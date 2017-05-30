@@ -20,7 +20,7 @@ n_output = 3
 n_input = 3
 
 
-def get_data(datafile, labelfile,seed=21,t=500,delim=',',ty=np.float32):
+def get_data(datafile, labelfile,seed=21,t=500,delim=',',ty=np.float32,steps=None):
     print('entered get data')
     data   = np.loadtxt(datafile,delimiter=delim,dtype=np.float32)
     print('loaded data')
@@ -133,9 +133,10 @@ def run(data_path = "./data_right.txt",labels_path="./labels_right.txt",delim=',
         biases = {
             'out': tf.Variable(tf.random_normal([n_steps]))
         }
-        x = tf.placeholder("float", [None,n_steps,n_input])
-        I = tf.Variable(tf.random_normal([100, 2]))
-        y = tf.placeholder("float", [None, 2])
+        with tf.device('/gpu:0'):
+            x = tf.placeholder("float", [None,n_steps,n_input])
+            I = tf.Variable(tf.random_normal([100, 2]))
+            y = tf.placeholder("float", [None, 2])
         SNP_label_train = Pool_labels[idxs[i][0]]
         SNP_label_test = Pool_labels[idxs[i][1]]
         SNP_data_train,SNP_data_test = organize_data([Pool_data[idxs[i][0]],Pool_data[idxs[i][1]]],n_steps)
@@ -150,14 +151,14 @@ def run(data_path = "./data_right.txt",labels_path="./labels_right.txt",delim=',
         #SNP_label_test = make_one_hot(Pool_labels[idxs[i][1]], 2)
         # Define loss and optimizer
         out = tf.matmul(flat,I)
-        cost = tf.square(tf.reduce_mean((y-out)))
-        print('have cost')
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=y))
+
+        optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
         print('got optimizer')
         # Evaluate model
         #correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
 
-        accuracy = cost
+        predict = tf.argmax(out, axis=1)
         # Initializing the variables
         init = tf.global_variables_initializer()
         fold = []
@@ -180,14 +181,16 @@ def run(data_path = "./data_right.txt",labels_path="./labels_right.txt",delim=',
                 if epoch % display_step == 0:
                     # Calculate batch accuracy
                     #SNP_data_train.reshape(n_steps,495,n_input)
-                    acc = sess.run(accuracy, feed_dict={x: SNP_data_train, y: SNP_label_train})
+                    acc = np.mean(np.argmax(SNP_label_train,axis=1)==
+                                  sess.run(predict, feed_dict={x: SNP_data_train, y: SNP_label_train}))
                     # Calculate batch loss
                     #batch_x.reshape(n_steps,cur_size,n_input)
                     #SNP_data_test.reshape(n_steps,55,n_input)
                     #loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y})
-                    print("Iter " + str(epoch) +  ", Training Cost= " + \
+                    print("Iter " + str(epoch)  + ", Training Cost= " + \
                           "{:.5f}".format(acc))
-                    test_acc = sess.run(accuracy, feed_dict={x: SNP_data_test, y: SNP_label_test})
+                    test_acc = np.mean(np.argmax(SNP_label_test,axis=1)==
+                                       sess.run(predict, feed_dict={x: SNP_data_test, y: SNP_label_test}))
                     print("Testing Cost: " + str(test_acc))
 
 
@@ -208,7 +211,7 @@ if __name__ == '__main__':
     learning_rate = 0.001
     training_iters = 200
     batch_size = 20
-    n_hidden = 1
+    n_hidden = 10
     args = sys.argv
     if len(args) > 0:
         parse = argparse.ArgumentParser()

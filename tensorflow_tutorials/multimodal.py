@@ -168,27 +168,28 @@ def main():
         predict = tf.argmax(yhat, axis=1)
 
         # Backward propagation
-        cost = tf.square(tf.reduce_mean((Y-yhat)))
-        updates = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=yhat, labels=Y))
 
+        updates = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
         # Run SGD
         init = tf.global_variables_initializer()
         sess.run(init)
         batch_size = 20
-        for epoch in range(training_iters):
+        for epoch in range(30):
             # Train with each example
             for i in range(1,len(train_MRI_X),batch_size):
                 sess.run(updates, feed_dict={X: train_MRI_X[i: i + batch_size],X_SNP:train_SNP_X[i:i+batch_size], Y: train_MRI_y[i: i + batch_size]})
 
-            train_accuracy = np.mean(np.argmax(train_MRI_y, axis=1) ==
-                                     sess.run(updates, feed_dict={X: train_MRI_X,X_SNP:train_SNP_X, Y: train_MRI_y}))
-            test_accuracy  = np.mean(np.argmax(test_MRI_y, axis=1) ==
-                                     sess.run(updates, feed_dict={X: test_MRI_X, X_SNP:test_SNP_X, Y: test_MRI_y}))
+            train_accuracy = np.mean(np.argmax(train_MRI_y,axis=1)==
+                                     sess.run(predict, feed_dict={X: train_MRI_X,X_SNP:train_SNP_X, Y: train_MRI_y}))
+            test_accuracy  = np.mean(np.argmax(test_MRI_y,axis=1)==
+                                     sess.run(predict, feed_dict={X: test_MRI_X, X_SNP:test_SNP_X, Y: test_MRI_y}))
 
             print("Epoch = %d, train accuracy = %.2f%%, test accuracy = %.2f%%"
-                  % (epoch + 1, 100. * train_accuracy, 100. * test_accuracy))
+                  % (epoch + 1, train_accuracy, test_accuracy))
 
         sess.close()
+        tf.reset_default_graph()
 
 if __name__ == '__main__':
     global learning_rate, training_iters, batch_size, n_hidden, n_steps
