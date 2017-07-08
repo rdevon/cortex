@@ -1,6 +1,6 @@
 
 ---
-Converting fmri dataset into tfrecord file
+# Converting fmri dataset into tfrecord file
 ---
 
 # Introduction
