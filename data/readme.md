@@ -21,10 +21,10 @@ The data consists of over 1000 preprocessed functional data samples. The dimensi
 ```
 example = tf.train.Example(features=tf.train.Features(feature={'img_raw': _bytes_feature(img_raw), 'img_shape': _bytes_feature(img_shape_raw)}))
 ```
-The data is minimally preprocessed using slice timing correction, realignment to correct for motion and written into template space at 3x3x3 mm^3 isotropic resolution. Also the datatype is float64.
+The data is minimally preprocessed using slice timing correction, realignment to correct for motion and written into template space at 3x3x3 mm<sup>3</sup> isotropic resolution. Also the datatype is float64.
 
 # Conversion
-The script lets the user decide, the number of files to include in the tfrecord file. It then downloads the files and starts adding them into the tfrecord file. Once all the files are added, you will have your tfrecord file in the home directory of your OS.
+The script lets the user decide, the number of files to include in the tfrecord file. It then downloads the files and starts adding them into the tfrecord file. Once all the files are added, you will have your tfrecord file in the home directory of your OS. Just run the code and follow the runtime instructions.
 
 # Significance
 Functional images of brain are bulky and reading through all the training samples can get inefficient and time consuming. Converting this data into tfrecords makes it ready for tensorflow and accessing and batching data becomes better and easy.
