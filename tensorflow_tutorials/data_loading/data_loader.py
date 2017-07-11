@@ -14,7 +14,7 @@ numpy is the most effective way, in my experience, to read in numeric data.  Ten
 a 'TextLineReader()' which allows for text reading as strings.  This would be useful if the data
 was in byte form (or text).  However, numpy is the most streamlined for numeric data
 '''
-def load_text(name,delimiter=',',type=np.float32):
+def load_file(name,delimiter=',',type=np.float32):
     return np.loadtxt(name,delimiter=delimiter,dtype=type)
 
 
@@ -22,8 +22,8 @@ def build_records(data):
     return tf.train.Feature(float_list = tf.train.FloatList(value=data))
 
 #default file names
-data_file = "./smoothed_SNPs_full_DATA.txt"
-labels_file = "./smoothed_SNPs_full_LABELS.txt"
+data_file = "./data_sample.txt"
+labels_file = "./labels_sample.txt"
 
 if __name__ == "__main__":
     args = sys.argv
@@ -33,8 +33,8 @@ if __name__ == "__main__":
         labels_file = args[0]
 
     record_name = "./text_records.tfrecords"
-    features = load_text(data_file)
-    labels = load_text(labels_file)
+    features = load_file(data_file)
+    labels = load_file(labels_file)
     record_writer = tf.python_io.TFRecordWriter(record_name)
 
     for d, l in zip(features,labels):
