@@ -6,29 +6,26 @@ Used for saving, loading, summarizing, etc
 
 import logging
 from os import path
+import yaml
 
-import numpy as np
+import torch
 
-logger = logging.getLogger('BGAN.exp')
+
+logger = logging.getLogger('cortex.exp')
 
 # Experiment info
 NAME = 'X'
-RESULTS_EPOCHS = {}
-RESULTS_UPDATES = {}
+USE_CUDA = False
+SUMMARY = {'train': {}, 'test': {}}
 OUT_DIRS = {}
 ARGS = {}
 INFO = {'name': NAME, 'epoch': 0}
 MODEL_PARAMS_RELOAD = None
-ITERATORS = {}
 
-# Models and tensors
+# Models criteria and results
 MODELS = {}
-INPUTS = {}
-LOSSES = {}
-STATS = {}
-SAMPLES = {}
-HISTOGRAMS = {}
-TENSORS = {}
+CRITERIA = {}
+RESULTS = {}
 
 
 def file_string(prefix=''):
@@ -36,8 +33,7 @@ def file_string(prefix=''):
     return '{}({})'.format(NAME, prefix)
 
 
-def configure_experiment(data=None, model=None, loss=None, optimizer=None,
-                         train=None, config_file=None):
+def configure_experiment(data=None, model=None, optimizer=None, train=None, config_file=None):
     '''Loads arguments into a yaml file.
 
     '''
@@ -46,55 +42,56 @@ def configure_experiment(data=None, model=None, loss=None, optimizer=None,
             d = yaml.load(f)
         logger.info('Loading config {}'.format(d))
         if model is not None: model.update(**d.get('model', {}))
-        if loss is not None: loss.update(**d.get('loss', {}))
         if optimizer is not None: optimizer.update(**d.get('optimizer', {}))
         if train is not None: train.update(**d.get('train', {}))
         if data is not None: data.update(**d.get('data', {}))
 
     logger.info('Training model with: \n\tdata args {}, \n\toptimizer args {} '
-                '\n\tmodel args {} \n\tloss args {} \n\ttrain args {}'.format(
-        data, optimizer, model, loss, train))
-
-
-def load_tensors(inputs, losses, stats, samples, histograms, tensors):
-    global INPUTS, LOSSES, STATS, SAMPLES, HISTOGRAMS, TENSORS
-
-    for k, v in losses.items():
-        stats[k][k + '_loss'] = v
-
-    INPUTS.update(**inputs)
-    LOSSES.update(**losses)
-    STATS.update(**stats)
-    SAMPLES.update(**samples)
-    HISTOGRAMS.update(**histograms)
-    TENSORS.update(**tensors)
-
-    all_inputs = set([i for k, inp in inputs.items() for i in inp])
-    INPUTS['all'] = all_inputs
+                '\n\tmodel args {} \n\ttrain args {}'.format(data, optimizer, model, train))
 
 
 def save(prefix=''):
     prefix = file_string(prefix)
-
     binary_dir = OUT_DIRS.get('binary_dir', None)
     if binary_dir is None:
         return
-    models = dict((k, lasagne.layers.get_all_param_values(v)) for k, v in MODELS.items())
-    np.savez(path.join(binary_dir, '{}.npz'.format(prefix)),
-             results_epochs=RESULTS_EPOCHS, results_updates=RESULTS_UPDATES,
-             info=INFO, args=ARGS, models=models, out_dirs=OUT_DIRS)
+
+    models = {}
+    for k, model in MODELS.items():
+        if isinstance(model, (tuple, list)):
+            nets = []
+            for net in model:
+                nets.append(net)#(net.module if USE_CUDA else net)
+            models[k] = nets
+        else:
+            models[k] = model#.module if USE_CUDA else model
+
+    state = dict(
+        models=models,
+        info=INFO,
+        args=ARGS,
+        out_dirs=OUT_DIRS,
+        summary=SUMMARY
+    )
+
+    file_path = path.join(binary_dir, '{}.t7'.format(prefix))
+    logger.info('Saving checkpoint {}'.format(file_path))
+    torch.save(state, file_path)
 
 
-def set_models(models):
-    global MODELS
+def setup(models, criteria, results):
+    global MODELS, CRITERIA, RESULTS
     MODELS.update(**models)
-    if MODEL_PARAMS_RELOAD is not None:
-        reload_params()
+    CRITERIA.update(**criteria)
+    RESULTS.update(**results)
+
+    if MODEL_PARAMS_RELOAD:
+        reload_models()
 
 
-def reload_params():
-    for k, v in MODELS.items():
-        params = MODEL_PARAMS_RELOAD.get(k, None)
-        if params:
-            logger.info('Reloading parameters for {}'.format(k))
-            lasagne.layers.set_all_param_values(v, params)
+def reload_models():
+    for k in MODELS.keys():
+        v_ = MODEL_PARAMS_RELOAD.get(k, None)
+        if v_:
+            logger.info('Reloading model {}'.format(k))
+            MODELS[k] = v_

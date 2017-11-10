@@ -9,12 +9,13 @@ from os import path
 from shutil import copyfile, rmtree
 
 import numpy as np
+import torch
 
-import config
-import exp
-from log_utils import set_file_logger, set_stream_logger
-from utils import make_argument_parser
-from viz import init as viz_init
+import models
+from lib import config, exp
+from lib.log_utils import set_file_logger, set_stream_logger
+from lib.utils import make_argument_parser
+from lib.viz import init as viz_init
 
 
 logger = logging.getLogger('cortex.init')
@@ -71,30 +72,35 @@ def setup_reload(exp_file):
 
 
 def reload_experiment(exp_file):
-    d = np.load(exp_file)
-    exp.INFO.update(**d['info'][()])
-    exp.NAME = d['info'][()]['name']
-    exp.RESULTS_EPOCHS.update(**d['results_epochs'][()])
-    exp.RESULTS_UPDATES.update(**d['results_updates'][()])
-    exp.ARGS.update(**d['args'][()])
-    exp.MODEL_PARAMS_RELOAD = d['models'][()]
-    out_dirs = d['out_dirs'][()]
+    d = torch.load(exp_file)
+    exp.INFO.update(**d['info'])
+    exp.NAME = d['info']['name']
+    exp.SUMMARY.update(**d['summary'])
+    exp.ARGS.update(**d['args'])
+    exp.MODEL_PARAMS_RELOAD = d['models']
+    out_dirs = d['out_dirs']
     out_path = path.dirname(path.dirname(exp_file))
     out_dirs = dict((k, path.join(out_path, path.basename(v))) for k, v in out_dirs.items())
     exp.OUT_DIRS.update(**out_dirs)
 
 
-def setup():
+def setup(use_cuda):
     parser = make_argument_parser()
     args = parser.parse_args()
     set_stream_logger(args.verbosity)
+    exp.USE_CUDA = use_cuda
 
-    config_file_path = path.join(path.dirname(path.dirname(
-        path.abspath(__file__))), 'config.yaml')
+    if exp.USE_CUDA:
+        logger.info('Using GPU')
+    else:
+        logger.info('Using CPU')
+
+    config_file_path = path.join(path.dirname(
+        path.abspath(__file__)), 'config.yaml')
     if not path.isfile(config_file_path): config_file_path = None
     config.update_config(config_file_path)
     viz_init()
-    assert False
+    arch = models.setup(args.arch)
 
     if args.reload:
         if not path.isfile(args.reload):
@@ -102,9 +108,10 @@ def setup():
         logger.info('Reloading from {}'.format(args.reload))
         copyfile(args.reload, args.reload + '.bak')
         reload_experiment(args.reload)
+
     else:
         kwargs = {}
-        for k, v in _default_args.items():
+        for k, v in arch.DEFAULTS.items():
             kwargs[k] = {}
             kwargs[k].update(**v)
 
@@ -124,11 +131,9 @@ def setup():
                 else:
                     raise ValueError('Unknown arg {}'.format(k))
 
-        kwargs['data']['use_tanh'] = bool(kwargs['model']['nonlin'] == 'tanh')
         name = args.name
-
         if name is None:
-            name = out_paths['binary_dir'].split('/')[-2]
+            name = args.arch
         exp.NAME = name
         exp.INFO['name'] = name
         exp.configure_experiment(config_file=args.config_file, **kwargs)
