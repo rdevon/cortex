@@ -24,7 +24,7 @@ def setup(arch):
     return ARCH
 
 
-def build_model(**model_args):
+def build_model(data_dims, **model_args):
     '''Builds the generator and discriminator.
 
     If architecture module contains a `build_model` function, use that,
@@ -32,10 +32,11 @@ def build_model(**model_args):
 
     '''
 
+    logger.debug('Model args: {}'.format(model_args))
     if hasattr(ARCH, 'GLOBALS'):
         for k, v in ARCH.GLOBALS.items():
-            if k.lower() in model_args.keys():
-                v_ = model_args.pop(k.lower())
+            if k.lower() in data_dims.keys():
+                v_ = data_dims.pop(k.lower())
                 if v_ != v:
                     logger.warning('Changing {} to {} from default {}'.format(
                         k, v_, v))

@@ -6,7 +6,7 @@ import logging
 
 from __init__ import setup
 from lib import exp
-from lib.data import setup as setup_data
+from lib.data import setup as setup_data, DIMS as data_dims
 from lib.exp import setup as setup_model
 from lib.train import setup as setup_optimizer, main_loop
 from lib.utils import print_section
@@ -42,7 +42,7 @@ def main(eval_mode=False):
     print_section('MODEL') #####################################################
     logger.info('Building model...')
     logger.info('Model args: {}'.format(model_args))
-    models, criteria, results = build_model(**model_args)
+    models, criteria, results = build_model(data_dims, **model_args)
     setup_model(models, criteria, results)
 
     print_section('OPTIMIZER') #################################################

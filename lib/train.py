@@ -3,6 +3,7 @@
 '''
 
 import logging
+import pprint
 import sys
 import time
 
@@ -14,6 +15,7 @@ import torch.backends.cudnn as cudnn
 from data import make_iterator
 import exp
 from utils import update_dict_of_lists
+import viz
 
 
 logger = logging.getLogger('cortex.util')
@@ -22,8 +24,27 @@ OPTIMIZERS = {}
 
 
 optimizer_defaults = dict(
-    SGD=dict(momentum=0.9, weight_decay=5e-4)
+    SGD=dict(momentum=0.9, weight_decay=5e-4),
+    Adam=dict(betas=(0.5, 0.999))
 )
+
+
+def plot():
+    train_summary = exp.SUMMARY['train']
+    test_summary = exp.SUMMARY['test']
+    for k in train_summary.keys():
+        v_tr = np.array(train_summary[k])
+        v_te = np.array(test_summary[k])
+        opts = dict(
+            xlabel='updates',
+            legend=['train', 'test'],
+            ylabel=k,
+            title=k)
+        if len(v_tr.shape) > 1:
+            continue
+        Y = np.column_stack((v_tr, v_te))
+        X = np.column_stack((np.arange(v_tr.shape[0]), np.arange(v_tr.shape[0])))
+        viz.visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
 
 
 def setup(optimizer=None, learning_rate=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
@@ -111,6 +132,8 @@ def test_epoch(epoch, best_condition=0):
 
 
 def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None):
+    info = pprint.pformat(exp.ARGS)
+    viz.visualizer.text(info, env=exp.NAME, win='info')
     try:
         for e in xrange(epochs):
             epoch = exp.INFO['epoch']
@@ -124,6 +147,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k])
                                     for k in train_results_.keys()]))
             logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))
+            plot()
             if (archive_every and epoch % archive_every == 0):
                 exp.save(prefix=epoch)
 

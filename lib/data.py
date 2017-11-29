@@ -5,6 +5,7 @@
 import logging
 from os import path
 
+import numpy as np
 from progressbar import Bar, ProgressBar, Percentage, Timer
 import torch
 from torch.autograd import Variable
@@ -18,6 +19,7 @@ logger = logging.getLogger('cortex.data')
 
 
 LOADERS = {}
+DIMS = {}
 
 
 def make_iterator(test=False, make_pbar=True, string=''):
@@ -52,10 +54,21 @@ def make_iterator(test=False, make_pbar=True, string=''):
     return iterator()
 
 
-def setup(source=None, batch_size=None, test_batch_size=None, n_workers=4, meta=None):
-    global LOADERS
+def setup(source=None, batch_size=None, test_batch_size=None, n_workers=4, meta=None,
+          normalize=True, scale=None):
+    global LOADERS, DIMS
+
     if hasattr(torchvision.datasets, source):
         dataset = getattr(torchvision.datasets, source)
+
+    if normalize:
+        if source == 'MNIST':
+            norm = transforms.Normalize((0.1307,), (0.3081,))
+        else:
+            #norm = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+            norm = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+
+    transform = transforms.Compose([transforms.ToTensor(), norm])
 
     if not source:
         raise ValueError('Source not provided.')
@@ -65,8 +78,6 @@ def setup(source=None, batch_size=None, test_batch_size=None, n_workers=4, meta=
         raise ValueError('Batch size not provided.')
     test_batch_size = test_batch_size or batch_size
 
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
-
     logger.info('Loading data from `{}`'.format(source))
     train_set = dataset(root=source, train=True, download=True, transform=transform)
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=n_workers)
@@ -74,5 +85,11 @@ def setup(source=None, batch_size=None, test_batch_size=None, n_workers=4, meta=
     test_set = dataset(root=source, train=False, download=True, transform=transform)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch_size, shuffle=False,
                                               num_workers=n_workers)
+
+    n_train, dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)
+    dim_l = len(np.unique(train_set.train_labels))
+    n_test = test_set.test_data.shape[0]
+    DIMS.update(n_train=n_train, n_test=n_test, dim_x=dim_x, dim_y=dim_y, dim_c=dim_c, dim_l=dim_l)
+    logger.debug('Data has the following dimensions: {}'.format(DIMS))
 
     LOADERS.update(train=train_loader, test=test_loader)
