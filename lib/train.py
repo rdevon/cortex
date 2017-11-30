@@ -3,6 +3,7 @@
 '''
 
 import logging
+from os import path
 import pprint
 import sys
 import time
@@ -45,6 +46,20 @@ def plot():
         Y = np.column_stack((v_tr, v_te))
         X = np.column_stack((np.arange(v_tr.shape[0]), np.arange(v_tr.shape[0])))
         viz.visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
+
+
+def show(samples, prefix=''):
+    prefix = exp.file_string(prefix)
+    image_dir = exp.OUT_DIRS.get('image_dir', None)
+
+    for i, (k, v) in enumerate(samples.items()):
+        logger.debug('Saving images to {}'.format(image_dir))
+        if image_dir is None:
+            out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
+        else:
+            out_path = None
+
+        viz.save_images(v.cpu().numpy(), 8, 8, out_file=out_path, labels=None, max_samples=64, image_id=1 + i, caption=k)
 
 
 def setup(optimizer=None, learning_rate=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
@@ -102,12 +117,24 @@ def train_epoch(epoch):
     results = {}
 
     for inputs in train_iter:
-        for k in exp.MODELS.keys():
-            OPTIMIZERS[k].zero_grad()
-            loss, results_, _ = exp.RESULTS[k](exp.MODELS[k], inputs, exp.CRITERIA[k])
-            loss.backward()
-            OPTIMIZERS[k].step()
-            update_dict_of_lists(results, **results_)
+        for i, k_ in enumerate(exp.MODELS.keys()):
+            OPTIMIZERS[k_].zero_grad()
+
+            for k, v in exp.PROCEDURES.items():
+                if k == 'main' or not isinstance(exp.ARGS['procedures'], dict):
+                    args = exp.ARGS['procedures']
+                else:
+                    args = exp.ARGS['procedures'][k]
+                losses, results_, _, _ = v(exp.MODELS, inputs, **args)
+                update_dict_of_lists(results, **results_)
+
+                if isinstance(losses, dict):
+                    loss = losses[k_]
+                else:
+                    loss = losses
+                loss.backward()
+                OPTIMIZERS[k_].step()
+
     results = dict((k, np.mean(v)) for k, v in results.items())
     return results
 
@@ -122,13 +149,23 @@ def test_epoch(epoch, best_condition=0):
 
     test_iter = make_iterator(test=True, string='Evaluating (epoch {}): '.format(epoch))
     results = {}
-
+    samples_ = None
     for inputs in test_iter:
-        loss, results_, condition = exp.RESULTS[k](exp.MODELS[k], inputs, exp.CRITERIA[k])
-        update_dict_of_lists(results, **results_)
+        samples__ = {}
+        for k, v in exp.PROCEDURES.items():
+            if k == 'main' or not isinstance(exp.ARGS['procedures'], dict):
+                args = exp.ARGS['procedures']
+            else:
+                args = exp.ARGS['procedures'][k]
+            loss, results_, samples, condition = v(exp.MODELS, inputs, **args)
+            if not samples_ and samples:
+                samples__.update(**samples)
+            update_dict_of_lists(results, **results_)
+        samples_ = samples_ or samples__
+
     results = dict((k, np.mean(v)) for k, v in results.items())
 
-    return results
+    return results, samples_
 
 
 def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None):
@@ -142,12 +179,14 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             train_results_ = train_epoch(epoch)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
-            test_results_ = test_epoch(epoch)
+            test_results_, samples_ = test_epoch(epoch)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
+
             logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k])
                                     for k in train_results_.keys()]))
             logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))
             plot()
+            show(samples_)
             if (archive_every and epoch % archive_every == 0):
                 exp.save(prefix=epoch)
 

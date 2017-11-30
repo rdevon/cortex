@@ -20,10 +20,11 @@ logger = logging.getLogger('cortex.data')
 
 LOADERS = {}
 DIMS = {}
+INPUT_NAMES = []
+NOISE = {}
 
 
 def make_iterator(test=False, make_pbar=True, string=''):
-    volatile = test
 
     if test:
         loader = LOADERS['test']
@@ -36,17 +37,33 @@ def make_iterator(test=False, make_pbar=True, string=''):
     else:
         pbar = None
 
-    def iterator(u=0):
+    def iterator():
         for u, inputs in enumerate(loader):
+
             if exp.USE_CUDA:
                 inputs = [inp.cuda() for inp in inputs]
             inputs_ = []
+
             for i, inp in enumerate(inputs):
                 if i == 0:
-                    inputs_.append(Variable(inp, volatile=volatile))
+                    inputs_.append(Variable(inp, volatile=test))
                 else:
                     inputs_.append(Variable(inp))
-            inputs = tuple(inputs_)
+
+            if len(NOISE) > 0:
+                noise = [NOISE[k] for k in INPUT_NAMES if k in NOISE.keys()]
+                for (n_var, dist) in noise:
+                    if dist == 'normal':
+                        n_var = n_var.normal_(0, 1)
+                    elif dist == 'uniform':
+                        n_var = n_var.uniform_(0, 1)
+                    else:
+                        raise NotImplementedError(dist)
+                    if n_var.size()[0] != inputs[0].size()[0]:
+                        n_var = n_var[0:inputs[0].size()[0]]
+                    inputs_.append(Variable(n_var, volatile=test))
+
+            inputs = dict(zip(INPUT_NAMES, inputs_))
             if pbar:
                 pbar.update(u)
             yield inputs
@@ -55,8 +72,8 @@ def make_iterator(test=False, make_pbar=True, string=''):
 
 
 def setup(source=None, batch_size=None, test_batch_size=None, n_workers=4, meta=None,
-          normalize=True, scale=None):
-    global LOADERS, DIMS
+          normalize=True, scale=None, noise_variables=None):
+    global LOADERS, DIMS, INPUT_NAMES, NOISE
 
     if hasattr(torchvision.datasets, source):
         dataset = getattr(torchvision.datasets, source)
@@ -91,5 +108,15 @@ def setup(source=None, batch_size=None, test_batch_size=None, n_workers=4, meta=
     n_test = test_set.test_data.shape[0]
     DIMS.update(n_train=n_train, n_test=n_test, dim_x=dim_x, dim_y=dim_y, dim_c=dim_c, dim_l=dim_l)
     logger.debug('Data has the following dimensions: {}'.format(DIMS))
+
+    INPUT_NAMES = ['images', 'targets']
+
+    if noise_variables:
+        for k, (dist, dim) in noise_variables.items():
+            var = torch.FloatTensor(batch_size, dim)
+            if exp.USE_CUDA:
+                var = var.cuda()
+            NOISE[k] = (var, dist)
+            INPUT_NAMES.append(k)
 
     LOADERS.update(train=train_loader, test=test_loader)

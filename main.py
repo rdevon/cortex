@@ -42,8 +42,8 @@ def main(eval_mode=False):
     print_section('MODEL') #####################################################
     logger.info('Building model...')
     logger.info('Model args: {}'.format(model_args))
-    models, criteria, results = build_model(data_dims, **model_args)
-    setup_model(models, criteria, results)
+    models, procedures = build_model(data_dims, **model_args)
+    setup_model(models, procedures)
 
     print_section('OPTIMIZER') #################################################
     setup_optimizer(**optimizer_args)

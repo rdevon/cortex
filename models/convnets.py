@@ -11,6 +11,11 @@ import torch.nn.functional as F
 logger = logging.getLogger('cortex.models' + __name__)
 
 
+def infer_conv_size(w, k, s, p):
+    x = (w - k + 2 * p) // s + 1
+    return x
+
+
 class SimpleNet(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -56,8 +61,7 @@ class SimpleConvEncoder(nn.Module):
         models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
         if dropout:
             models.add_module(name + '_do', nn.Dropout2d(p=dropout))
-        dim_x //= 2
-        dim_y //= 2
+        dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
 
         i = 0
         while dim_x > min_dim and dim_y > min_dim:
@@ -70,8 +74,7 @@ class SimpleConvEncoder(nn.Module):
             if batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
             models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
-            dim_x //= 2
-            dim_y //= 2
+            dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             i += 1
 
         if dim_out_:
@@ -79,6 +82,24 @@ class SimpleConvEncoder(nn.Module):
             models.add_module(name, nn.Conv2d(dim_out, dim_out_, f_size, 1, 0, bias=False))
 
         self.models = models
+
+    def next_size(self, dim_x, dim_y, k, s, p):
+        if isinstance(k, int):
+            kx, ky = (k, k)
+        else:
+            kx, ky = k
+
+        if isinstance(s, int):
+            sx, sy = (s, s)
+        else:
+            sx, sy = s
+
+        if isinstance(p, int):
+            px, py = (p, p)
+        else:
+            px, py = p
+
+        return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, nonlinearity_args=None):
         nonlinearity_args = nonlinearity_args or {}
@@ -92,28 +113,3 @@ class SimpleConvEncoder(nn.Module):
             else:
                 raise ValueError()
         return x
-
-'''
-def build_basic_conv_encoder(X=None, dim_h=None, use_batch_norm=True,
-                             use_dropout=None, n_steps=3, shape=None,
-                             nonlinearity=rectify, f_size=4, stride=2, pad=1,
-                             name='conv encoder'):
-    assert dim_h and shape
-
-    if not use_batch_norm:
-        bn = lambda x: x
-    else:
-        bn = batch_norm
-
-    x = InputLayer(shape=shape, input_var=X, name='x')
-    log_shape(logger, x, name, 'input')
-
-    args = dict(stride=stride, pad=pad, nonlinearity=nonlinearity)
-    for i in xrange(n_steps):
-        if use_dropout: x = dropout(x, p=use_dropout)
-        x = bn(Conv2DLayer(x, dim_h * (2 ** i), f_size, **args))
-        log_shape(logger, x, name, i)
-
-    log_shape(logger, x, name, 'output')
-    return x
-'''

@@ -79,7 +79,7 @@ def save_text(labels, max_samples=64, out_file=None, text_id=0,
     l_ = [''.join([char_map[j] for j in label]) for label in labels]
 
     logger.info('{}: {}'.format(caption, l_[0]))
-    visualizer.text('\n'.join(l_), env='{}_images'.format(exp.NAME),
+    visualizer.text('\n'.join(l_), env=exp.NAME,
                     win='text_{}'.format(text_id))
 
     if out_file is not None:
@@ -111,83 +111,81 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
             margin_y = 12
         labels = np.argmax(labels, axis=-1)
 
-    if out_file is None:
-        logger.warning('`out_file` not provided. Not saving.')
+    if _options['quantized']:
+        images = dequantize(images)
+    elif _options['use_tanh']:
+        images = 0.5 * (images + 1.)
+
+    images = images * 255.
+
+    dim_c, dim_x, dim_y = images.shape[-3:]
+    if dim_c == 1:
+        arr = tile_raster_images(
+            X=images, img_shape=(dim_x, dim_y), tile_shape=(num_x, num_y),
+            tile_spacing=(margin_y, margin_x), bottom_margin=margin_y)
+        fill = 255
     else:
-
-        if _options['quantized']:
-            images = dequantize(images)
-        elif _options['use_tanh']:
-            images = 0.5 * (images + 1.)
-
-        images = images * 255.
-
-        dim_c, dim_x, dim_y = images.shape[-3:]
-        if dim_c == 1:
+        arrs = []
+        for c in xrange(dim_c):
             arr = tile_raster_images(
-                X=images, img_shape=(dim_x, dim_y), tile_shape=(num_x, num_y),
-                tile_spacing=(margin_y, margin_x), bottom_margin=margin_y)
-            fill = 255
-        else:
-            arrs = []
-            for c in xrange(dim_c):
-                arr = tile_raster_images(
-                    X=images[:, c].copy(), img_shape=(dim_x, dim_y),
-                    tile_shape=(num_x, num_y),
-                    tile_spacing=(margin_y, margin_x),
-                    bottom_margin=margin_y, right_margin=margin_x)
-                arrs.append(arr)
+                X=images[:, c].copy(), img_shape=(dim_x, dim_y),
+                tile_shape=(num_x, num_y),
+                tile_spacing=(margin_y, margin_x),
+                bottom_margin=margin_y, right_margin=margin_x)
+            arrs.append(arr)
 
-            arr = np.array(arrs).transpose(1, 2, 0)
-            fill = (255, 255, 255)
+        arr = np.array(arrs).transpose(1, 2, 0)
+        fill = (255, 255, 255)
 
-        im = Image.fromarray(arr)
+    im = Image.fromarray(arr)
 
-        if labels is not None:
+    if labels is not None:
+        try:
+            font = ImageFont.truetype(config.font, 9)
+        except:
+            if config_font is None:
+                raise ValueError('font must be added to config file in '
+                                 '`viz`.')
+            font = ImageFont.truetype(config_font, 9)
+
+        idr = ImageDraw.Draw(im)
+        for i, label in enumerate(labels):
+            x_ = (i % num_x) * (dim_x + margin_x)
+            y_ = (i // num_x) * (dim_y + margin_y) + dim_y
+            if _options['is_caption']:
+                l_ = ''.join([CHAR_MAP[j] for j in label
+                              if CHAR_MAP[j] != '\n'])
+                l__ = [CHAR_MAP[j] for j in label]
+                l_ = l_.strip()
+                if len(l_) == 0:
+                    l_ = '<EMPTY>'
+                if len(l_) > 30:
+                    l_ = '\n'.join(
+                        [l_[x:x + 30] for x in range(0, len(l_), 30)])
+            elif _options['is_attribute']:
+                attribs = [j for j, a in enumerate(label) if a == 1]
+                l_ = '\n'.join(_options['label_names'][a] for a in attribs)
+            elif _options['label_names'] is not None:
+                l_ = _options['label_names'][label]
+                l_ = l_.replace('_', '\n')
+            else:
+                l_ = str(label)
             try:
-                font = ImageFont.truetype(config.font, 9)
-            except:
-                if config_font is None:
-                    raise ValueError('font must be added to config file in '
-                                     '`viz`.')
-                font = ImageFont.truetype(config_font, 9)
+                idr.text((x_, y_), l_, fill=fill, font=font)
+            except Exception as e:
+                print l_
+                print l__
+                print len(l_)
+                raise e
 
-            idr = ImageDraw.Draw(im)
-            for i, label in enumerate(labels):
-                x_ = (i % num_x) * (dim_x + margin_x)
-                y_ = (i // num_x) * (dim_y + margin_y) + dim_y
-                if _options['is_caption']:
-                    l_ = ''.join([CHAR_MAP[j] for j in label
-                                  if CHAR_MAP[j] != '\n'])
-                    l__ = [CHAR_MAP[j] for j in label]
-                    l_ = l_.strip()
-                    if len(l_) == 0:
-                        l_ = '<EMPTY>'
-                    if len(l_) > 30:
-                        l_ = '\n'.join(
-                            [l_[x:x + 30] for x in range(0, len(l_), 30)])
-                elif _options['is_attribute']:
-                    attribs = [j for j, a in enumerate(label) if a == 1]
-                    l_ = '\n'.join(_options['label_names'][a] for a in attribs)
-                elif _options['label_names'] is not None:
-                    l_ = _options['label_names'][label]
-                    l_ = l_.replace('_', '\n')
-                else:
-                    l_ = str(label)
-                try:
-                    idr.text((x_, y_), l_, fill=fill, font=font)
-                except Exception as e:
-                    print l_
-                    print l__
-                    print len(l_)
-                    raise e
+    arr = np.array(im)
+    if arr.ndim == 3:
+        arr = arr.transpose(2, 0, 1)
+    visualizer.image(arr, opts=dict(title=title, caption=caption),
+                     win='image_{}'.format(image_id),
+                     env=exp.NAME)
 
-        arr = np.array(im)
-        if arr.ndim == 3:
-            arr = arr.transpose(2, 0, 1)
-        visualizer.image(arr, opts=dict(title=title, caption=caption),
-                         win='image_{}'.format(image_id),
-                         env='{}_images'.format(exp.NAME))
+    if out_file:
         im.save(out_file)
 
 
@@ -208,7 +206,7 @@ def save_movie(images, num_x, num_y, out_file=None, movie_id=0):
             images_.append(image)
         imageio.mimsave(out_file, images_)
 
-    visualizer.video(videofile=out_file, env='{}_images'.format(exp.NAME),
+    visualizer.video(videofile=out_file, env=exp.NAME,
                      win='movie_{}'.format(movie_id))
 
 
@@ -225,5 +223,5 @@ def save_hist(scores, out_file, hist_id=0):
     visualizer.stem(
         X=X, Y=np.array([0.5 * (bins[i] + bins[i + 1]) for i in range(99)]),
         opts=dict(legend=['Real', 'Fake']), win='hist_{}'.format(hist_id),
-        env='{}_images'.format(exp.NAME))
+        env=exp.NAME)
 

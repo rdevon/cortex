@@ -24,7 +24,8 @@ DEFAULTS = dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
-    model=dict(loss=nn.CrossEntropyLoss()),
+    model=dict(),
+    procedures=dict(criterion=nn.CrossEntropyLoss()),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -33,22 +34,22 @@ DEFAULTS = dict(
 )
 
 
-def results(net, inputs, criterion):
-    images, targets = inputs
+def classify(nets, inputs, criterion=None):
+    net = nets['classifier']
+    images = inputs['images']
+    targets = inputs['targets']
     outputs = net(images, nonlinearity=F.log_softmax)
     loss = criterion(outputs, targets)
     _, predicted = torch.max(outputs.data, 1)
     correct = 100. * predicted.eq(targets.data).cpu().sum() / targets.size(0)
-    return loss, dict(loss=loss.data[0], accuracy=correct), 'accuracy'
+    return loss, dict(loss=loss.data[0], accuracy=correct), None, 'accuracy'
 
 
-def build_model(loss=None, classifier_args=None):
+def build_model(classifier_args=None):
     classifier_args = classifier_args or {}
     args = classifier_args_
     args.update(**classifier_args)
 
     shape = (DIM_X, DIM_Y, DIM_C)
     net = Net(shape, dim_out=DIM_L, **args)
-    return dict(classifier=net), dict(classifier=loss), dict(classifier=results)
-
-
+    return dict(classifier=net), classify

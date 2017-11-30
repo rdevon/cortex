@@ -25,7 +25,7 @@ MODEL_PARAMS_RELOAD = None
 # Models criteria and results
 MODELS = {}
 CRITERIA = {}
-RESULTS = {}
+PROCEDURES = {}
 
 
 def file_string(prefix=''):
@@ -33,7 +33,7 @@ def file_string(prefix=''):
     return '{}({})'.format(NAME, prefix)
 
 
-def configure_experiment(data=None, model=None, optimizer=None, train=None, config_file=None):
+def configure_experiment(data=None, model=None, optimizer=None, train=None, procedures=None, config_file=None):
     '''Loads arguments into a yaml file.
 
     '''
@@ -45,9 +45,11 @@ def configure_experiment(data=None, model=None, optimizer=None, train=None, conf
         if optimizer is not None: optimizer.update(**d.get('optimizer', {}))
         if train is not None: train.update(**d.get('train', {}))
         if data is not None: data.update(**d.get('data', {}))
+        if procedures is not None: procedures.update(**d.get('procedures', {}))
 
     logger.info('Training model with: \n\tdata args {}, \n\toptimizer args {} '
-                '\n\tmodel args {} \n\ttrain args {}'.format(data, optimizer, model, train))
+                '\n\tmodel args {} \n\ttrain args {} \n\tprocedure args {}'.format(
+        data, optimizer, model, train, procedures))
 
 
 def save(prefix=''):
@@ -79,11 +81,12 @@ def save(prefix=''):
     torch.save(state, file_path)
 
 
-def setup(models, criteria, results):
-    global MODELS, CRITERIA, RESULTS
+def setup(models, procedures):
+    global MODELS, PROCEDURES
     MODELS.update(**models)
-    CRITERIA.update(**criteria)
-    RESULTS.update(**results)
+    if not isinstance(procedures, dict):
+        procedures = dict(main=procedures)
+    PROCEDURES.update(**procedures)
 
     if MODEL_PARAMS_RELOAD:
         reload_models()
