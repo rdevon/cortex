@@ -1,2 +1,2 @@
 # cortex2.0
-New cortex in tensorflow
+A machine learning library for PyTorch
