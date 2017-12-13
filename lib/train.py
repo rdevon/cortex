@@ -52,7 +52,8 @@ def show(samples, prefix=''):
     prefix = exp.file_string(prefix)
     image_dir = exp.OUT_DIRS.get('image_dir', None)
 
-    for i, (k, v) in enumerate(samples.items()):
+    images = samples.get('images', {})
+    for i, (k, v) in enumerate(images.items()):
         logger.debug('Saving images to {}'.format(image_dir))
         if image_dir is None:
             out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
@@ -61,6 +62,20 @@ def show(samples, prefix=''):
 
         viz.save_images(v.cpu().numpy(), 8, 8, out_file=out_path, labels=None, max_samples=64, image_id=1 + i, caption=k)
 
+    scatters = samples.get('scatters', {})
+    for i, (k, v) in enumerate(scatters.items()):
+        if isinstance(v, tuple):
+            v, l = v
+            l = l.cpu().numpy()
+        else:
+            l = None
+        logger.debug('Saving scatter to {}'.format(image_dir))
+        if image_dir is None:
+            out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
+        else:
+            out_path = None
+
+        viz.save_scatter(v.cpu().numpy(), out_file=out_path, labels=l, image_id=i, title=k)
 
 def setup(optimizer=None, learning_rate=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
           optimizer_options='default'):
@@ -129,11 +144,17 @@ def train_epoch(epoch):
                 update_dict_of_lists(results, **results_)
 
                 if isinstance(losses, dict):
-                    loss = losses[k_]
+                    if k_ in losses:
+                        loss = losses[k_]
+                    else:
+                        loss = None
                 else:
                     loss = losses
-                loss.backward()
-                OPTIMIZERS[k_].step()
+
+                if loss is not None:
+                    loss.backward()
+
+            OPTIMIZERS[k_].step()
 
     results = dict((k, np.mean(v)) for k, v in results.items())
     return results

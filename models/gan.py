@@ -5,31 +5,30 @@
 import logging
 
 import torch
+from torch import autograd
+from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
-from convnets import SimpleConvEncoder as Discriminator
-from conv_decoders import SimpleConvDecoder as Generator
+from resnets import ResEncoder as Discriminator
+from resnets import ResDecoder as Generator
 
 
 logger = logging.getLogger('cortex.models' + __name__)
 
 GLOBALS = {'DIM_X': None, 'DIM_Y': None, 'DIM_C': None, 'DIM_L': None, 'DIM_Z': None}
 
-discriminator_args_ = dict(dim_h=64, batch_norm=True, nonlinearity='LeakyReLU',
-                           f_size=4, stride=2, pad=1, min_dim=4)
-
-generator_args_ = dict(dim_h=64, batch_norm=True, nonlinearity='ReLU',
-                       f_size=4, stride=2, pad=1, n_steps=4)
+discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 
 DEFAULTS = dict(
-    data=dict(batch_size=128, noise_variables=dict(z=('normal', 64))),
+    data=dict(batch_size=64, noise_variables=dict(z=('normal', 64))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
-    model=dict(),
-    procedures=dict(measure='proxy_gan'),
+    model=dict(discriminator_args=discriminator_args_, generator_args=generator_args_),
+    procedures=dict(measure='gan', penalty=1.0, boundary_seek=True),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -82,7 +81,7 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
         b = fake_out ** 2
 
     else:
-        raise NotImplementedError(loss)
+        raise NotImplementedError(measure)
 
     d_loss = torch.mean(f - r)
 
@@ -95,7 +94,8 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
 
     return d_loss, g_loss, r, f, w, b
 
-def gan(nets, inputs, measure=None, boundary_seek=False):
+
+def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
     discriminator = nets['discriminator']
     generator = nets['generator']
     gen_out = generator(inputs['z'], nonlinearity=F.tanh)
@@ -104,24 +104,47 @@ def gan(nets, inputs, measure=None, boundary_seek=False):
     fake_out = discriminator(gen_out)
 
     d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out, boundary_seek=boundary_seek)
+
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], boundary=torch.mean(b).data[0],
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0])
-    samples = dict(generated=0.5*(gen_out.data+1.), real=0.5*(inputs['images'].data+1.))
+    samples = dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (inputs['images'].data + 1.))
+
+    if penalty:
+        real = Variable(inputs['images'].data.cuda(), requires_grad=True)
+        fake = Variable(gen_out.data.cuda(), requires_grad=True)
+        real_out = discriminator(real)
+        fake_out = discriminator(fake)
+
+        g_r = autograd.grad(outputs=real_out, inputs=real, grad_outputs=torch.ones(real_out.size()).cuda(),
+                            create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+        g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
+                            create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+        if measure in ('gan', 'proxy_gan', 'jsd'):
+            g_p = (0.5 * ((1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2).sum(1).sum(1).sum(1)
+                          + F.sigmoid(fake_out) ** 2 * (g_f ** 2).sum(1).sum(1).sum(1)))
+
+        else:
+            g_p = (0.5 * ((g_r ** 2).sum(1).sum(1).sum(1)
+                          + (g_f ** 2).sum(1).sum(1).sum(1)))
+
+        g_p = torch.mean(g_p)
+
+        d_loss += penalty * torch.mean(g_p)
+        results['gradient penalty'] = torch.mean(g_p).data[0]
+
     return dict(generator=g_loss, discriminator=d_loss), results, samples, 'boundary'
 
 
 def build_model(loss=None, discriminator_args=None, generator_args=None):
     discriminator_args = discriminator_args or {}
     generator_args = generator_args or {}
-    d_args = discriminator_args_
-    d_args.update(**discriminator_args)
-    g_args = generator_args_
-    g_args.update(**generator_args)
 
     shape = (DIM_X, DIM_Y, DIM_C)
 
-    discriminator = Discriminator(shape, dim_out=1, **d_args)
-    generator = Generator(shape, dim_in=64, **g_args)
+    discriminator = Discriminator(shape, dim_out=1, **discriminator_args)
+    generator = Generator(shape, dim_in=64, **generator_args)
     logger.debug(discriminator)
     logger.debug(generator)
 

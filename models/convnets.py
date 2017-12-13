@@ -105,6 +105,7 @@ class SimpleConvEncoder(nn.Module):
         nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
+
         if nonlinearity:
             if callable(nonlinearity):
                 x = nonlinearity(x, **nonlinearity_args)
