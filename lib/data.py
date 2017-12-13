@@ -79,6 +79,8 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
 
     if hasattr(torchvision.datasets, source):
         dataset = getattr(torchvision.datasets, source)
+    else:
+        raise NotImplementedError(source)
 
     transform_ = []
     if image_size:

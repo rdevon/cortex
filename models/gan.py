@@ -1,4 +1,4 @@
-'''Simple classifier model
+'''Simple GAN model
 
 '''
 
@@ -95,6 +95,32 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
     return d_loss, g_loss, r, f, w, b
 
 
+def apply_penalty(inputs, discriminator, generator, measure):
+    gen_out = generator(inputs['z'], nonlinearity=F.tanh)
+
+    real = Variable(inputs['images'].data.cuda(), requires_grad=True)
+    fake = Variable(gen_out.data.cuda(), requires_grad=True)
+    real_out = discriminator(real)
+    fake_out = discriminator(fake)
+
+    g_r = autograd.grad(outputs=real_out, inputs=real, grad_outputs=torch.ones(real_out.size()).cuda(),
+                        create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
+                        create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    if measure in ('gan', 'proxy_gan', 'jsd'):
+        g_p = (0.5 * ((1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2).sum(1).sum(1).sum(1)
+                      + F.sigmoid(fake_out) ** 2 * (g_f ** 2).sum(1).sum(1).sum(1)))
+
+    else:
+        g_p = (0.5 * ((g_r ** 2).sum(1).sum(1).sum(1)
+                      + (g_f ** 2).sum(1).sum(1).sum(1)))
+
+    g_p = torch.mean(g_p)
+    return g_p
+
+
 def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
     discriminator = nets['discriminator']
     generator = nets['generator']
@@ -110,29 +136,10 @@ def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
     samples = dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (inputs['images'].data + 1.))
 
     if penalty:
-        real = Variable(inputs['images'].data.cuda(), requires_grad=True)
-        fake = Variable(gen_out.data.cuda(), requires_grad=True)
-        real_out = discriminator(real)
-        fake_out = discriminator(fake)
+        p_term = apply_penalty(inputs, discriminator, generator, measure)
 
-        g_r = autograd.grad(outputs=real_out, inputs=real, grad_outputs=torch.ones(real_out.size()).cuda(),
-                            create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-        g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
-                            create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-        if measure in ('gan', 'proxy_gan', 'jsd'):
-            g_p = (0.5 * ((1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2).sum(1).sum(1).sum(1)
-                          + F.sigmoid(fake_out) ** 2 * (g_f ** 2).sum(1).sum(1).sum(1)))
-
-        else:
-            g_p = (0.5 * ((g_r ** 2).sum(1).sum(1).sum(1)
-                          + (g_f ** 2).sum(1).sum(1).sum(1)))
-
-        g_p = torch.mean(g_p)
-
-        d_loss += penalty * torch.mean(g_p)
-        results['gradient penalty'] = torch.mean(g_p).data[0]
+        d_loss += penalty * torch.mean(p_term)
+        results['gradient penalty'] = torch.mean(p_term).data[0]
 
     return dict(generator=g_loss, discriminator=d_loss), results, samples, 'boundary'
 
