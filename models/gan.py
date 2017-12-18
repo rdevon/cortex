@@ -3,6 +3,7 @@
 '''
 
 import logging
+import math
 
 import torch
 from torch import autograd
@@ -49,6 +50,8 @@ DEFAULTS = dict(
 
 
 def f_divergence(measure, real_out, fake_out, boundary_seek=False):
+    log_2 = math.log(2.)
+
     if measure in ('gan', 'proxy_gan'):
         r = -F.softplus(-real_out)
         f = F.softplus(-fake_out) + fake_out
@@ -56,8 +59,8 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
         b = fake_out ** 2
 
     elif measure == 'jsd':
-        r = torch.log(2.) - F.softplus(-real_out)
-        f = F.softplus(-fake_out) + fake_out + torch.log(2.)
+        r = log_2 - F.softplus(-real_out)
+        f = F.softplus(-fake_out) + fake_out + log_2
         w = torch.exp(fake_out)
         b = fake_out ** 2
 
@@ -149,7 +152,7 @@ def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], boundary=torch.mean(b).data[0],
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0])
     samples = dict(images=dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (inputs['images'].data + 1.)))
-    
+
     if penalty:
         p_term = apply_penalty(inputs, discriminator, generator, measure)
 
