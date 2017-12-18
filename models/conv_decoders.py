@@ -1,7 +1,13 @@
+'''Convolutional decoders
+
+'''
+
 import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
+
+from modules import View
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -10,14 +16,6 @@ logger = logging.getLogger('cortex.models' + __name__)
 def infer_conv_size(w, k, s, p):
     x = (w - k + 2 * p) // s + 1
     return x
-
-
-class View(nn.Module):
-    def __init__(self, *shape):
-        super(View, self).__init__()
-        self.shape = shape
-    def forward(self, input):
-        return input.view(*self.shape)
 
 
 class SimpleConvDecoder(nn.Module):
@@ -63,6 +61,7 @@ class SimpleConvDecoder(nn.Module):
         models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
 
         for i in xrange(n_steps):
+
             dim_in = dim_out
 
             if i == n_steps - 1:
@@ -71,7 +70,6 @@ class SimpleConvDecoder(nn.Module):
                 dim_out = dim_in // 2
             name = 'tconv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, nn.ConvTranspose2d(dim_in, dim_out, f_size, stride, pad, bias=False))
-
             if i < n_steps - 1:
                 if dropout:
                     models.add_module(name + '_do', nn.Dropout2d(p=dropout))
@@ -79,7 +77,6 @@ class SimpleConvDecoder(nn.Module):
                     models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
 
                 models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
-            i += 1
 
         self.models = models
 

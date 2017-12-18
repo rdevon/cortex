@@ -15,7 +15,7 @@ import torch.backends.cudnn as cudnn
 
 from data import make_iterator
 import exp
-from utils import update_dict_of_lists
+from utils import bad_values, update_dict_of_lists
 import viz
 
 
@@ -141,6 +141,11 @@ def train_epoch(epoch):
                 else:
                     args = exp.ARGS['procedures'][k]
                 losses, results_, _, _ = v(exp.MODELS, inputs, **args)
+                bads = bad_values(results_)
+                if bads:
+                    logger.error('Bad values found (quitting): {} \n All:{}'.format(
+                        bads, results_))
+                    exit(0)
                 update_dict_of_lists(results, **results_)
 
                 if isinstance(losses, dict):

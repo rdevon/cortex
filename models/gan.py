@@ -10,25 +10,36 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
-from resnets import ResEncoder as Discriminator
-from resnets import ResDecoder as Generator
+#from resnets import ResEncoder as Discriminator
+#from resnets import ResDecoder as Generator
 
+from conv_decoders import SimpleConvDecoder as Generator
+from convnets import SimpleConvEncoder as Discriminator
 
 logger = logging.getLogger('cortex.models' + __name__)
 
 GLOBALS = {'DIM_X': None, 'DIM_Y': None, 'DIM_C': None, 'DIM_L': None, 'DIM_Z': None}
 
-discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+#discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+#generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+
+discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
+                           nonlinearity='LeakyReLU')
+generator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=1, n_steps=2)
+
+#discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
+#generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
-    data=dict(batch_size=64, noise_variables=dict(z=('normal', 64))),
+    data=dict(batch_size=64,
+              noise_variables=dict(z=('normal', 64)),
+              test_batch_size=64),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
     model=dict(discriminator_args=discriminator_args_, generator_args=generator_args_),
-    procedures=dict(measure='gan', penalty=1.0, boundary_seek=True),
+    procedures=dict(measure='proxy_gan', penalty=False, boundary_seek=False),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -82,8 +93,7 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
 
     else:
         raise NotImplementedError(measure)
-
-    d_loss = torch.mean(f - r)
+    d_loss = f.mean() - r.mean()
 
     if boundary_seek:
         g_loss = torch.mean(b)
@@ -96,9 +106,12 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
 
 
 def apply_penalty(inputs, discriminator, generator, measure):
-    gen_out = generator(inputs['z'], nonlinearity=F.tanh)
+    Z = inputs['z']
+    X = inputs['images']
 
-    real = Variable(inputs['images'].data.cuda(), requires_grad=True)
+    gen_out = generator(Z, nonlinearity=F.tanh)
+
+    real = Variable(X.data.cuda(), requires_grad=True)
     fake = Variable(gen_out.data.cuda(), requires_grad=True)
     real_out = discriminator(real)
     fake_out = discriminator(fake)
@@ -114,27 +127,29 @@ def apply_penalty(inputs, discriminator, generator, measure):
                       + F.sigmoid(fake_out) ** 2 * (g_f ** 2).sum(1).sum(1).sum(1)))
 
     else:
-        g_p = (0.5 * ((g_r ** 2).sum(1).sum(1).sum(1)
-                      + (g_f ** 2).sum(1).sum(1).sum(1)))
+        g_p = (0.5 * ((g_r ** 2).sum(1).sum(1).sum(1) + (g_f ** 2).sum(1).sum(1).sum(1)))
 
     g_p = torch.mean(g_p)
     return g_p
 
 
 def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
+    Z = inputs['z']
+    X = inputs['images']
+
     discriminator = nets['discriminator']
     generator = nets['generator']
-    gen_out = generator(inputs['z'], nonlinearity=F.tanh)
+    gen_out = generator(Z, nonlinearity=F.tanh)
 
-    real_out = discriminator(inputs['images'])
+    real_out = discriminator(X)
     fake_out = discriminator(gen_out)
 
     d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out, boundary_seek=boundary_seek)
 
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], boundary=torch.mean(b).data[0],
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0])
-    samples = dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (inputs['images'].data + 1.))
-
+    samples = dict(images=dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (inputs['images'].data + 1.)))
+    
     if penalty:
         p_term = apply_penalty(inputs, discriminator, generator, measure)
 

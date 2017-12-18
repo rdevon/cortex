@@ -7,6 +7,8 @@ import logging
 import torch.nn as nn
 import torch.nn.functional as F
 
+from modules import View
+
 
 logger = logging.getLogger('cortex.models' + __name__)
 
@@ -36,8 +38,8 @@ class SimpleNet(nn.Module):
 
 
 class SimpleConvEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, batch_norm=True, dropout=False, nonlinearity='ReLU',
-                 f_size=4, stride=2, pad=1, min_dim=4):
+    def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True,
+                 dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4):
         super(SimpleConvEncoder, self).__init__()
         models = nn.Sequential()
 
@@ -54,19 +56,25 @@ class SimpleConvEncoder(nn.Module):
 
         logger.debug('Input shape: {}'.format(shape))
         dim_x, dim_y, dim_in = shape
-        dim_out = dim_h
-
+        #dim_out = dim_h
+        '''
         name = 'conv_({}/{})_0'.format(dim_in, dim_out)
         models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
         models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
         if dropout:
             models.add_module(name + '_do', nn.Dropout2d(p=dropout))
         dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
+        '''
 
         i = 0
         while dim_x > min_dim and dim_y > min_dim:
-            dim_in = dim_out
-            dim_out = dim_in * 2
+            #print dim_in, dim_out, dim_x, dim_y
+            logger.debug('Input size: {},{}'.format(dim_x, dim_y))
+            if i == 0:
+                dim_out = dim_h
+            else:
+                dim_in = dim_out
+                dim_out = dim_in * 2
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
             if dropout:
@@ -75,11 +83,20 @@ class SimpleConvEncoder(nn.Module):
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
             models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
+            logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
+        #assert False
+        dim_out = dim_x * dim_y * dim_out
+        models.add_module('final_reshape', View(-1, dim_out))
+        if final_layer:
+            name = 'linear_({}/{})_{}'.format(dim_out, final_layer, 'final')
+            models.add_module(name, nn.Linear(dim_out, final_layer))
+            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            dim_out = final_layer
 
         if dim_out_:
-            name = 'conv_({}/{})_{}'.format(dim_out, dim_out_, 'final')
-            models.add_module(name, nn.Conv2d(dim_out, dim_out_, f_size, 1, 0, bias=False))
+            name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
+            models.add_module(name, nn.Linear(dim_out, dim_out_))
 
         self.models = models
 

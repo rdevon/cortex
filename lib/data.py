@@ -93,7 +93,7 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
 
     if normalize:
         if source == 'MNIST':
-            transform_.append(transforms.Normalize((0.1307,), (0.3081,)))
+            transform_.append(transforms.Normalize((0.5,), (0.5,)))
         else:
             #norm = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
             transform_.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))

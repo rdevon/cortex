@@ -6,6 +6,8 @@ import argparse
 import logging
 import os
 
+import numpy as np
+
 
 logger = logging.getLogger('cortex.util')
 
@@ -78,3 +80,14 @@ def update_dict_of_lists(d_to_update, **d):
             d_to_update[k].append(v)
         else:
             d_to_update[k] = [v]
+
+
+def bad_values(d):
+    failed = {}
+    for k, v in d.items():
+        if np.isnan(v) or np.isinf(v):
+            failed[k] = v
+
+    if len(failed) == 0:
+        return False
+    return failed
