@@ -37,6 +37,56 @@ class SimpleNet(nn.Module):
         return F.log_softmax(x)
 
 
+class MNISTConv(nn.Module):
+    def __init__(self, shape, dim_out=1, dim_h=64, batch_norm=True, nonlinearity='ReLU'):
+        super(MNISTConv, self).__init__()
+        models = nn.Sequential()
+
+        if hasattr(nn, nonlinearity):
+            nonlin = getattr(nn, nonlinearity)
+            if nonlinearity == 'LeakyReLU':
+                nonlinearity = nonlin(0.02, inplace=True)
+            else:
+                nonlinearity = nonlin()
+        else:
+            raise ValueError(nonlinearity)
+
+        models.add_module('conv1', nn.Conv2d(1, dim_h, 5, 2, 2))
+        models.add_module('conv1_nonlin', nonlinearity)
+        if batch_norm:
+            models.add_module('conv1_bn', nn.BatchNorm2d(dim_h))
+
+        models.add_module('conv2', nn.Conv2d(dim_h, 2 * dim_h, 5, 2, 2))
+        models.add_module('conv2_nonlin', nonlinearity)
+        if batch_norm:
+            models.add_module('conv1_bn', nn.BatchNorm2d(2 * dim_h))
+
+        models.add_module('view', View(-1, 2 * dim_h * 7 * 7))
+
+        models.add_module('dense1', nn.Linear(2 * dim_h * 7 * 7, 1024))
+        models.add_module('dense1_nonlin', nonlinearity)
+        if batch_norm:
+            models.add_module('dense1_bn', nn.BatchNorm1d(1024))
+
+        models.add_module('dense2', nn.Linear(1024, dim_out))
+
+        self.models = models
+
+    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
+        nonlinearity_args = nonlinearity_args or {}
+        x = self.models(x)
+        x = x.view(x.size()[0], x.size()[1])
+
+        if nonlinearity:
+            if callable(nonlinearity):
+                x = nonlinearity(x, **nonlinearity_args)
+            elif hasattr(F, nonlinearity):
+                x = getattr(F, nonlinearity)(x, **nonlinearity_args)
+            else:
+                raise ValueError()
+        return x
+
+
 class SimpleConvEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True,
                  dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4):
@@ -48,7 +98,7 @@ class SimpleConvEncoder(nn.Module):
         if hasattr(nn, nonlinearity):
             nonlin = getattr(nn, nonlinearity)
             if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlin(0.2, inplace=True)
+                nonlinearity = nonlin(0.02, inplace=True)
             else:
                 nonlinearity = nonlin()
         else:
@@ -85,7 +135,7 @@ class SimpleConvEncoder(nn.Module):
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
-        #assert False
+
         dim_out = dim_x * dim_y * dim_out
         models.add_module('final_reshape', View(-1, dim_out))
         if final_layer:

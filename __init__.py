@@ -71,13 +71,16 @@ def setup_reload(exp_file):
     reload_experiment(exp_file)
 
 
-def reload_experiment(exp_file):
+def reload_experiment(exp_file, reloads=None):
     d = torch.load(exp_file)
     exp.INFO.update(**d['info'])
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     exp.ARGS.update(**d['args'])
-    exp.MODEL_PARAMS_RELOAD = d['models']
+
+    reloads = reloads or d['models'].keys()
+    for k in reloads:
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
     out_dirs = d['out_dirs']
     out_path = path.dirname(path.dirname(exp_file))
     out_dirs = dict((k, path.join(out_path, path.basename(v))) for k, v in out_dirs.items())
@@ -107,7 +110,7 @@ def setup(use_cuda):
             raise ValueError('Cannot find {}'.format(args.reload))
         logger.info('Reloading from {}'.format(args.reload))
         copyfile(args.reload, args.reload + '.bak')
-        reload_experiment(args.reload)
+        reload_experiment(args.reload, args.reloads)
 
     else:
         kwargs = {}

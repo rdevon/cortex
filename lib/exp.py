@@ -20,7 +20,7 @@ SUMMARY = {'train': {}, 'test': {}}
 OUT_DIRS = {}
 ARGS = {}
 INFO = {'name': NAME, 'epoch': 0}
-MODEL_PARAMS_RELOAD = None
+MODEL_PARAMS_RELOAD = {}
 
 # Models criteria and results
 MODELS = {}
@@ -33,7 +33,8 @@ def file_string(prefix=''):
     return '{}({})'.format(NAME, prefix)
 
 
-def configure_experiment(data=None, model=None, optimizer=None, train=None, procedures=None, config_file=None):
+def configure_experiment(data=None, model=None, optimizer=None, train=None, procedures=None, test_procedures=None,
+                         config_file=None):
     '''Loads arguments into a yaml file.
 
     '''
@@ -46,10 +47,11 @@ def configure_experiment(data=None, model=None, optimizer=None, train=None, proc
         if train is not None: train.update(**d.get('train', {}))
         if data is not None: data.update(**d.get('data', {}))
         if procedures is not None: procedures.update(**d.get('procedures', {}))
+        if test_procedures is not None: procedures.update(**d.get('test_procedures', procedures))
 
     logger.info('Training model with: \n\tdata args {}, \n\toptimizer args {} '
-                '\n\tmodel args {} \n\ttrain args {} \n\tprocedure args {}'.format(
-        data, optimizer, model, train, procedures))
+                '\n\tmodel args {} \n\ttrain args {} \n\tprocedure args {} \n\ttest procedure args {}'.format(
+        data, optimizer, model, train, procedures, test_procedures))
 
 
 def save(prefix=''):

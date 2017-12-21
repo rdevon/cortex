@@ -22,7 +22,7 @@ import viz
 logger = logging.getLogger('cortex.util')
 
 OPTIMIZERS = {}
-
+UPDATES = {}
 
 optimizer_defaults = dict(
     SGD=dict(momentum=0.9, weight_decay=5e-4),
@@ -77,11 +77,16 @@ def show(samples, prefix=''):
 
         viz.save_scatter(v.cpu().numpy(), out_file=out_path, labels=l, image_id=i, title=k)
 
-def setup(optimizer=None, learning_rate=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
+def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
           optimizer_options='default'):
+
+    global UPDATES
 
     if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
         optimizer_options = optimizer_defaults[optimizer]
+
+    updates_per_model = updates_per_model or dict((k, 1) for k in exp.MODELS.keys())
+    UPDATES.update(**updates_per_model)
 
     if callable(optimizer):
         op = optimizer
@@ -131,35 +136,40 @@ def train_epoch(epoch):
     train_iter = make_iterator(string='Training (epoch {}): '.format(epoch))
     results = {}
 
-    for inputs in train_iter:
-        for i, k_ in enumerate(exp.MODELS.keys()):
-            OPTIMIZERS[k_].zero_grad()
+    try:
+        while True:
+            for i, k_ in enumerate(exp.MODELS.keys()):
+                for _ in xrange(UPDATES[k_]):
+                    inputs = train_iter.next()
+                    OPTIMIZERS[k_].zero_grad()
 
-            for k, v in exp.PROCEDURES.items():
-                if k == 'main' or not isinstance(exp.ARGS['procedures'], dict):
-                    args = exp.ARGS['procedures']
-                else:
-                    args = exp.ARGS['procedures'][k]
-                losses, results_, _, _ = v(exp.MODELS, inputs, **args)
-                bads = bad_values(results_)
-                if bads:
-                    logger.error('Bad values found (quitting): {} \n All:{}'.format(
-                        bads, results_))
-                    exit(0)
-                update_dict_of_lists(results, **results_)
+                    for k, v in exp.PROCEDURES.items():
+                        if k == 'main' or not isinstance(exp.ARGS['procedures'], dict):
+                            args = exp.ARGS['procedures']
+                        else:
+                            args = exp.ARGS['procedures'][k]
+                        losses, results_, _, _ = v(exp.MODELS, inputs, **args)
+                        bads = bad_values(results_)
+                        if bads:
+                            logger.error('Bad values found (quitting): {} \n All:{}'.format(
+                                bads, results_))
+                            exit(0)
+                        update_dict_of_lists(results, **results_)
 
-                if isinstance(losses, dict):
-                    if k_ in losses:
-                        loss = losses[k_]
-                    else:
-                        loss = None
-                else:
-                    loss = losses
+                        if isinstance(losses, dict):
+                            if k_ in losses:
+                                loss = losses[k_]
+                            else:
+                                loss = None
+                        else:
+                            loss = losses
 
-                if loss is not None:
-                    loss.backward()
+                        if loss is not None:
+                            loss.backward()
 
-            OPTIMIZERS[k_].step()
+                OPTIMIZERS[k_].step()
+    except StopIteration:
+        pass
 
     results = dict((k, np.mean(v)) for k, v in results.items())
     return results
@@ -176,13 +186,16 @@ def test_epoch(epoch, best_condition=0):
     test_iter = make_iterator(test=True, string='Evaluating (epoch {}): '.format(epoch))
     results = {}
     samples_ = None
+
+    procedures = exp.ARGS['test_procedures']
+
     for inputs in test_iter:
         samples__ = {}
         for k, v in exp.PROCEDURES.items():
-            if k == 'main' or not isinstance(exp.ARGS['procedures'], dict):
-                args = exp.ARGS['procedures']
+            if k == 'main' or not isinstance(procedures, dict):
+                args = procedures
             else:
-                args = exp.ARGS['procedures'][k]
+                args = procedures[k]
             loss, results_, samples, condition = v(exp.MODELS, inputs, **args)
             if not samples_ and samples:
                 samples__.update(**samples)

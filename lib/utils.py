@@ -51,6 +51,7 @@ def make_argument_parser():
                         )
     parser.add_argument('-r', '--reload', type=str, default=None,
                         help=('Path to model to reload.'))
+    parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
     parser.add_argument('-a', '--args', default=None, type=str,
                         help=('Arguments for the main file'))
     parser.add_argument('-S', '--source', type=str, default=None,
