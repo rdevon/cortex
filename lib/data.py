@@ -84,7 +84,7 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
 
     transform_ = []
     if image_size:
-        transform_.append(transforms.Scale(image_size))
+        transform_.append(transforms.Resize(image_size))
 
     if image_crop:
         transform_.append(transforms.CenterCrop(image_crop))
@@ -119,11 +119,9 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
 
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=n_workers)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch_size, shuffle=True, num_workers=n_workers)
-    if len(train_set.train_data.shape) == 4:
-        n_train, dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)
-    else:
-        n_train, dim_x, dim_y = tuple(train_set.train_data.shape)
-        dim_c = 1
+
+    n_train = len(train_set)
+    dim_c, dim_x, dim_y = train_set[0][0].size()
 
     dim_l = len(np.unique(train_set.train_labels))
     n_test = test_set.test_data.shape[0]
