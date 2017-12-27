@@ -87,6 +87,30 @@ def reload_experiment(exp_file, reloads=None):
     exp.OUT_DIRS.update(**out_dirs)
 
 
+def update_args(args, **kwargs):
+    if args is not None:
+        a = args.split(',')
+        for a_ in a:
+            k, v = a_.split('=')
+
+            try:
+                v = ast.literal_eval(v)
+            except ValueError:
+                pass
+
+            k_split = k.split('.')
+            kw = kwargs
+            for i, k_ in enumerate(k_split):
+                print k_
+                if i < len(k_split) - 1:
+                    if k_ in kw:
+                        kw = kw[k_]
+                    else:
+                        raise ValueError('Unknown arg {}'.format(k))
+                else:
+                    kw[k_] = v
+
+
 def setup(use_cuda):
     parser = make_argument_parser()
     args = parser.parse_args()
@@ -112,6 +136,7 @@ def setup(use_cuda):
         copyfile(args.reload, args.reload + '.bak')
         reload_experiment(args.reload, args.reloads)
 
+        update_args(args.args, **exp.ARGS)
     else:
         kwargs = {}
         for k, v in arch.DEFAULTS.items():
@@ -120,19 +145,7 @@ def setup(use_cuda):
 
         kwargs['data']['source'] = args.source
         kwargs['data']['meta'] = args.meta
-        if args.args is not None:
-            a = args.args.split(',')
-            for a_ in a:
-                k, v = a_.split('=')
-                k, k_ = k.split('.')
-                try:
-                    v = ast.literal_eval(v)
-                except ValueError:
-                    pass
-                if k in kwargs:
-                    kwargs[k][k_] = v
-                else:
-                    raise ValueError('Unknown arg {}'.format(k))
+        update_args(args.args, **kwargs)
 
         name = args.name
         if name is None:
