@@ -152,7 +152,8 @@ def apply_penalty(inputs, discriminator, real, fake, measure, penalty_type='grad
         if 'e' not in inputs:
             raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
         epsilon = inputs['e'].view(-1, 1, 1, 1)
-        interpolations = Variable(((1. - epsilon) * fake + epsilon * real).data.cuda(), requires_grad=True)
+        interpolations = Variable(((1. - epsilon) * fake + epsilon * real[:fake.size()[0]]).data.cuda(),
+                                  requires_grad=True)
 
         mid_out = discriminator(interpolations)
         g = autograd.grad(outputs=mid_out, inputs=interpolations, grad_outputs=torch.ones(mid_out.size()).cuda(),
