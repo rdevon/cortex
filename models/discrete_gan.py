@@ -176,10 +176,11 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
         results.update(alpha=alpha.mean().data[0], log_alpha = log_alpha.mean().data[0],
                        beta=beta.mean().data[0], log_beta = log_beta.mean().data[0])
     else:
-        S_th = (g_output >= 0.5).float()
+        S_th = Variable((g_output >= 0.5).float().data.cuda(), volatile=True)
+        fake_out_sam = Variable(fake_out[0].data.cuda(), volatile=True)
         fake_out_th = discriminator(S_th)
         dist_th = -f_divergence(measure, real_out, fake_out_th)[0]
-        dist_sam = -f_divergence(measure, real_out, fake_out[0])[0]
+        dist_sam = -f_divergence(measure, real_out, fake_out_sam)[0]
         results.update(distance_th=dist_th.data[0], distance_sam=dist_sam.data[0])
 
     samples = dict(images=dict(generated=gen_out.data,
