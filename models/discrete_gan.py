@@ -32,8 +32,8 @@ generator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=1, n_s
 #                           nonlinearity='LeakyReLU')
 #generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=2, stride=1, n_steps=2)
 
-discriminator_args_ = dict(dim_h=128, batch_norm=False)
-generator_args_ = dict(dim_h=128, batch_norm=True)
+discriminator_args_ = dict(dim_h=64, batch_norm=False)
+generator_args_ = dict(dim_h=64, batch_norm=True)
 
 DEFAULTS = dict(
     data=dict(batch_size=64,
@@ -42,15 +42,15 @@ DEFAULTS = dict(
                                    r_t=('uniform', 100 * 28 * 28),
                                    u=('uniform', 28 * 28),
                                    e=('uniform', 1)),
-              test_batch_size=1000),
+              test_batch_size=100),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-3,
-        updates_per_model=dict(discriminator=1, generator=1)
+        updates_per_model=dict(discriminator=5, generator=1)
     ),
     model=dict(discriminator_args=discriminator_args_, generator_args=generator_args_),
-    procedures=dict(measure='gan', penalty=5.0, n_samples=10, penalty_type='gradient_norm'),
-    test_procedures=dict(measure='gan', penalty=5.0, n_samples=100, penalty_type='gradient_norm'),
+    procedures=dict(measure='gan', penalty=1.0, n_samples=10, penalty_type='gradient_norm'),
+    test_procedures=dict(n_samples=100),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -69,22 +69,33 @@ def log_sum_exp(x, axis=None):
     return y
 
 
-def discrete_gan(nets, inputs, measure=None, boundary_seek=False, penalty=None,
-                 n_samples=10, reinforce=False, gamma=0.95, penalty_type='gradient_norm'):
+def setup(data=None, optimizer=None, model=None, procedures=None, test_procedures=None, train=None):
+    data['noise_variables']['r'] = ('uniform', procedures['n_samples'] * 28 * 28 * 1)
+    data['noise_variables']['r_t'] = ('uniform', test_procedures['n_samples'] * 28 * 28 * 1)
+
+
+def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinforce=False, gamma=0.95,
+                 penalty_type='gradient_norm', use_beta=False):
     global log_Z
     log_M = math.log(n_samples)
     discriminator = nets['discriminator']
     generator = nets['generator']
+
     M = n_samples
     X = (inputs['images'] >= 0).float()
     Z = inputs['z']
     R = inputs['r']
     U = inputs['u']
     B = inputs['z'].size()[0]
+    log_B = math.log(B)
+
+    if R.size()[1] != DIM_C * n_samples * DIM_X * DIM_Y:
+        R = inputs['r_t']
+    assert R.size() == (B, DIM_C * n_samples * DIM_X * DIM_Y), (R.size(), (B, DIM_C * n_samples * DIM_X * DIM_Y))
+
     try:
         R = R.view(M, -1, DIM_C * DIM_X * DIM_Y)
     except:
-        R = inputs['r_t']
         R = R.view(M, -1, DIM_C * DIM_X * DIM_Y)
     U.requires_grad = False
 
@@ -93,6 +104,7 @@ def discrete_gan(nets, inputs, measure=None, boundary_seek=False, penalty=None,
 
     g_output = F.sigmoid(logit)
     g_output_ = g_output.view(-1, DIM_C * DIM_X * DIM_Y)
+
     S = (R <= g_output_).float()
     S = S.view(M, -1, DIM_C, DIM_X, DIM_Y)
     S_ = Variable(S.data.cuda(), volatile=True)
@@ -109,22 +121,25 @@ def discrete_gan(nets, inputs, measure=None, boundary_seek=False, penalty=None,
 
     if measure == 'w':
         fake_out_sm = discriminator(g_output)
-        d_loss, g_loss, r, f, w, b = f_divergence(
-            measure, real_out, fake_out_sm,
-            boundary_seek=boundary_seek)
+        d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out_sm)
     else:
-        d_loss, _, r, f, w, b = f_divergence(
-            measure, real_out, fake_out.view(M, B, -1),
-            boundary_seek=boundary_seek)
-    #w = w.detach()
-    #w.requires_grad = False
-    #print torch.log(w).mean().data[0], fake_out.mean().data[0], fake_out_.mean().data[0]
+        d_loss, _, r, f, w, b = f_divergence(measure, real_out, fake_out.view(M, B, -1))
 
     if measure in ('gan', 'jsd', 'rkl', 'kl', 'sh', 'proxy_gan', 'dv'):
         log_w = Variable(fake_out_.data.cuda(), requires_grad=False).view(M, B)
-        log_Z_est = log_sum_exp(log_w, axis=0)
-        log_w_tilde = log_w - log_Z_est
+        log_beta = log_sum_exp(log_w.view(M * B, -1) - log_M - log_B, axis=0)
+        log_alpha = log_sum_exp(log_w - log_M, axis=0)
+
+        if use_beta:
+            log_Z_est = log_beta
+            log_w_tilde = log_w - log_Z_est - log_M - log_B
+        else:
+            log_Z_est = log_alpha
+            log_w_tilde = log_w - log_Z_est - log_M
         w_tilde = torch.exp(log_w_tilde)
+
+        alpha = torch.exp(log_alpha)
+        beta = torch.exp(log_beta)
 
     elif measure == 'xs':
         w = (fake_out / 2. + 1.).view(M, B)
@@ -139,9 +154,6 @@ def discrete_gan(nets, inputs, measure=None, boundary_seek=False, penalty=None,
     else:
         raise NotImplementedError(measure)
 
-    log_beta = log_Z_est - log_M
-    beta = torch.exp(log_beta)
-
     if measure != 'w':
         if reinforce:
             r = (log_w - log_Z)
@@ -150,13 +162,25 @@ def discrete_gan(nets, inputs, measure=None, boundary_seek=False, penalty=None,
         else:
             w_tilde = Variable(w_tilde.data.cuda(), requires_grad=False)
             assert not w_tilde.requires_grad
-            g_loss = -(w_tilde * log_g).sum(0).mean()
+            if use_beta:
+                g_loss = -((w_tilde * log_g).view(M * B)).sum(0).mean()
+            else:
+                g_loss = -(w_tilde * log_g).sum(0).mean()
 
     results = dict(g_loss=g_loss.data[0], distance=-d_loss.data[0], boundary=torch.mean(b).data[0],
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0],
                    gen_out=g_output.mean().data[0], w_tilde=w_tilde.mean().data[0],
-                   real_out=real_out.mean().data[0], fake_out=fake_out.mean().data[0],
-                   beta=beta.mean().data[0], log_beta=log_beta.mean().data[0])
+                   real_out=real_out.mean().data[0], fake_out=fake_out.mean().data[0])
+
+    if measure != 'w':
+        results.update(alpha=alpha.mean().data[0], log_alpha = log_alpha.mean().data[0],
+                       beta=beta.mean().data[0], log_beta = log_beta.mean().data[0])
+    else:
+        S_th = (g_output >= 0.5).float()
+        fake_out_th = discriminator(S_th)
+        dist_th = -f_divergence(measure, real_out, fake_out_th)[0]
+        dist_sam = -f_divergence(measure, real_out, fake_out[0])[0]
+        results.update(distance_th=dist_th.data[0], distance_sam=dist_sam.data[0])
 
     samples = dict(images=dict(generated=gen_out.data,
                                prob=g_output.data,
@@ -181,7 +205,6 @@ def mmd(nets, inputs, sample_method='threshold'):
     Z = inputs['z']
     R = inputs['r']
     U = inputs['u']
-
 
     logit = generator(Z)
     g_output = F.sigmoid(logit)

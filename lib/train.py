@@ -35,16 +35,24 @@ def plot():
     test_summary = exp.SUMMARY['test']
     for k in train_summary.keys():
         v_tr = np.array(train_summary[k])
-        v_te = np.array(test_summary[k])
-        opts = dict(
-            xlabel='updates',
-            legend=['train', 'test'],
-            ylabel=k,
-            title=k)
+        v_te = np.array(test_summary[k]) if k in test_summary.keys() else None
         if len(v_tr.shape) > 1:
             continue
-        Y = np.column_stack((v_tr, v_te))
-        X = np.column_stack((np.arange(v_tr.shape[0]), np.arange(v_tr.shape[0])))
+        if v_te is not None:
+            opts = dict(
+                xlabel='updates',
+                legend=['train', 'test'],
+                ylabel=k,
+                title=k)
+            Y = np.column_stack((v_tr, v_te))
+            X = np.column_stack((np.arange(v_tr.shape[0]), np.arange(v_tr.shape[0])))
+        else:
+            opts = dict(
+                xlabel='updates',
+                ylabel=k,
+                title=k)
+            Y = v_tr
+            X = np.arange(v_tr.shape[0])
         viz.visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
 
 
@@ -84,7 +92,6 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
 
     if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
         optimizer_options = optimizer_defaults[optimizer]
-
     updates_per_model = updates_per_model or dict((k, 1) for k in exp.MODELS.keys())
     UPDATES.update(**updates_per_model)
 
@@ -144,6 +151,7 @@ def train_epoch(epoch):
                     OPTIMIZERS[k_].zero_grad()
 
                     for k, v in exp.PROCEDURES.items():
+                        start_time = time.time()
                         if k == 'main' or not isinstance(exp.ARGS['procedures'], dict):
                             args = exp.ARGS['procedures']
                         else:
@@ -154,7 +162,6 @@ def train_epoch(epoch):
                             logger.error('Bad values found (quitting): {} \n All:{}'.format(
                                 bads, results_))
                             exit(0)
-                        update_dict_of_lists(results, **results_)
 
                         if isinstance(losses, dict):
                             if k_ in losses:
@@ -166,6 +173,9 @@ def train_epoch(epoch):
 
                         if loss is not None:
                             loss.backward()
+                        end_time = time.time()
+                        results_['{}_{}_time'.format(k_, k)] = end_time - start_time
+                        update_dict_of_lists(results, **results_)
 
                 OPTIMIZERS[k_].step()
     except StopIteration:
@@ -221,7 +231,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             test_results_, samples_ = test_epoch(epoch)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
 
-            logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k])
+            logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k] if k in test_results_.keys() else 0)
                                     for k in train_results_.keys()]))
             logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))
             plot()

@@ -47,7 +47,11 @@ def configure_experiment(data=None, model=None, optimizer=None, train=None, proc
         if train is not None: train.update(**d.get('train', {}))
         if data is not None: data.update(**d.get('data', {}))
         if procedures is not None: procedures.update(**d.get('procedures', {}))
-        if test_procedures is not None: procedures.update(**d.get('test_procedures', procedures))
+        if test_procedures is not None: test_procedures.update(**d.get('test_procedures', procedures))
+
+    for k, v in procedures.items():
+        if not k in test_procedures.keys():
+            test_procedures[k] = v
 
     logger.info('Training model with: \n\tdata args {}, \n\toptimizer args {} '
                 '\n\tmodel args {} \n\ttrain args {} \n\tprocedure args {} \n\ttest procedure args {}'.format(

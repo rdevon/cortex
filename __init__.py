@@ -101,7 +101,6 @@ def update_args(args, **kwargs):
             k_split = k.split('.')
             kw = kwargs
             for i, k_ in enumerate(k_split):
-                print k_
                 if i < len(k_split) - 1:
                     if k_ in kw:
                         kw = kw[k_]
@@ -135,7 +134,6 @@ def setup(use_cuda):
         logger.info('Reloading from {}'.format(args.reload))
         copyfile(args.reload, args.reload + '.bak')
         reload_experiment(args.reload, args.reloads)
-
         update_args(args.args, **exp.ARGS)
     else:
         kwargs = {}
@@ -156,3 +154,5 @@ def setup(use_cuda):
         exp.ARGS.update(**kwargs)
         setup_out_dir(args.out_path, name, clean=args.clean)
 
+    if hasattr(arch, 'setup'):
+        getattr(arch, 'setup')(**exp.ARGS)
