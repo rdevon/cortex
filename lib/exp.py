@@ -99,8 +99,10 @@ def setup(models, procedures):
 
 
 def reload_models():
+    global MODELS
     for k in MODELS.keys():
         v_ = MODEL_PARAMS_RELOAD.get(k, None)
         if v_:
             logger.info('Reloading model {}'.format(k))
+            logger.debug(v_)
             MODELS[k] = v_

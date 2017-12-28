@@ -5,10 +5,9 @@
 import logging
 import math
 
+import numpy as np
 import torch
-from torch import autograd
 from torch.autograd import Variable
-import torch.nn as nn
 import torch.nn.functional as F
 
 from gan import apply_penalty, f_divergence
@@ -46,10 +45,10 @@ DEFAULTS = dict(
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-3,
-        updates_per_model=dict(discriminator=5, generator=1)
+        updates_per_model=dict(discriminator=1, generator=1)
     ),
     model=dict(discriminator_args=discriminator_args_, generator_args=generator_args_),
-    procedures=dict(measure='gan', penalty=1.0, n_samples=10, penalty_type='gradient_norm'),
+    procedures=dict(measure='gan', penalty=5.0, n_samples=10, penalty_type='gradient_norm'),
     test_procedures=dict(n_samples=100),
     train=dict(
         epochs=200,
@@ -75,7 +74,7 @@ def setup(data=None, optimizer=None, model=None, procedures=None, test_procedure
 
 
 def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinforce=False, gamma=0.95,
-                 penalty_type='gradient_norm', use_beta=False):
+                 penalty_type='gradient_norm', use_beta=False, test_mode=False):
     global log_Z
     log_M = math.log(n_samples)
     discriminator = nets['discriminator']
@@ -175,13 +174,16 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
     if measure != 'w':
         results.update(alpha=alpha.mean().data[0], log_alpha = log_alpha.mean().data[0],
                        beta=beta.mean().data[0], log_beta = log_beta.mean().data[0])
-    else:
+    if test_mode or measure == 'w':
+        fake_out_sm = discriminator(Variable(g_output.data.cuda(), volatile=True))
         S_th = Variable((g_output >= 0.5).float().data.cuda(), volatile=True)
         fake_out_sam = Variable(fake_out[0].data.cuda(), volatile=True)
         fake_out_th = discriminator(S_th)
         dist_th = -f_divergence(measure, real_out, fake_out_th)[0]
         dist_sam = -f_divergence(measure, real_out, fake_out_sam)[0]
-        results.update(distance_th=dist_th.data[0], distance_sam=dist_sam.data[0])
+        dist_sm = -f_divergence(measure, real_out, fake_out_sm)[0]
+        results.update(distance_th=dist_th.data[0], distance_sam=dist_sam.data[0],
+                       distance_sm=dist_sm.data[0])
 
     samples = dict(images=dict(generated=gen_out.data,
                                prob=g_output.data,

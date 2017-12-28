@@ -177,7 +177,7 @@ def train_epoch(epoch):
                         results_['{}_{}_time'.format(k_, k)] = end_time - start_time
                         update_dict_of_lists(results, **results_)
 
-                OPTIMIZERS[k_].step()
+                    OPTIMIZERS[k_].step()
     except StopIteration:
         pass
 
