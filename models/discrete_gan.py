@@ -118,7 +118,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
     fake_out_ = discriminator(S_.view(-1, DIM_C, DIM_X, DIM_Y))
     log_g = -((1. - S) * logit + F.softplus(-logit)).sum(2).sum(2).sum(2)
 
-    if measure == 'w':
+    if measure == 'w' and not test_mode:
         fake_out_sm = discriminator(g_output)
         d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out_sm)
     else:
