@@ -122,7 +122,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
         fake_out_sm = discriminator(g_output)
         d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out_sm)
     else:
-        d_loss, _, r, f, w, b = f_divergence(measure, real_out, fake_out.view(M, B, -1))
+        d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out.view(M, B, -1))
 
     if measure in ('gan', 'jsd', 'rkl', 'kl', 'sh', 'proxy_gan', 'dv'):
         log_w = Variable(fake_out_.data.cuda(), requires_grad=False).view(M, B)
