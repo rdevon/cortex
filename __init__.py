@@ -75,7 +75,7 @@ def reload_experiment(args):
     exp_file = args.reload
     reloads = args.reloads
     name = args.name
-    
+
     d = torch.load(exp_file)
     exp.INFO.update(**d['info'])
     exp.NAME = d['info']['name']
@@ -143,6 +143,7 @@ def setup(use_cuda):
         copyfile(args.reload, args.reload + '.bak')
         reload_experiment(args)
         update_args(args.args, **exp.ARGS)
+
     else:
         kwargs = {}
         for k, v in arch.DEFAULTS.items():
@@ -164,3 +165,5 @@ def setup(use_cuda):
 
     if hasattr(arch, 'setup'):
         getattr(arch, 'setup')(**exp.ARGS)
+
+    exp.ARGS['train']['test_mode'] = args.test
