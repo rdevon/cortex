@@ -179,7 +179,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
     if test_mode or measure == 'w' or use_sm:
         fake_out_sm = discriminator(Variable(g_output.data.cuda(), volatile=True))
         S_th = Variable((g_output >= 0.5).float().data.cuda(), volatile=True)
-        fake_out_sam = Variable(fake_out[0].data.cuda(), volatile=True)
+        fake_out_sam = Variable(fake_out.data.cuda(), volatile=True)
         fake_out_th = discriminator(S_th)
         dist_th = -f_divergence(measure, real_out, fake_out_th)[0]
         dist_sam = -f_divergence(measure, real_out, fake_out_sam)[0]
