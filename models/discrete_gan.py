@@ -170,7 +170,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0],
                    gen_out=g_output.mean().data[0], w_tilde=w_tilde.mean().data[0],
                    real_out=real_out.mean().data[0], fake_out=fake_out.mean().data[0])
-
+    
     if measure != 'w' and not use_sm:
         results.update(alpha=alpha.mean().data[0], log_alpha = log_alpha.mean().data[0],
                        beta=beta.mean().data[0], log_beta = log_beta.mean().data[0])
