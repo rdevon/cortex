@@ -4,7 +4,7 @@
 
 import logging
 
-import classifier, gan, discrete_gan, featnet
+import classifier, gan, discrete_gan, featnet, autoencoder
 
 
 logger = logging.getLogger('cortex.models')
@@ -49,4 +49,4 @@ def build_model(data_dims, **model_args):
     else:
         raise NotImplementedError('Module lacks `build_model` method')
 
-_archs = dict(classifier=classifier, discrete_gan=discrete_gan, gan=gan, featnet=featnet)
+_archs = dict(classifier=classifier, discrete_gan=discrete_gan, gan=gan, featnet=featnet, autoencoder=autoencoder)
