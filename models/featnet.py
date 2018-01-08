@@ -34,7 +34,7 @@ DEFAULTS = dict(
         learning_rate=1e-4,
     ),
     model=dict(discriminator_args=discriminator_args_, generator_args=generator_args_),
-    procedures=dict(penalty=1.0),
+    procedures=dict(penalty=5.0),
     train=dict(
         epochs=200,
         summary_updates=100,
