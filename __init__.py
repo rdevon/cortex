@@ -150,6 +150,9 @@ def setup(use_cuda):
             kwargs[k] = {}
             kwargs[k].update(**v)
 
+        if 'test_procedures' not in kwargs.keys():
+            kwargs['test_procedures'] = {}
+
         kwargs['data']['source'] = args.source
         kwargs['data']['meta'] = args.meta
         update_args(args.args, **kwargs)
