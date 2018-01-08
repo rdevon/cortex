@@ -5,10 +5,9 @@
 import logging
 import math
 
+import numpy as np
 import torch
-from torch import autograd
 from torch.autograd import Variable
-import torch.nn as nn
 import torch.nn.functional as F
 
 from gan import apply_penalty, f_divergence
@@ -46,10 +45,10 @@ DEFAULTS = dict(
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-3,
-        updates_per_model=dict(discriminator=5, generator=1)
+        updates_per_model=dict(discriminator=1, generator=1)
     ),
     model=dict(discriminator_args=discriminator_args_, generator_args=generator_args_),
-    procedures=dict(measure='gan', penalty=1.0, n_samples=10, penalty_type='gradient_norm'),
+    procedures=dict(measure='gan', penalty=5.0, n_samples=10, penalty_type='gradient_norm'),
     test_procedures=dict(n_samples=100),
     train=dict(
         epochs=200,
@@ -75,7 +74,7 @@ def setup(data=None, optimizer=None, model=None, procedures=None, test_procedure
 
 
 def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinforce=False, gamma=0.95,
-                 penalty_type='gradient_norm', use_beta=False):
+                 penalty_type='gradient_norm', use_beta=False, test_mode=False, use_sm=False):
     global log_Z
     log_M = math.log(n_samples)
     discriminator = nets['discriminator']
@@ -119,13 +118,13 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
     fake_out_ = discriminator(S_.view(-1, DIM_C, DIM_X, DIM_Y))
     log_g = -((1. - S) * logit + F.softplus(-logit)).sum(2).sum(2).sum(2)
 
-    if measure == 'w':
+    if (measure == 'w' and not test_mode) or use_sm:
         fake_out_sm = discriminator(g_output)
         d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out_sm)
     else:
-        d_loss, _, r, f, w, b = f_divergence(measure, real_out, fake_out.view(M, B, -1))
+        d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out.view(M, B, -1))
 
-    if measure in ('gan', 'jsd', 'rkl', 'kl', 'sh', 'proxy_gan', 'dv'):
+    if measure in ('gan', 'jsd', 'rkl', 'kl', 'sh', 'proxy_gan', 'dv') and not use_sm:
         log_w = Variable(fake_out_.data.cuda(), requires_grad=False).view(M, B)
         log_beta = log_sum_exp(log_w.view(M * B, -1) - log_M - log_B, axis=0)
         log_alpha = log_sum_exp(log_w - log_M, axis=0)
@@ -146,7 +145,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
         w_tilde = w / w.sum(0)
         log_Z_est = torch.log(torch.mean(w))
 
-    elif measure == 'w':
+    elif measure == 'w' or use_sm:
         log_w = Variable(torch.Tensor([0.]).float()).cuda()
         log_Z_est = Variable(torch.Tensor([0.]).float()).cuda()
         w_tilde = Variable(torch.Tensor([0.]).float()).cuda()
@@ -154,7 +153,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
     else:
         raise NotImplementedError(measure)
 
-    if measure != 'w':
+    if measure != 'w' and not use_sm:
         if reinforce:
             r = (log_w - log_Z)
             assert not r.requires_grad
@@ -171,17 +170,22 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0],
                    gen_out=g_output.mean().data[0], w_tilde=w_tilde.mean().data[0],
                    real_out=real_out.mean().data[0], fake_out=fake_out.mean().data[0])
-
-    if measure != 'w':
+    
+    if measure != 'w' and not use_sm:
         results.update(alpha=alpha.mean().data[0], log_alpha = log_alpha.mean().data[0],
                        beta=beta.mean().data[0], log_beta = log_beta.mean().data[0])
-    else:
+        results.update(ess=(1. / (w_tilde ** 2).sum(0)).mean().data[0])
+
+    if test_mode or measure == 'w' or use_sm:
+        fake_out_sm = discriminator(Variable(g_output.data.cuda(), volatile=True))
         S_th = Variable((g_output >= 0.5).float().data.cuda(), volatile=True)
-        fake_out_sam = Variable(fake_out[0].data.cuda(), volatile=True)
+        fake_out_sam = Variable(fake_out.data.cuda(), volatile=True)
         fake_out_th = discriminator(S_th)
         dist_th = -f_divergence(measure, real_out, fake_out_th)[0]
         dist_sam = -f_divergence(measure, real_out, fake_out_sam)[0]
-        results.update(distance_th=dist_th.data[0], distance_sam=dist_sam.data[0])
+        dist_sm = -f_divergence(measure, real_out, fake_out_sm)[0]
+        results.update(distance_th=dist_th.data[0], distance_sam=dist_sam.data[0],
+                       distance_sm=dist_sm.data[0])
 
     samples = dict(images=dict(generated=gen_out.data,
                                prob=g_output.data,

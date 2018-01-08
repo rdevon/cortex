@@ -72,7 +72,8 @@ def make_iterator(test=False, make_pbar=True, string=''):
 
 
 def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=None,
-          normalize=True, image_size=None, image_crop=None, noise_variables=None):
+          normalize=True, image_size=None, image_crop=None, noise_variables=None,
+          test_on_train=False):
     global LOADERS, DIMS, INPUT_NAMES, NOISE
 
     source_ = source
@@ -84,7 +85,7 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
 
     transform_ = []
     if image_size:
-        transform_.append(transforms.Resize(image_size))
+        transform_.append(transforms.Scale(image_size))
 
     if image_crop:
         transform_.append(transforms.CenterCrop(image_crop))
@@ -117,14 +118,21 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
         train_set = dataset(root=source, train=True, download=True, transform=transform)
         test_set = dataset(root=source, train=False, download=True, transform=transform)
 
+    if test_on_train:
+        test_set = train_set
+        n_test = train_set.train_data.shape[0]
+    else:
+        n_test = test_set.test_data.shape[0]
+
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=n_workers)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch_size, shuffle=True, num_workers=n_workers)
-
-    n_train = len(train_set)
-    dim_c, dim_x, dim_y = train_set[0][0].size()
+    if len(train_set.train_data.shape) == 4:
+        n_train, dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)
+    else:
+        n_train, dim_x, dim_y = tuple(train_set.train_data.shape)
+        dim_c = 1
 
     dim_l = len(np.unique(train_set.train_labels))
-    n_test = test_set.test_data.shape[0]
     DIMS.update(n_train=n_train, n_test=n_test, dim_x=dim_x, dim_y=dim_y, dim_c=dim_c, dim_l=dim_l)
     logger.debug('Data has the following dimensions: {}'.format(DIMS))
 

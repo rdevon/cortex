@@ -177,7 +177,7 @@ def train_epoch(epoch):
                         results_['{}_{}_time'.format(k_, k)] = end_time - start_time
                         update_dict_of_lists(results, **results_)
 
-                OPTIMIZERS[k_].step()
+                    OPTIMIZERS[k_].step()
     except StopIteration:
         pass
 
@@ -185,7 +185,7 @@ def train_epoch(epoch):
     return results
 
 
-def test_epoch(epoch, best_condition=0):
+def test_epoch(epoch, best_condition=0, return_std=False):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -212,14 +212,23 @@ def test_epoch(epoch, best_condition=0):
             update_dict_of_lists(results, **results_)
         samples_ = samples_ or samples__
 
-    results = dict((k, np.mean(v)) for k, v in results.items())
+    means = dict((k, np.mean(v)) for k, v in results.items())
+    if return_std:
+        stds = dict((k, np.std(v)) for k, v in results.items())
+        return means, stds, samples_
+    
+    return means, samples_
 
-    return results, samples_
 
-
-def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None):
+def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
+    if test_mode:
+        test_results, test_std, samples_ = test_epoch('Testing', return_std=True)
+        logger.info(' | '.join(
+            ['{}: {:.5f}({:.5f})'.format(k, test_results[k], test_std[k]) for k in test_results.keys()]))
+        exit(0)
+
     try:
         for e in xrange(epochs):
             epoch = exp.INFO['epoch']

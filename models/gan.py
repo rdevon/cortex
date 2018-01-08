@@ -66,7 +66,7 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
 
     elif measure == 'jsd':
         r = log_2 - F.softplus(-real_out)
-        f = F.softplus(-fake_out) + fake_out + log_2
+        f = F.softplus(-fake_out) + fake_out - log_2
         w = torch.exp(fake_out)
         b = fake_out ** 2
 
