@@ -76,12 +76,23 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
           test_on_train=False):
     global LOADERS, DIMS, INPUT_NAMES, NOISE
 
+    if not source:
+        raise ValueError('Source not provided.')
+
     source_ = source
 
+    if path.isdir(source):
+        dataset = torchvision.datasets.ImageFolder
     if hasattr(torchvision.datasets, source):
         dataset = getattr(torchvision.datasets, source)
+        if config.TV_PATH is None:
+            raise ValueError('torchvision dataset must have corresponding torchvision folder specified in `config.yaml`')
+        source = path.join(config.TV_PATH, source)
     else:
-        raise NotImplementedError(source)
+        dataset = torchvision.datasets.ImageFolder
+        if source not in config.DATA_PATHS.keys():
+            raise ValueError('Custom dataset not specified in `config.yaml` data_paths.')
+        source = path.join(config.DATA_PATHS[source])
 
     transform_ = []
     if image_size:
@@ -101,10 +112,6 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
 
     transform = transforms.Compose(transform_)
 
-    if not source:
-        raise ValueError('Source not provided.')
-    else:
-        source = path.join(config.DATA_PATH, source)
     if not batch_size:
         raise ValueError('Batch size not provided.')
     test_batch_size = test_batch_size or batch_size
