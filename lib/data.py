@@ -146,11 +146,7 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
         else:
             test_set = dataset(root=test_path, train=False, download=True, transform=transform)
 
-    if test_on_train:
-        test_set = train_set
-        n_test = train_set.train_data.shape[0]
-    else:
-        n_test = test_set.test_data.shape[0]
+    n_test = test_set.test_data.shape[0]
 
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=n_workers)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch_size, shuffle=True, num_workers=n_workers)
