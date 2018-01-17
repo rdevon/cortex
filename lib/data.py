@@ -101,7 +101,7 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
             train_path = path.join(config.DATA_PATHS[source]['train'])
             test_path = path.join(config.DATA_PATHS[source]['test'])
         else:
-            train_path = path.join(config.DATA_PATHS[source])
+            test_path = path.join(config.DATA_PATHS[source])
 
     transform_ = []
     if image_size:
