@@ -76,12 +76,32 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
           test_on_train=False):
     global LOADERS, DIMS, INPUT_NAMES, NOISE
 
-    source_ = source
+    if not source:
+        raise ValueError('Source not provided.')
 
+    if path.isdir(source):
+        logger.info('Using train set as testing set. For more options, use `data_paths` in `config.yaml`')
+        isfolder = True
+        dataset = torchvision.datasets.ImageFolder
+        train_path = source
+        test_path = source
     if hasattr(torchvision.datasets, source):
+        isfolder = (source == 'Imagenet-12')
         dataset = getattr(torchvision.datasets, source)
+        if config.TV_PATH is None:
+            raise ValueError('torchvision dataset must have corresponding torchvision folder specified in `config.yaml`')
+        train_path = path.join(config.TV_PATH, source)
+        test_path = train_path
     else:
-        raise NotImplementedError(source)
+        isfolder = True
+        dataset = torchvision.datasets.ImageFolder
+        if source not in config.DATA_PATHS.keys():
+            raise ValueError('Custom dataset not specified in `config.yaml` data_paths.')
+        if isinstance(config.DATA_PATHS[source], dict):
+            train_path = path.join(config.DATA_PATHS[source]['train'])
+            test_path = path.join(config.DATA_PATHS[source]['test'])
+        else:
+            train_path = path.join(config.DATA_PATHS[source])
 
     transform_ = []
     if image_size:
@@ -101,28 +121,32 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
 
     transform = transforms.Compose(transform_)
 
-    if not source:
-        raise ValueError('Source not provided.')
-    else:
-        source = path.join(config.DATA_PATH, source)
     if not batch_size:
         raise ValueError('Batch size not provided.')
     test_batch_size = test_batch_size or batch_size
 
     logger.info('Loading data from `{}`'.format(source))
 
-    if source_ == 'LSUN':
-        train_set = dataset(source, classes=['bedroom_train'], transform=transform)
-        test_set = dataset(source, classes=['bedroom_test'], transform=transform)
+    if source == 'LSUN':
+        train_set = dataset(train_path, classes=['bedroom_train'], transform=transform)
+        if test_on_train:
+            test_set = train_set
+        else:
+            test_set = dataset(test_path, classes=['bedroom_test'], transform=transform)
+    elif isfolder:
+        train_set = dataset(root=train_path, transform=transform)
+        if test_on_train:
+            test_set = train_set
+        else:
+            test_set = dataset(root=test_path, transform=transform)
     else:
-        train_set = dataset(root=source, train=True, download=True, transform=transform)
-        test_set = dataset(root=source, train=False, download=True, transform=transform)
+        train_set = dataset(root=train_path, train=True, download=True, transform=transform)
+        if test_on_train:
+            test_set = train_set
+        else:
+            test_set = dataset(root=test_path, train=False, download=True, transform=transform)
 
-    if test_on_train:
-        test_set = train_set
-        n_test = train_set.train_data.shape[0]
-    else:
-        n_test = test_set.test_data.shape[0]
+    n_test = test_set.test_data.shape[0]
 
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=n_workers)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch_size, shuffle=True, num_workers=n_workers)
