@@ -85,7 +85,7 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
         dataset = torchvision.datasets.ImageFolder
         train_path = source
         test_path = source
-    if hasattr(torchvision.datasets, source):
+    elif hasattr(torchvision.datasets, source):
         isfolder = (source == 'Imagenet-12')
         dataset = getattr(torchvision.datasets, source)
         if config.TV_PATH is None:
@@ -104,8 +104,12 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
             test_path = path.join(config.DATA_PATHS[source])
 
     transform_ = []
+    if isfolder:
+        transform_.append(transforms.RandomSizedCrop(224))
+        image_size = (64, 64)
+
     if image_size:
-        transform_.append(transforms.Scale(image_size))
+        transform_.append(transforms.Resize(image_size))
 
     if image_crop:
         transform_.append(transforms.CenterCrop(image_crop))
@@ -146,20 +150,24 @@ def setup(source=None, batch_size=None, test_batch_size=1000, n_workers=4, meta=
         else:
             test_set = dataset(root=test_path, train=False, download=True, transform=transform)
 
-    n_test = test_set.test_data.shape[0]
-
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=n_workers)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=test_batch_size, shuffle=True, num_workers=n_workers)
-    if len(train_set.train_data.shape) == 4:
-        n_train, dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)
+
+    if isfolder:
+        for sample in train_loader:
+            break
+        dim_c, dim_x, dim_y = sample[0].size()[1:]
+        dim_l = len(train_set.classes)
     else:
-        n_train, dim_x, dim_y = tuple(train_set.train_data.shape)
-        dim_c = 1
+        if len(train_set.train_data.shape) == 4:
+            dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
+        else:
+            dim_x, dim_y = tuple(train_set.train_data.shape)[1:]
+            dim_c = 1
+        dim_l = len(np.unique(train_set.train_labels))
 
-    dim_l = len(np.unique(train_set.train_labels))
-    DIMS.update(n_train=n_train, n_test=n_test, dim_x=dim_x, dim_y=dim_y, dim_c=dim_c, dim_l=dim_l)
+    DIMS.update(dim_x=dim_x, dim_y=dim_y, dim_c=dim_c, dim_l=dim_l)
     logger.debug('Data has the following dimensions: {}'.format(DIMS))
-
     INPUT_NAMES = ['images', 'targets']
 
     if noise_variables:
