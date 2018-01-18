@@ -6,8 +6,9 @@ import logging
 
 from __init__ import setup
 from lib import exp
-from lib.data import setup as setup_data, DIMS as data_dims
+from lib.data import setup as setup_data, DATA_HANDLER
 from lib.exp import setup as setup_model
+from lib.train import setup as setup_optimizer, main_loop
 from lib.train import setup as setup_optimizer, main_loop
 from lib.utils import print_section
 from models import build_model
@@ -42,7 +43,7 @@ def main(eval_mode=False):
     print_section('MODEL') #####################################################
     logger.info('Building model...')
     logger.info('Model args: {}'.format(model_args))
-    models, procedures = build_model(data_dims, **model_args)
+    models, procedures = build_model(DATA_HANDLER, **model_args)
     setup_model(models, procedures)
 
     print_section('OPTIMIZER') #################################################
@@ -57,8 +58,7 @@ def main(eval_mode=False):
 def reload_model(model_file):
     setup_reload(model_file)
     main(eval_mode=True)
-
-
+    
 
 if __name__ == '__main__':
     import torch

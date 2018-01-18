@@ -7,12 +7,11 @@ import logging
 import torch
 from torch import autograd
 from torch.autograd import Variable
-import torch.nn as nn
 import torch.nn.functional as F
 
-from convnets import SimpleConvEncoder as Discriminator
+from convnets import SimpleConvEncoder as Encoder
 from densenet import DenseNet
-#from resnets import ResEncoder as Discriminator
+#from resnets import ResEncoder as Encoder
 #from resnets import ResDecoder as Generator
 
 
@@ -28,7 +27,7 @@ generator_args_ = dict(dim_h=64, batch_norm=False)
 
 
 DEFAULTS = dict(
-    data=dict(batch_size=64),
+    data=dict(batch_size=64, keys=['images', 'images']),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
@@ -44,16 +43,16 @@ DEFAULTS = dict(
 
 
 def feature_map(nets, inputs, penalty=None):
-    discriminator = nets['discriminator']
-    generator = nets['generator']
-    topnet = nets['topnet']
-    real_feat = discriminator(inputs['images'])
-    fake_feat = generator(inputs['images'])
+    encoder = nets['encoder']
+    mine_input = nets['mine_input']
+    mine_enc = nets['mine_enc']
 
-    #targets = topnet(real_out, F.softmax)
-    #targets_ = Variable(targets.data.cuda())
-    #pred = topnet(fake_out)
-    #pred_ = Variable(pred.data.cuda())
+    features = encoder(inputs['images'])
+
+    mine_features = mine_input(inputs['images'])
+    mine_f = torch.cat([mine_features, features])
+    mine_r = torch.cat([])
+
 
     real_out = topnet(real_feat)
     fake_out = topnet(fake_feat)
@@ -63,7 +62,7 @@ def feature_map(nets, inputs, penalty=None):
     t_loss = torch.mean(f - r)
     d_loss = torch.mean(-r)
     g_loss = torch.mean(F.softplus(-fake_out))
-    #g_loss = torch.mean(fake_out ** 2)
+    #g_loss = torch.mean(fake_out   ** 2)
 
     #g_loss = torch.mean(((1. - targets_) * pred + F.softplus(-pred)).sum(1))
     #d_loss = -g_loss
@@ -94,13 +93,6 @@ def feature_map(nets, inputs, penalty=None):
         d_loss += penalty * torch.mean(g_p)
         t_loss += penalty * torch.mean(g_p)
 
-    '''
-    results.update(g_loss=g_loss.data[0], d_loss=d_loss.data[0],
-                   feat_mean=torch.mean(fake_out).data[0],
-                   feat_std=torch.std(fake_out).data[0],
-                   norm_term=torch.mean(F.softplus(-pred_).sum(1)).data[0],
-                   pred=torch.mean(pred).data[0])
-    '''
     results.update(g_loss=g_loss.data[0], d_loss=d_loss.data[0],
                    feat_mean=torch.mean(fake_feat).data[0],
                    feat_std=torch.std(fake_feat).data[0])
@@ -117,12 +109,11 @@ def build_model(loss=None, discriminator_args=None, generator_args=None):
 
     shape = (DIM_X, DIM_Y, DIM_C)
 
-    discriminator = Discriminator(shape, dim_out=2, **discriminator_args)
-    generator = Discriminator(shape, dim_out=2, **generator_args)
-    topnet = DenseNet(2, dim_h=10, dim_out=1, batch_norm=False)
-    logger.debug(discriminator)
-    logger.debug(generator)
+    encoder = Encoder(shape, dim_out=2, **discriminator_args)
+    mine_input = Encoder(shape, dim_out=2, **discriminator_args)
+    mine_enc = DenseNet(4, dim_h=10, dim_out=1, batch_norm=False)
+    logger.debug(encoder)
 
-    return dict(generator=generator, discriminator=discriminator, topnet=topnet), feature_map
+    return dict(encoder=encoder, mine_input=mine_input, mine_enc=mine_enc), feature_map
 
 

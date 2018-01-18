@@ -13,7 +13,7 @@ import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from data import make_iterator
+from data import DATA_HANDLER
 import exp
 from utils import bad_values, update_dict_of_lists
 import viz
@@ -140,14 +140,15 @@ def train_epoch(epoch):
         else:
             model.train()
 
-    train_iter = make_iterator(string='Training (epoch {}): '.format(epoch))
+    DATA_HANDLER.reset(string='Training (epoch {}): '.format(epoch))
+
     results = {}
 
     try:
         while True:
             for i, k_ in enumerate(exp.MODELS.keys()):
                 for _ in xrange(UPDATES[k_]):
-                    inputs = train_iter.next()
+                    DATA_HANDLER.next()
                     OPTIMIZERS[k_].zero_grad()
 
                     for k, v in exp.PROCEDURES.items():
@@ -156,7 +157,7 @@ def train_epoch(epoch):
                             args = exp.ARGS['procedures']
                         else:
                             args = exp.ARGS['procedures'][k]
-                        losses, results_, _, _ = v(exp.MODELS, inputs, **args)
+                        losses, results_, _, _ = v(exp.MODELS, DATA_HANDLER, **args)
                         bads = bad_values(results_)
                         if bads:
                             logger.error('Bad values found (quitting): {} \n All:{}'.format(
@@ -193,13 +194,13 @@ def test_epoch(epoch, best_condition=0, return_std=False):
         else:
             model.eval()
 
-    test_iter = make_iterator(test=True, string='Evaluating (epoch {}): '.format(epoch))
+    DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
     results = {}
     samples_ = None
 
     procedures = exp.ARGS['test_procedures']
 
-    for inputs in test_iter:
+    for inputs in DATA_HANDLER:
         samples__ = {}
         for k, v in exp.PROCEDURES.items():
             if k == 'main' or not isinstance(procedures, dict):
@@ -216,7 +217,7 @@ def test_epoch(epoch, best_condition=0, return_std=False):
     if return_std:
         stds = dict((k, np.std(v)) for k, v in results.items())
         return means, stds, samples_
-    
+
     return means, samples_
 
 

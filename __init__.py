@@ -154,7 +154,6 @@ def setup(use_cuda):
             kwargs['test_procedures'] = {}
 
         kwargs['data']['source'] = args.source
-        kwargs['data']['meta'] = args.meta
         update_args(args.args, **kwargs)
 
         name = args.name

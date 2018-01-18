@@ -24,7 +24,7 @@ def setup(arch):
     return ARCH
 
 
-def build_model(data_dims, **model_args):
+def build_model(data_handler, **model_args):
     '''Builds the generator and discriminator.
 
     If architecture module contains a `build_model` function, use that,
@@ -33,19 +33,9 @@ def build_model(data_dims, **model_args):
     '''
 
     logger.debug('Model args: {}'.format(model_args))
-    if hasattr(ARCH, 'GLOBALS'):
-        for k, v in ARCH.GLOBALS.items():
-            if k.lower() in data_dims.keys():
-                v_ = data_dims.pop(k.lower())
-                if v_ != v:
-                    logger.warning('Changing {} to {} from default {}'.format(
-                        k, v_, v))
-                    v = v_
-            logger.debug('Setting module global {} to {}'.format(k, v))
-            setattr(ARCH, k, v)
 
     if hasattr(ARCH, 'build_model'):
-        return getattr(ARCH, 'build_model')(**model_args)
+        return getattr(ARCH, 'build_model')(data_handler, **model_args)
     else:
         raise NotImplementedError('Module lacks `build_model` method')
 

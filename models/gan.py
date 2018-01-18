@@ -27,14 +27,13 @@ dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinear
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
-    data=dict(batch_size=64,
-              noise_variables=dict(z=('normal', 64)),
-              test_batch_size=64),
+    data=dict(batch_size=dict(train=64, test=64),
+              noise_variables=dict(z=('normal', 64))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
-    model=dict(discriminator_args=None, generator_args=None),
+    model=dict(model_type='resnet', discriminator_args=None, generator_args=None),
     procedures=dict(measure='proxy_gan', penalty=False, boundary_seek=False),
     train=dict(
         epochs=200,
@@ -181,10 +180,10 @@ def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
     return dict(generator=g_loss, discriminator=d_loss), results, samples, 'boundary'
 
 
-def build_model(loss=None, model_type='resnet', discriminator_args=None, generator_args=None):
+def build_model(data_handler, model_type='resnet', discriminator_args=None, generator_args=None):
     discriminator_args = discriminator_args or {}
     generator_args = generator_args or {}
-    shape = (DIM_X, DIM_Y, DIM_C)
+    shape = data_handler.get_dims('x', 'y', 'c')
 
     if model_type == 'resnet':
         from resnets import ResEncoder as Discriminator
