@@ -181,6 +181,7 @@ def train_epoch(epoch):
                     OPTIMIZERS[k_].step()
     except StopIteration:
         pass
+    assert False, results['ess']
 
     results = dict((k, np.mean(v)) for k, v in results.items())
     return results
