@@ -12,8 +12,6 @@ import torch.nn.functional as F
 
 logger = logging.getLogger('cortex.models' + __name__)
 
-GLOBALS = {'DIM_X': None, 'DIM_Y': None, 'DIM_C': None, 'DIM_L': None, 'DIM_Z': None}
-
 sw = 1
 
 resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
@@ -25,6 +23,7 @@ mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=
 
 dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+
 
 DEFAULTS = dict(
     data=dict(batch_size=dict(train=64, test=64),
@@ -110,7 +109,7 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
     return d_loss, g_loss, r, f, w, b
 
 
-def apply_penalty(inputs, discriminator, real, fake, measure, penalty_type='gradient_norm'):
+def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type='gradient_norm'):
     real = Variable(real.data.cuda(), requires_grad=True)
     fake = Variable(fake.data.cuda(), requires_grad=True)
     real_out = discriminator(real)
@@ -137,9 +136,9 @@ def apply_penalty(inputs, discriminator, real, fake, measure, penalty_type='grad
         return g_p
 
     elif penalty_type == 'interpolate':
-        if 'e' not in inputs:
+        if 'e' not in data_handler:
             raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
-        epsilon = inputs['e'].view(-1, 1, 1, 1)
+        epsilon = data_handler['e'].view(-1, 1, 1, 1)
         interpolations = Variable(((1. - epsilon) * fake + epsilon * real[:fake.size()[0]]).data.cuda(),
                                   requires_grad=True)
 
@@ -153,10 +152,9 @@ def apply_penalty(inputs, discriminator, real, fake, measure, penalty_type='grad
     else:
         raise NotImplementedError(penalty_type)
 
-def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
-    Z = inputs['z']
-    X = inputs['images']
-    #X = 0.5 * (X + 1.)
+def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None):
+    Z = data_handler['z']
+    X = data_handler['images']
 
     discriminator = nets['discriminator']
     generator = nets['generator']
@@ -169,10 +167,10 @@ def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
 
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], boundary=torch.mean(b).data[0],
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0])
-    samples = dict(images=dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (inputs['images'].data + 1.)))
-    #samples = dict(images=dict(generated=gen_out.data, real=inputs['images'].data))
+    samples = dict(images=dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (data_handler['images'].data + 1.)))
+
     if penalty:
-        p_term = apply_penalty(inputs, discriminator, X, gen_out, measure)
+        p_term = apply_penalty(data_handler, discriminator, X, gen_out, measure)
 
         d_loss += penalty * torch.mean(p_term)
         results['gradient penalty'] = torch.mean(p_term).data[0]
