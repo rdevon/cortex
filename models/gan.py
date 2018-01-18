@@ -8,14 +8,7 @@ import math
 import torch
 from torch import autograd
 from torch.autograd import Variable
-import torch.nn as nn
 import torch.nn.functional as F
-
-#from resnets import ResEncoder as Discriminator
-#from resnets import ResDecoder as Generator
-
-from conv_decoders import SimpleConvDecoder as Generator
-from convnets import SimpleConvEncoder as Discriminator
 
 logger = logging.getLogger('cortex.models' + __name__)
 
@@ -23,19 +16,15 @@ GLOBALS = {'DIM_X': None, 'DIM_Y': None, 'DIM_C': None, 'DIM_L': None, 'DIM_Z': 
 
 sw = 1
 
-if sw == 0:
-    discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-    generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 
-elif sw == 1:
+mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
+                                 nonlinearity='LeakyReLU')
+mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-    discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
-                            nonlinearity='LeakyReLU')
-    generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
-
-else:
-    discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
-    generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
+dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
     data=dict(batch_size=64,
@@ -45,7 +34,7 @@ DEFAULTS = dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
-    model=dict(discriminator_args=discriminator_args_, generator_args=generator_args_),
+    model=dict(discriminator_args=None, generator_args=None),
     procedures=dict(measure='proxy_gan', penalty=False, boundary_seek=False),
     train=dict(
         epochs=200,
@@ -192,14 +181,34 @@ def gan(nets, inputs, measure=None, boundary_seek=False, penalty=None):
     return dict(generator=g_loss, discriminator=d_loss), results, samples, 'boundary'
 
 
-def build_model(loss=None, discriminator_args=None, generator_args=None):
+def build_model(loss=None, model_type='resnet', discriminator_args=None, generator_args=None):
     discriminator_args = discriminator_args or {}
     generator_args = generator_args or {}
-
     shape = (DIM_X, DIM_Y, DIM_C)
 
-    discriminator = Discriminator(shape, dim_out=1, **discriminator_args)
-    generator = Generator(shape, dim_in=64, **generator_args)
+    if model_type == 'resnet':
+        from resnets import ResEncoder as Discriminator
+        from resnets import ResDecoder as Generator
+        discriminator_args_ = resnet_discriminator_args_
+        generator_args_ = resnet_generator_args_
+    elif model_type == 'dcgan':
+        from conv_decoders import SimpleConvDecoder as Generator
+        from convnets import SimpleConvEncoder as Discriminator
+        discriminator_args_ = dcgan_discriminator_args_
+        generator_args_ = dcgan_generator_args_
+    elif model_type == 'mnist':
+        from conv_decoders import SimpleConvDecoder as Generator
+        from convnets import SimpleConvEncoder as Discriminator
+        discriminator_args_ = mnist_discriminator_args_
+        generator_args_ = mnist_generator_args_
+    else:
+        raise NotImplementedError(model_type)
+
+    discriminator_args_.update(**discriminator_args)
+    generator_args_.update(**generator_args)
+
+    discriminator = Discriminator(shape, dim_out=1, **discriminator_args_)
+    generator = Generator(shape, dim_in=64, **generator_args_)
     logger.debug(discriminator)
     logger.debug(generator)
 
