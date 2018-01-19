@@ -10,12 +10,11 @@ from torch import autograd
 from torch.autograd import Variable
 import torch.nn.functional as F
 
+
 logger = logging.getLogger('cortex.models' + __name__)
 
-sw = 1
-
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
+resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
 
 mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
                                  nonlinearity='LeakyReLU')
@@ -24,16 +23,15 @@ mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=
 dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
-
 DEFAULTS = dict(
-    data=dict(batch_size=dict(train=64, test=64),
+    data=dict(batch_size=dict(train=32, test=32),
               noise_variables=dict(z=('normal', 64))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
     model=dict(model_type='resnet', discriminator_args=None, generator_args=None),
-    procedures=dict(measure='proxy_gan', penalty=False, boundary_seek=False),
+    procedures=dict(measure='gan', boundary_seek=True, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -152,7 +150,7 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
     else:
         raise NotImplementedError(penalty_type)
 
-def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None):
+def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None, penalty_type='gradient_norm'):
     Z = data_handler['z']
     X = data_handler['images']
 
@@ -170,7 +168,7 @@ def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None):
     samples = dict(images=dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (data_handler['images'].data + 1.)))
 
     if penalty:
-        p_term = apply_penalty(data_handler, discriminator, X, gen_out, measure)
+        p_term = apply_penalty(data_handler, discriminator, X, gen_out, measure, penalty_type=penalty_type)
 
         d_loss += penalty * torch.mean(p_term)
         results['gradient penalty'] = torch.mean(p_term).data[0]
@@ -184,18 +182,18 @@ def build_model(data_handler, model_type='resnet', discriminator_args=None, gene
     shape = data_handler.get_dims('x', 'y', 'c')
 
     if model_type == 'resnet':
-        from resnets import ResEncoder as Discriminator
-        from resnets import ResDecoder as Generator
+        from modules.resnets import ResEncoder as Discriminator
+        from modules.resnets import ResDecoder as Generator
         discriminator_args_ = resnet_discriminator_args_
         generator_args_ = resnet_generator_args_
     elif model_type == 'dcgan':
-        from conv_decoders import SimpleConvDecoder as Generator
-        from convnets import SimpleConvEncoder as Discriminator
+        from modules.conv_decoders import SimpleConvDecoder as Generator
+        from modules.convnets import SimpleConvEncoder as Discriminator
         discriminator_args_ = dcgan_discriminator_args_
         generator_args_ = dcgan_generator_args_
     elif model_type == 'mnist':
-        from conv_decoders import SimpleConvDecoder as Generator
-        from convnets import SimpleConvEncoder as Discriminator
+        from modules.conv_decoders import SimpleConvDecoder as Generator
+        from modules.convnets import SimpleConvEncoder as Discriminator
         discriminator_args_ = mnist_discriminator_args_
         generator_args_ = mnist_generator_args_
     else:

@@ -2,12 +2,22 @@
 
 '''
 
+import importlib
 import logging
+import os
 
 import classifier, gan, discrete_gan, featnet
 
 
+arch_names = ['gan', 'discrete_gan', 'classifier', 'minet', 'vral']
 logger = logging.getLogger('cortex.models')
+
+ARCHS = dict()
+
+mod_path = os.path.dirname(__file__)
+for arch_name in arch_names:
+    m = importlib.import_module('models.' + arch_name)
+    ARCHS[arch_name] = m
 
 ARCH = None
 
@@ -15,11 +25,11 @@ ARCH = None
 def setup(arch):
     global ARCH
     logger.info('Using architecture `{}`'.format(arch))
-    ARCH = _archs.get(arch, None)
+    ARCH = ARCHS.get(arch, None)
     if ARCH is None:
-        raise ValueError('Arch not found (``). Did you register it? '
+        raise ValueError('Arch not found ({}). Did you register it? '
                          'Available: {}'.format(
-            arch, _archs.keys()))
+            arch, ARCHS.keys()))
 
     return ARCH
 
@@ -39,4 +49,6 @@ def build_model(data_handler, **model_args):
     else:
         raise NotImplementedError('Module lacks `build_model` method')
 
-_archs = dict(classifier=classifier, discrete_gan=discrete_gan, gan=gan, featnet=featnet)
+
+def register(key, mod):
+    ARCHS[key] = mod

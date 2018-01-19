@@ -15,6 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 import visdom
 
 import config
+from data import DATA_HANDLER
 import exp
 from viz_utils import tile_raster_images
 
@@ -195,7 +196,7 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='', image
     else:
         Y = None
 
-    names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    names = DATA_HANDLER.get_label_names()
 
     visualizer.scatter(X=points, Y=Y, opts=dict(title=title, caption=caption, legend=names),
                        win='scatter_{}'.format(image_id), env=exp.NAME)

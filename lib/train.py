@@ -181,7 +181,6 @@ def train_epoch(epoch):
                     OPTIMIZERS[k_].step()
     except StopIteration:
         pass
-    assert False, results['ess']
 
     results = dict((k, np.mean(v)) for k, v in results.items())
     return results
@@ -201,18 +200,22 @@ def test_epoch(epoch, best_condition=0, return_std=False):
 
     procedures = exp.ARGS['test_procedures']
 
-    for inputs in DATA_HANDLER:
-        samples__ = {}
-        for k, v in exp.PROCEDURES.items():
-            if k == 'main' or not isinstance(procedures, dict):
-                args = procedures
-            else:
-                args = procedures[k]
-            loss, results_, samples, condition = v(exp.MODELS, inputs, **args)
-            if not samples_ and samples:
-                samples__.update(**samples)
-            update_dict_of_lists(results, **results_)
-        samples_ = samples_ or samples__
+    try:
+        while True:
+            DATA_HANDLER.next()
+            samples__ = {}
+            for k, v in exp.PROCEDURES.items():
+                if k == 'main' or not isinstance(procedures, dict):
+                    args = procedures
+                else:
+                    args = procedures[k]
+                loss, results_, samples, condition = v(exp.MODELS, DATA_HANDLER, **args)
+                if not samples_ and samples:
+                    samples__.update(**samples)
+                update_dict_of_lists(results, **results_)
+            samples_ = samples_ or samples__
+    except StopIteration:
+        pass
 
     means = dict((k, np.mean(v)) for k, v in results.items())
     if return_std:

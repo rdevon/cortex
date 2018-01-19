@@ -31,7 +31,7 @@ _default_normalization = {
 }
 
 
-def make_transform(source, normalize=True, image_crop=None, scale_image=None, image_scale=None, isfolder=False):
+def make_transform(source, normalize=True, image_crop=None, image_size=None, isfolder=False):
     transform_ = []
 
     if isfolder:
@@ -39,8 +39,8 @@ def make_transform(source, normalize=True, image_crop=None, scale_image=None, im
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 
-    if image_scale:
-        transform_.append(transforms.Resize(image_scale))
+    if image_size:
+        transform_.append(transforms.Resize(image_size))
 
     if image_crop:
         transform_.append(transforms.CenterCrop(image_crop))
@@ -144,7 +144,11 @@ class DataHandler(object):
             else:
                 dim_x, dim_y = tuple(train_set.train_data.shape)[1:]
                 dim_c = 1
-            dim_l = len(np.unique(train_set.train_labels))
+
+            labels = train_set.train_labels
+            if not isinstance(labels, list):
+                labels = labels.numpy()
+            dim_l = len(np.unique(labels))
 
         self.dims[source] = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l)
         logger.debug('Data has the following dimensions: {}'.format(self.dims[source]))
@@ -159,6 +163,14 @@ class DataHandler(object):
             var = var.cuda()
             var_t = var.cuda()
         self.noise[key] = (var, var_t, dist)
+
+    def get_label_names(self, source=None):
+        source = source or self.sources[0]
+        if source == 'CIFAR10':
+            names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+        else:
+            names = ['{}'.format(i) for i in range(self.dims[source]['labels'])]
+        return names
 
     def __iter__(self):
         return self

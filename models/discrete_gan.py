@@ -14,8 +14,8 @@ from gan import apply_penalty, f_divergence
 #from conv_decoders import SimpleConvDecoder as Generator
 #from convnets import SimpleConvEncoder as Discriminator
 
-from conv_decoders import MNISTDeConv as Generator
-from convnets import MNISTConv as Discriminator
+from modules.conv_decoders import MNISTDeConv as Generator
+from modules.convnets import MNISTConv as Discriminator
 
 logger = logging.getLogger('cortex.models' + __name__)
 
@@ -170,7 +170,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0],
                    gen_out=g_output.mean().data[0], w_tilde=w_tilde.mean().data[0],
                    real_out=real_out.mean().data[0], fake_out=fake_out.mean().data[0])
-    
+
     if measure != 'w' and not use_sm:
         results.update(alpha=alpha.mean().data[0], log_alpha = log_alpha.mean().data[0],
                        beta=beta.mean().data[0], log_beta = log_beta.mean().data[0])

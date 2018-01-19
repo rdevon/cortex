@@ -10,10 +10,8 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
-from convnets import SimpleConvEncoder as Discriminator
-from densenet import DenseNet
-#from resnets import ResEncoder as Discriminator
-#from resnets import ResDecoder as Generator
+from modules.convnets import SimpleConvEncoder as Discriminator
+from modules.densenet import DenseNet
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -47,8 +45,9 @@ def feature_map(nets, inputs, penalty=None):
     discriminator = nets['discriminator']
     generator = nets['generator']
     topnet = nets['topnet']
-    real_feat = discriminator(inputs['images'])
-    fake_feat = generator(inputs['images'])
+
+    real_feat = discriminator(inputs['@data1'])
+    fake_feat = generator(inputs['NAME2'])
 
     #targets = topnet(real_out, F.softmax)
     #targets_ = Variable(targets.data.cuda())
@@ -63,7 +62,7 @@ def feature_map(nets, inputs, penalty=None):
     t_loss = torch.mean(f - r)
     d_loss = torch.mean(-r)
     g_loss = torch.mean(F.softplus(-fake_out))
-    #g_loss = torch.mean(fake_out ** 2)
+    #g_loss = torch.mean(fake_out   ** 2)
 
     #g_loss = torch.mean(((1. - targets_) * pred + F.softplus(-pred)).sum(1))
     #d_loss = -g_loss

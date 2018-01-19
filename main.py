@@ -9,23 +9,11 @@ from lib import exp
 from lib.data import setup as setup_data, DATA_HANDLER
 from lib.exp import setup as setup_model
 from lib.train import setup as setup_optimizer, main_loop
-from lib.train import setup as setup_optimizer, main_loop
 from lib.utils import print_section
 from models import build_model
 
-'''
-import lib.data
-from lib import exp, setup_reload
-from lib.gen import setup_generation
-from lib.loss import get_gan_loss
-, train
-from models import build, make_iterator_generator
-'''
-
 
 logger = logging.getLogger('cortex')
-
-
 
 
 def main(eval_mode=False):
@@ -58,7 +46,7 @@ def main(eval_mode=False):
 def reload_model(model_file):
     setup_reload(model_file)
     main(eval_mode=True)
-    
+
 
 if __name__ == '__main__':
     import torch
