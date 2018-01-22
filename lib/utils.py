@@ -7,7 +7,7 @@ import logging
 import os
 
 import numpy as np
-
+import torch
 
 logger = logging.getLogger('cortex.util')
 
@@ -87,9 +87,27 @@ def update_dict_of_lists(d_to_update, **d):
 def bad_values(d):
     failed = {}
     for k, v in d.items():
-        if np.isnan(v) or np.isinf(v):
-            failed[k] = v
+        if isinstance(v, torch.autograd.variable.Variable):
+            v_ = v.data[0]
+        else:
+            v_ = v
+        if np.isnan(v_) or np.isinf(v_):
+            failed[k] = v_
 
     if len(failed) == 0:
         return False
     return failed
+
+
+def convert_to_numpy(o):
+    if isinstance(o, torch.autograd.variable.Variable):
+        o = o.data.cpu().numpy()
+        if len(o.shape) == 1 and o.shape[0] == 1:
+            o = o[0]
+    elif isinstance(o, (list, tuple)):
+        for i in xrange(len(o)):
+            o[i] = convert_to_numpy(o[i])
+    elif isinstance(o, dict):
+        for k in o.keys():
+            o[k] = convert_to_numpy(o[k])
+    return o

@@ -2,6 +2,7 @@
 
 '''
 
+import gc
 import logging
 from os import path
 import pprint
@@ -15,7 +16,7 @@ import torch.backends.cudnn as cudnn
 
 from data import DATA_HANDLER
 import exp
-from utils import bad_values, update_dict_of_lists
+from utils import bad_values, update_dict_of_lists, convert_to_numpy
 import viz
 
 
@@ -62,13 +63,14 @@ def show(samples, prefix=''):
 
     images = samples.get('images', {})
     for i, (k, v) in enumerate(images.items()):
+        v = convert_to_numpy(v)
         logger.debug('Saving images to {}'.format(image_dir))
         if image_dir is None:
             out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
         else:
             out_path = None
 
-        viz.save_images(v.cpu().numpy(), 8, 8, out_file=out_path, labels=None, max_samples=64, image_id=1 + i, caption=k)
+        viz.save_images(v, 8, 8, out_file=out_path, labels=None, max_samples=64, image_id=1 + i, caption=k)
 
     scatters = samples.get('scatters', {})
     for i, (k, v) in enumerate(scatters.items()):
@@ -77,13 +79,26 @@ def show(samples, prefix=''):
             l = l.cpu().numpy()
         else:
             l = None
+        v = convert_to_numpy(v)
+        l = convert_to_numpy(l)
+
         logger.debug('Saving scatter to {}'.format(image_dir))
         if image_dir is None:
             out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
         else:
             out_path = None
 
-        viz.save_scatter(v.cpu().numpy(), out_file=out_path, labels=l, image_id=i, title=k)
+        viz.save_scatter(v, out_file=out_path, labels=l, image_id=i, title=k)
+
+    histograms = samples.get('histograms', {})
+    for i, (k, v) in enumerate(histograms.items()):
+        convert_to_numpy(v)
+        logger.debug('Saving histograms to {}'.format(image_dir))
+        if image_dir is None:
+            out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
+        else:
+            out_path = None
+        viz.save_hist(v, out_file=out_path, hist_id=i)
 
 def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
           optimizer_options='default'):
@@ -149,6 +164,11 @@ def train_epoch(epoch):
             for i, k_ in enumerate(exp.MODELS.keys()):
                 for _ in xrange(UPDATES[k_]):
                     DATA_HANDLER.next()
+
+                    for k__, model in exp.MODELS.items():
+                        for p in model.parameters():
+                            p.requires_grad = (k__ == k_)
+
                     OPTIMIZERS[k_].zero_grad()
 
                     for k, v in exp.PROCEDURES.items():
@@ -179,6 +199,13 @@ def train_epoch(epoch):
                         update_dict_of_lists(results, **results_)
 
                     OPTIMIZERS[k_].step()
+            '''
+            tens = [obj for obj in gc.get_objects()
+                if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data))]
+            print(len(tens))
+            for ten in tens:
+                del ten
+            '''
     except StopIteration:
         pass
 
@@ -240,11 +267,12 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
 
             start_time = time.time()
             train_results_ = train_epoch(epoch)
+            convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
             test_results_, samples_ = test_epoch(epoch)
+            convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
-
             logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k] if k in test_results_.keys() else 0)
                                     for k in train_results_.keys()]))
             logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))

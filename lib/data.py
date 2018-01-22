@@ -73,13 +73,14 @@ class DataHandler(object):
         self.pbar = None
         self.u = 0
 
-    def set_batch_size(self, batch_size):
+    def set_batch_size(self, batch_size, skip_last_batch=False):
         if not isinstance(batch_size, dict):
             self.batch_size = dict(train=batch_size)
         else:
             self.batch_size = batch_size
         if 'test' not in self.batch_size.keys():
             self.batch_size['test'] = self.batch_size['train']
+        self.skip_last_batch = skip_last_batch
 
     def add_dataset(self, source, test_on_train, n_workers=4, **source_args):
         if path.isdir(source):
@@ -161,7 +162,7 @@ class DataHandler(object):
         var_t = torch.FloatTensor(self.batch_size['test'], dim)
         if exp.USE_CUDA:
             var = var.cuda()
-            var_t = var.cuda()
+            var_t = var_t.cuda()
         self.noise[key] = (var, var_t, dist)
 
     def get_label_names(self, source=None):
@@ -182,6 +183,8 @@ class DataHandler(object):
         for source in self.sources:
             data = self.iterators[source].next()
             if data[0].size()[0] < batch_size:
+                if self.skip_last_batch:
+                    raise StopIteration
                 batch_size = data[0].size()[0]
             data = dict((k, v) for k, v in zip(self.input_names[source], data))
             if len(self.sources) > 1:
@@ -272,7 +275,7 @@ class DataHandler(object):
 DATA_HANDLER = DataHandler()
 
 
-def setup(source=None, batch_size=64, noise_variables=None, n_workers=4,
+def setup(source=None, batch_size=64, noise_variables=None, n_workers=4, skip_last_batch=False,
           test_on_train=False, setup_fn=None, **kwargs):
     global DATA_HANDLER, NOISE
 
@@ -281,7 +284,7 @@ def setup(source=None, batch_size=64, noise_variables=None, n_workers=4,
     if not isinstance(source, (list, tuple)):
         source = [source]
 
-    DATA_HANDLER.set_batch_size(batch_size)
+    DATA_HANDLER.set_batch_size(batch_size, skip_last_batch=skip_last_batch)
 
     for source_ in source:
         source_args = kwargs.get(source_, kwargs)

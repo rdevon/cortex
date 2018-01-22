@@ -152,7 +152,6 @@ class SimpleConvDecoder(nn.Module):
     def forward(self, x, nonlinearity=None, nonlinearity_args=None):
         nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
-
         if nonlinearity:
             if callable(nonlinearity):
                 x = nonlinearity(x, **nonlinearity_args)

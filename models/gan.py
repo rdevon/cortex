@@ -30,7 +30,7 @@ DEFAULTS = dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
-    model=dict(model_type='resnet', discriminator_args=None, generator_args=None),
+    model=dict(model_type='dcgan', discriminator_args=None, generator_args=None),
     procedures=dict(measure='gan', boundary_seek=True, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
         epochs=200,
@@ -122,12 +122,16 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
                             create_graph=True, retain_graph=True, only_inputs=True)[0]
 
         if measure in ('gan', 'proxy_gan', 'jsd'):
-            g_r = (1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2).sum(1).sum(1).sum(1)
-            g_f = F.sigmoid(fake_out) ** 2 * (g_f ** 2).sum(1).sum(1).sum(1)
+            g_r = (1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2)
+            g_f = F.sigmoid(fake_out) ** 2 * (g_f ** 2)
 
         else:
-            g_r = (g_r ** 2).sum(1).sum(1).sum(1)
-            g_f = (g_f ** 2).sum(1).sum(1).sum(1)
+            g_r = (g_r ** 2)
+            g_f = (g_f ** 2)
+
+        while len(g_r.size()) > 1:
+            g_r = g_r.sum(1)
+            g_f = g_f.sum(1)
 
         g_p = 0.5 * (g_r.mean() + g_f.mean())
 
