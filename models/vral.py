@@ -31,7 +31,7 @@ DEFAULTS = dict(
         learning_rate=5e-4,
         updates_per_model=dict(discriminator=5, generator=1, real_discriminator=5, fake_discriminator=5)
     ),
-    model=dict(model_type='dcgan', dim_d=64, discriminator_args=None, generator_args=None),
+    model=dict(model_type='dcgan', dim_d=1, discriminator_args=None, generator_args=None),
     procedures=dict(measure='proxy_gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
         epochs=200,
@@ -46,7 +46,7 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pe
     X = data_handler['images']
     Z = data_handler['z']
     Rr = (data_handler['r'] + real_mu).detach()
-    Fr = (data_handler['f'] - fake_mu).detach()
+    Fr = (data_handler['f'] + fake_mu).detach()
 
     discriminator = nets['discriminator']
     generator = nets['generator']

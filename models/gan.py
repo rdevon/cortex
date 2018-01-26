@@ -20,8 +20,8 @@ mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, str
                                  nonlinearity='LeakyReLU')
 mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=False, min_dim=4, nonlinearity='LeakyReLU')
-dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=4)
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
+dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
     data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
@@ -32,7 +32,7 @@ DEFAULTS = dict(
         updates_per_model=dict(discriminator=1, generator=1)
     ),
     model=dict(model_type='dcgan', discriminator_args=None, generator_args=None),
-    procedures=dict(measure='gan', boundary_seek=True, penalty_type='gradient_norm', penalty=1.0),
+    procedures=dict(measure='gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
         epochs=30,
         summary_updates=100,
@@ -121,7 +121,7 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
 
         g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
                             create_graph=True, retain_graph=True, only_inputs=True)[0]
-
+ 
         g_r = g_r.view(g_r.size()[0], -1)
         g_f = g_f.view(g_f.size()[0], -1)
 
@@ -155,6 +155,7 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         return g_p.mean()
 
     elif penalty_type == 'variance':
+        _, _, r, f, _, _ = f_divergence(measure, real_out, fake_out)
         var_real = real_out.var()
         var_fake = fake_out.var()
 
@@ -181,7 +182,7 @@ def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pen
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0],
                    real_var=torch.var(r), fake_var=torch.var(f))
     samples = dict(images=dict(generated=0.5 * (gen_out + 1.), real=0.5 * (data_handler['images'] + 1.)),
-                   histograms=dict(generated=dict(fake=f.view(-1), real=r.view(-1))))
+                   histograms=dict(generated=dict(fake=fake_out.view(-1), real=real_out.view(-1))))
 
     if penalty:
         p_term = apply_penalty(data_handler, discriminator, X, gen_out, measure, penalty_type=penalty_type)
