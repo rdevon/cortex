@@ -13,8 +13,8 @@ from modules.densenet import DenseNet
 
 logger = logging.getLogger('cortex.models' + __name__)
 
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
-resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 
 mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
                                  nonlinearity='LeakyReLU')
@@ -28,11 +28,11 @@ DEFAULTS = dict(
               noise_variables=dict(z=('normal', 64), r=('normal', 1), f=('normal', 1))),
     optimizer=dict(
         optimizer='Adam',
-        learning_rate=1e-4,
-        updates_per_model=dict(discriminator=1, generator=1, real_discriminator=1, fake_discriminator=1)
+        learning_rate=5e-4,
+        updates_per_model=dict(discriminator=5, generator=1, real_discriminator=5, fake_discriminator=5)
     ),
     model=dict(model_type='dcgan', dim_d=64, discriminator_args=None, generator_args=None),
-    procedures=dict(measure='proxy_gan', boundary_seek=True, penalty_type='gradient_norm', penalty=1.0),
+    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -41,11 +41,12 @@ DEFAULTS = dict(
 )
 
 
-def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, penalty_type='gradient_norm'):
+def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, penalty_type='gradient_norm',
+         real_mu=1.0, fake_mu=0.0):
     X = data_handler['images']
     Z = data_handler['z']
-    Rr = (data_handler['r'] + 1.).detach()
-    Fr = data_handler['f']
+    Rr = (data_handler['r'] + real_mu).detach()
+    Fr = (data_handler['f'] - fake_mu).detach()
 
     discriminator = nets['discriminator']
     generator = nets['generator']
@@ -60,6 +61,7 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pe
     real_f = real_discriminator(Rf.t())
     fake_r = fake_discriminator(Fr.t())
     fake_f = fake_discriminator(Ff.t())
+    real_from_fake = real_discriminator(Ff.t())
 
     '''
     real_r = real_discriminator(Rr)
@@ -71,13 +73,13 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pe
     d_loss_r, g_loss_r, rr, fr, wr, br = f_divergence(measure, real_r, real_f, boundary_seek=boundary_seek)
     d_loss_f, g_loss_f, rf, ff, wf, bf = f_divergence(measure, fake_r, fake_f, boundary_seek=boundary_seek)
     d_loss = g_loss_r + g_loss_f
-    #g_loss = d_loss_f - g_loss_f
-    g_loss = ((Ff - 1.) ** 2).mean()
+    #g_loss = real_from_fake.mean()
+    g_loss = (Ff.mean() - real_mu) ** 2
 
     results = dict(g_loss=g_loss, d_loss=d_loss, boundary=torch.mean(br),
                    real=torch.mean(Rf), fake=torch.mean(Ff), w=torch.mean(wr))
     samples = dict(images=dict(generated=0.5 * (gen_out + 1.), real=0.5 * (X + 1.)),
-                   histograms=dict(generated=dict(fake=Ff.view(-1), real=Rf.view(-1))))
+                   histograms=dict(discriminator_output=dict(fake=Ff.view(-1), real=Rf.view(-1))))
 
     if penalty:
         p_term_r = apply_penalty(data_handler, real_discriminator, Rr.t(), Rf.t(), measure, penalty_type=penalty_type)
@@ -120,8 +122,10 @@ def build_model(data_handler, model_type='resnet', dim_d=1, discriminator_args=N
 
     discriminator = Discriminator(shape, dim_out=dim_d, **discriminator_args_)
     generator = Generator(shape, dim_in=64, **generator_args_)
-    real_discriminator = DenseNet(data_handler.batch_size['train'], dim_h=64, dim_out=1, nonlinearity='LeakyReLU', batch_norm=False)
-    fake_discriminator = DenseNet(data_handler.batch_size['train'], dim_h=64, dim_out=1, nonlinearity='LeakyReLU', batch_norm=False)
+    real_discriminator = DenseNet(data_handler.batch_size['train'], dim_h=[128, 64, 1], dim_out=1,
+                                  nonlinearity='LeakyReLU', batch_norm=False)
+    fake_discriminator = DenseNet(data_handler.batch_size['train'], dim_h=[128, 64, 1], dim_out=1,
+                                  nonlinearity='LeakyReLU', batch_norm=False)
     #real_discriminator = DenseNet(dim_d, dim_h=64, dim_out=1, nonlinearity='LeakyReLU')
     #fake_discriminator = DenseNet(dim_d, dim_h=64, dim_out=1, nonlinearity='LeakyReLU')
     logger.debug(discriminator)

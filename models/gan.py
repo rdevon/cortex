@@ -20,20 +20,21 @@ mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, str
                                  nonlinearity='LeakyReLU')
 mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
-dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=False, min_dim=4, nonlinearity='LeakyReLU')
+dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=4)
 
 DEFAULTS = dict(
-    data=dict(batch_size=dict(train=32, test=32),
+    data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
               noise_variables=dict(z=('normal', 64))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
+        updates_per_model=dict(discriminator=1, generator=1)
     ),
     model=dict(model_type='dcgan', discriminator_args=None, generator_args=None),
     procedures=dict(measure='gan', boundary_seek=True, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
-        epochs=200,
+        epochs=30,
         summary_updates=100,
         archive_every=10
     )
@@ -121,6 +122,9 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
                             create_graph=True, retain_graph=True, only_inputs=True)[0]
 
+        g_r = g_r.view(g_r.size()[0], -1)
+        g_f = g_f.view(g_f.size()[0], -1)
+
         if measure in ('gan', 'proxy_gan', 'jsd'):
             g_r = (1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2)
             g_f = F.sigmoid(fake_out) ** 2 * (g_f ** 2)
@@ -129,16 +133,15 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
             g_r = (g_r ** 2)
             g_f = (g_f ** 2)
 
-        while len(g_r.size()) > 1:
-            g_r = g_r.sum(1)
-            g_f = g_f.sum(1)
+        g_r = g_r.sum(1)
+        g_f = g_f.sum(1)
 
         g_p = 0.5 * (g_r.mean() + g_f.mean())
 
         return g_p
 
     elif penalty_type == 'interpolate':
-        if 'e' not in data_handler:
+        if 'e' not in data_handler.keys():
             raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
         epsilon = data_handler['e'].view(-1, 1, 1, 1)
         interpolations = Variable(((1. - epsilon) * fake + epsilon * real[:fake.size()[0]]).data.cuda(),
@@ -150,6 +153,13 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         s = (g ** 2).sum(1).sum(1).sum(1)
         g_p = ((torch.sqrt(s) - 1.) ** 2)
         return g_p.mean()
+
+    elif penalty_type == 'variance':
+        var_real = real_out.var()
+        var_fake = fake_out.var()
+
+        return (var_real - 1.) ** 2 + (var_fake - 1.) ** 2
+
 
     else:
         raise NotImplementedError(penalty_type)
@@ -168,8 +178,10 @@ def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pen
     d_loss, g_loss, r, f, w, b = f_divergence(measure, real_out, fake_out, boundary_seek=boundary_seek)
 
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], boundary=torch.mean(b).data[0],
-                   real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0])
-    samples = dict(images=dict(generated=0.5 * (gen_out.data + 1.), real=0.5 * (data_handler['images'].data + 1.)))
+                   real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0],
+                   real_var=torch.var(r), fake_var=torch.var(f))
+    samples = dict(images=dict(generated=0.5 * (gen_out + 1.), real=0.5 * (data_handler['images'] + 1.)),
+                   histograms=dict(generated=dict(fake=f.view(-1), real=r.view(-1))))
 
     if penalty:
         p_term = apply_penalty(data_handler, discriminator, X, gen_out, measure, penalty_type=penalty_type)

@@ -147,7 +147,7 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
         cudnn.benchmark = True
 
 
-def train_epoch(epoch):
+def train_epoch(epoch, quit_on_bad_values):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -179,7 +179,7 @@ def train_epoch(epoch):
                             args = exp.ARGS['procedures'][k]
                         losses, results_, _, _ = v(exp.MODELS, DATA_HANDLER, **args)
                         bads = bad_values(results_)
-                        if bads:
+                        if bads and quit_on_bad_values:
                             logger.error('Bad values found (quitting): {} \n All:{}'.format(
                                 bads, results_))
                             exit(0)
@@ -252,7 +252,8 @@ def test_epoch(epoch, best_condition=0, return_std=False):
     return means, samples_
 
 
-def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False):
+def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False,
+              quit_on_bad_values=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     if test_mode:
@@ -266,7 +267,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             epoch = exp.INFO['epoch']
 
             start_time = time.time()
-            train_results_ = train_epoch(epoch)
+            train_results_ = train_epoch(epoch, quit_on_bad_values)
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 

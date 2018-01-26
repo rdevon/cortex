@@ -3,13 +3,17 @@
 '''
 
 import logging
+import os
 from os import path
 
+from fuel.datasets.hdf5 import H5PYDataset
 import numpy as np
 from progressbar import Bar, ProgressBar, Percentage, Timer
 import torch
+import torch.utils.data as data
 from torch.autograd import Variable
 import torchvision
+from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
 import config
@@ -31,11 +35,68 @@ _default_normalization = {
 }
 
 
+class CelebA(torchvision.datasets.ImageFolder):
+    url = "https://www.dropbox.com/sh/8oqt9vytwxb3s4r/AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1"
+    filename = "img_align_celeba.zip"
+
+    def __init__(self, root, transform=None, target_transform=None, download=False):
+        self.root = os.path.expanduser(root)
+        self.transform = transform
+        self.target_transform = target_transform
+
+        if download:
+            self.download()
+
+        super(CelebA, self).__init__(root, transform, target_transform)
+
+    def download(self):
+        import errno
+        import zipfile
+        from six.moves import urllib
+
+        root = self.root
+        url = self.url
+
+        root = os.path.expanduser(root)
+        fpath = os.path.join(root, self.filename)
+        image_dir = os.path.join(root, 'images')
+
+        try:
+            os.makedirs(image_dir)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                logger.info('Dataset exists, not downloading.')
+                return
+            else:
+                raise
+
+        # downloads file
+        if os.path.isfile(fpath):
+            logger.info('Using downloaded file: {}'.format(fpath))
+        else:
+            try:
+                logger.info('Downloading ' + url + ' to ' + fpath)
+                urllib.request.urlretrieve(url, fpath)
+            except Exception as e:
+                if url[:5] == 'https':
+                    url = url.replace('https:', 'http:')
+                    logger.info('Failed download. Trying https -> http instead.'
+                                ' Downloading ' + url + ' to ' + fpath)
+                    urllib.request.urlretrieve(url, fpath)
+                else:
+                    raise
+
+        zip_ref = zipfile.ZipFile(fpath, 'r')
+        zip_ref.extractall(image_dir)
+        zip_ref.close()
+
+
 def make_transform(source, normalize=True, image_crop=None, image_size=None, isfolder=False):
     transform_ = []
 
     if isfolder:
-        transform_.append(transforms.RandomSizedCrop(224))
+        if source != 'CelebA':
+            transform_.append(transforms.RandomSizedCrop(224))
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 
@@ -85,30 +146,38 @@ class DataHandler(object):
     def add_dataset(self, source, test_on_train, n_workers=4, **source_args):
         if path.isdir(source):
             logger.info('Using train set as testing set. For more options, use `data_paths` in `config.yaml`')
-            isfolder = True
+            source_type = 'folder'
             dataset = torchvision.datasets.ImageFolder
             train_path = source
             test_path = source
         elif hasattr(torchvision.datasets, source):
-            isfolder = False
-            dataset = getattr(torchvision.datasets, source)
+            source_type = 'torchvision'
+
             if config.TV_PATH is None:
                 raise ValueError(
                     'torchvision dataset must have corresponding torchvision folder specified in `config.yaml`')
             train_path = path.join(config.TV_PATH, source)
             test_path = train_path
         else:
-            isfolder = True
-            dataset = torchvision.datasets.ImageFolder
             if source not in config.DATA_PATHS.keys():
                 raise ValueError('Custom dataset not specified in `config.yaml` data_paths.')
             if isinstance(config.DATA_PATHS[source], dict):
                 train_path = path.join(config.DATA_PATHS[source]['train'])
                 test_path = path.join(config.DATA_PATHS[source]['test'])
             else:
+                train_path = path.join(config.DATA_PATHS[source])
                 test_path = path.join(config.DATA_PATHS[source])
+            source_type = 'folder'
 
-        transform = make_transform(source, isfolder=isfolder, **source_args)
+        if source_type == 'torchvision':
+            dataset = getattr(torchvision.datasets, source)
+        elif source_type == 'folder':
+            if source == 'CelebA':
+                dataset = CelebA
+            else:
+                dataset = torchvision.datasets.ImageFolder
+
+        transform = make_transform(source, isfolder=(source_type=='folder'), **source_args)
 
         if source == 'LSUN':
             train_set = dataset(train_path, classes=['bedroom_train'], transform=transform)
@@ -116,12 +185,18 @@ class DataHandler(object):
                 test_set = train_set
             else:
                 test_set = dataset(test_path, classes=['bedroom_test'], transform=transform)
-        elif isfolder:
-            train_set = dataset(root=train_path, transform=transform)
+        elif source_type == 'folder':
+            if source == 'CelebA':
+                train_set = dataset(root=train_path, transform=transform, download=True)
+            else:
+                train_set = dataset(root=train_path, transform=transform)
             if test_on_train:
                 test_set = train_set
             else:
                 test_set = dataset(root=test_path, transform=transform)
+        elif source_type == 'hdf5':
+            train_set = dataset(train_path, train=True, transform=transform)
+            test_set = dataset(train_path, train=True, transform=transform)
         else:
             train_set = dataset(root=train_path, train=True, download=True, transform=transform)
             if test_on_train:
@@ -134,7 +209,7 @@ class DataHandler(object):
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=self.batch_size['test'], shuffle=True,
                                                   num_workers=n_workers)
 
-        if isfolder:
+        if source_type == 'folder':
             for sample in train_loader:
                 break
             dim_c, dim_x, dim_y = sample[0].size()[1:]
