@@ -20,7 +20,7 @@ mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, str
                                  nonlinearity='LeakyReLU')
 mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, min_dim=4, nonlinearity='LeakyReLU')
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
@@ -121,7 +121,7 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
 
         g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
                             create_graph=True, retain_graph=True, only_inputs=True)[0]
- 
+
         g_r = g_r.view(g_r.size()[0], -1)
         g_f = g_f.view(g_f.size()[0], -1)
 
@@ -197,6 +197,7 @@ def build_model(data_handler, model_type='resnet', discriminator_args=None, gene
     discriminator_args = discriminator_args or {}
     generator_args = generator_args or {}
     shape = data_handler.get_dims('x', 'y', 'c')
+    dim_z = data_handler.get_dims('z')[0]
 
     if model_type == 'resnet':
         from modules.resnets import ResEncoder as Discriminator
@@ -219,8 +220,12 @@ def build_model(data_handler, model_type='resnet', discriminator_args=None, gene
     discriminator_args_.update(**discriminator_args)
     generator_args_.update(**generator_args)
 
+    if shape[0] == 64:
+        discriminator_args_['n_steps'] = 4
+        generator_args_['n_steps'] = 4
+
     discriminator = Discriminator(shape, dim_out=1, **discriminator_args_)
-    generator = Generator(shape, dim_in=64, **generator_args_)
+    generator = Generator(shape, dim_in=dim_z, **generator_args_)
     logger.debug(discriminator)
     logger.debug(generator)
 

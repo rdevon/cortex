@@ -89,7 +89,7 @@ class MNISTConv(nn.Module):
 
 class SimpleConvEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True,
-                 dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4):
+                 dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4, n_steps=None):
         super(SimpleConvEncoder, self).__init__()
         models = nn.Sequential()
 
@@ -117,8 +117,7 @@ class SimpleConvEncoder(nn.Module):
         '''
 
         i = 0
-        while dim_x > min_dim and dim_y > min_dim:
-            #print dim_in, dim_out, dim_x, dim_y
+        while (dim_x > min_dim and dim_y > min_dim) and (i < n_steps if n_steps else True):
             logger.debug('Input size: {},{}'.format(dim_x, dim_y))
             if i == 0:
                 dim_out = dim_h
@@ -134,6 +133,7 @@ class SimpleConvEncoder(nn.Module):
             models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
+            print dim_x
             i += 1
 
         dim_out = dim_x * dim_y * dim_out

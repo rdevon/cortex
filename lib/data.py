@@ -239,6 +239,7 @@ class DataHandler(object):
             var = var.cuda()
             var_t = var_t.cuda()
         self.noise[key] = (var, var_t, dist)
+        self.dims[key] = dim
 
     def get_label_names(self, source=None):
         source = source or self.sources[0]
@@ -299,16 +300,19 @@ class DataHandler(object):
 
     def get_dims(self, *q):
         if q[0] in self.dims.keys():
-            dims = self.dims[q[0]]
-            q = q[1:]
+            if len(q[1:]) != 0:
+                dims = self.dims[q[0]]
+                q = q[1:]
+            else:
+                dims = self.dims
         else:
-            dims = self.dims[self.dims.keys()[0]]
+            key = [k for k in self.dims.keys() if k not in self.noise.keys()][0]
+            dims = self.dims[key]
 
         try:
             d = [dims[q_] for q_ in q]
         except KeyError:
             raise KeyError('Cannot resolve dimensions {}, provided {}'.format(q, dims))
-
         return d
 
     def make_iterator(self, source):
