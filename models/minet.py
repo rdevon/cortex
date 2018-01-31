@@ -9,8 +9,8 @@ from torch import autograd
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from modules.convnets import SimpleConvEncoder as Encoder
-from modules.densenet import DenseNet
+from .modules.convnets import SimpleConvEncoder as Encoder
+from .modules.densenet import DenseNet
 #from resnets import ResEncoder as Encoder
 #from resnets import ResDecoder as Generator
 

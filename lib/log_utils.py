@@ -5,14 +5,14 @@
 import logging
 
 
-logging.basicConfig(disable_existing_loggers=False)
+logging.basicConfig()
 logger = logging.getLogger('cortex')
 logger.propagate = False
 
 file_formatter = logging.Formatter(
-    '%(asctime)s:%(name)s[%(levelname)s]:%(message)s')
+    '%(asctime)s:%(name)s[%(levelname)s]:%(message)s\n')
 stream_formatter = logging.Formatter(
-    '[%(levelname)s:%(name)s]:%(message)s' + ' ' * 40)
+    '[%(levelname)s:%(name)s]:%(message)s' + ' ' * 40 + '\n')
 
 
 def set_stream_logger(verbosity):

@@ -10,12 +10,12 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from gan import apply_penalty, f_divergence
+from .gan import apply_penalty, f_divergence
 #from conv_decoders import SimpleConvDecoder as Generator
 #from convnets import SimpleConvEncoder as Discriminator
 
-from modules.conv_decoders import MNISTDeConv as Generator
-from modules.convnets import MNISTConv as Discriminator
+from .modules.conv_decoders import MNISTDeConv as Generator
+from .modules.convnets import MNISTConv as Discriminator
 
 logger = logging.getLogger('cortex.models' + __name__)
 

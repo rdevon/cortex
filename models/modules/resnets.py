@@ -139,7 +139,7 @@ class ResDecoder(nn.Module):
         dim_h = dim_h_
         nonlinearity = nn.ReLU()
 
-        for n in xrange(n_steps):
+        for n in range(n_steps):
             dim_x //= 2
             dim_y //= 2
             if n < n_steps - 1:
@@ -156,7 +156,7 @@ class ResDecoder(nn.Module):
 
         models.add_module('{}_{}'.format(name, 'relu'), nonlinearity)
 
-        for i in xrange(n_steps):
+        for i in range(n_steps):
             dim_in = dim_out
             dim_out = dim_in // 2
             name = 'resblock_({}/{})_{}'.format(dim_in, dim_out, i + 1)
@@ -200,7 +200,7 @@ class ResEncoder(nn.Module):
         models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
 
         dim_out = dim_h
-        for i in xrange(n_steps):
+        for i in range(n_steps):
             dim_in = dim_out
             dim_out = dim_in * 2
 

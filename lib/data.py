@@ -6,7 +6,6 @@ import logging
 import os
 from os import path
 
-from fuel.datasets.hdf5 import H5PYDataset
 import numpy as np
 from progressbar import Bar, ProgressBar, Percentage, Timer
 import torch
@@ -16,8 +15,7 @@ import torchvision
 from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
-import config
-import exp
+from . import config, exp
 
 
 logger = logging.getLogger('cortex.data')
@@ -257,7 +255,7 @@ class DataHandler(object):
 
         batch_size = self.batch_size[self.mode]
         for source in self.sources:
-            data = self.iterators[source].next()
+            data = next(self.iterators[source])
             if data[0].size()[0] < batch_size:
                 if self.skip_last_batch:
                     raise StopIteration

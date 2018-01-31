@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.convnets import SimpleConvEncoder as Net
+from .modules.convnets import SimpleConvEncoder as Net
 
 
 logger = logging.getLogger('cortex.models' + __name__)

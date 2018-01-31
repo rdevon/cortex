@@ -7,7 +7,7 @@ import logging
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules import View
+from .modules import View
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -133,7 +133,6 @@ class SimpleConvEncoder(nn.Module):
             models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
-            print dim_x
             i += 1
 
         dim_out = dim_x * dim_y * dim_out

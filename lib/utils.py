@@ -24,7 +24,7 @@ def print_section(s):
         s (str): string of section
     '''
     h = s + ('-' * (_columns - len(s)))
-    print h
+    print(h)
 
 
 def make_argument_parser():
@@ -77,7 +77,7 @@ def update_dict_of_lists(d_to_update, **d):
         **d: keyword arguments to append.
 
     '''
-    for k, v in d.iteritems():
+    for k, v in d.items():
         if k in d_to_update.keys():
             d_to_update[k].append(v)
         else:
@@ -105,7 +105,7 @@ def convert_to_numpy(o):
         if len(o.shape) == 1 and o.shape[0] == 1:
             o = o[0]
     elif isinstance(o, (list, tuple)):
-        for i in xrange(len(o)):
+        for i in range(len(o)):
             o[i] = convert_to_numpy(o[i])
     elif isinstance(o, dict):
         for k in o.keys():

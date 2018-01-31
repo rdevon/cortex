@@ -200,18 +200,18 @@ def build_model(data_handler, model_type='resnet', discriminator_args=None, gene
     dim_z = data_handler.get_dims('z')[0]
 
     if model_type == 'resnet':
-        from modules.resnets import ResEncoder as Discriminator
-        from modules.resnets import ResDecoder as Generator
+        from .modules.resnets import ResEncoder as Discriminator
+        from .modules.resnets import ResDecoder as Generator
         discriminator_args_ = resnet_discriminator_args_
         generator_args_ = resnet_generator_args_
     elif model_type == 'dcgan':
-        from modules.conv_decoders import SimpleConvDecoder as Generator
-        from modules.convnets import SimpleConvEncoder as Discriminator
+        from .modules.conv_decoders import SimpleConvDecoder as Generator
+        from .modules.convnets import SimpleConvEncoder as Discriminator
         discriminator_args_ = dcgan_discriminator_args_
         generator_args_ = dcgan_generator_args_
     elif model_type == 'mnist':
-        from modules.conv_decoders import SimpleConvDecoder as Generator
-        from modules.convnets import SimpleConvEncoder as Discriminator
+        from .modules.conv_decoders import SimpleConvDecoder as Generator
+        from .modules.convnets import SimpleConvEncoder as Discriminator
         discriminator_args_ = mnist_discriminator_args_
         generator_args_ = mnist_generator_args_
     else:

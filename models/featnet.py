@@ -10,8 +10,8 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.convnets import SimpleConvEncoder as Discriminator
-from modules.densenet import DenseNet
+from .modules.convnets import SimpleConvEncoder as Discriminator
+from .modules.densenet import DenseNet
 
 
 logger = logging.getLogger('cortex.models' + __name__)

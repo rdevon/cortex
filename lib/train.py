@@ -2,7 +2,6 @@
 
 '''
 
-import gc
 import logging
 from os import path
 import pprint
@@ -14,11 +13,13 @@ import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from data import DATA_HANDLER
-import exp
-from utils import bad_values, update_dict_of_lists, convert_to_numpy
-import viz
+from .data import DATA_HANDLER
+from . import exp, viz
+from .utils import bad_values, update_dict_of_lists, convert_to_numpy
 
+
+try: input = raw_input #Python3 compatibility
+except NameError: pass
 
 logger = logging.getLogger('cortex.util')
 
@@ -162,7 +163,7 @@ def train_epoch(epoch, quit_on_bad_values):
     try:
         while True:
             for i, k_ in enumerate(exp.MODELS.keys()):
-                for _ in xrange(UPDATES[k_]):
+                for _ in range(UPDATES[k_]):
                     DATA_HANDLER.next()
 
                     for k__, model in exp.MODELS.items():
@@ -263,7 +264,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
         exit(0)
 
     try:
-        for e in xrange(epochs):
+        for e in range(epochs):
             epoch = exp.INFO['epoch']
 
             start_time = time.time()
@@ -298,10 +299,10 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
                 kill = True
                 break
             elif response == 'n':
-                print 'Cancelling interrupt. Starting epoch over.'
+                print('Cancelling interrupt. Starting epoch over.')
                 break
             else:
-                print 'Unknown response'
+                print('Unknown response')
 
         if kill:
             print('Training interrupted')

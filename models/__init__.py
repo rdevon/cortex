@@ -6,7 +6,7 @@ import importlib
 import logging
 import os
 
-import classifier, gan, discrete_gan, featnet
+from . import classifier, gan, discrete_gan, featnet
 
 
 arch_names = ['gan', 'discrete_gan', 'classifier', 'minet', 'vral']
