@@ -15,10 +15,10 @@ import torch.backends.cudnn as cudnn
 
 from .data import DATA_HANDLER
 from . import exp, viz
-from .utils import bad_values, update_dict_of_lists, convert_to_numpy
+from .utils import bad_values, compute_tsne, convert_to_numpy, update_dict_of_lists
 
 
-try: input = raw_input #Python3 compatibility
+try: input = raw_input #Python2 compatibility
 except NameError: pass
 
 logger = logging.getLogger('cortex.util')
@@ -77,11 +77,16 @@ def show(samples, prefix=''):
     for i, (k, v) in enumerate(scatters.items()):
         if isinstance(v, tuple):
             v, l = v
-            l = l.cpu().numpy()
         else:
             l = None
         v = convert_to_numpy(v)
         l = convert_to_numpy(l)
+
+        if v.shape[1] == 1:
+            raise ValueError('1D-scatter not supported')
+        elif v.shape[1] > 2:
+            logger.info('Scatter greater than 2D. Performing TSNE to 2D')
+            v = compute_tsne(v)
 
         logger.debug('Saving scatter to {}'.format(image_dir))
         if image_dir is None:
@@ -289,7 +294,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
         kill = False
         while True:
             try:
-                response = raw_input('Keyboard interrupt. Kill? (Y/N) '
+                response = input('Keyboard interrupt. Kill? (Y/N) '
                                      '(or ^c again)')
             except KeyboardInterrupt:
                 kill = True

@@ -104,6 +104,8 @@ def convert_to_numpy(o):
         o = o.data.cpu().numpy()
         if len(o.shape) == 1 and o.shape[0] == 1:
             o = o[0]
+    elif isinstance(o, (torch.cuda.FloatTensor, torch.cuda.LongTensor)):
+        o = o.cpu().numpy()
     elif isinstance(o, (list, tuple)):
         for i in range(len(o)):
             o[i] = convert_to_numpy(o[i])
@@ -111,3 +113,11 @@ def convert_to_numpy(o):
         for k in o.keys():
             o[k] = convert_to_numpy(o[k])
     return o
+
+
+def compute_tsne(X, perplexity=40, n_iter=300, init='pca'):
+    from sklearn.manifold import TSNE
+
+    tsne = TSNE(2, perplexity=perplexity, n_iter=n_iter, init=init)
+    points = X.tolist()
+    return tsne.fit_transform(points)
