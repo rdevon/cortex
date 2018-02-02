@@ -10,12 +10,13 @@ import torch.nn.functional as fun
 
 from .gan import apply_penalty, f_divergence
 from .modules.densenet import DenseNet
+from .modules.modules import Pipeline
 
 
 logger = logging.getLogger('cortex.models' + __name__)
 
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=False, f_size=3, n_steps=3)
+resnet_generator_args_ = dict(dim_h=64, batch_norm=False, f_size=3, n_steps=3)
 
 mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
                                  nonlinearity='LeakyReLU')
@@ -29,11 +30,11 @@ DEFAULTS = dict(
               noise_variables=dict(z=('normal', 128), r=('normal', 1), f=('normal', 1))),
     optimizer=dict(
         optimizer='Adam',
-        learning_rate=1e-4,#dict(discriminator=1e-4, generator=1e-4, topnet=1e-3, real_discriminator=1e-3, fake_discriminator=1e-3),
+        learning_rate=1e-4,
         updates_per_model=dict(discriminator=1, generator=1, real_discriminator=1, fake_discriminator=1, topnet=1)
     ),
     model=dict(model_type='dcgan', dim_d=1, dim_e=1, discriminator_args=None, generator_args=None),
-    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
+    procedures=dict(measure='proxy_gan', boundary_seek=True, penalty_type='gradient_norm', penalty=1.),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -140,7 +141,7 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pe
         results['real gradient penalty'] = p_term_r.mean()
         results['fake gradient penalty'] = p_term_f.mean()
 
-        p_term_d = apply_penalty(data_handler, real_discriminator, X, gen_out, measure, penalty_type=penalty_type)
+        p_term_d = apply_penalty(data_handler, complete_discriminator, X, gen_out, measure, penalty_type=penalty_type)
         d_loss += penalty * p_term_d.mean()
         results['gradient_penalty'] = p_term_d.mean()
 
@@ -149,6 +150,7 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pe
     return loss, results, samples, 'boundary'
 
 
+complete_discriminator = None
 def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
                 discriminator_args=None, generator_args=None):
     discriminator_args = discriminator_args or {}
@@ -183,6 +185,9 @@ def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
     elif shape[0] == 128:
         discriminator_args_['n_steps'] = 5
         generator_args_['n_steps'] = 5
+    elif shape[0] == 32:
+        discriminator_args_['n_steps'] = 3
+        generator_args_['n_steps'] = 3
 
     discriminator = Discriminator(shape, dim_out=dim_h, **discriminator_args_)
     topnet = DenseNet(dim_h, dim_h=[], dim_out=dim_d)
@@ -195,6 +200,9 @@ def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
     logger.debug(generator)
     logger.debug(real_discriminator)
     logger.debug(fake_discriminator)
+
+    global complete_discriminator
+    complete_discriminator = Pipeline([discriminator, topnet])
 
     return dict(generator=generator, discriminator=discriminator, real_discriminator=real_discriminator,
                 fake_discriminator=fake_discriminator, topnet=topnet), vral
