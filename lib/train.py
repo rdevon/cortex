@@ -25,6 +25,7 @@ logger = logging.getLogger('cortex.util')
 
 OPTIMIZERS = {}
 UPDATES = {}
+CLIPPING = {}
 
 optimizer_defaults = dict(
     SGD=dict(momentum=0.9, weight_decay=5e-4),
@@ -107,14 +108,18 @@ def show(samples, prefix=''):
         viz.save_hist(v, out_file=out_path, hist_id=i)
 
 def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
-          optimizer_options='default'):
+          clipping=None, weight_decay=None, optimizer_options='default', model_optimizer_options=None):
 
-    global UPDATES
+    global CLIPPING, UPDATES
+    model_optimizer_options = model_optimizer_options or {}
+    weight_decay = weight_decay or {}
+    clipping = clipping or {}
 
     if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
         optimizer_options = optimizer_defaults[optimizer]
     updates_per_model = updates_per_model or dict((k, 1) for k in exp.MODELS.keys())
     UPDATES.update(**updates_per_model)
+    CLIPPING.update(**clipping)
 
     if callable(optimizer):
         op = optimizer
@@ -146,8 +151,20 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
         else:
             eta = learning_rate
 
-        optimizer = op(model_params, lr=eta, **optimizer_options)
+        if isinstance(weight_decay, dict):
+            wd = weight_decay.get(k, 0)
+        else:
+            wd = weight_decay
+
+        optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
+        if k in model_optimizer_options.keys():
+            optimizer_options_.update(**model_optimizer_options)
+
+        optimizer = op(model_params, lr=eta, weight_decay=wd, **optimizer_options_)
         OPTIMIZERS[k] = optimizer
+
+        if k in CLIPPING.keys():
+            logger.info('Clipping {} with {}'.format(k, CLIPPING[k]))
 
     if exp.USE_CUDA:
         cudnn.benchmark = True
@@ -172,8 +189,13 @@ def train_epoch(epoch, quit_on_bad_values):
                     DATA_HANDLER.next()
 
                     for k__, model in exp.MODELS.items():
-                        for p in model.parameters():
-                            p.requires_grad = (k__ == k_)
+                        if isinstance(model, (list, tuple)):
+                            for net in model:
+                                for p in net.parameters():
+                                    p.requires_grad = (k__ == k_)
+                        else:
+                            for p in model.parameters():
+                                p.requires_grad = (k__ == k_)
 
                     OPTIMIZERS[k_].zero_grad()
 
@@ -205,6 +227,18 @@ def train_epoch(epoch, quit_on_bad_values):
                         update_dict_of_lists(results, **results_)
 
                     OPTIMIZERS[k_].step()
+
+                    if k_ in CLIPPING.keys():
+                        clip = CLIPPING[k_]
+                        model = exp.MODELS[k_]
+                        if isinstance(model, (list, tuple)):
+                            for net in model:
+                                for p in net.parameters():
+                                    p.data.clamp_(-clip, clip)
+                        else:
+                            for p in model.parameters():
+                                p.data.clamp_(-clip, clip)
+
             '''
             tens = [obj for obj in gc.get_objects()
                 if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data))]

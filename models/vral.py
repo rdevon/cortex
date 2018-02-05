@@ -5,6 +5,7 @@
 import logging
 
 import torch
+from torch import autograd
 from torch.autograd import Variable
 import torch.nn.functional as fun
 
@@ -29,11 +30,12 @@ DEFAULTS = dict(
               noise_variables=dict(z=('normal', 128), r=('normal', 1), f=('normal', 1))),
     optimizer=dict(
         optimizer='Adam',
-        learning_rate=1e-4,#dict(discriminator=1e-4, generator=1e-4, topnet=1e-3, real_discriminator=1e-3, fake_discriminator=1e-3),
+        learning_rate=1e-4,
+        clipping=dict(real_discriminator=0.1, fake_discriminator=0.1),
         updates_per_model=dict(discriminator=1, generator=1, real_discriminator=1, fake_discriminator=1, topnet=1)
     ),
     model=dict(model_type='dcgan', dim_d=1, dim_e=1, discriminator_args=None, generator_args=None),
-    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
+    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty=1.0, meta_penalty=1.0),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -46,8 +48,8 @@ def setup(model=None, data=None, procedure=None, **kwargs):
     data['noise_variables']['f'] = ('normal', model['dim_d'])
 
 
-def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, penalty_type='gradient_norm',
-         real_mu=1.0, fake_mu=0.0, lam=100., vral_type=None):
+def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None,
+         real_mu=1.0, fake_mu=0.0, lam=100., vral_type=None, meta_penalty=None):
     # Variables
     X = data_handler['images']
     Z = data_handler['z']
@@ -83,6 +85,7 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pe
         real_g = real_discriminator(Ff - real_mu)
 
     if measure == 'mmd':
+        assert False, 'Doesnt work right now'
         B, D = real_r.size()
         eye_B = Variable(torch.eye(B).cuda())
         def mmd_mat(x, y, remove_diagonal=False):
@@ -126,23 +129,45 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pe
         t_loss = d_loss
         g_loss = (Ff.mean() - Rf.mean()) ** 2
 
-    results = dict(g_loss=g_loss, d_loss=d_loss, rd_loss=d_loss_r, fd_loss=d_loss_f, t_loss=t_loss,
-                   real=torch.mean(Rf), fake=torch.mean(Ff))
-    samples = dict(images=dict(generated=0.5 * (gen_out + 1.), real=0.5 * (X + 1.)),
-                   histograms=dict(discriminator_output=dict(fake=Ff.view(-1), real=Rf.view(-1))))
+    results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], rd_loss=d_loss_r.data[0], fd_loss=d_loss_f.data[0], t_loss=t_loss.data[0],
+                   real=torch.mean(Rf).data[0], fake=torch.mean(Ff).data[0])
+    samples = dict(images=dict(generated=0.5 * (gen_out + 1.).data, real=0.5 * (X + 1.).data),
+                   histograms=dict(discriminator_output=dict(fake=Ff.view(-1).data, real=Rf.view(-1).data)))
 
-    if penalty:
-        p_term_r = apply_penalty(data_handler, real_discriminator, Rr, Rf, measure, penalty_type=penalty_type)
-        p_term_f = apply_penalty(data_handler, fake_discriminator, Fr, Ff, measure, penalty_type=penalty_type)
+    if meta_penalty:
+        p_term_r = apply_penalty(data_handler, real_discriminator, Rr, Rf, measure)
+        p_term_f = apply_penalty(data_handler, fake_discriminator, Fr, Ff, measure)
 
-        d_loss_r += penalty * p_term_r.mean()
-        d_loss_f += penalty * p_term_f.mean()
+        d_loss_r += meta_penalty * p_term_r.mean()
+        d_loss_f += meta_penalty * p_term_f.mean()
         results['real gradient penalty'] = p_term_r.mean()
         results['fake gradient penalty'] = p_term_f.mean()
 
-        p_term_d = apply_penalty(data_handler, real_discriminator, X, gen_out, measure, penalty_type=penalty_type)
-        d_loss += penalty * p_term_d.mean()
-        results['gradient_penalty'] = p_term_d.mean()
+    if penalty:
+        real = Variable(X.data.cuda(), requires_grad=True)
+        fake = Variable(gen_out.data.cuda(), requires_grad=True)
+        real_out = discriminator(real)
+        fake_out = discriminator(fake)
+
+        real_out = topnet(real_out)
+        fake_out = topnet(fake_out)
+
+        g_r = autograd.grad(outputs=real_out, inputs=real, grad_outputs=torch.ones(real_out.size()).cuda(),
+                            create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+        g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
+                            create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+        g_r = g_r.view(g_r.size()[0], -1)
+        g_f = g_f.view(g_f.size()[0], -1)
+
+        g_r = (g_r ** 2).sum(1)
+        g_f = (g_f ** 2).sum(1)
+
+        g_p = 0.5 * (g_r.mean() + g_f.mean())
+
+        d_loss += penalty * g_p
+        results['gradient penalty'] = g_p.data[0]
 
     loss = dict(generator=g_loss, real_discriminator=d_loss_r, fake_discriminator=d_loss_f, discriminator=d_loss,
                 topnet=t_loss)

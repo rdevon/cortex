@@ -136,9 +136,6 @@ def setup(use_cuda):
     viz_init()
     arch = models.setup(args.arch)
 
-    if hasattr(arch, 'setup_data'):
-        assert False
-
     if args.reload:
         if not path.isfile(args.reload):
             raise ValueError('Cannot find {}'.format(args.reload))

@@ -88,12 +88,13 @@ class MNISTConv(nn.Module):
 
 
 class SimpleConvEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True,
+    def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True, fully_connected_layers=None,
                  dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4, n_steps=None):
         super(SimpleConvEncoder, self).__init__()
         models = nn.Sequential()
 
         dim_out_ = dim_out
+        fully_connected_layers = fully_connected_layers or []
 
         if hasattr(nn, nonlinearity):
             nonlin = getattr(nn, nonlinearity)
@@ -137,6 +138,18 @@ class SimpleConvEncoder(nn.Module):
 
         dim_out = dim_x * dim_y * dim_out
         models.add_module('final_reshape', View(-1, dim_out))
+
+        for dim_h in fully_connected_layers:
+            dim_in = dim_out
+            dim_out = dim_h
+            name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
+            models.add_module(name, nn.Linear(dim_in, dim_out))
+            if dropout:
+                models.add_module(name + '_do', nn.Dropout2d(p=dropout))
+            if batch_norm:
+                models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
+            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+
         if final_layer:
             name = 'linear_({}/{})_{}'.format(dim_out, final_layer, 'final')
             models.add_module(name, nn.Linear(dim_out, final_layer))
