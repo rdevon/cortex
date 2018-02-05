@@ -31,11 +31,11 @@ DEFAULTS = dict(
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
-        clipping=dict(real_discriminator=0.1, fake_discriminator=0.1),
-        updates_per_model=dict(discriminator=1, generator=1, real_discriminator=1, fake_discriminator=1, topnet=1)
+        clipping=dict(meta_discriminators=1.0),
+        updates_per_model=dict(discriminator=1, generator=1, meta_discriminators=1)
     ),
     model=dict(model_type='dcgan', dim_d=1, dim_e=1, discriminator_args=None, generator_args=None),
-    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty=1.0, meta_penalty=0.0),
+    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty=1.0, meta_penalty=1.0),
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -57,11 +57,9 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None,
     Fr = data_handler['f']
 
     # Nets
-    discriminator = nets['discriminator']
+    discriminator, topnet = nets['discriminator']
     generator = nets['generator']
-    topnet = nets['topnet']
-    real_discriminator = nets['real_discriminator']
-    fake_discriminator = nets['fake_discriminator']
+    real_discriminator, fake_discriminator = nets['meta_discriminators']
     gen_out = generator(Z, nonlinearity=fun.tanh)
 
 
@@ -118,7 +116,6 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None,
         d_loss_r, g_loss_r, rr, fr, wr, br = f_divergence(measure, real_r, real_f, boundary_seek=boundary_seek)
         d_loss_f, g_loss_f, rf, ff, wf, bf = f_divergence(measure, fake_r, fake_f, boundary_seek=boundary_seek)
         d_loss = lam * (g_loss_r + g_loss_f) + Ff.mean()
-        t_loss = (g_loss_r + g_loss_f) + Ff.mean()
 
         g_loss = -Ff.mean()
     else:
@@ -126,10 +123,9 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None,
         d_loss_f, g_loss_f, rf, ff, wf, bf = f_divergence(measure, fake_r, fake_f, boundary_seek=boundary_seek)
 
         d_loss = g_loss_r + g_loss_f
-        t_loss = d_loss
         g_loss = (Ff.mean() - Rf.mean()) ** 2
 
-    results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], rd_loss=d_loss_r.data[0], fd_loss=d_loss_f.data[0], t_loss=t_loss.data[0],
+    results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], rd_loss=d_loss_r.data[0], fd_loss=d_loss_f.data[0],
                    real=torch.mean(Rf).data[0], fake=torch.mean(Ff).data[0])
     samples = dict(images=dict(generated=0.5 * (gen_out + 1.).data, real=0.5 * (X + 1.).data),
                    histograms=dict(discriminator_output=dict(fake=Ff.view(-1).data, real=Rf.view(-1).data)))
@@ -169,8 +165,7 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None,
         d_loss += penalty * g_p
         results['gradient penalty'] = g_p.data[0]
 
-    loss = dict(generator=g_loss, real_discriminator=d_loss_r, fake_discriminator=d_loss_f, discriminator=d_loss,
-                topnet=t_loss)
+    loss = dict(generator=g_loss, meta_discriminators=d_loss_r+d_loss_f, discriminator=d_loss)
     return loss, results, samples, 'boundary'
 
 
@@ -212,16 +207,15 @@ def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
     discriminator = Discriminator(shape, dim_out=dim_h, **discriminator_args_)
     topnet = DenseNet(dim_h, dim_h=[], dim_out=dim_d)
     generator = Generator(shape, dim_in=dim_z, **generator_args_)
-    real_discriminator = DenseNet(dim_d, dim_h=[64], dim_out=dim_e, nonlinearity='LeakyReLU', batch_norm=False,
+    real_discriminator = DenseNet(dim_d, dim_h=[64, 64], dim_out=dim_e, nonlinearity='ReLU', batch_norm=False,
                                   layer_norm=False)
-    fake_discriminator = DenseNet(dim_d, dim_h=[64], dim_out=dim_e, nonlinearity='LeakyReLU', batch_norm=False,
+    fake_discriminator = DenseNet(dim_d, dim_h=[64, 64], dim_out=dim_e, nonlinearity='ReLU', batch_norm=False,
                                   layer_norm=False)
     logger.debug(discriminator)
     logger.debug(generator)
     logger.debug(real_discriminator)
     logger.debug(fake_discriminator)
 
-    return dict(generator=generator, discriminator=discriminator, real_discriminator=real_discriminator,
-                fake_discriminator=fake_discriminator, topnet=topnet), vral
+    return dict(generator=generator, discriminator=[discriminator, topnet], meta_discriminators=[real_discriminator, fake_discriminator]), vral
 
 
