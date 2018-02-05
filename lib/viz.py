@@ -191,7 +191,7 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='', image
 
     names = DATA_HANDLER.get_label_names()
 
-    visualizer.scatter(X=points, Y=Y, opts=dict(title=title, caption=caption, legend=names),
+    visualizer.scatter(X=points, Y=Y, opts=dict(title=title, caption=caption, legend=names, markersize=5),
                        win='scatter_{}'.format(image_id), env=exp.NAME)
 
 
