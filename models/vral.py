@@ -35,7 +35,7 @@ DEFAULTS = dict(
         updates_per_model=dict(discriminator=1, generator=1, real_discriminator=1, fake_discriminator=1, topnet=1)
     ),
     model=dict(model_type='dcgan', dim_d=1, dim_e=1, discriminator_args=None, generator_args=None),
-    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty=1.0, meta_penalty=1.0),
+    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty=1.0, meta_penalty=0.0),
     train=dict(
         epochs=200,
         summary_updates=100,
