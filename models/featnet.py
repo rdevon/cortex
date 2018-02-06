@@ -17,9 +17,9 @@ logger = logging.getLogger('cortex.models' + __name__)
 
 resnet_encoder_args_ = dict(dim_h=64, batch_norm=False, f_size=3, n_steps=3)
 resnet_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-mnist_encoder_args_ = dict(dim_h=64, batch_norm=False, f_size=5, pad=2, stride=2, min_dim=7, nonlinearity='LeakyReLU')
+mnist_encoder_args_ = dict(dim_h=64, batch_norm=False, f_size=5, pad=2, stride=2, min_dim=7)
 mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
-convnet_encoder_args_ = dict(dim_h=64, batch_norm=False, n_steps=3, nonlinearity='ReLU')
+convnet_encoder_args_ = dict(dim_h=64, batch_norm=False, n_steps=3)
 convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(

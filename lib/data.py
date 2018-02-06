@@ -27,6 +27,7 @@ _default_normalization = {
     'PhotoTour': [(0.5,), (0.5,)],
     'Imagenet-12': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
     'LSUN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+    'SVHN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
     'CIFAR10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
     'CIFAR100': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
     'STL10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
@@ -183,6 +184,12 @@ class DataHandler(object):
                 test_set = train_set
             else:
                 test_set = dataset(test_path, classes=['bedroom_test'], transform=transform)
+        elif source == 'SVHN':
+            train_set = dataset(train_path, split='train', transform=transform, download=True)
+            if test_on_train:
+                test_set = train_set
+            else:
+                test_set = dataset(test_path, split='test', transform=transform, download=True)
         elif source_type == 'folder':
             if source == 'CelebA':
                 train_set = dataset(root=train_path, transform=transform, download=True)
@@ -212,6 +219,9 @@ class DataHandler(object):
                 break
             dim_c, dim_x, dim_y = sample[0].size()[1:]
             dim_l = len(train_set.classes)
+        elif source == 'SVHN':
+            dim_c, dim_x, dim_y = train_set.data.shape[1:]
+            dim_l = len(np.unique(train_set.labels))
         else:
             if len(train_set.train_data.shape) == 4:
                 dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
