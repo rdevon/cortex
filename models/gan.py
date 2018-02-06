@@ -126,19 +126,14 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         g_f = g_f.view(g_f.size()[0], -1)
 
         if measure in ('gan', 'proxy_gan', 'jsd'):
-            g_r = (1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2)
-            g_f = F.sigmoid(fake_out) ** 2 * (g_f ** 2)
+            g_r = ((1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2)).sum(1)
+            g_f = (F.sigmoid(fake_out) ** 2 * (g_f ** 2)).sum(1)
 
         else:
-            g_r = (g_r ** 2)
-            g_f = (g_f ** 2)
+            g_r = (g_r ** 2).sum(1)
+            g_f = (g_f ** 2).sum(1)
 
-        g_r = g_r.sum(1)
-        g_f = g_f.sum(1)
-
-        g_p = 0.5 * (g_r.mean() + g_f.mean())
-
-        return g_p
+        return 0.5 * (g_r.mean() + g_f.mean())
 
     elif penalty_type == 'interpolate':
         try:
@@ -152,8 +147,7 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         g = autograd.grad(outputs=mid_out, inputs=interpolations, grad_outputs=torch.ones(mid_out.size()).cuda(),
                           create_graph=True, retain_graph=True, only_inputs=True)[0]
         s = (g ** 2).sum(1).sum(1).sum(1)
-        g_p = ((torch.sqrt(s) - 1.) ** 2)
-        return g_p.mean()
+        return ((torch.sqrt(s) - 1.) ** 2).mean()
 
     elif penalty_type == 'variance':
         _, _, r, f, _, _ = f_divergence(measure, real_out, fake_out)
