@@ -253,7 +253,7 @@ def train_epoch(epoch, quit_on_bad_values):
     return results
 
 
-def test_epoch(epoch, best_condition=0, return_std=False):
+def test_epoch(epoch, best_condition=0, return_std=False, fast_eval=False):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -281,6 +281,8 @@ def test_epoch(epoch, best_condition=0, return_std=False):
                     samples__.update(**samples)
                 update_dict_of_lists(results, **results_)
             samples_ = samples_ or samples__
+            if fast_eval:
+                break
     except StopIteration:
         pass
 
@@ -293,7 +295,7 @@ def test_epoch(epoch, best_condition=0, return_std=False):
 
 
 def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False,
-              quit_on_bad_values=False):
+              quit_on_bad_values=False, fast_eval=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     if test_mode:
@@ -311,7 +313,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
-            test_results_, samples_ = test_epoch(epoch)
+            test_results_, samples_ = test_epoch(epoch, fast_eval=fast_eval)
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
             logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k] if k in test_results_.keys() else 0)

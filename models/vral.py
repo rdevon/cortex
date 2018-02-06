@@ -15,14 +15,14 @@ from .modules.densenet import DenseNet
 
 logger = logging.getLogger('cortex.models' + __name__)
 
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=False, f_size=3, n_steps=3)
 resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 
 mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
                                  nonlinearity='LeakyReLU')
 mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='ReLU')
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=False, n_steps=3, nonlinearity='ReLU')
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
@@ -198,9 +198,9 @@ def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
     discriminator = Discriminator(shape, dim_out=dim_h, **discriminator_args_)
     topnet = DenseNet(dim_h, dim_h=[], dim_out=dim_d)
     generator = Generator(shape, dim_in=dim_z, **generator_args_)
-    real_discriminator = DenseNet(dim_d, dim_h=[64, 64], dim_out=dim_e, nonlinearity='ReLU', batch_norm=False,
+    real_discriminator = DenseNet(dim_d, dim_h=[64], dim_out=dim_e, nonlinearity='LeakyReLU', batch_norm=False,
                                   layer_norm=False)
-    fake_discriminator = DenseNet(dim_d, dim_h=[64, 64], dim_out=dim_e, nonlinearity='ReLU', batch_norm=False,
+    fake_discriminator = DenseNet(dim_d, dim_h=[64], dim_out=dim_e, nonlinearity='LeakyReLU', batch_norm=False,
                                   layer_norm=False)
     logger.debug(discriminator)
     logger.debug(generator)
