@@ -59,6 +59,24 @@ def plot():
         viz.visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
 
 
+def compute_tsne(latents, labels, dim_l):
+    if latents:
+        from sklearn.manifold import TSNE
+
+        directory = exp.OUT_DIRS.get('image_dir', None)
+        tsne = TSNE(2, perplexity=40, n_iter=300, init='pca')
+        points = sum([l.tolist() for l in latents.values()], [])
+        points = tsne.fit_transform(points)
+        idx = 0
+        colormap = np.random.rand(dim_l, 3)
+        labels_name = map(str, range(dim_l))
+        for i, (k, v) in enumerate(latents.items()):
+            point = points[idx:idx+len(v), :]
+            idx += len(v)
+            viz.save_tsne(point, labels[k].tolist(), colormap, '%s/%s_tsne.png' % (directory, k), id=i,
+                          labels_name=labels_name, title='tsne_latent_%s' % k)
+
+
 def show(samples, prefix=''):
     prefix = exp.file_string(prefix)
     image_dir = exp.OUT_DIRS.get('image_dir', None)
@@ -319,6 +337,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))
             plot()
             show(samples_)
+            compute_tsne(samples_.get('latents', None), samples_.get('labels', None), DATA_HANDLER.get_dims('labels')[0])
             if (archive_every and epoch % archive_every == 0):
                 exp.save(prefix=epoch)
 

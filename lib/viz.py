@@ -12,6 +12,7 @@ matplotlib.use('Agg')
 from matplotlib import pylab as plt
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+import matplotlib.patches as mpatches
 import visdom
 
 from . import config, exp
@@ -232,3 +233,19 @@ def save_hist(scores, out_file, hist_id=0):
         opts=dict(legend=['Real', 'Fake']), win='hist_{}'.format(hist_id),
         env=exp.NAME)
 
+
+def save_tsne(X, labels, colormap, out_file, id=0, labels_name=None, title=''):
+    plt.clf()
+    if len(labels):
+        color = [colormap[label] for label in labels]
+        plt.scatter(*X.transpose(1,0), c=color)
+        patches = [mpatches.Patch(color=c, label=l) for c, l in zip(colormap, range(10))]
+        plt.legend(handles=patches)
+        visualizer.scatter(
+            X, win='scatter%s' % id, Y=np.array(labels)+1, env=exp.NAME,
+            opts={'legend': labels_name, 'title': title})
+    else:
+        plt.scatter(*X)
+        visualizer.scatter(
+            X, win='scatter%s' % id, env=exp.NAME, opts={'title': title})
+    plt.savefig(out_file)
