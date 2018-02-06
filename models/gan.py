@@ -25,7 +25,7 @@ dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
     data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
-              noise_variables=dict(z=('normal', 64))),
+              noise_variables=dict(z=('normal', 64), e=('uniform', 1))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
@@ -47,8 +47,8 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
     if measure in ('gan', 'proxy_gan'):
         r = -F.softplus(-real_out)
         f = F.softplus(-fake_out) + fake_out
-        w = None#torch.exp(fake_out)
-        b = None#fake_out ** 2 + real_out ** 2
+        w = torch.exp(fake_out)
+        b = fake_out ** 2 + real_out ** 2
 
     elif measure == 'jsd':
         r = log_2 - F.softplus(-real_out)
