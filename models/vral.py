@@ -11,12 +11,13 @@ import torch.nn.functional as fun
 
 from .gan import apply_penalty, f_divergence
 from .modules.densenet import DenseNet
+from .modules.modules import Pipeline
 
 
 logger = logging.getLogger('cortex.models' + __name__)
 
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=False, f_size=3, n_steps=3)
+resnet_generator_args_ = dict(dim_h=64, batch_norm=False, f_size=3, n_steps=3)
 
 mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
                                  nonlinearity='LeakyReLU')
@@ -31,11 +32,18 @@ DEFAULTS = dict(
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
+<<<<<<< HEAD
+        updates_per_model=dict(discriminator=1, generator=1, real_discriminator=1, fake_discriminator=1, topnet=1)
+    ),
+    model=dict(model_type='dcgan', dim_d=1, dim_e=1, discriminator_args=None, generator_args=None),
+    procedures=dict(measure='proxy_gan', boundary_seek=True, penalty_type='gradient_norm', penalty=1.),
+=======
         clipping=dict(meta_discriminators=1.0),
         updates_per_model=dict(discriminator=1, generator=1, meta_discriminators=1)
     ),
     model=dict(model_type='dcgan', dim_d=1, dim_e=1, discriminator_args=None, generator_args=None),
     procedures=dict(measure='proxy_gan', boundary_seek=False, penalty=1.0, meta_penalty=1.0),
+>>>>>>> 532731453a109fe88eadbb0eb8f23e7e2d34b0a6
     train=dict(
         epochs=200,
         summary_updates=100,
@@ -139,6 +147,11 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None,
         results['real gradient penalty'] = p_term_r.mean()
         results['fake gradient penalty'] = p_term_f.mean()
 
+<<<<<<< HEAD
+        p_term_d = apply_penalty(data_handler, complete_discriminator, X, gen_out, measure, penalty_type=penalty_type)
+        d_loss += penalty * p_term_d.mean()
+        results['gradient_penalty'] = p_term_d.mean()
+=======
     if penalty:
         real = Variable(X.data.cuda(), requires_grad=True)
         fake = Variable(gen_out.data.cuda(), requires_grad=True)
@@ -164,11 +177,13 @@ def vral(nets, data_handler, measure=None, boundary_seek=False, penalty=None,
 
         d_loss += penalty * g_p
         results['gradient penalty'] = g_p.data[0]
+>>>>>>> 532731453a109fe88eadbb0eb8f23e7e2d34b0a6
 
     loss = dict(generator=g_loss, meta_discriminators=d_loss_r+d_loss_f, discriminator=d_loss)
     return loss, results, samples, 'boundary'
 
 
+complete_discriminator = None
 def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
                 discriminator_args=None, generator_args=None):
     discriminator_args = discriminator_args or {}
@@ -203,6 +218,9 @@ def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
     elif shape[0] == 128:
         discriminator_args_['n_steps'] = 5
         generator_args_['n_steps'] = 5
+    elif shape[0] == 32:
+        discriminator_args_['n_steps'] = 3
+        generator_args_['n_steps'] = 3
 
     discriminator = Discriminator(shape, dim_out=dim_h, **discriminator_args_)
     topnet = DenseNet(dim_h, dim_h=[], dim_out=dim_d)
@@ -216,6 +234,14 @@ def build_model(data_handler, model_type='resnet', dim_h=64, dim_d=1, dim_e=1,
     logger.debug(real_discriminator)
     logger.debug(fake_discriminator)
 
+<<<<<<< HEAD
+    global complete_discriminator
+    complete_discriminator = Pipeline([discriminator, topnet])
+
+    return dict(generator=generator, discriminator=discriminator, real_discriminator=real_discriminator,
+                fake_discriminator=fake_discriminator, topnet=topnet), vral
+=======
     return dict(generator=generator, discriminator=[discriminator, topnet], meta_discriminators=[real_discriminator, fake_discriminator]), vral
+>>>>>>> 532731453a109fe88eadbb0eb8f23e7e2d34b0a6
 
 
