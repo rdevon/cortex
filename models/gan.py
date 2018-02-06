@@ -141,9 +141,10 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         return g_p
 
     elif penalty_type == 'interpolate':
-        if 'e' not in data_handler.keys():
+        try:
+            epsilon = data_handler['e'].view(-1, 1, 1, 1)
+        except:
             raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
-        epsilon = data_handler['e'].view(-1, 1, 1, 1)
         interpolations = Variable(((1. - epsilon) * fake + epsilon * real[:fake.size()[0]]).data.cuda(),
                                   requires_grad=True)
 
