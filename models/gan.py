@@ -47,8 +47,8 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
     if measure in ('gan', 'proxy_gan'):
         r = -F.softplus(-real_out)
         f = F.softplus(-fake_out) + fake_out
-        w = torch.exp(fake_out)
-        b = fake_out ** 2 + real_out ** 2
+        w = None#torch.exp(fake_out)
+        b = None#fake_out ** 2 + real_out ** 2
 
     elif measure == 'jsd':
         r = log_2 - F.softplus(-real_out)
