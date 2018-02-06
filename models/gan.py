@@ -181,9 +181,9 @@ def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pen
 
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], boundary=torch.mean(b).data[0],
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0],
-                   real_var=torch.var(r), fake_var=torch.var(f))
-    samples = dict(images=dict(generated=0.5 * (gen_out + 1.), real=0.5 * (data_handler['images'] + 1.)),
-                   histograms=dict(generated=dict(fake=fake_out.view(-1), real=real_out.view(-1))))
+                   real_var=torch.var(r).data[0], fake_var=torch.var(f).data[0])
+    samples = dict(images=dict(generated=0.5 * (gen_out + 1.).data, real=0.5 * (data_handler['images'] + 1.).data),
+                   histograms=dict(generated=dict(fake=fake_out.view(-1).data, real=real_out.view(-1).data)))
 
     if penalty:
         p_term = apply_penalty(data_handler, discriminator, X, gen_out, measure, penalty_type=penalty_type)
