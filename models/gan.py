@@ -25,14 +25,14 @@ dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
     data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
-              noise_variables=dict(z=('normal', 64))),
+              noise_variables=dict(z=('normal', 64), e=('uniform', 1))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
         updates_per_model=dict(discriminator=1, generator=1)
     ),
     model=dict(model_type='dcgan', discriminator_args=None, generator_args=None),
-    procedures=dict(measure='gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
+    procedures=dict(measure='proxy_gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
         epochs=30,
         summary_updates=100,
@@ -47,8 +47,12 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
     if measure in ('gan', 'proxy_gan'):
         r = -F.softplus(-real_out)
         f = F.softplus(-fake_out) + fake_out
-        w = None#torch.exp(fake_out)
-        b = None#fake_out ** 2 + real_out ** 2
+        if boundary_seek:
+            w = torch.exp(fake_out)
+            b = fake_out ** 2 + real_out ** 2
+        else:
+            w = Variable(torch.Tensor([0.]).float()).cuda()
+            b = Variable(torch.Tensor([0.]).float()).cuda()
 
     elif measure == 'jsd':
         r = log_2 - F.softplus(-real_out)
@@ -126,24 +130,20 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         g_f = g_f.view(g_f.size()[0], -1)
 
         if measure in ('gan', 'proxy_gan', 'jsd'):
-            g_r = (1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2)
-            g_f = F.sigmoid(fake_out) ** 2 * (g_f ** 2)
+            g_r = ((1. - F.sigmoid(real_out)) ** 2 * (g_r ** 2)).sum(1)
+            g_f = (F.sigmoid(fake_out) ** 2 * (g_f ** 2)).sum(1)
 
         else:
-            g_r = (g_r ** 2)
-            g_f = (g_f ** 2)
+            g_r = (g_r ** 2).sum(1)
+            g_f = (g_f ** 2).sum(1)
 
-        g_r = g_r.sum(1)
-        g_f = g_f.sum(1)
-
-        g_p = 0.5 * (g_r.mean() + g_f.mean())
-
-        return g_p
+        return 0.5 * (g_r.mean() + g_f.mean())
 
     elif penalty_type == 'interpolate':
-        if 'e' not in data_handler.keys():
+        try:
+            epsilon = data_handler['e'].view(-1, 1, 1, 1)
+        except:
             raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
-        epsilon = data_handler['e'].view(-1, 1, 1, 1)
         interpolations = Variable(((1. - epsilon) * fake + epsilon * real[:fake.size()[0]]).data.cuda(),
                                   requires_grad=True)
 
@@ -151,8 +151,7 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
         g = autograd.grad(outputs=mid_out, inputs=interpolations, grad_outputs=torch.ones(mid_out.size()).cuda(),
                           create_graph=True, retain_graph=True, only_inputs=True)[0]
         s = (g ** 2).sum(1).sum(1).sum(1)
-        g_p = ((torch.sqrt(s) - 1.) ** 2)
-        return g_p.mean()
+        return ((torch.sqrt(s) - 1.) ** 2).mean()
 
     elif penalty_type == 'variance':
         _, _, r, f, _, _ = f_divergence(measure, real_out, fake_out)
@@ -180,9 +179,9 @@ def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None, pen
 
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], boundary=torch.mean(b).data[0],
                    real=torch.mean(r).data[0], fake=torch.mean(f).data[0], w=torch.mean(w).data[0],
-                   real_var=torch.var(r), fake_var=torch.var(f))
-    samples = dict(images=dict(generated=0.5 * (gen_out + 1.), real=0.5 * (data_handler['images'] + 1.)),
-                   histograms=dict(generated=dict(fake=fake_out.view(-1), real=real_out.view(-1))))
+                   real_var=torch.var(r).data[0], fake_var=torch.var(f).data[0])
+    samples = dict(images=dict(generated=0.5 * (gen_out + 1.).data, real=0.5 * (data_handler['images'] + 1.).data),
+                   histograms=dict(generated=dict(fake=fake_out.view(-1).data, real=real_out.view(-1).data)))
 
     if penalty:
         p_term = apply_penalty(data_handler, discriminator, X, gen_out, measure, penalty_type=penalty_type)
