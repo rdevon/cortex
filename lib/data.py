@@ -98,6 +98,8 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
             transform_.append(transforms.RandomSizedCrop(224))
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
+    if source == 'LSUN' and image_size == None:
+        image_size = (64, 64)
 
     if image_size:
         transform_.append(transforms.Resize(image_size))
@@ -222,6 +224,9 @@ class DataHandler(object):
         elif source == 'SVHN':
             dim_c, dim_x, dim_y = train_set.data.shape[1:]
             dim_l = len(np.unique(train_set.labels))
+        elif source == 'LSUN':
+            dim_c, dim_x, dim_y = train_set[0][0].shape
+            dim_l = 1
         else:
             if len(train_set.train_data.shape) == 4:
                 dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
