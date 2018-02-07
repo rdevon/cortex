@@ -138,12 +138,15 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
                     net.cuda()
                     net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
                 logger.debug('Getting parameters for {}'.format(net))
-                model_params += net.parameters()
+                model_params += list(net.parameters())
         else:
             if exp.USE_CUDA:
                 model.cuda()
                 model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
-            model_params = model.parameters()
+            model_params = list(model.parameters())
+
+        for p in model_params:
+            p.requires_grad = True
 
         logger.info('Training with {} and optimizer options {}'.format(optimizer, optimizer_options))
         if isinstance(learning_rate, dict):
@@ -253,7 +256,7 @@ def train_epoch(epoch, quit_on_bad_values):
     return results
 
 
-def test_epoch(epoch, best_condition=0, return_std=False, fast_eval=False):
+def test_epoch(epoch, best_condition=0, return_std=False):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -281,8 +284,6 @@ def test_epoch(epoch, best_condition=0, return_std=False, fast_eval=False):
                     samples__.update(**samples)
                 update_dict_of_lists(results, **results_)
             samples_ = samples_ or samples__
-            if fast_eval:
-                break
     except StopIteration:
         pass
 
@@ -295,7 +296,7 @@ def test_epoch(epoch, best_condition=0, return_std=False, fast_eval=False):
 
 
 def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False,
-              quit_on_bad_values=False, fast_eval=False):
+              quit_on_bad_values=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     if test_mode:
@@ -313,7 +314,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
-            test_results_, samples_ = test_epoch(epoch, fast_eval=fast_eval)
+            test_results_, samples_ = test_epoch(epoch)
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
             logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k] if k in test_results_.keys() else 0)

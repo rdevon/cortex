@@ -190,10 +190,12 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='', image
         Y = None
 
     names = DATA_HANDLER.get_label_names()
+    Y = Y - min(Y) + 1
+    if len(names) != max(Y):
+        names = ['{}'.format(i+1) for i in range(max(Y))]
 
     visualizer.scatter(X=points, Y=Y, opts=dict(title=title, caption=caption, legend=names, markersize=5),
                        win='scatter_{}'.format(image_id), env=exp.NAME)
-
 
 def save_movie(images, num_x, num_y, out_file=None, movie_id=0):
     if out_file is None:

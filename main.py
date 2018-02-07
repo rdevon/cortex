@@ -4,7 +4,7 @@
 
 import logging
 
-from __init__ import setup
+from __init__ import setup, setup_reload
 from lib import exp
 from lib.data import setup as setup_data, DATA_HANDLER
 from lib.exp import setup as setup_model
@@ -43,8 +43,10 @@ def main(eval_mode=False):
     main_loop(**train_args)
 
 
-def reload_model(model_file):
-    setup_reload(model_file)
+def reload_model(arch, model_file):
+    import torch
+    use_cuda = torch.cuda.is_available()
+    setup_reload(arch, use_cuda, model_file)
     main(eval_mode=True)
 
 
