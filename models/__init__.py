@@ -2,12 +2,22 @@
 
 '''
 
+import importlib
 import logging
+import os
 
-import classifier, gan, discrete_gan, featnet
+from . import classifier, gan, discrete_gan, featnet
 
 
+arch_names = ['gan', 'discrete_gan', 'classifier', 'featnet', 'minet', 'vral']
 logger = logging.getLogger('cortex.models')
+
+ARCHS = dict()
+
+mod_path = os.path.dirname(__file__)
+for arch_name in arch_names:
+    m = importlib.import_module('models.' + arch_name)
+    ARCHS[arch_name] = m
 
 ARCH = None
 
@@ -15,16 +25,16 @@ ARCH = None
 def setup(arch):
     global ARCH
     logger.info('Using architecture `{}`'.format(arch))
-    ARCH = _archs.get(arch, None)
+    ARCH = ARCHS.get(arch, None)
     if ARCH is None:
-        raise ValueError('Arch not found (``). Did you register it? '
+        raise ValueError('Arch not found ({}). Did you register it? '
                          'Available: {}'.format(
-            arch, _archs.keys()))
+            arch, ARCHS.keys()))
 
     return ARCH
 
 
-def build_model(data_dims, **model_args):
+def build_model(data_handler, **model_args):
     '''Builds the generator and discriminator.
 
     If architecture module contains a `build_model` function, use that,
@@ -33,20 +43,12 @@ def build_model(data_dims, **model_args):
     '''
 
     logger.debug('Model args: {}'.format(model_args))
-    if hasattr(ARCH, 'GLOBALS'):
-        for k, v in ARCH.GLOBALS.items():
-            if k.lower() in data_dims.keys():
-                v_ = data_dims.pop(k.lower())
-                if v_ != v:
-                    logger.warning('Changing {} to {} from default {}'.format(
-                        k, v_, v))
-                    v = v_
-            logger.debug('Setting module global {} to {}'.format(k, v))
-            setattr(ARCH, k, v)
 
     if hasattr(ARCH, 'build_model'):
-        return getattr(ARCH, 'build_model')(**model_args)
+        return getattr(ARCH, 'build_model')(data_handler, **model_args)
     else:
         raise NotImplementedError('Module lacks `build_model` method')
 
-_archs = dict(classifier=classifier, discrete_gan=discrete_gan, gan=gan, featnet=featnet)
+
+def register(key, mod):
+    ARCHS[key] = mod

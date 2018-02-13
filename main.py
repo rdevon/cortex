@@ -4,27 +4,16 @@
 
 import logging
 
-from __init__ import setup
+from __init__ import setup, setup_reload
 from lib import exp
-from lib.data import setup as setup_data, DIMS as data_dims
+from lib.data import setup as setup_data, DATA_HANDLER
 from lib.exp import setup as setup_model
 from lib.train import setup as setup_optimizer, main_loop
 from lib.utils import print_section
 from models import build_model
 
-'''
-import lib.data
-from lib import exp, setup_reload
-from lib.gen import setup_generation
-from lib.loss import get_gan_loss
-, train
-from models import build, make_iterator_generator
-'''
-
 
 logger = logging.getLogger('cortex')
-
-
 
 
 def main(eval_mode=False):
@@ -42,7 +31,7 @@ def main(eval_mode=False):
     print_section('MODEL') #####################################################
     logger.info('Building model...')
     logger.info('Model args: {}'.format(model_args))
-    models, procedures = build_model(data_dims, **model_args)
+    models, procedures = build_model(DATA_HANDLER, **model_args)
     setup_model(models, procedures)
 
     print_section('OPTIMIZER') #################################################
@@ -54,10 +43,11 @@ def main(eval_mode=False):
     main_loop(**train_args)
 
 
-def reload_model(model_file):
-    setup_reload(model_file)
+def reload_model(arch, model_file):
+    import torch
+    use_cuda = torch.cuda.is_available()
+    setup_reload(arch, use_cuda, model_file)
     main(eval_mode=True)
-
 
 
 if __name__ == '__main__':
@@ -68,5 +58,5 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print 'Cancelled'
+        print('Cancelled')
         exit(0)

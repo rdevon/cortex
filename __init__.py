@@ -62,13 +62,57 @@ def setup_out_dir(out_path, name=None, clean=False):
     exp.OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir)
 
 
-def setup_reload(exp_file):
-    config_file_path = path.join(path.dirname(path.dirname(
-        path.abspath(__file__))), 'config.yaml')
+def update_args(args, **kwargs):
+    if args is not None:
+        a = args.split(',')
+        for a_ in a:
+            k, v = a_.split('=')
+
+            try:
+                v = ast.literal_eval(v)
+            except ValueError:
+                pass
+
+            k_split = k.split('.')
+            kw = kwargs
+            for i, k_ in enumerate(k_split):
+                if i < len(k_split) - 1:
+                    if k_ in kw:
+                        kw = kw[k_]
+                    else:
+                        raise ValueError('Unknown arg {}'.format(k))
+                else:
+                    if kw is None:
+                        kw = dict(k_=v)
+                    else:
+                        kw[k_] = v
+
+
+def setup_reload(arch, use_cuda, exp_file):
+    exp.USE_CUDA = use_cuda
+
+    if exp.USE_CUDA:
+        logger.info('Using GPU')
+    else:
+        logger.info('Using CPU')
+
+    config_file_path = path.join(path.dirname(
+        path.abspath(__file__)), 'config.yaml')
     if not path.isfile(config_file_path): config_file_path = None
     config.update_config(config_file_path)
     viz_init()
-    reload_experiment(exp_file)
+
+    models.setup(arch)
+
+    logger.info('Reloading from {}'.format(exp_file))
+    d = torch.load(exp_file)
+    exp.INFO.update(**d['info'])
+    exp.NAME = d['info']['name']
+    exp.SUMMARY.update(**d['summary'])
+    exp.ARGS.update(**d['args'])
+    reloads = d['models'].keys()
+    for k in reloads:
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
 
 
 def reload_experiment(args):
@@ -93,29 +137,6 @@ def reload_experiment(args):
     out_path = path.dirname(path.dirname(exp_file))
     out_dirs = dict((k, path.join(out_path, path.basename(v))) for k, v in out_dirs.items())
     exp.OUT_DIRS.update(**out_dirs)
-
-
-def update_args(args, **kwargs):
-    if args is not None:
-        a = args.split(',')
-        for a_ in a:
-            k, v = a_.split('=')
-
-            try:
-                v = ast.literal_eval(v)
-            except ValueError:
-                pass
-
-            k_split = k.split('.')
-            kw = kwargs
-            for i, k_ in enumerate(k_split):
-                if i < len(k_split) - 1:
-                    if k_ in kw:
-                        kw = kw[k_]
-                    else:
-                        raise ValueError('Unknown arg {}'.format(k))
-                else:
-                    kw[k_] = v
 
 
 def setup(use_cuda):
@@ -154,7 +175,6 @@ def setup(use_cuda):
             kwargs['test_procedures'] = {}
 
         kwargs['data']['source'] = args.source
-        kwargs['data']['meta'] = args.meta
         update_args(args.args, **kwargs)
 
         name = args.name

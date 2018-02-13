@@ -8,12 +8,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from convnets import SimpleConvEncoder as Net
+from .modules.convnets import SimpleConvEncoder as Net
 
 
 logger = logging.getLogger('cortex.models' + __name__)
-
-GLOBALS = {'DIM_X': None, 'DIM_Y': None, 'DIM_C': None, 'DIM_L': None}
 
 classifier_args_ = dict(dim_h=256, batch_norm=True, dropout=0.5, nonlinearity='ReLU',
                         f_size=4, stride=2, pad=1, min_dim=4)
@@ -45,11 +43,12 @@ def classify(nets, inputs, criterion=None):
     return loss, dict(loss=loss.data[0], accuracy=correct), None, 'accuracy'
 
 
-def build_model(classifier_args=None):
+def build_model(data_handler, classifier_args=None):
     classifier_args = classifier_args or {}
     args = classifier_args_
     args.update(**classifier_args)
 
-    shape = (DIM_X, DIM_Y, DIM_C)
-    net = Net(shape, dim_out=DIM_L, **args)
+    shape = data_handler.get_dims('x', 'y', 'c')
+    dim_l = data_handler.get_dims('labels')[0]
+    net = Net(shape, dim_out=dim_l, **args)
     return dict(classifier=net), classify

@@ -1,0 +1,7 @@
+imageio
+matplotlib
+progressbar2
+scipy
+sklearn
+torchvision
+visdom

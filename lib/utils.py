@@ -7,7 +7,7 @@ import logging
 import os
 
 import numpy as np
-
+import torch
 
 logger = logging.getLogger('cortex.util')
 
@@ -24,7 +24,7 @@ def print_section(s):
         s (str): string of section
     '''
     h = s + ('-' * (_columns - len(s)))
-    print h
+    print(h)
 
 
 def make_argument_parser():
@@ -77,7 +77,7 @@ def update_dict_of_lists(d_to_update, **d):
         **d: keyword arguments to append.
 
     '''
-    for k, v in d.iteritems():
+    for k, v in d.items():
         if k in d_to_update.keys():
             d_to_update[k].append(v)
         else:
@@ -87,9 +87,37 @@ def update_dict_of_lists(d_to_update, **d):
 def bad_values(d):
     failed = {}
     for k, v in d.items():
-        if np.isnan(v) or np.isinf(v):
-            failed[k] = v
+        if isinstance(v, torch.autograd.variable.Variable):
+            v_ = v.data[0]
+        else:
+            v_ = v
+        if np.isnan(v_) or np.isinf(v_):
+            failed[k] = v_
 
     if len(failed) == 0:
         return False
     return failed
+
+
+def convert_to_numpy(o):
+    if isinstance(o, torch.autograd.variable.Variable):
+        o = o.data.cpu().numpy()
+        if len(o.shape) == 1 and o.shape[0] == 1:
+            o = o[0]
+    elif isinstance(o, (torch.cuda.FloatTensor, torch.cuda.LongTensor)):
+        o = o.cpu().numpy()
+    elif isinstance(o, (list, tuple)):
+        for i in range(len(o)):
+            o[i] = convert_to_numpy(o[i])
+    elif isinstance(o, dict):
+        for k in o.keys():
+            o[k] = convert_to_numpy(o[k])
+    return o
+
+
+def compute_tsne(X, perplexity=40, n_iter=300, init='pca'):
+    from sklearn.manifold import TSNE
+
+    tsne = TSNE(2, perplexity=perplexity, n_iter=n_iter, init=init)
+    points = X.tolist()
+    return tsne.fit_transform(points)

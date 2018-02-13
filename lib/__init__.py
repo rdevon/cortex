@@ -10,11 +10,10 @@ from shutil import copyfile, rmtree
 
 import numpy as np
 
-import config
-import exp
-from log_utils import set_file_logger, set_stream_logger
-from utils import make_argument_parser
-from viz import init as viz_init
+from . import config, exp
+from .log_utils import set_file_logger, set_stream_logger
+from .utils import make_argument_parser
+from .viz import init as viz_init
 
 
 logger = logging.getLogger('cortex.init')

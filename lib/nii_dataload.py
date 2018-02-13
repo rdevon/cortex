@@ -1,36 +1,37 @@
-import torch.utils.data as data
-
-from PIL import Image
-import os
-import os.path
-import numpy as np
-import nibabel as nib
-from glob import glob
-
-IMG_EXTENSIONS = ['.nii', '.nii.gz', '.img', '.hdr', '.img.gz', '.hdr.gz']
-
-'''
+'''Module for handling neuroimaging data
  We build an "ImageFolder" object and we can iterate/index through
  it.  The class is initialized with a folder location, a loader (the only one we have now is for nii files), and (optionally)
  a list of regex patterns.
- 
+
  The user can also provide a 3D binary mask (same size as data) to vectorize the space/voxel dimension. Can handle 3D and 3D+time (4D) datasets
  So, it can be built one of two ways:
  1: a path to one directory with many images, and the classes are based on regex patterns.
-    example 1a: "/home/user/some_data_path" has files *_H_*.nii and *_S_*.nii files 
+    example 1a: "/home/user/some_data_path" has files *_H_*.nii and *_S_*.nii files
   patterned_images = ImageFolder("/home/user/some_data_path",patterns=['*_H_*','*_S_*'] , loader=nii_loader)
     example 1b: "/home/user/some_data_path" has files *_H_*.nii and *_S_*.nii files, and user specifies a mask to vectorize space
   patterned_images_mask = ImageFolder("/home/user/some_data_path",patterns=['*_H_*','*_S_*'] , loader=nii_loader, mask="/home/user/maskImage.nii")
 
  2: a path to a top level directory with sub directories denoting the classes.
     example 2a: "/home/user/some_data_path" has subfolders 0 and 1 with nifti files corresponding to class 0 and class 1 respectively
-  foldered_images = ImageFolder("/home/user/some_data_path",loader=nii_loader) 
+  foldered_images = ImageFolder("/home/user/some_data_path",loader=nii_loader)
     example 2b: Same as above but with a mask
-  foldered_images = ImageFolder("/home/user/some_data_path",loader=nii_loader, mask="/home/user/maskImage.nii") 
+  foldered_images = ImageFolder("/home/user/some_data_path",loader=nii_loader, mask="/home/user/maskImage.nii")
 
 
  The final output (when we call __getitem__) is a tuple of: (image,label)
 '''
+
+import torch.utils.data as data
+
+import os
+import os.path
+import numpy as np
+import nibabel as nib
+from glob import glob
+
+
+IMG_EXTENSIONS = ['.nii', '.nii.gz', '.img', '.hdr', '.img.gz', '.hdr.gz']
+
 
 def make_dataset(dir,patterns=None):
     images = []

@@ -13,16 +13,19 @@ import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from data import make_iterator
-import exp
-from utils import bad_values, update_dict_of_lists
-import viz
+from .data import DATA_HANDLER
+from . import exp, viz
+from .utils import bad_values, compute_tsne, convert_to_numpy, update_dict_of_lists
 
+
+try: input = raw_input #Python2 compatibility
+except NameError: pass
 
 logger = logging.getLogger('cortex.util')
 
 OPTIMIZERS = {}
 UPDATES = {}
+CLIPPING = {}
 
 optimizer_defaults = dict(
     SGD=dict(momentum=0.9, weight_decay=5e-4),
@@ -62,38 +65,61 @@ def show(samples, prefix=''):
 
     images = samples.get('images', {})
     for i, (k, v) in enumerate(images.items()):
+        v = convert_to_numpy(v)
         logger.debug('Saving images to {}'.format(image_dir))
         if image_dir is None:
             out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
         else:
             out_path = None
 
-        viz.save_images(v.cpu().numpy(), 8, 8, out_file=out_path, labels=None, max_samples=64, image_id=1 + i, caption=k)
+        viz.save_images(v, 8, 8, out_file=out_path, labels=None, max_samples=64, image_id=1 + i, caption=k)
 
     scatters = samples.get('scatters', {})
     for i, (k, v) in enumerate(scatters.items()):
         if isinstance(v, tuple):
             v, l = v
-            l = l.cpu().numpy()
         else:
             l = None
+        v = convert_to_numpy(v)
+        l = convert_to_numpy(l)
+
+        if v.shape[1] == 1:
+            raise ValueError('1D-scatter not supported')
+        elif v.shape[1] > 2:
+            logger.info('Scatter greater than 2D. Performing TSNE to 2D')
+            v = compute_tsne(v)
+
         logger.debug('Saving scatter to {}'.format(image_dir))
         if image_dir is None:
             out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
         else:
             out_path = None
 
-        viz.save_scatter(v.cpu().numpy(), out_file=out_path, labels=l, image_id=i, title=k)
+        viz.save_scatter(v, out_file=out_path, labels=l, image_id=i, title=k)
+
+    histograms = samples.get('histograms', {})
+    for i, (k, v) in enumerate(histograms.items()):
+        convert_to_numpy(v)
+        logger.debug('Saving histograms to {}'.format(image_dir))
+        if image_dir is None:
+            out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
+        else:
+            out_path = None
+        viz.save_hist(v, out_file=out_path, hist_id=i)
 
 def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
-          optimizer_options='default'):
+          clipping=None, weight_decay=None, optimizer_options='default', model_optimizer_options=None):
 
-    global UPDATES
+    global CLIPPING, UPDATES
+    model_optimizer_options = model_optimizer_options or {}
+    weight_decay = weight_decay or {}
+    clipping = clipping or {}
 
     if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
         optimizer_options = optimizer_defaults[optimizer]
     updates_per_model = updates_per_model or dict((k, 1) for k in exp.MODELS.keys())
     UPDATES.update(**updates_per_model)
+    CLIPPING.update(**clipping)
 
     if callable(optimizer):
         op = optimizer
@@ -112,12 +138,15 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
                     net.cuda()
                     net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
                 logger.debug('Getting parameters for {}'.format(net))
-                model_params += net.parameters()
+                model_params += list(net.parameters())
         else:
             if exp.USE_CUDA:
                 model.cuda()
                 model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
-            model_params = model.parameters()
+            model_params = list(model.parameters())
+
+        for p in model_params:
+            p.requires_grad = True
 
         logger.info('Training with {} and optimizer options {}'.format(optimizer, optimizer_options))
         if isinstance(learning_rate, dict):
@@ -125,14 +154,26 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
         else:
             eta = learning_rate
 
-        optimizer = op(model_params, lr=eta, **optimizer_options)
+        if isinstance(weight_decay, dict):
+            wd = weight_decay.get(k, 0)
+        else:
+            wd = weight_decay
+
+        optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
+        if k in model_optimizer_options.keys():
+            optimizer_options_.update(**model_optimizer_options)
+
+        optimizer = op(model_params, lr=eta, weight_decay=wd, **optimizer_options_)
         OPTIMIZERS[k] = optimizer
+
+        if k in CLIPPING.keys():
+            logger.info('Clipping {} with {}'.format(k, CLIPPING[k]))
 
     if exp.USE_CUDA:
         cudnn.benchmark = True
 
 
-def train_epoch(epoch):
+def train_epoch(epoch, quit_on_bad_values):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -140,14 +181,25 @@ def train_epoch(epoch):
         else:
             model.train()
 
-    train_iter = make_iterator(string='Training (epoch {}): '.format(epoch))
+    DATA_HANDLER.reset(string='Training (epoch {}): '.format(epoch))
+
     results = {}
 
     try:
         while True:
             for i, k_ in enumerate(exp.MODELS.keys()):
-                for _ in xrange(UPDATES[k_]):
-                    inputs = train_iter.next()
+                for _ in range(UPDATES[k_]):
+                    DATA_HANDLER.next()
+
+                    for k__, model in exp.MODELS.items():
+                        if isinstance(model, (list, tuple)):
+                            for net in model:
+                                for p in net.parameters():
+                                    p.requires_grad = (k__ == k_)
+                        else:
+                            for p in model.parameters():
+                                p.requires_grad = (k__ == k_)
+
                     OPTIMIZERS[k_].zero_grad()
 
                     for k, v in exp.PROCEDURES.items():
@@ -156,9 +208,9 @@ def train_epoch(epoch):
                             args = exp.ARGS['procedures']
                         else:
                             args = exp.ARGS['procedures'][k]
-                        losses, results_, _, _ = v(exp.MODELS, inputs, **args)
+                        losses, results_, _, _ = v(exp.MODELS, DATA_HANDLER, **args)
                         bads = bad_values(results_)
-                        if bads:
+                        if bads and quit_on_bad_values:
                             logger.error('Bad values found (quitting): {} \n All:{}'.format(
                                 bads, results_))
                             exit(0)
@@ -178,6 +230,25 @@ def train_epoch(epoch):
                         update_dict_of_lists(results, **results_)
 
                     OPTIMIZERS[k_].step()
+
+                    if k_ in CLIPPING.keys():
+                        clip = CLIPPING[k_]
+                        model = exp.MODELS[k_]
+                        if isinstance(model, (list, tuple)):
+                            for net in model:
+                                for p in net.parameters():
+                                    p.data.clamp_(-clip, clip)
+                        else:
+                            for p in model.parameters():
+                                p.data.clamp_(-clip, clip)
+
+            '''
+            tens = [obj for obj in gc.get_objects()
+                if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data))]
+            print(len(tens))
+            for ten in tens:
+                del ten
+            '''
     except StopIteration:
         pass
 
@@ -193,34 +264,39 @@ def test_epoch(epoch, best_condition=0, return_std=False):
         else:
             model.eval()
 
-    test_iter = make_iterator(test=True, string='Evaluating (epoch {}): '.format(epoch))
+    DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
     results = {}
     samples_ = None
 
     procedures = exp.ARGS['test_procedures']
 
-    for inputs in test_iter:
-        samples__ = {}
-        for k, v in exp.PROCEDURES.items():
-            if k == 'main' or not isinstance(procedures, dict):
-                args = procedures
-            else:
-                args = procedures[k]
-            loss, results_, samples, condition = v(exp.MODELS, inputs, **args)
-            if not samples_ and samples:
-                samples__.update(**samples)
-            update_dict_of_lists(results, **results_)
-        samples_ = samples_ or samples__
+    try:
+        while True:
+            DATA_HANDLER.next()
+            samples__ = {}
+            for k, v in exp.PROCEDURES.items():
+                if k == 'main' or not isinstance(procedures, dict):
+                    args = procedures
+                else:
+                    args = procedures[k]
+                loss, results_, samples, condition = v(exp.MODELS, DATA_HANDLER, **args)
+                if not samples_ and samples:
+                    samples__.update(**samples)
+                update_dict_of_lists(results, **results_)
+            samples_ = samples_ or samples__
+    except StopIteration:
+        pass
 
     means = dict((k, np.mean(v)) for k, v in results.items())
     if return_std:
         stds = dict((k, np.std(v)) for k, v in results.items())
         return means, stds, samples_
-    
+
     return means, samples_
 
 
-def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False):
+def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False,
+              quit_on_bad_values=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     if test_mode:
@@ -230,16 +306,17 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
         exit(0)
 
     try:
-        for e in xrange(epochs):
+        for e in range(epochs):
             epoch = exp.INFO['epoch']
 
             start_time = time.time()
-            train_results_ = train_epoch(epoch)
+            train_results_ = train_epoch(epoch, quit_on_bad_values)
+            convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
             test_results_, samples_ = test_epoch(epoch)
+            convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
-
             logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k] if k in test_results_.keys() else 0)
                                     for k in train_results_.keys()]))
             logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))
@@ -254,7 +331,7 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
         kill = False
         while True:
             try:
-                response = raw_input('Keyboard interrupt. Kill? (Y/N) '
+                response = input('Keyboard interrupt. Kill? (Y/N) '
                                      '(or ^c again)')
             except KeyboardInterrupt:
                 kill = True
@@ -264,10 +341,10 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
                 kill = True
                 break
             elif response == 'n':
-                print 'Cancelling interrupt. Starting epoch over.'
+                print('Cancelling interrupt. Starting epoch over.')
                 break
             else:
-                print 'Unknown response'
+                print('Unknown response')
 
         if kill:
             print('Training interrupted')

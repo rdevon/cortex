@@ -7,7 +7,7 @@ import logging
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules import View
+from .modules import View
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -82,7 +82,7 @@ class SimpleConvDecoder(nn.Module):
         dim_y = dim_y_
         dim_h = dim_h_
 
-        for n in xrange(n_steps):
+        for n in range(n_steps):
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             if n < n_steps - 1:
                 dim_h *= 2
@@ -110,7 +110,7 @@ class SimpleConvDecoder(nn.Module):
 
         models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
 
-        for i in xrange(n_steps):
+        for i in range(n_steps):
             dim_in = dim_out
 
             if i == n_steps - 1:
@@ -152,7 +152,6 @@ class SimpleConvDecoder(nn.Module):
     def forward(self, x, nonlinearity=None, nonlinearity_args=None):
         nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
-
         if nonlinearity:
             if callable(nonlinearity):
                 x = nonlinearity(x, **nonlinearity_args)

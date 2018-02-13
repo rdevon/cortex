@@ -14,9 +14,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import visdom
 
-import config
-import exp
-from viz_utils import tile_raster_images
+from . import config, exp
+from .data import DATA_HANDLER
+from .viz_utils import tile_raster_images
 
 logger = logging.getLogger('cortex.viz')
 visualizer = None
@@ -29,7 +29,7 @@ CHARS = ['_', '\n', ' ', '!', '"', '%', '&', "'", '(', ')', ',', '-', '.', '/',
          'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
          'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '*', '*',
          '*']
-CHAR_MAP = dict((i, CHARS[i]) for i in xrange(len(CHARS)))
+CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 
 
 def init():
@@ -126,7 +126,7 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
         fill = 255
     else:
         arrs = []
-        for c in xrange(dim_c):
+        for c in range(dim_c):
             arr = tile_raster_images(
                 X=images[:, c].copy(), img_shape=(dim_x, dim_y),
                 tile_shape=(num_x, num_y),
@@ -170,13 +170,7 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
                 l_ = l_.replace('_', '\n')
             else:
                 l_ = str(label)
-            try:
-                idr.text((x_, y_), l_, fill=fill, font=font)
-            except Exception as e:
-                print l_
-                print l__
-                print len(l_)
-                raise e
+            idr.text((x_, y_), l_, fill=fill, font=font)
 
     arr = np.array(im)
     if arr.ndim == 3:
@@ -195,11 +189,13 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='', image
     else:
         Y = None
 
-    names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    names = DATA_HANDLER.get_label_names()
+    Y = Y - min(Y) + 1
+    if len(names) != max(Y):
+        names = ['{}'.format(i+1) for i in range(max(Y))]
 
-    visualizer.scatter(X=points, Y=Y, opts=dict(title=title, caption=caption, legend=names),
+    visualizer.scatter(X=points, Y=Y, opts=dict(title=title, caption=caption, legend=names, markersize=5),
                        win='scatter_{}'.format(image_id), env=exp.NAME)
-
 
 def save_movie(images, num_x, num_y, out_file=None, movie_id=0):
     if out_file is None:
@@ -223,14 +219,15 @@ def save_movie(images, num_x, num_y, out_file=None, movie_id=0):
 
 
 def save_hist(scores, out_file, hist_id=0):
-    bins = np.linspace(np.min(np.array(scores.values())),
-                       np.max(np.array(scores.values())), 100)
+    s = list(scores.values())
+    bins = np.linspace(np.min(np.array(s)),
+                       np.max(np.array(s)), 100)
     plt.clf()
     for k, v in scores.items():
         plt.hist(v, bins, alpha=0.5, label=k)
     plt.legend(loc='upper right')
     plt.savefig(out_file)
-    hists = tuple(np.histogram(v, bins=bins)[0] for v in scores.values())
+    hists = tuple(np.histogram(v, bins=bins)[0] for v in s)
     X = np.column_stack(hists)
     visualizer.stem(
         X=X, Y=np.array([0.5 * (bins[i] + bins[i + 1]) for i in range(99)]),
