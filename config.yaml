@@ -3,4 +3,4 @@ data_paths: {Imagenet-12: /data/lisa/data/ImageNet2012_jpeg}
 viz: {
     font: /usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf
 }
-out_path: /home/devon/Outs/
+out_path: /home/devon/Outs
