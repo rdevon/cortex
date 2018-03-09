@@ -98,8 +98,6 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
             transform_.append(transforms.RandomSizedCrop(224))
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
-    if source == 'LSUN' and image_size == None:
-        image_size = (64, 64)
 
     if image_size:
         transform_.append(transforms.Resize(image_size))
@@ -224,9 +222,6 @@ class DataHandler(object):
         elif source == 'SVHN':
             dim_c, dim_x, dim_y = train_set.data.shape[1:]
             dim_l = len(np.unique(train_set.labels))
-        elif source == 'LSUN':
-            dim_c, dim_x, dim_y = train_set[0][0].shape
-            dim_l = 1
         else:
             if len(train_set.train_data.shape) == 4:
                 dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
@@ -309,7 +304,24 @@ class DataHandler(object):
     def __getitem__(self, item):
         if self.batch is None:
             raise KeyError('Batch not set')
-        return self.batch[item]
+
+        if not item in self.batch.keys():
+            raise KeyError('Data with label `{}` found. Available: {}'.format(item, self.batch.keys()))
+        batch = self.batch[item]
+
+        return batch
+
+    def get_batch(self, *item):
+        if self.batch is None:
+            raise KeyError('Batch not set')
+
+        batch = []
+        for i in item:
+            if not i in self.batch.keys():
+                raise KeyError('Data with label `{}` found. Available: {}'.format(i, self.batch.keys()))
+            batch.append(self.batch[i])
+
+        return batch
 
     def get_dims(self, *q):
         if q[0] in self.dims.keys():
