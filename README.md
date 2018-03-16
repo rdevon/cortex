@@ -3,7 +3,7 @@ A machine learning library for PyTorch
 
 
 ## SETUP
-The first thing to do is to set up the config.yaml. This file is user-specific (it got added at some point, so I need to fix this), and will tell cortex everything user-specific regarding data locations, visualation, and outputs. Here is mine on MILA machines:
+The first thing to do is to set up the config.yaml. This file is user-specific (it got tracked at some point, so I need to fix this), and will tell cortex everything user-specific regarding data locations, visualation, and outputs. Here is mine on MILA machines:
 
 ```python
 torchvision_data_path: /data/milatmp1/hjelmdev/data/
