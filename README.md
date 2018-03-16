@@ -15,7 +15,6 @@ viz: {
     server: 'http://132.204.26.180'
 }
 out_path: /data/milatmp1/hjelmdev/outs/
-)
 ```
 
 These are as follows:
