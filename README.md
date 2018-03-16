@@ -5,7 +5,7 @@ A machine learning library for PyTorch
 ## SETUP
 The first thing to do is to set up the config.yaml. This file is user-specific (it got added at some point, so I need to fix this), and will tell cortex everything user-specific regarding data locations, visualation, and outputs. Here is mine on MILA machines:
 
-`code(
+```python
 torchvision_data_path: /data/milatmp1/hjelmdev/data/
 data_paths: {
     Imagenet-12: /data/lisa/data/ImageNet2012_jpeg,
@@ -15,7 +15,8 @@ viz: {
     server: 'http://132.204.26.180'
 }
 out_path: /data/milatmp1/hjelmdev/outs/
-)`
+)
+```
 
 These are as follows:
 
