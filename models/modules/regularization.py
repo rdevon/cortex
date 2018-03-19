@@ -19,7 +19,7 @@ def spectral_norm(input):
    
 
 
-def reg_term(input, target, reg="l1", factor=0.0005, **kwargs):
+def reg_term(input, reg="l1", factor=0.0005, **kwargs):
     '''
         reg - computes standard regularization terms
         
