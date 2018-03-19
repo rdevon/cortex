@@ -33,7 +33,7 @@ DEFAULTS = dict(
 )
 
 
-def classify(nets, inputs, criterion=None):
+def classify(nets, inputs, criterion=None, regularizer=reg_term):
     net = nets['classifier']
     images = inputs['images']
     targets = inputs['targets']
