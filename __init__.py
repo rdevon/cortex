@@ -36,9 +36,19 @@ def setup_out_dir(out_path, name=None, clean=False):
                              'must set both the name argument and configure '
                              'the out_path entry in `config.yaml`')
 
-    if name is not None: out_path = path.join(out_path, name)
-
+    if name is not None: 
+        out_path = path.join(out_path, name)
+        
+        
+    Nexp=1
     if not path.isdir(out_path):
+        #check if there are some existing folders with the same name
+        attempt=out_path+'_Exp{}'.format(Nexp)
+        while os.path.exists(attempt):
+            Nexp+=1
+            attempt=out_path+'_Exp{}'.format(Nexp)
+        out_path=attempt
+        
         logger.info('Creating out path `{}`'.format(out_path))
         os.mkdir(out_path)
 
@@ -60,7 +70,8 @@ def setup_out_dir(out_path, name=None, clean=False):
     set_file_logger(path.join(out_path, 'out.log'))
 
     exp.OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir)
-
+    exp.NAME = name+'_Exp{}'.format(Nexp)
+    exp.INFO['name'] = name+'_Exp{}'.format(Nexp)
 
 def update_args(args, **kwargs):
     if args is not None:
@@ -142,6 +153,15 @@ def reload_experiment(args):
 def setup(use_cuda):
     parser = make_argument_parser()
     args = parser.parse_args()
+    
+
+    
+    
+    
+    
+    
+    
+    
     set_stream_logger(args.verbosity)
     exp.USE_CUDA = use_cuda
 
@@ -179,7 +199,8 @@ def setup(use_cuda):
 
         name = args.name
         if name is None:
-            name = args.arch
+            name = args.arch#+'_Exp{}'.format(Nexp)
+        #args.name=name
         exp.NAME = name
         exp.INFO['name'] = name
         exp.configure_experiment(config_file=args.config_file, **kwargs)
