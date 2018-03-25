@@ -3,11 +3,11 @@
 import logging
 
 from __init__ import setup, setup_reload
-from lib import exp
-from lib.data import setup as setup_data, DATA_HANDLER
-from lib.exp import setup as setup_model
-from lib.train import setup as setup_optimizer, main_loop
-from lib.utils import print_section
+from cortex import exp
+from cortex.data import setup as setup_data, DATA_HANDLER
+from cortex.exp import setup as setup_model
+from cortex.train import setup as setup_optimizer, main_loop
+from cortex.utils import print_section
 from models import build_model
 
 

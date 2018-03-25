@@ -12,10 +12,10 @@ import numpy as np
 import torch
 
 import models
-from lib import config, exp
-from lib.log_utils import set_file_logger, set_stream_logger
-from lib.utils import make_argument_parser
-from lib.viz import init as viz_init
+from cortex import config, exp
+from cortex.log_utils import set_file_logger, set_stream_logger
+from cortex.utils import make_argument_parser
+from cortex.viz import init as viz_init
 
 
 logger = logging.getLogger('cortex.init')
