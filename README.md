@@ -23,7 +23,10 @@ These are as follows:
 * vis: visdom specific arguments.
 * out_path: Out path for experiment outputs
 
-To run a simple experiment, try  `python main.py classifier -S MNIST -n test_classifier`
+To run a simple experiment, try  
+```
+scripts/cortex classifier -S MNIST -n test_classifier
+```
 
 This should run a simple classifier on MNIST.
 
