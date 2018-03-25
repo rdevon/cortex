@@ -1,7 +1,5 @@
-'''Main file for running experiments.
-
-'''
-
+#!/usr/bin/env python
+"""Main file for running experiments."""
 import logging
 
 from __init__ import setup, setup_reload
