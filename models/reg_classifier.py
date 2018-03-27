@@ -4,8 +4,8 @@ Simple Regularized classifier model
 example usage:
 
 python main.py reg_classifier -S MNIST -n l1reg -a procedures.regularizer='l1'
-python main.py reg_classifier -S MNIST -n l1reg -a procedures.regularizer='l2'
-python main.py reg_classifier -S MNIST -n l1reg -a procedures.regularizer='en'
+python main.py reg_classifier -S MNIST -n l2reg -a procedures.regularizer='l2'
+python main.py reg_classifier -S MNIST -n enreg -a procedures.regularizer='en'
 
 '''
 
