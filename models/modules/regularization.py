@@ -13,8 +13,12 @@ def spectral_norm(input):
     '''
         input : a pytorch tensor, for now, assuming real input
         output : the spectral norm of the tensor, a functional
+        is currently broken for general tensors
+
+        TODO: fix for general tensors
     '''
-    return torch.sqrt(torch.max(torch.eig(torch.mul(torch.t(input), input))))
+    x = input.view(input.numel())
+    return torch.sqrt(torch.max(torch.eig(torch.mul(torch.t(x), x))))
 
 
 def l1_norm(input):
