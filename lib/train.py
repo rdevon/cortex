@@ -68,7 +68,7 @@ def show(samples, prefix=''):
         v = convert_to_numpy(v)
         logger.debug('Saving images to {}'.format(image_dir))
         if image_dir is None:
-            out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
+            out_path = path.join(image_dir, '{}_{}_image.png'.format(prefix, k))
         else:
             out_path = None
 
@@ -91,7 +91,7 @@ def show(samples, prefix=''):
 
         logger.debug('Saving scatter to {}'.format(image_dir))
         if image_dir is None:
-            out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
+            out_path = path.join(image_dir, '{}_{}_scatter.png'.format(prefix, k))
         else:
             out_path = None
 
@@ -102,10 +102,20 @@ def show(samples, prefix=''):
         convert_to_numpy(v)
         logger.debug('Saving histograms to {}'.format(image_dir))
         if image_dir is None:
-            out_path = path.join(image_dir, '{}_{}_samples.png'.format(prefix, k))
+            out_path = path.join(image_dir, '{}_{}_histogram.png'.format(prefix, k))
         else:
             out_path = None
         viz.save_hist(v, out_file=out_path, hist_id=i)
+
+    heatmaps = samples.get('heatmaps', {})
+    for i, (k, v) in enumerate(heatmaps.items()):
+        v = convert_to_numpy(v)
+        logger.debug('Saving heatmap to {}'.format(image_dir))
+        if not image_dir:
+            out_path = path.join(image_dir, '{}_{}_heatmap.png'.format(prefix, k))
+        else:
+            out_path = None
+        viz.save_heatmap(v, out_file=out_path, image_id=i, title=k)
 
 def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
           clipping=None, weight_decay=None, optimizer_options='default', model_optimizer_options=None):

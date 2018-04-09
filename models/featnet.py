@@ -1,4 +1,4 @@
-'''Simple GAN model
+'''Implicit feature network
 
 '''
 
@@ -7,6 +7,7 @@ import math
 
 import numpy as np
 import torch
+from torch import nn
 import torch.nn.functional as F
 from torch import autograd
 from torch.autograd import Variable
@@ -25,16 +26,13 @@ convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
-    data=dict(batch_size=dict(train=64, test=1028), skip_last_batch=True,
-              noise_variables=dict(r=('uniform', 16), s=('uniform', 16))),
+    data=dict(batch_size=dict(train=64, test=1028), skip_last_batch=True),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=dict(discriminator=1e-4, nets=1e-4, ss_nets=1e-4),
-        #clipping=dict(discriminator=0.1),
-        updates_per_model=dict(discriminator=5, nets=1, ss_nets=1)
-    ),
-    model=dict(model_type='convnet', dim_e=2, dim_d=16, encoder_args=None),
-    procedures=dict(measure='gan', boundary_seek=False, penalty=0.),
+        updates_per_model=dict(discriminator=1, nets=1, ss_nets=1)),
+    model=dict(model_type='convnet', dim_embedding=16, dim_noise=16, encoder_args=None, use_topnet=False),
+    procedures=dict(measure='jsd', boundary_seek=False, penalty=1., noise_type='hypercubes', noise='uniform'),
     train=dict(
         epochs=500,
         summary_updates=100,
@@ -43,24 +41,22 @@ DEFAULTS = dict(
 )
 
 
-def setup(model=None, data=None, procedures=None, **kwargs):
-    #data['noise_variables']['r'] = (data['noise_variables']['r'][0], model['dim_d'])
+Id = None
 
-    data['noise_variables']['s'] = (data['noise_variables']['s'][0], model['dim_d'])
+def setup(model=None, data=None, procedures=None, test_procedures=None, **kwargs):
+    noise = procedures['noise']
+    noise_type = procedures['noise_type']
+    if noise_type in ('unitsphere', 'unitball'):
+        noise = 'normal'
+    data['noise_variables'] = dict(y=(noise, model['dim_noise']))
+    data['noise_variables']['u'] = ('uniform', 1)
+    procedures['use_topnet'] = model['use_topnet']
+    test_procedures['use_topnet'] = model['use_topnet']
 
-    if procedures['noise_type'] == 'gaussians':
-        data['noise_variables']['r'] = ('normal', 1)
-        data['noise_variables']['v'] = ('normal', model['dim_d'])
-    else:
-        data['noise_variables']['r'] = (data['noise_variables']['r'][0], 1)
-        data['noise_variables']['v'] = (data['noise_variables']['s'][0], model['dim_d'])
-
-    data['noise_variables']['u'] = (data['noise_variables']['r'][0], 1)
-    data['noise_variables']['n_e'] = ('normal', model['dim_e'])
-    data['noise_variables']['n_d'] = ('normal', model['dim_e'])
-
-    if procedures['noise_type'] == 'discrete':
-        model['dim_d'] += 1
+    global Id
+    Id = torch.Tensor(model['dim_noise'], model['dim_noise'])
+    nn.init.eye(Id)
+    Id = torch.autograd.Variable(Id.cuda(), requires_grad=False)
 
 
 def to_one_hot(y, K):
@@ -71,198 +67,154 @@ def to_one_hot(y, K):
     return Variable(one_hot)
 
 
-def make_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=None, r_lambda=1., e_lambda=1.,
-               noise_type='lines', n_samples=10, dim_s=128):
+def make_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=None, epsilon=1e-6,
+               noise_type='hypercubes', dim_subspace=16, use_topnet=False, output_nonlin=False, noise=None):
 
     # Variables
-    X, Y, Rr, Rs, S, V, Ne, Nd = data_handler.get_batch('images', 'targets', 'r', 'u', 's', 'v', 'n_e', 'n_d')
-    batch_size = X.size(0)
+    X, T, Yr, U = data_handler.get_batch('images', 'targets', 'y', 'u')
+    b = np.zeros(Yr.size(1))
 
-    b = np.zeros(S.size(1))
+    if noise_type == 'hypercubes':
+        b[0] = 1
+        a = (np.arange(64) / 64.)[:, None] * b[None, :]
 
-    if noise_type == 'lines':
-        offset = 0.
-        scale = 1.
-        Rr *= scale
-        Rr += offset
-        b[0] = 1
-        a = (scale * (np.arange(64) / 64.) + offset)[:, None] * b[None, :]
-        S = (S.max(1, keepdim=True)[0] == S).float()
-        Rr = Rr * S
-    elif noise_type == 'planes':
-        b[0] = 1
-        b[1] = 1
-        offset = 0.
-        scale = 1.
-        Rr *= scale
-        Rr += offset
-        a = (scale * (np.arange(64) / 64.) + offset)[:, None] * b[None, :]
-        if dim_s == S.size(1):
-            Rr = S
-        else:
+        if dim_subspace and dim_subspace != Yr.size(1):
             assert False
-            S_ = to_one_hot(Variable(torch.multinomial(torch.zeros(Rr.size(0), S.size(1)) + 1. / float(S.size(1)), dim_s).cuda()), S.size(1)).sum(1)
-            Rr = S * S_
+            Y_ = to_one_hot(Variable(
+                torch.multinomial(torch.zeros(Yr.size()) + 1. / float(Yr.size(1)), dim_subspace).cuda()
+            ), Yr.size(1)).sum(1)
+            Yr = Yr * Y_
     elif noise_type == 'sparse':
         b[0] = 1
         a = (np.arange(64) / 64.)[:, None] * b[None, :]
         S = (S < 0.1).float()
-        Rr = V * S
-    elif noise_type == 'gaussians':
+        R = V * S
+    elif noise_type == 'unitsphere':
         b[0] = 1
-        #a = ((np.arange(64) / 64.) - 0.5)[:, None] * b[None, :]
         a = ((np.arange(64) / 64.))[:, None] * b[None, :]
-        #S = (S.max(1, keepdim=True)[0] == S).float()
-        #Rr = Rr * S
-        S = (S < 0.1).float()
-        Rr = V * S
-    elif noise_type == 'discrete':
-        S = (S.max(1, keepdim=True)[0] == S).float()
-        Rr = torch.cat([Rr, S], 1)
-    elif noise_type == 'unit_sphere':
-        Rr = S / S.sum(1, keepdim=True)
-        a = (np.arange(64) / 64.)[:, None] * b[None, :]
-
-    '''
-    Rr =  (Rr + noise_scale * offsets).view(-1, 1) / noise_scale
-    Rr = Rr[torch.randperm(Rr.size(0)).cuda()][:X.size(0)]
-    '''
+        Yr = Yr / (torch.sqrt((Yr ** 2).sum(1, keepdim=True)) + epsilon)
+    elif noise_type == 'unitball':
+        b[0] = 1
+        a = ((np.arange(64) / 64.))[:, None] * b[None, :]
+        Yr = Yr / (torch.sqrt((Yr ** 2).sum(1, keepdim=True)) + epsilon) * U.expand(Yr.size())
+    else:
+        raise ValueError
 
     # Nets
     discriminator = nets['discriminator']
-    encoder, topnet, revnet =  nets['nets']
+    if use_topnet:
+        encoder, topnet, revnet = nets['nets']
+    else:
+        encoder, = nets['nets']
     decoder, classifier = nets['ss_nets']
 
-    z = encoder(X)
-    z_t = Variable(z.detach().data.cuda())
-    X_r = decoder(z_t, nonlinearity=F.tanh)
-    y_hat = classifier(z_t, nonlinearity=F.log_softmax)
-    Rf = topnet(z + Ne)
+    Zf = encoder(X)
+    if output_nonlin:
+        if noise_type == 'hypercubes':
+            Zf = F.sigmoid(Zf)
+        elif noise_type == 'unitsphere':
+            Zf = Zf / (torch.sqrt((Zf ** 2).sum(1, keepdim=True)) + epsilon)
+        elif noise_type == 'unitball':
+            Zf = F.tanh(Zf)
 
-    def log_sum_exp(x, axis=None, keepdim=False):
-        x_max = torch.max(x, axis)[0]
-        y = torch.log((torch.exp(x - x_max)).sum(axis, keepdim=keepdim)) + x_max
-        return y
+    Zt = Variable(Zf.detach().data.cuda())
+    Xc = decoder(Zt, nonlinearity=F.tanh)
+    Th = classifier(Zt, nonlinearity=F.log_softmax)
 
-    if noise_type == 'discrete':
-        logits = Rf[:, 1:]
-        values = Rf[:, 0]
-        K = logits.size(1)
-        probs = F.softmax(logits, dim=1)
-        samples = to_one_hot(torch.multinomial(probs, n_samples), K).float().t()
-
-        values_e = values.unsqueeze(0).expand(n_samples, -1)
-        Rf = torch.cat([values_e.unsqueeze(2), samples], 2)
-        Rf_ = Variable(Rf.data.cuda(), volatile=True)
-
-        try:
-            z_f = revnet(Rf[0])
-        except:
-            print(X.size())
-            print(z.size())
-            print(logits.size())
-            print(values.size())
-            print(K)
-            print(probs.size())
-            print(samples.size())
-            print(values_e.size())
-            raise
-        z_e = z.unsqueeze(0).expand(n_samples, -1, -1)
-        z_e_ = Variable(z_e.data.cuda(), volatile=True)
-        real_f = discriminator(torch.cat([Rf, z_e], 2).view(n_samples * batch_size, -1))
-        real_f_ = discriminator(torch.cat([Rf_, z_e_], 2).view(n_samples * batch_size, -1))
-
+    if use_topnet:
+        Yf = topnet(Zf)
+        Zr = revnet(Yr)
+        real_f = discriminator(torch.cat([Yf, Zf], 1))
+        real_r = discriminator(torch.cat([Yr, Zr], 1))
+        d_loss, e_loss, rr, fr, wr, br = f_divergence(measure, real_r, real_f, boundary_seek=boundary_seek)
     else:
-        z_f = revnet(Rf)
+        Yf = Zf
+        real_f = discriminator(Yf)
+        real_r = discriminator(Yr)
 
-        #w_f = discriminator(Rf)
-        #real_f = top_disc(torch.cat([w_f, z], 1))
-        real_f = discriminator(torch.cat([Rf, z], 1))
+        d_loss, e_loss, rr, fr, wr, br = f_divergence(measure, real_f, real_r, boundary_seek=boundary_seek)
+        #d_loss, e_loss, rr, fr, wr, br = f_divergence(measure, real_r, real_f, boundary_seek=boundary_seek)
+    #e_loss *= -1.
+    c_loss = torch.nn.CrossEntropyLoss()(Th, T)
 
-    #Rr = Rr.view(*Rf.size())
-    z_r = revnet(Rr)
-    real_r = discriminator(torch.cat([Rr, z_r], 1))
-    #w_r = discriminator(Rr)
-    #real_r = top_disc(torch.cat([w_r, z_r], 1))
+    predicted = torch.max(Th.data, 1)[1]
+    correct = 100. * predicted.eq(T.data).cpu().sum() / T.size(0)
 
-    d_loss, e_loss, rr, fr, wr, br = f_divergence(measure, real_r, real_f, boundary_seek=boundary_seek)
+    dd_loss = ((X - Xc) ** 2).sum(1).sum(1).sum(1).mean()
 
-    if noise_type == 'discrete':
-        lse = log_sum_exp(logits.t(), axis=0, keepdim=True).t().expand(-1, K)
-        log_g = (samples * (logits - lse).unsqueeze(0).expand(n_samples, -1, -1)).sum(2)
+    I = torch.autograd.Variable(torch.FloatTensor(a).cuda())
 
-        log_M = math.log(n_samples)
-        log_w = Variable(real_f_.data.cuda(), requires_grad=False).view(n_samples, batch_size)
-        log_alpha = log_sum_exp(log_w - log_M, axis=0)
+    if use_topnet:
+        Zi = revnet(I)
+        Zs = revnet(Yr)
+    else:
+        Zi = I
+        Zs = Yr
 
-        log_Z_est = log_alpha
-        log_w_tilde = log_w - log_Z_est - log_M
-        w_tilde = torch.exp(log_w_tilde)
-        e_loss -= (w_tilde * log_g).sum(0).mean()
-        Rf = Rf[0]
+    Xi = decoder(Zi, nonlinearity=F.tanh)
+    Xs = decoder(Zs, nonlinearity=F.tanh)
 
-    r_loss = ((z_f - z_t) ** 2).sum(1).mean()
-    c_loss = torch.nn.CrossEntropyLoss()(y_hat, Y)
+    z_s = Yf / Yf.std(0)
+    z_m = z_s - z_s.mean(0)
+    b, dim_z = z_m.size()
+    correlations = (z_m.unsqueeze(2).expand(b, dim_z, dim_z) * z_m.unsqueeze(1).expand(b, dim_z, dim_z)).sum(0) / float(b)
+    correlations -= Id
 
-    predicted = torch.max(y_hat.data, 1)[1]
-    correct = 100. * predicted.eq(Y.data).cpu().sum() / Y.size(0)
-
-    dd_loss = ((X - X_r) ** 2).sum(1).sum(1).sum(1).mean()
-
-    y = torch.autograd.Variable(torch.FloatTensor(a).cuda())
-    x_y = decoder(revnet(y), nonlinearity=F.tanh)
-    x_s = decoder(revnet(Rr), nonlinearity=F.tanh)
-
-    results = dict(e_loss=e_loss.data[0], r_loss=r_loss.data[0], d_loss=d_loss.data[0],
-                   c_loss=c_loss.data[0], dd_loss=dd_loss.data[0],
-                   real=Rr.mean().data[0], real_std=torch.std(Rf).data[0], accuracy=correct)
-    samples = dict(scatters=dict(labels=(z.data, Y.data), cluster=(z.data, Rf.max(1)[1] + 1)),
-                   histograms=dict(encoder=dict(fake=Rf.max(1)[1].data, real=Rr.max(1)[1].data)),
-                   images=dict(reconstruction=0.5 * (X_r.data + 1.), original=0.5 * (X.data + 1.),
-                               samples=0.5 * (x_s.data + 1.), interpolation=0.5 * (x_y.data + 1.)))
+    results = dict(e_loss=e_loss.data[0], d_loss=d_loss.data[0],
+                   c_loss=c_loss.data[0], dd_loss=dd_loss.data[0], accuracy=correct)
+    samples = dict(scatters=dict(labels=(Yf.data, T.data)),
+                   histograms=dict(encoder=dict(fake=Yf.view(-1).data,
+                                                real=Yr.view(-1).data)),
+                   images=dict(reconstruction=0.5 * (Xc.data + 1.), original=0.5 * (X.data + 1.),
+                               samples=0.5 * (Xs.data + 1.), interpolation=0.5 * (Xi.data + 1.)),
+                   heatmaps=dict(correlations=correlations))
 
     if penalty:
-        X_ = Variable(X.data.cuda(), requires_grad=True)
-        Rr_ = Variable(Rr.data.cuda(), requires_grad=True)
-        z_ = encoder(X_)
-        Rf_ = topnet(z_)
-        z_r_ = revnet(Rr_)
+        X = Variable(X.data.cuda(), requires_grad=True)
+        #Yr = Variable(Yr.data.cuda(), requires_grad=True)
+        Zf = encoder(X)
 
-        real = torch.cat([Rr_, z_r_], 1)
-        fake = torch.cat([Rf_, z_], 1)
-        real_out = discriminator(real)
+        if use_topnet:
+            Yf = topnet(Zf)
+            #Zr = revnet(Yr)
+            #real = torch.cat([Yr, Zr], 1)
+            fake = torch.cat([Yf, Zf], 1)
+        else:
+            #real = Yr
+            fake = Zf
+
+        #real_out = discriminator(real)
         fake_out = discriminator(fake)
-        '''
 
-        w_r_ = discriminator(Rr_)
-        w_f_ = discriminator(Rf_)
-        real_out = top_disc(torch.cat([w_r_, z_r_], 1))
-        fake_out = top_disc(torch.cat([w_f_, z_], 1))
-        '''
-
-        g_r = autograd.grad(outputs=real_out, inputs=real, grad_outputs=torch.ones(real_out.size()).cuda(),
-                            create_graph=True, retain_graph=True, only_inputs=True)[0]
+        #g_r = autograd.grad(outputs=real_out, inputs=real, grad_outputs=torch.ones(real_out.size()).cuda(),
+        #                    create_graph=True, retain_graph=True, only_inputs=True)[0]
 
         g_f = autograd.grad(outputs=fake_out, inputs=fake, grad_outputs=torch.ones(fake_out.size()).cuda(),
                             create_graph=True, retain_graph=True, only_inputs=True)[0]
 
-        g_r = g_r.view(g_r.size()[0], -1)
+        #g_r = g_r.view(g_r.size()[0], -1)
         g_f = g_f.view(g_f.size()[0], -1)
 
-        g_r = (g_r ** 2).sum(1)
+        #g_r = (g_r ** 2).sum(1)
         g_f = (g_f ** 2).sum(1)
 
-        p_term = 0.5 * (g_r.mean() + g_f.mean())
+        #p_term = 0.5 * (g_r.mean() + g_f.mean())
+        p_term = g_f.mean()
 
         d_loss += penalty * p_term.mean()
-        e_loss += penalty * p_term.mean()
+        #e_loss += penalty * p_term.mean()
         results['real gradient penalty'] = p_term.mean().data[0]
 
-    loss = dict(nets=(e_lambda*e_loss)+(r_lambda*r_loss), discriminator=d_loss, ss_nets=(dd_loss+c_loss))
+    loss = dict(nets=e_loss, discriminator=d_loss, ss_nets=(dd_loss+c_loss))
     return loss, results, samples, 'boundary'
 
 
-def build_model(data_handler, model_type='convnet', dim_d=16, dim_e=2, dim_h=512, n_steps=3, encoder_args=None, decoder_args=None):
+def build_model(data_handler, model_type='convnet', use_topnet=False, dim_noise=16, dim_embedding=16,
+                encoder_args=None, decoder_args=None):
+
+    if not use_topnet:
+        dim_embedding = dim_noise
+
     encoder_args = encoder_args or {}
     decoder_args = decoder_args or {}
     shape = data_handler.get_dims('x', 'y', 'c')
@@ -273,16 +225,20 @@ def build_model(data_handler, model_type='convnet', dim_d=16, dim_e=2, dim_h=512
         from .modules.resnets import ResDecoder as Decoder
         encoder_args_ = resnet_encoder_args_
         decoder_args_ = resnet_decoder_args_
+        dim_h = [512, 256, 128]
     elif model_type == 'convnet':
         from .modules.convnets import SimpleConvEncoder as Encoder
         from .modules.conv_decoders import SimpleConvDecoder as Decoder
         encoder_args_ = convnet_encoder_args_
         decoder_args_ = convnet_decoder_args_
+        dim_h = [2048, 1028, 512]
+        dim_top = [128, 128]
     elif model_type == 'mnist':
         from .modules.convnets import SimpleConvEncoder as Encoder
         from .modules.conv_decoders import SimpleConvDecoder as Decoder
         encoder_args_ = mnist_encoder_args_
         decoder_args_ = mnist_decoder_args_
+        dim_h = [256, 512, 256]
     else:
         raise NotImplementedError(model_type)
 
@@ -293,20 +249,22 @@ def build_model(data_handler, model_type='convnet', dim_d=16, dim_e=2, dim_h=512
         encoder_args_['n_steps'] = 4
         decoder_args_['n_steps'] = 4
 
-    encoder = Encoder(shape, dim_out=dim_e, fully_connected_layers=[1028], **encoder_args_)
-    decoder = Decoder(shape, dim_in=dim_e, **decoder_args_)
-    dim_h = [1028, 512, 256, 128]
-    classifier = DenseNet(dim_e, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
-    topnet = DenseNet(dim_e, dim_h=dim_h[::-1], dim_out=dim_d, batch_norm=True)
-    #topnet = Decoder(shape, dim_in=dim_e, **decoder_args_)
-    #revnet = Encoder(shape, dim_out=dim_e, **encoder_args_)
-    revnet = DenseNet(dim_d, dim_h=dim_h, dim_out=dim_e, batch_norm=True)
-    discriminator = DenseNet(dim_d+dim_e, dim_h=dim_h, dim_out=1, batch_norm=False)
-    #discriminator = Encoder(shape, dim_out=dim_e, **encoder_args_)
-    #top_disc = DenseNet(2*dim_e, dim_out=1, batch_norm=False)
-    logger.debug(discriminator)
-    logger.debug(encoder)
+    encoder = Encoder(shape, dim_out=dim_embedding, fully_connected_layers=[1028], **encoder_args_)
+    decoder = Decoder(shape, dim_in=dim_embedding, **decoder_args_)
 
-    return dict(discriminator=discriminator, nets=[encoder, topnet, revnet], ss_nets=[decoder, classifier]), make_graph
+    if use_topnet:
+        topnet = DenseNet(dim_embedding, dim_h=dim_top[::-1], dim_out=dim_noise, batch_norm=True)
+        revnet = DenseNet(dim_noise, dim_h=dim_top, dim_out=dim_embedding, batch_norm=True)
+        nets = [encoder, topnet, revnet]
+        dim_d = dim_noise + dim_embedding
+    else:
+        nets = [encoder]
+        dim_d = dim_noise
+
+    discriminator = DenseNet(dim_d, dim_h=dim_h, dim_out=1, batch_norm=False)
+
+    classifier = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+
+    return dict(discriminator=discriminator, nets=nets, ss_nets=[decoder, classifier]), make_graph
 
 

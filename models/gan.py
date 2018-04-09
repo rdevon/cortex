@@ -23,6 +23,7 @@ mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=
 dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
+
 DEFAULTS = dict(
     data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
               noise_variables=dict(z=('normal', 64), e=('uniform', 1))),
@@ -39,6 +40,11 @@ DEFAULTS = dict(
         archive_every=10
     )
 )
+
+def log_sum_exp(x, axis=None):
+    x_max = torch.max(x, axis)[0]
+    y = torch.log((torch.exp(x - x_max)).sum(axis)) + x_max
+    return y
 
 
 def f_divergence(measure, real_out, fake_out, boundary_seek=False):
@@ -80,7 +86,7 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
 
     elif measure == 'dv':
         r = real_out
-        f = torch.log(torch.exp(fake_out))
+        f = log_sum_exp(fake_out, 0) - math.log(fake_out.size(0))
         w = torch.exp(fake_out)
         b = fake_out ** 2
 
@@ -102,12 +108,10 @@ def f_divergence(measure, real_out, fake_out, boundary_seek=False):
 
     if boundary_seek:
         g_loss = b.mean()
-
     elif measure == 'proxy_gan':
         g_loss = torch.mean(F.softplus(-fake_out))
-
     else:
-        g_loss = -torch.mean(f)
+        g_loss = -d_loss
 
     return d_loss, g_loss, r, f, w, b
 
@@ -164,7 +168,7 @@ def apply_penalty(data_handler, discriminator, real, fake, measure, penalty_type
     else:
         raise NotImplementedError(penalty_type)
 
-def gan(nets, data_handler, measure=None, boundary_seek=False, penalty=None, penalty_type='gradient_norm'):
+def build_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=None, penalty_type='gradient_norm'):
     Z = data_handler['z']
     X = data_handler['images']
 
@@ -228,6 +232,6 @@ def build_model(data_handler, model_type='resnet', discriminator_args=None, gene
     logger.debug(discriminator)
     logger.debug(generator)
 
-    return dict(generator=generator, discriminator=discriminator), gan
+    return dict(generator=generator, discriminator=discriminator), build_graph
 
 

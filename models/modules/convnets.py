@@ -96,7 +96,9 @@ class SimpleConvEncoder(nn.Module):
         dim_out_ = dim_out
         fully_connected_layers = fully_connected_layers or []
 
-        if hasattr(nn, nonlinearity):
+        if not nonlinearity:
+            pass
+        elif hasattr(nn, nonlinearity):
             nonlin = getattr(nn, nonlinearity)
             if nonlinearity == 'LeakyReLU':
                 nonlinearity = nonlin(0.02, inplace=True)
@@ -131,7 +133,8 @@ class SimpleConvEncoder(nn.Module):
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
             if batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            if nonlinearity:
+                models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
@@ -148,7 +151,8 @@ class SimpleConvEncoder(nn.Module):
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
             if batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            if nonlinearity:
+                models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
 
         if final_layer:
             name = 'linear_({}/{})_{}'.format(dim_out, final_layer, 'final')
