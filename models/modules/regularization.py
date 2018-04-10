@@ -27,6 +27,8 @@ def contractive_loss(parameters, hidden_u):
     w_sum = torch.sum(Variable(parameters)**2, dim=1)
     # unsqueeze to avoid issues with torch.mv
     w_sum = w_sum.unsqueeze(1)  # shape N_hidden x 1
+    print(w_sum)
+    print(dh)
     return torch.sum(torch.mm(dh**2, w_sum), 0)
 
 
