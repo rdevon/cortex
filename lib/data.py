@@ -16,6 +16,7 @@ from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
 from . import config, exp
+from .cub import CUB
 
 
 logger = logging.getLogger('cortex.data')
@@ -182,13 +183,15 @@ class DataHandler(object):
         elif source_type == 'folder':
             if source == 'CelebA':
                 dataset = CelebA
+            elif source == 'CUB':
+                dataset = CUB
             else:
                 dataset = torchvision.datasets.ImageFolder
 
         transform = make_transform(source, isfolder=(source_type=='folder'), **source_args)
-
         dataset = make_indexing(dataset)
 
+        output_sources = ['images', 'targets']
         if source == 'LSUN':
             train_set = dataset(train_path, classes=['bedroom_train'], transform=transform)
             if test_on_train:
@@ -204,6 +207,9 @@ class DataHandler(object):
         elif source_type == 'folder':
             if source == 'CelebA':
                 train_set = dataset(root=train_path, transform=transform, download=True)
+            elif source == 'CUB':
+                output_sources += ['attributes']
+                train_set = dataset(root=train_path, transform=transform)
             else:
                 train_set = dataset(root=train_path, transform=transform)
             if test_on_train:
@@ -250,10 +256,14 @@ class DataHandler(object):
 
         dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, n_train=N_train, n_test=N_test)
 
+        if source == 'CUB':
+            dim_a = train_set.attrs.shape[1]
+            dims['a'] = dim_a
+
         if not duplicate:
             self.dims[source] = dims
             logger.debug('Data has the following dimensions: {}'.format(self.dims[source]))
-            self.input_names[source] = ['images', 'targets', 'index']
+            self.input_names[source] = output_sources + ['index']
             self.loaders.update(**{source: dict(train=train_loader, test=test_loader)})
             self.sources.append(source)
         else:
@@ -261,7 +271,7 @@ class DataHandler(object):
                 source_ = source + '_{}'.format(i)
                 self.dims[source_] = dims
                 logger.debug('Data has the following dimensions: {}'.format(self.dims[source_]))
-                self.input_names[source_] = ['images', 'targets', 'index']
+                self.input_names[source_] = output_sources + ['index']
                 self.loaders.update(**{source_: dict(train=train_loader, test=test_loader)})
                 self.sources.append(source_)
 

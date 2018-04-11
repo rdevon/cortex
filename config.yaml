@@ -1,5 +1,7 @@
 torchvision_data_path: /mnt/MegaDisc/Data/PT/
-data_paths: {Imagenet-12: /data/lisa/data/ImageNet2012_jpeg}
+data_paths: {
+    Imagenet-12: /data/lisa/data/ImageNet2012_jpeg,
+    CUB: /mnt/MegaDisc/Data/CUB/}
 viz: {
     font: /usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf
 }

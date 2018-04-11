@@ -1,7 +1,8 @@
 imageio
 matplotlib
+pandas
+Pillow
 progressbar2
 scipy
-sklearn
 torchvision
 visdom
