@@ -6,6 +6,7 @@ import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
+from .SpectralNormLayer import SNConv2d, SNLinear
 
 from .modules import View
 
@@ -89,8 +90,11 @@ class MNISTConv(nn.Module):
 
 class SimpleConvEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True, fully_connected_layers=None,
-                 dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4, n_steps=None):
+                 dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4, n_steps=None,
+                 spectral_norm=False):
         super(SimpleConvEncoder, self).__init__()
+        conv2d = SNConv2d if spectral_norm else nn.Conv2d
+        linear = SNLinear if spectral_norm else nn.Linear
         models = nn.Sequential()
 
         dim_out_ = dim_out
@@ -126,7 +130,7 @@ class SimpleConvEncoder(nn.Module):
                 dim_in = dim_out
                 dim_out = dim_in * 2
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
-            models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+            models.add_module(name, conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
             if dropout:
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
             if batch_norm:
@@ -143,7 +147,7 @@ class SimpleConvEncoder(nn.Module):
             dim_in = dim_out
             dim_out = dim_h
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
-            models.add_module(name, nn.Linear(dim_in, dim_out))
+            models.add_module(name, linear(dim_in, dim_out))
             if dropout:
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
             if batch_norm:
@@ -152,13 +156,13 @@ class SimpleConvEncoder(nn.Module):
 
         if final_layer:
             name = 'linear_({}/{})_{}'.format(dim_out, final_layer, 'final')
-            models.add_module(name, nn.Linear(dim_out, final_layer))
+            models.add_module(name, linear(dim_out, final_layer))
             models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
             dim_out = final_layer
 
         if dim_out_:
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
-            models.add_module(name, nn.Linear(dim_out, dim_out_))
+            models.add_module(name, linear(dim_out, dim_out_))
 
         self.models = models
 
