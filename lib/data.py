@@ -100,7 +100,7 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 
-    if image_size and source != 'CUB':
+    if image_size:
         transform_.append(transforms.Resize(image_size))
 
     if image_crop:
@@ -255,7 +255,6 @@ class DataHandler(object):
             dim_l = len(np.unique(labels))
 
         dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, n_train=N_train, n_test=N_test)
-
         if source == 'CUB':
             dim_a = train_set.attrs.shape[1]
             dims['a'] = dim_a
