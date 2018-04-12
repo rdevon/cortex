@@ -52,7 +52,7 @@ def build_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=N
 
     discriminator = nets['discriminator']
     generator = nets['generator']
-    classifier = nets['classifier']
+    classifier_f, classifier_r = nets['classifier']
 
     X_f = generator(torch.cat([Z, A], 1), nonlinearity=F.tanh)
     W_r = discriminator(X_r)
@@ -64,12 +64,17 @@ def build_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=N
     d_loss = S_f.mean() - S_r.mean()
     g_loss = -d_loss
 
-    T_p = classifier(W_f, nonlinearity=F.log_softmax)
-    c_loss = torch.nn.CrossEntropyLoss()(T_p, T)
-    predicted = torch.max(T_p.data, 1)[1]
-    correct = 100. * predicted.eq(T.data).cpu().sum() / T.size(0)
+    T_pf = classifier_f(W_f, nonlinearity=F.log_softmax)
+    c_loss_f = torch.nn.CrossEntropyLoss()(T_pf, T)
+    predicted_f = torch.max(T_pf.data, 1)[1]
+    correct_f = 100. * predicted_f.eq(T.data).cpu().sum() / T.size(0)
 
-    results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], accuracy=correct,
+    T_pr = classifier_f(W_r, nonlinearity=F.log_softmax)
+    c_loss_r = torch.nn.CrossEntropyLoss()(T_pr, T)
+    predicted_r = torch.max(T_pr.data, 1)[1]
+    correct_r = 100. * predicted_r.eq(T.data).cpu().sum() / T.size(0)
+
+    results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], accuracy_f=correct_f, accuracy_r=correct_r,
                    real=torch.mean(S_r.mean()).data[0], fake=torch.mean(S_f.mean()).data[0])
     samples = dict(images=dict(generated=0.5 * (X_f + 1.).data, real=0.5 * (X_r + 1.).data),
                    histograms=dict(generated=dict(fake=S_f.view(-1).data, real=S_r.view(-1).data)))
@@ -99,7 +104,7 @@ def build_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=N
         d_loss += penalty * p_term
         results['gradient penalty'] = p_term.data[0]
 
-    return dict(generator=g_loss, discriminator=d_loss, classifier=c_loss), results, samples, None
+    return dict(generator=g_loss, discriminator=d_loss, classifier=c_loss_r+c_loss_f), results, samples, None
 
 
 
@@ -138,9 +143,10 @@ def build_model(data_handler, dim_embedding=312, model_type='convnet', discrimin
 
     discriminator = Discriminator(shape, dim_out=dim_embedding, **discriminator_args_)
     generator = Generator(shape, dim_in=dim_z+dim_a, **generator_args_)
-    classifier = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier_f = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier_r = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
 
     logger.debug(discriminator)
     logger.debug(generator)
 
-    return dict(generator=generator, discriminator=discriminator, classifier=classifier), build_graph
+    return dict(generator=generator, discriminator=discriminator, classifier=(classifier_f, classifier_r)), build_graph
