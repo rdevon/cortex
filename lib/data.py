@@ -95,12 +95,12 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
     transform_ = []
 
     if isfolder:
-        if source != 'CelebA':
+        if source not in ('CelebA', 'CUB'):
             transform_.append(transforms.RandomSizedCrop(224))
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 
-    if image_size:
+    if image_size and source != 'CUB':
         transform_.append(transforms.Resize(image_size))
 
     if image_crop:

@@ -37,7 +37,7 @@ DEFAULTS = dict(
     model=dict(model_type='dcgan', discriminator_args=None, generator_args=None, dim_embedding=312),
     procedures=dict(measure='proxy_gan', boundary_seek=False, penalty_type='gradient_norm', penalty=1.0),
     train=dict(
-        epochs=30,
+        epochs=1000,
         summary_updates=100,
         archive_every=10
     )
