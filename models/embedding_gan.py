@@ -22,7 +22,7 @@ mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, str
                                  nonlinearity='LeakyReLU')
 mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=False, n_steps=3, nonlinearity='LeakyReLU')
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 
@@ -72,7 +72,9 @@ def build_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=N
     T_pr = classifier_f(W_r, nonlinearity=F.log_softmax)
     c_loss_r = torch.nn.CrossEntropyLoss()(T_pr, T)
     predicted_r = torch.max(T_pr.data, 1)[1]
+    import numpy as np
     correct_r = 100. * predicted_r.eq(T.data).cpu().sum() / T.size(0)
+    print(np.concatenate([predicted_r.cpu().numpy()[:, None], T.data.cpu().numpy()[:, None]], 1)[:20], correct_r)
 
     results = dict(g_loss=g_loss.data[0], d_loss=d_loss.data[0], accuracy_f=correct_f, accuracy_r=correct_r,
                    real=torch.mean(S_r.mean()).data[0], fake=torch.mean(S_f.mean()).data[0])
@@ -104,7 +106,7 @@ def build_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=N
         d_loss += penalty * p_term
         results['gradient penalty'] = p_term.data[0]
 
-    return dict(generator=g_loss, discriminator=d_loss, classifier=c_loss_r+c_loss_f), results, samples, None
+    return dict(generator=g_loss+c_loss_f, discriminator=d_loss, classifier=c_loss_r+c_loss_f), results, samples, None
 
 
 

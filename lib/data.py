@@ -209,13 +209,16 @@ class DataHandler(object):
                 train_set = dataset(root=train_path, transform=transform, download=True)
             elif source == 'CUB':
                 output_sources += ['attributes']
-                train_set = dataset(root=train_path, transform=transform)
+                train_set = dataset(root=train_path, transform=transform, split_type='train')
             else:
                 train_set = dataset(root=train_path, transform=transform)
             if test_on_train:
                 test_set = train_set
             else:
-                test_set = dataset(root=test_path, transform=transform)
+                if source == 'CUB':
+                    test_set = dataset(root=test_path, transform=transform, split_type='test')
+                else:
+                    test_set = dataset(root=test_path, transform=transform)
         elif source_type == 'hdf5':
             train_set = dataset(train_path, train=True, transform=transform)
             test_set = dataset(train_path, train=True, transform=transform)
