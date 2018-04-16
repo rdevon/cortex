@@ -26,7 +26,7 @@ convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 DEFAULTS = dict(
-    data=dict(batch_size=dict(train=64, test=1028), skip_last_batch=True),
+    data=dict(batch_size=dict(train=64, test=64), skip_last_batch=True, test_on_train=True),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=dict(encoder=1e-4, ss_nets=1e-4),
@@ -67,22 +67,31 @@ def make_graph(nets, data_handler):
     X, T, I = data_handler.get_batch('images', 'targets', 'index')
 
     I_ = I.data.cpu().numpy()
+    J_ = P[I_, :].argmax(1)
     C_ = Variable(torch.FloatTensor(C), requires_grad=False).cuda()
-    P_ = Variable(torch.FloatTensor(P[I_, :]), requires_grad=False).cuda()
+    P_ = Variable(torch.FloatTensor(P[I_, :].astype('float32')), requires_grad=False).cuda()
+    batch_size = I.shape[0]
 
     # Nets
     encoder = nets['encoder']
     decoder, classifier = nets['ss_nets']
 
     Zf = encoder(X)
-    Zf = Zf / (torch.sqrt((Zf ** 2).sum(1, keepdim=True)))
+    Zf = Zf / (torch.sqrt((Zf ** 2).sum(1, keepdim=True)) + 1e-6)
     Zr = torch.mm(P_, C_)
 
-    e_loss = -nn.CosineSimilarity(dim=1, eps=1e-6)(Zr, Zf)
+    e_loss = -nn.CosineSimilarity(dim=1, eps=1e-6)(Zr, Zf).mean()
+    Z_f_e =  Zf.unsqueeze(2).expand(Zf.size(0), Zf.size(1), Zf.size(0))
+    Z_r_e = Zr.unsqueeze(2).expand(Zr.size(0), Zr.size(1), Zr.size(0)).transpose(0, 2)
+    h_loss = 1 - nn.CosineSimilarity(dim=1, eps=1e-6)(Z_f_e, Z_r_e)
 
-    h_loss = -nn.CosineSimilarity(dim=1, eps=1e-6)(Zr.expand(), Zf)
-    rows, cols = linear_sum_assignment(e_loss.data.cpu().numpy())
-    assert False, (rows, cols)
+    rows, cols = linear_sum_assignment(h_loss.data.cpu().numpy())
+    P_n = np.zeros((batch_size, batch_size)).astype('int8')
+    P_n[rows, cols] = 1
+
+    for ii, i in enumerate(I_):
+        for jj, j in enumerate(J_):
+            P[i, j] = P_n[ii, jj]
 
     Zt = Variable(Zf.detach().data.cuda())
     Xc = decoder(Zt, nonlinearity=F.tanh)
@@ -100,11 +109,11 @@ def make_graph(nets, data_handler):
     correlations = (z_m.unsqueeze(2).expand(b, dim_z, dim_z) * z_m.unsqueeze(1).expand(b, dim_z, dim_z)).sum(0) / float(b)
     correlations -= Id
 
-    results = dict(e_loss=e_loss.data[0], d_loss=d_loss.data[0],
+    results = dict(e_loss=e_loss.data[0],
                    c_loss=c_loss.data[0], dd_loss=dd_loss.data[0], accuracy=correct)
-    samples = dict(scatters=dict(labels=(Yf.data, T.data)),
-                   histograms=dict(encoder=dict(fake=Yf.view(-1).data,
-                                                real=Yr.view(-1).data)),
+    samples = dict(scatters=dict(labels=(Zf.data, T.data)),
+                   histograms=dict(encoder=dict(fake=Zf.view(-1).data,
+                                                real=Zr.view(-1).data)),
                    images=dict(reconstruction=0.5 * (Xc.data + 1.), original=0.5 * (X.data + 1.)),
                    heatmaps=dict(correlations=correlations))
 
@@ -153,7 +162,7 @@ def build_model(data_handler, model_type='convnet', dim_embedding=16, encoder_ar
     N, = data_handler.get_dims('n_train')
     C = np.random.normal(size=(N, dim_embedding))
     C = C / np.sqrt((C ** 2).sum(1, keepdims=True))
-    P = np.random.randint(2, size=(N, N), dtype='int8')
+    P = np.eye(N, dtype='int8')
 
     return dict(encoder=encoder, ss_nets=(decoder, classifier)), make_graph
 
