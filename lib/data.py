@@ -98,8 +98,6 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
             transform_.append(transforms.RandomSizedCrop(224))
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
-    if source == 'LSUN' and image_size == None:
-        image_size = (64, 64)
 
     if image_size:
         transform_.append(transforms.Resize(image_size))
@@ -120,6 +118,15 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
 
     transform = transforms.Compose(transform_)
     return transform
+
+
+def make_indexing(C):
+    class IndexingDataset(C):
+        def __getitem__(self, index):
+            output = super().__getitem__(index)
+            return output + (index,)
+
+    return IndexingDataset
 
 
 class DataHandler(object):
@@ -144,7 +151,7 @@ class DataHandler(object):
             self.batch_size['test'] = self.batch_size['train']
         self.skip_last_batch = skip_last_batch
 
-    def add_dataset(self, source, test_on_train, n_workers=4, **source_args):
+    def add_dataset(self, source, test_on_train, n_workers=4, duplicate=None, **source_args):
         if path.isdir(source):
             logger.info('Using train set as testing set. For more options, use `data_paths` in `config.yaml`')
             source_type = 'folder'
@@ -180,6 +187,8 @@ class DataHandler(object):
 
         transform = make_transform(source, isfolder=(source_type=='folder'), **source_args)
 
+        dataset = make_indexing(dataset)
+
         if source == 'LSUN':
             train_set = dataset(train_path, classes=['bedroom_train'], transform=transform)
             if test_on_train:
@@ -211,6 +220,9 @@ class DataHandler(object):
             else:
                 test_set = dataset(root=test_path, train=False, download=True, transform=transform)
 
+        N_train = len(train_set)
+        N_test = len(test_set)
+
         train_loader = torch.utils.data.DataLoader(train_set, batch_size=self.batch_size['train'], shuffle=True,
                                                    num_workers=n_workers)
         test_loader = torch.utils.data.DataLoader(test_set, batch_size=self.batch_size['test'], shuffle=True,
@@ -224,9 +236,6 @@ class DataHandler(object):
         elif source == 'SVHN':
             dim_c, dim_x, dim_y = train_set.data.shape[1:]
             dim_l = len(np.unique(train_set.labels))
-        elif source == 'LSUN':
-            dim_c, dim_x, dim_y = train_set[0][0].shape
-            dim_l = 1
         else:
             if len(train_set.train_data.shape) == 4:
                 dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
@@ -239,11 +248,22 @@ class DataHandler(object):
                 labels = labels.numpy()
             dim_l = len(np.unique(labels))
 
-        self.dims[source] = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l)
-        logger.debug('Data has the following dimensions: {}'.format(self.dims[source]))
-        self.input_names[source] = ['images', 'targets']
-        self.loaders.update(**{source: dict(train=train_loader, test=test_loader)})
-        self.sources.append(source)
+        dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, n_train=N_train, n_test=N_test)
+
+        if not duplicate:
+            self.dims[source] = dims
+            logger.debug('Data has the following dimensions: {}'.format(self.dims[source]))
+            self.input_names[source] = ['images', 'targets', 'index']
+            self.loaders.update(**{source: dict(train=train_loader, test=test_loader)})
+            self.sources.append(source)
+        else:
+            for i in range(duplicate):
+                source_ = source + '_{}'.format(i)
+                self.dims[source_] = dims
+                logger.debug('Data has the following dimensions: {}'.format(self.dims[source_]))
+                self.input_names[source_] = ['images', 'targets', 'index']
+                self.loaders.update(**{source_: dict(train=train_loader, test=test_loader)})
+                self.sources.append(source_)
 
     def add_noise(self, key, dist, dim):
         var = torch.FloatTensor(self.batch_size['train'], dim)
@@ -309,15 +329,33 @@ class DataHandler(object):
     def __getitem__(self, item):
         if self.batch is None:
             raise KeyError('Batch not set')
-        return self.batch[item]
+
+        if not item in self.batch.keys():
+            raise KeyError('Data with label `{}` found. Available: {}'.format(item, self.batch.keys()))
+        batch = self.batch[item]
+
+        return batch
+
+    def get_batch(self, *item):
+        if self.batch is None:
+            raise KeyError('Batch not set')
+
+        batch = []
+        for i in item:
+            if '.' in i:
+                j, i_ = i.split('.')
+                j = int(j)
+                batch.append(self.batch[list(self.batch.keys())[j-1]][i_])
+            elif not i in self.batch.keys():
+                raise KeyError('Data with label `{}` not found. Available: {}'.format(i, self.batch.keys()))
+            else:
+                batch.append(self.batch[i])
+
+        return batch
 
     def get_dims(self, *q):
         if q[0] in self.dims.keys():
-            if len(q[1:]) != 0:
-                dims = self.dims[q[0]]
-                q = q[1:]
-            else:
-                dims = self.dims
+            dims = self.dims
         else:
             key = [k for k in self.dims.keys() if k not in self.noise.keys()][0]
             dims = self.dims[key]
@@ -357,7 +395,10 @@ class DataHandler(object):
 
         if make_pbar:
             widgets = [string, Timer(), Bar()]
-            maxval = min(len(loader[self.mode]) for loader in self.loaders.values())
+            if len([len(loader[self.mode]) for loader in self.loaders.values()]) == 0:
+                maxval = 1000
+            else:
+                maxval = min(len(loader[self.mode]) for loader in self.loaders.values())
             self.pbar = ProgressBar(widgets=widgets, maxval=maxval).start()
         else:
             self.pbar = None
@@ -371,16 +412,15 @@ def setup(source=None, batch_size=64, noise_variables=None, n_workers=4, skip_la
           test_on_train=False, setup_fn=None, **kwargs):
     global DATA_HANDLER, NOISE
 
-    if not source:
-        raise ValueError('Source not provided.')
-    if not isinstance(source, (list, tuple)):
+    if source and not isinstance(source, (list, tuple)):
         source = [source]
 
     DATA_HANDLER.set_batch_size(batch_size, skip_last_batch=skip_last_batch)
 
-    for source_ in source:
-        source_args = kwargs.get(source_, kwargs)
-        DATA_HANDLER.add_dataset(source_, test_on_train, n_workers=n_workers, **source_args)
+    if source:
+        for source_ in source:
+            source_args = kwargs.get(source_, kwargs)
+            DATA_HANDLER.add_dataset(source_, test_on_train, n_workers=n_workers, **source_args)
 
     if noise_variables:
         for k, (dist, dim) in noise_variables.items():
