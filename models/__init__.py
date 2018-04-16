@@ -9,7 +9,7 @@ import os
 from . import classifier, gan, discrete_gan, featnet
 
 
-arch_names = ['gan', 'discrete_gan', 'classifier', 'featnet', 'minet', 'vral']
+arch_names = ['gan', 'discrete_gan', 'classifier', 'vae']
 logger = logging.getLogger('cortex.models')
 
 ARCHS = dict()
