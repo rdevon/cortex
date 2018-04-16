@@ -183,6 +183,10 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
         im.save(out_file)
 
 
+def save_heatmap(X, out_file=None, caption='', title='', image_id=0):
+    visualizer.heatmap(X=X, opts=dict(title=title, caption=caption), win='heatmap_{}'.format(image_id), env=exp.NAME)
+
+
 def save_scatter(points, out_file=None, labels=None, caption='', title='', image_id=0):
     if labels is not None:
         Y = (labels + 1.5).astype(int)
@@ -226,7 +230,8 @@ def save_hist(scores, out_file, hist_id=0):
     for k, v in scores.items():
         plt.hist(v, bins, alpha=0.5, label=k)
     plt.legend(loc='upper right')
-    plt.savefig(out_file)
+    if out_file:
+        plt.savefig(out_file)
     hists = tuple(np.histogram(v, bins=bins)[0] for v in s)
     X = np.column_stack(hists)
     visualizer.stem(
