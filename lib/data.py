@@ -16,7 +16,8 @@ from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
 from . import config, exp
-from .cub import CUB
+from .cub import CUB as CUBZSL
+from .cub_standard import CUBStandard as CUB
 
 
 logger = logging.getLogger('cortex.data')
@@ -98,7 +99,7 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
     transform_ = []
 
     if isfolder:
-        if source not in ('CelebA', 'CUB'):
+        if source not in ('CelebA', 'CUB', 'CUB_ZSL'):
             transform_.append(transforms.RandomSizedCrop(224))
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
@@ -193,14 +194,13 @@ class DataHandler(object):
                 dataset = CelebA
             elif source == 'CUB':
                 dataset = CUB
+            elif source == 'CUB_ZSL':
+                dataset = CUBZSL
             else:
                 dataset = torchvision.datasets.ImageFolder
 
         transform = make_transform(source, isfolder=(source_type=='folder'), **source_args)
-<<<<<<< HEAD
-=======
         self.image_scale = IMAGE_SCALE
->>>>>>> master
         dataset = make_indexing(dataset)
 
         output_sources = ['images', 'targets']
@@ -219,7 +219,7 @@ class DataHandler(object):
         elif source_type == 'folder':
             if source == 'CelebA':
                 train_set = dataset(root=train_path, transform=transform, download=True)
-            elif source == 'CUB':
+            elif source in ('CUB', 'CUB_ZSL'):
                 output_sources += ['attributes']
                 train_set = dataset(root=train_path, transform=transform, split_type='train')
             else:
@@ -227,7 +227,7 @@ class DataHandler(object):
             if test_on_train:
                 test_set = train_set
             else:
-                if source == 'CUB':
+                if source in ('CUB', 'CUB_ZSL'):
                     test_set = dataset(root=test_path, transform=transform, split_type='test')
                 else:
                     test_set = dataset(root=test_path, transform=transform)
@@ -270,7 +270,7 @@ class DataHandler(object):
             dim_l = len(np.unique(labels))
 
         dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, n_train=N_train, n_test=N_test)
-        if source == 'CUB':
+        if source in ('CUB', 'CUB_ZSL'):
             dim_a = train_set.attrs.shape[1]
             dims['a'] = dim_a
 
@@ -385,7 +385,7 @@ class DataHandler(object):
         else:
             key = [k for k in self.dims.keys() if k not in self.noise.keys()][0]
             dims = self.dims[key]
-
+            
         try:
             d = [dims[q_] for q_ in q]
         except KeyError:

@@ -15,16 +15,18 @@ mnist_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim
 convnet_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
 
 
-def classify(data, models, losses, results, viz, aux_inputs=None, backprop=False, criterion=None):
-    classifier = models['classifier']
+def classify(data, models, losses, results, viz, aux_inputs=None, backprop=False, key='classifier', criterion=None,
+             aux_viz=None):
+    classifier = models[key]
     inputs, targets = data.get_batch('images', 'targets')
+    if aux_viz is not None:
+        viz_inputs = aux_viz
+    else:
+        viz_inputs = inputs
     if aux_inputs is not None:
-        inputs_ = inputs
         inputs = aux_inputs
         if not backprop:
             inputs = Variable(inputs.data.cuda(), requires_grad=False)
-    else:
-        inputs_ = inputs
 
     outputs = classifier(inputs, nonlinearity=F.log_softmax)
 
@@ -32,9 +34,9 @@ def classify(data, models, losses, results, viz, aux_inputs=None, backprop=False
     predicted = torch.max(outputs.data, 1)[1]
     correct = 100. * predicted.eq(targets.data).cpu().sum() / targets.size(0)
 
-    losses.update(classifier=loss)
-    results.update(accuracy=correct)
-    viz.add_image(inputs_, labels=(targets, predicted), name='gt_pred')
+    losses[key] = loss
+    results[key + '_accuracy'] = correct
+    viz.add_image(viz_inputs, labels=(targets, predicted), name=key + '_gt_pred')
 
 
 def build_model(data, models, model_type='convnet', dropout=0.2, classifier_args=None):
