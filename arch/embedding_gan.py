@@ -94,6 +94,7 @@ def classifier_routine(data, models, losses, results, viz, **kwargs):
 
     classify(data, classifiers, losses, results, viz, key='classifier_real', aux_inputs=W_P, **kwargs)
     classify(data, classifiers, losses, results, viz, key='classifier_fake', aux_inputs=W_Q, aux_viz=X_Q, **kwargs)
+    losses['classifier'] = losses['classifier_fake'] + losses['classifier_real']
 
 
 def build_model(data, models, dim_embedding=312, model_type='convnet', discriminator_args=None, generator_args=None):
