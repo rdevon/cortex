@@ -25,7 +25,7 @@ MODEL_PARAMS_RELOAD = {}
 # Models criteria and results
 MODELS = {}
 CRITERIA = {}
-PROCEDURES = {}
+ROUTINES = {}
 
 
 def file_string(prefix=''):
@@ -33,7 +33,7 @@ def file_string(prefix=''):
     return '{}({})'.format(NAME, prefix)
 
 
-def configure_experiment(data=None, model=None, optimizer=None, train=None, procedures=None, test_procedures=None,
+def configure_experiment(data=None, model=None, optimizer=None, train=None, routines=None, test_routines=None,
                          config_file=None):
     '''Loads arguments into a yaml file.
 
@@ -46,16 +46,16 @@ def configure_experiment(data=None, model=None, optimizer=None, train=None, proc
         if optimizer is not None: optimizer.update(**d.get('optimizer', {}))
         if train is not None: train.update(**d.get('train', {}))
         if data is not None: data.update(**d.get('data', {}))
-        if procedures is not None: procedures.update(**d.get('procedures', {}))
-        if test_procedures is not None: test_procedures.update(**d.get('test_procedures', {}))
+        if routines is not None: routines.update(**d.get('routine', {}))
+        if test_routines is not None: test_routines.update(**d.get('test_routines', {}))
 
-    for k, v in procedures.items():
-        if not k in test_procedures.keys():
-            test_procedures[k] = v
+    for k, v in routines.items():
+        if not k in test_routines.keys():
+            test_routines[k] = v
 
     logger.info('Training model with: \n\tdata args {}, \n\toptimizer args {} '
-                '\n\tmodel args {} \n\ttrain args {} \n\tprocedure args {} \n\ttest procedure args {}'.format(
-        data, optimizer, model, train, procedures, test_procedures))
+                '\n\tmodel args {} \n\ttrain args {} \n\troutine args {} \n\ttest routine args {}'.format(
+        data, optimizer, model, train, routines, test_routines))
 
 
 def save(prefix=''):
@@ -69,10 +69,10 @@ def save(prefix=''):
         if isinstance(model, (tuple, list)):
             nets = []
             for net in model:
-                nets.append(net)#(net.module if USE_CUDA else net)
+                nets.append(net)
             models[k] = nets
         else:
-            models[k] = model#.module if USE_CUDA else model
+            models[k] = model
 
     state = dict(
         models=models,
@@ -87,12 +87,11 @@ def save(prefix=''):
     torch.save(state, file_path)
 
 
-def setup(models, procedures):
-    global MODELS, PROCEDURES
+def setup(models, routines):
+    global MODELS, ROUTINES
+
     MODELS.update(**models)
-    if not isinstance(procedures, dict):
-        procedures = dict(main=procedures)
-    PROCEDURES.update(**procedures)
+    ROUTINES.update(**routines)
 
     if MODEL_PARAMS_RELOAD:
         reload_models()

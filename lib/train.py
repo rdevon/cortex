@@ -3,7 +3,6 @@
 '''
 
 import logging
-from os import path
 import pprint
 import sys
 import time
@@ -15,7 +14,8 @@ import torch.backends.cudnn as cudnn
 
 from .data import DATA_HANDLER
 from . import exp, viz
-from .utils import bad_values, compute_tsne, convert_to_numpy, update_dict_of_lists
+from .utils import bad_values, convert_to_numpy, update_dict_of_lists
+from .viz import VizHandler, plot
 
 
 try: input = raw_input #Python2 compatibility
@@ -32,90 +32,6 @@ optimizer_defaults = dict(
     Adam=dict(betas=(0.5, 0.999))
 )
 
-
-def plot():
-    train_summary = exp.SUMMARY['train']
-    test_summary = exp.SUMMARY['test']
-    for k in train_summary.keys():
-        v_tr = np.array(train_summary[k])
-        v_te = np.array(test_summary[k]) if k in test_summary.keys() else None
-        if len(v_tr.shape) > 1:
-            continue
-        if v_te is not None:
-            opts = dict(
-                xlabel='updates',
-                legend=['train', 'test'],
-                ylabel=k,
-                title=k)
-            Y = np.column_stack((v_tr, v_te))
-            X = np.column_stack((np.arange(v_tr.shape[0]), np.arange(v_tr.shape[0])))
-        else:
-            opts = dict(
-                xlabel='updates',
-                ylabel=k,
-                title=k)
-            Y = v_tr
-            X = np.arange(v_tr.shape[0])
-        viz.visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
-
-
-def show(samples, prefix=''):
-    prefix = exp.file_string(prefix)
-    image_dir = exp.OUT_DIRS.get('image_dir', None)
-
-    images = samples.get('images', {})
-    for i, (k, v) in enumerate(images.items()):
-        v = convert_to_numpy(v)
-        logger.debug('Saving images to {}'.format(image_dir))
-        if image_dir is None:
-            out_path = path.join(image_dir, '{}_{}_image.png'.format(prefix, k))
-        else:
-            out_path = None
-
-        viz.save_images(v, 8, 8, out_file=out_path, labels=None, max_samples=64, image_id=1 + i, caption=k)
-
-    scatters = samples.get('scatters', {})
-    for i, (k, v) in enumerate(scatters.items()):
-        if isinstance(v, tuple):
-            v, l = v
-        else:
-            l = None
-        v = convert_to_numpy(v)
-        l = convert_to_numpy(l)
-
-        if v.shape[1] == 1:
-            raise ValueError('1D-scatter not supported')
-        elif v.shape[1] > 2:
-            logger.info('Scatter greater than 2D. Performing TSNE to 2D')
-            v = compute_tsne(v)
-
-        logger.debug('Saving scatter to {}'.format(image_dir))
-        if image_dir is None:
-            out_path = path.join(image_dir, '{}_{}_scatter.png'.format(prefix, k))
-        else:
-            out_path = None
-
-        viz.save_scatter(v, out_file=out_path, labels=l, image_id=i, title=k)
-
-    histograms = samples.get('histograms', {})
-    for i, (k, v) in enumerate(histograms.items()):
-        convert_to_numpy(v)
-        logger.debug('Saving histograms to {}'.format(image_dir))
-        if image_dir is None:
-            out_path = path.join(image_dir, '{}_{}_histogram.png'.format(prefix, k))
-        else:
-            out_path = None
-        viz.save_hist(v, out_file=out_path, hist_id=i)
-
-    heatmaps = samples.get('heatmaps', {})
-    for i, (k, v) in enumerate(heatmaps.items()):
-        v = convert_to_numpy(v)
-        logger.debug('Saving heatmap to {}'.format(image_dir))
-        if not image_dir:
-            out_path = path.join(image_dir, '{}_{}_heatmap.png'.format(prefix, k))
-        else:
-            out_path = None
-        viz.save_heatmap(v, out_file=out_path, image_id=i, title=k)
 
 def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
           clipping=None, weight_decay=None, optimizer_options='default', model_optimizer_options=None):
@@ -183,7 +99,7 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
         cudnn.benchmark = True
 
 
-def train_epoch(epoch, quit_on_bad_values):
+def train_epoch(epoch, vh, quit_on_bad_values):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -192,58 +108,63 @@ def train_epoch(epoch, quit_on_bad_values):
             model.train()
 
     DATA_HANDLER.reset(string='Training (epoch {}): '.format(epoch))
+    vh.ignore = True
 
     results = {}
 
     try:
         while True:
-            for i, k_ in enumerate(exp.MODELS.keys()):
-                for _ in range(UPDATES[k_]):
+            for rk, routine in exp.ROUTINES.items():
+                for _ in range(UPDATES[rk]):
                     DATA_HANDLER.next()
 
-                    for k__, model in exp.MODELS.items():
+                    for mk, model in exp.MODELS.items():
                         if isinstance(model, (list, tuple)):
                             for net in model:
                                 for p in net.parameters():
-                                    p.requires_grad = (k__ == k_)
+                                    p.requires_grad = (mk == rk)
                         else:
                             for p in model.parameters():
-                                p.requires_grad = (k__ == k_)
+                                p.requires_grad = (mk == rk)
 
-                    OPTIMIZERS[k_].zero_grad()
+                    OPTIMIZERS[rk].zero_grad()
 
-                    for k, v in exp.PROCEDURES.items():
-                        start_time = time.time()
-                        if k == 'main' or not isinstance(exp.ARGS['procedures'], dict):
-                            args = exp.ARGS['procedures']
+                    if isinstance(routine, (tuple, list)):
+                        routine = routine[0]
+                    start_time = time.time()
+                    if rk in exp.ARGS['routines'].keys():
+                        args = exp.ARGS['routines'][rk]
+                    else:
+                        args = exp.ARGS['routines']
+                    losses = {}
+                    results_ = {}
+                    routine(DATA_HANDLER, exp.MODELS, losses, results_, vh, **args)
+                    bads = bad_values(results_)
+                    if bads and quit_on_bad_values:
+                        logger.error('Bad values found (quitting): {} \n All:{}'.format(
+                            bads, results_))
+                        exit(0)
+
+                    if isinstance(losses, dict):
+                        if rk in losses:
+                            loss = losses[rk]
                         else:
-                            args = exp.ARGS['procedures'][k]
-                        losses, results_, _, _ = v(exp.MODELS, DATA_HANDLER, **args)
-                        bads = bad_values(results_)
-                        if bads and quit_on_bad_values:
-                            logger.error('Bad values found (quitting): {} \n All:{}'.format(
-                                bads, results_))
-                            exit(0)
+                            loss = None
+                    else:
+                        loss = losses
 
-                        if isinstance(losses, dict):
-                            if k_ in losses:
-                                loss = losses[k_]
-                            else:
-                                loss = None
-                        else:
-                            loss = losses
+                    if loss is not None:
+                        results_['{}_loss'.format(rk)] = loss.data[0]
+                        loss.backward()
+                    end_time = time.time()
+                    results_['{}_time'.format(rk)] = end_time - start_time
+                    update_dict_of_lists(results, **results_)
 
-                        if loss is not None:
-                            loss.backward()
-                        end_time = time.time()
-                        results_['{}_{}_time'.format(k_, k)] = end_time - start_time
-                        update_dict_of_lists(results, **results_)
+                    OPTIMIZERS[rk].step()
 
-                    OPTIMIZERS[k_].step()
-
-                    if k_ in CLIPPING.keys():
-                        clip = CLIPPING[k_]
-                        model = exp.MODELS[k_]
+                    if rk in CLIPPING.keys():
+                        clip = CLIPPING[rk]
+                        model = exp.MODELS[rk]
                         if isinstance(model, (list, tuple)):
                             for net in model:
                                 for p in net.parameters():
@@ -266,7 +187,7 @@ def train_epoch(epoch, quit_on_bad_values):
     return results
 
 
-def test_epoch(epoch, best_condition=0, return_std=False):
+def test_epoch(epoch, vh, return_std=False):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -276,41 +197,47 @@ def test_epoch(epoch, best_condition=0, return_std=False):
 
     DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
     results = {}
-    samples_ = None
 
-    procedures = exp.ARGS['test_procedures']
+    routines = exp.ARGS['test_routines']
 
+    vh.ignore = False
     try:
         while True:
             DATA_HANDLER.next()
-            samples__ = {}
-            for k, v in exp.PROCEDURES.items():
-                if k == 'main' or not isinstance(procedures, dict):
-                    args = procedures
+            for rk, routine in exp.ROUTINES.items():
+                if isinstance(routine, (tuple, list)):
+                    routine = routine[1]
+                if rk in routines.keys():
+                    args = routines[rk]
                 else:
-                    args = procedures[k]
-                loss, results_, samples, condition = v(exp.MODELS, DATA_HANDLER, **args)
-                if not samples_ and samples:
-                    samples__.update(**samples)
+                    args = routines
+                results_ = {}
+                losses = {}
+                routine(DATA_HANDLER, exp.MODELS, losses, results_, vh, **args)
+
+                if rk in losses:
+                    results_[rk + '_loss'] = losses[rk].data[0]
                 update_dict_of_lists(results, **results_)
-            samples_ = samples_ or samples__
+            vh.ignore = True
     except StopIteration:
         pass
 
     means = dict((k, np.mean(v)) for k, v in results.items())
     if return_std:
         stds = dict((k, np.std(v)) for k, v in results.items())
-        return means, stds, samples_
+        return means, stds
 
-    return means, samples_
+    return means
 
 
 def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False,
               quit_on_bad_values=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
+    vh = VizHandler()
+
     if test_mode:
-        test_results, test_std, samples_ = test_epoch('Testing', return_std=True)
+        test_results, test_std = test_epoch('Testing', vh, return_std=True)
         logger.info(' | '.join(
             ['{}: {:.5f}({:.5f})'.format(k, test_results[k], test_std[k]) for k in test_results.keys()]))
         exit(0)
@@ -320,18 +247,19 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             epoch = exp.INFO['epoch']
 
             start_time = time.time()
-            train_results_ = train_epoch(epoch, quit_on_bad_values)
+            train_results_ = train_epoch(epoch, vh, quit_on_bad_values)
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
-            test_results_, samples_ = test_epoch(epoch)
+            test_results_ = test_epoch(epoch, vh)
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
             logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k] if k in test_results_.keys() else 0)
                                     for k in train_results_.keys()]))
             logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))
             plot()
-            show(samples_)
+            vh.show()
+            vh.clear()
             if (archive_every and epoch % archive_every == 0):
                 exp.save(prefix=epoch)
 

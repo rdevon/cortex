@@ -8,34 +8,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from .modules.convnets import SimpleConvEncoder as Encoder
 from .modules.densenet import DenseNet
-from .modules.conv_decoders import SimpleConvDecoder as Decoder
-from .modules.modules import View
+from .classifier import classify as classify_
+from .utils import cross_correlation
 
 
-logger = logging.getLogger('cortex.models' + __name__)
+logger = logging.getLogger('cortex.arch' + __name__)
 
 mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7, dim_out=1028)
 mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, dim_out=1028)
 convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
-
-DEFAULTS = dict(
-    data=dict(batch_size=dict(train=64, test=640),
-              noise_variables=dict(z=('normal', 64))),
-    optimizer=dict(
-        optimizer='Adam',
-        learning_rate=1e-4,
-    ),
-    model=dict(dim_z=64, encoder_args=None, decoder_args=None),
-    procedures=dict(criterion=F.mse_loss, beta_kld=1.),
-    train=dict(
-        epochs=500,
-        summary_updates=100,
-        archive_every=10
-    )
-)
 
 
 def setup(model=None, data=None, **kwargs):
@@ -68,44 +51,39 @@ class VAE(nn.Module):
         return self.decoder(self.latent, nonlinearity=nonlinearity)
 
 
-def build_graph(nets, inputs, criterion=None, beta_kld=1.):
-    X, Y, Z = inputs.get_batch('images', 'targets', 'z')
+def vae(data, models, losses, results, viz, criterion=None, beta_kld=1.):
+    X, Y, Z = data.get_batch('images', 'targets', 'z')
+    vae_net = models['vae']
 
-    vae_net = nets['vae']
-    classifier = nets['classifier']
     outputs = vae_net(X, nonlinearity=F.tanh)
+    gen = vae_net.decoder(Z, nonlinearity=F.tanh)
 
     r_loss = criterion(outputs, X, size_average=False)
     kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum()
+    losses.update(vae=r_loss + beta_kld * kl)
+    correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 
-    #classification
-    y_hat = classifier(Variable(vae_net.mu.data.cuda(), requires_grad=False), nonlinearity=F.log_softmax)
-    c_loss = torch.nn.CrossEntropyLoss()(y_hat, Y)
-
-    predicted = torch.max(y_hat.data, 1)[1]
-    correct = 100. * predicted.eq(Y.data).cpu().sum() / Y.size(0)
-    gen = vae_net.decoder(Z, nonlinearity=F.tanh)
-
-    z_s = vae_net.latent / vae_net.latent.std(0)
-    z_m = z_s - z_s.mean(0)
-    b, dim_z = z_m.size()
-    correlations = (z_m.unsqueeze(2).expand(b, dim_z, dim_z) * z_m.unsqueeze(1).expand(b, dim_z, dim_z)).sum(0) / float(b)
-
-    samples = dict(images=dict(reconstruction=0.5 * (outputs + 1.), original=0.5 * (X + 1.),
-                               generated=0.5 * (gen + 1.)),
-                   heatmaps=dict(correlations=correlations),
-                   latents=dict(latent=vae_net.latent.data),
-                   labels=dict(latent=Y.data))
-    losses = dict(vae=r_loss + beta_kld * kl, classifier=c_loss)
-    results = dict(loss=r_loss.data[0], kld=kl.data[0], accuracy=correct)
-    return losses, results, samples, 'reconstruction'
+    results.update(kld=kl.data[0])
+    viz.add_image(outputs, name='reconstruction')
+    viz.add_image(gen, name='generated')
+    viz.add_image(X, name='ground truth')
+    viz.add_heatmap(correlations.data, name='latent correlations')
+    viz.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
 
-def build_model(data_handler, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
+def classify(data, models, losses, results, viz, **kwargs):
+    X, Y = data.get_batch('images', 'targets')
+    vae_net = models['vae']
+
+    vae_net(X, nonlinearity=F.tanh)
+    classify_(data, models, losses, results, viz, aux_inputs=vae_net.mu, **kwargs)
+
+
+def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
     encoder_args = encoder_args or {}
     decoder_args = decoder_args or {}
-    shape = data_handler.get_dims('x', 'y', 'c')
-    dim_l = data_handler.get_dims('labels')[0]
+    shape = data.get_dims('x', 'y', 'c')
+    dim_l = data.get_dims('labels')
 
     if model_type == 'convnet':
         from .modules.convnets import SimpleConvEncoder as Encoder
@@ -128,8 +106,27 @@ def build_model(data_handler, model_type='convnet', dim_z=64, encoder_args=None,
 
     encoder = Encoder(shape, **encoder_args_)
     decoder = Decoder(shape, dim_in=dim_z, **decoder_args_)
-    net = VAE(encoder, decoder, dim_out=encoder_args_['dim_out'], dim_z=dim_z)
-
+    vae = VAE(encoder, decoder, dim_out=encoder_args_['dim_out'], dim_z=dim_z)
     classifier = DenseNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
 
-    return dict(vae=net, classifier=classifier), build_graph
+    models.update(vae=vae, classifier=classifier)
+
+
+ROUTINES = dict(vae=vae, classifier=classify)
+
+DEFAULT_CONFIG = dict(
+    data=dict(batch_size=dict(train=64, test=640),
+              noise_variables=dict(z=('normal', 64))),
+    optimizer=dict(
+        optimizer='Adam',
+        learning_rate=1e-4,
+    ),
+    model=dict(dim_z=64, encoder_args=None, decoder_args=None),
+    routines=dict(vae=dict(criterion=F.mse_loss, beta_kld=1.),
+                  classifier=dict(criterion=nn.CrossEntropyLoss())),
+    train=dict(
+        epochs=500,
+        summary_updates=100,
+        archive_every=10
+    )
+)
