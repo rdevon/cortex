@@ -34,6 +34,8 @@ _default_normalization = {
     'STL10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 }
 
+IMAGE_SCALE = [0, 1]
+
 
 class CelebA(torchvision.datasets.ImageFolder):
     url = "https://www.dropbox.com/sh/8oqt9vytwxb3s4r/AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1"
@@ -92,6 +94,7 @@ class CelebA(torchvision.datasets.ImageFolder):
 
 
 def make_transform(source, normalize=True, image_crop=None, image_size=None, isfolder=False):
+    global IMAGE_SCALE
     transform_ = []
 
     if isfolder:
@@ -110,12 +113,17 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
 
     if normalize and isinstance(normalize, bool):
         if source in _default_normalization.keys():
-            transform_.append(transforms.Normalize(*_default_normalization[source]))
+            normalize = _default_normalization[source]
+            if normalize[0] == (0.5, 0.5, 0.5):
+                IMAGE_SCALE = [-1, 1]
+            transform_.append(transforms.Normalize(*normalize))
         else:
             raise ValueError('Default normalization for source {} not found. Please enter custom normalization.'
                              ''.format(source))
     else:
         transform_.append(transforms.Normalize(*normalize))
+        if normalize[0] == (0.5, 0.5, 0.5):
+            IMAGE_SCALE = [-1, 1]
 
     transform = transforms.Compose(transform_)
     return transform
@@ -189,6 +197,10 @@ class DataHandler(object):
                 dataset = torchvision.datasets.ImageFolder
 
         transform = make_transform(source, isfolder=(source_type=='folder'), **source_args)
+<<<<<<< HEAD
+=======
+        self.image_scale = IMAGE_SCALE
+>>>>>>> master
         dataset = make_indexing(dataset)
 
         output_sources = ['images', 'targets']
@@ -343,7 +355,7 @@ class DataHandler(object):
             raise KeyError('Batch not set')
 
         if not item in self.batch.keys():
-            raise KeyError('Data with label `{}` found. Available: {}'.format(item, self.batch.keys()))
+            raise KeyError('Data with label `{}` not found. Available: {}'.format(item, self.batch.keys()))
         batch = self.batch[item]
 
         return batch
@@ -362,8 +374,10 @@ class DataHandler(object):
                 raise KeyError('Data with label `{}` not found. Available: {}'.format(i, self.batch.keys()))
             else:
                 batch.append(self.batch[i])
-
-        return batch
+        if len(batch) == 1:
+            return batch[0]
+        else:
+            return batch
 
     def get_dims(self, *q):
         if q[0] in self.dims.keys():
@@ -376,7 +390,10 @@ class DataHandler(object):
             d = [dims[q_] for q_ in q]
         except KeyError:
             raise KeyError('Cannot resolve dimensions {}, provided {}'.format(q, dims))
-        return d
+        if len(d) == 1:
+            return d[0]
+        else:
+            return d
 
     def make_iterator(self, source):
         loader = self.loaders[source][self.mode]
