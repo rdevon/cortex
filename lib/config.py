@@ -14,6 +14,7 @@ VIZ = {}
 TV_PATH = None
 DATA_PATHS = {}
 OUT_PATH = None
+ARCH_PATHS = {}
 
 
 def update_config(config_file):
@@ -30,7 +31,8 @@ def update_config(config_file):
             data_paths = d.get('data_paths', {})
             TV_PATH = torchvision_data_path
             DATA_PATHS.update(**data_paths)
-
+            arch_paths = d.get('arch_paths', {})
+            ARCH_PATHS.update(**arch_paths)
             OUT_PATH = d.get('out_path', None)
 
             logger.debug('User-defined configs: {}'.format(d))

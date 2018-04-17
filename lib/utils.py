@@ -106,9 +106,14 @@ def convert_to_numpy(o):
             o = o[0]
     elif isinstance(o, (torch.cuda.FloatTensor, torch.cuda.LongTensor)):
         o = o.cpu().numpy()
-    elif isinstance(o, (list, tuple)):
+    elif isinstance(o, list):
         for i in range(len(o)):
             o[i] = convert_to_numpy(o[i])
+    elif isinstance(o, tuple):
+        o_ = tuple()
+        for i in range(len(o)):
+            o_ = o_ + (convert_to_numpy(o[i]),)
+        o = o_
     elif isinstance(o, dict):
         for k in o.keys():
             o[k] = convert_to_numpy(o[k])

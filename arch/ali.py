@@ -13,7 +13,7 @@ from .gan import f_divergence
 from .modules.densenet import DenseNet
 
 
-logger = logging.getLogger('cortex.models' + __name__)
+logger = logging.getLogger('cortex.arch' + __name__)
 
 mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7, dim_out=1028)
 mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
@@ -108,12 +108,11 @@ def build_graph(nets, data_handler, measure=None, boundary_seek=False, penalty=N
     return losses, results, samples, None
 
 
-def build_model(data_handler, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None,
-                discriminator_args=None):
+def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
     encoder_args = encoder_args or {}
     decoder_args = decoder_args or {}
-    shape = data_handler.get_dims('x', 'y', 'c')
-    dim_l = data_handler.get_dims('labels')[0]
+    shape = data.get_dims('x', 'y', 'c')
+    dim_l = data.get_dims('labels')
 
     if model_type == 'convnet':
         from .modules.convnets import SimpleConvEncoder as Encoder
@@ -143,7 +142,6 @@ def build_model(data_handler, model_type='convnet', dim_z=64, encoder_args=None,
     x_disc = Encoder(shape, dim_out=256, **discriminator_args_)
     z_disc = DenseNet(dim_z, dim_h=[dim_z], dim_out=dim_z)
     topnet = DenseNet(256 + dim_z, dim_h=[512, 128], dim_out=1, batch_norm=False)
-
     classifier = DenseNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
 
-    return dict(discriminator=(x_disc, z_disc, topnet), nets=(encoder, decoder), ss_nets=(classifier, decoder2)), build_graph
+    models.update(discriminator=(x_disc, z_disc, topnet), nets=(encoder, decoder), ss_nets=(classifier, decoder2))

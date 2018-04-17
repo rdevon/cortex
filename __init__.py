@@ -8,11 +8,9 @@ import os
 from os import path
 from shutil import copyfile, rmtree
 
-import numpy as np
 import torch
 
-import models
-from lib import config, exp
+from lib import config, models, exp
 from lib.log_utils import set_file_logger, set_stream_logger
 from lib.utils import make_argument_parser
 from lib.viz import init as viz_init
@@ -102,7 +100,7 @@ def setup_reload(arch, use_cuda, exp_file):
     config.update_config(config_file_path)
     viz_init()
 
-    models.setup(arch)
+    arch.setup(arch)
 
     logger.info('Reloading from {}'.format(exp_file))
     d = torch.load(exp_file)
@@ -110,9 +108,9 @@ def setup_reload(arch, use_cuda, exp_file):
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     exp.ARGS.update(**d['args'])
-    reloads = d['models'].keys()
+    reloads = d['arch'].keys()
     for k in reloads:
-        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['arch'][k]})
 
 
 def reload_experiment(args):
@@ -125,9 +123,9 @@ def reload_experiment(args):
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     exp.ARGS.update(**d['args'])
-    reloads = reloads or d['models'].keys()
+    reloads = reloads or d['arch'].keys()
     for k in reloads:
-        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['arch'][k]})
     out_dirs = d['out_dirs']
 
     if name:
@@ -167,12 +165,12 @@ def setup(use_cuda):
 
     else:
         kwargs = {}
-        for k, v in arch.DEFAULTS.items():
+        for k, v in arch.DEFAULT_CONFIG.items():
             kwargs[k] = {}
             kwargs[k].update(**v)
 
-        if 'test_procedures' not in kwargs.keys():
-            kwargs['test_procedures'] = {}
+        if 'test_routines' not in kwargs.keys():
+            kwargs['test_routines'] = {}
 
         kwargs['data']['source'] = args.source
         update_args(args.args, **kwargs)
