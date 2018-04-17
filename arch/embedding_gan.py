@@ -19,7 +19,7 @@ mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, str
                                  nonlinearity='LeakyReLU')
 mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=False, n_steps=3, nonlinearity='LeakyReLU')
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
 dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 
