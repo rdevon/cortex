@@ -7,10 +7,9 @@ import logging
 from __init__ import setup, setup_reload
 from lib import exp
 from lib.data import setup as setup_data, DATA_HANDLER
-from lib.exp import setup as setup_model
+from lib.models import setup_model
 from lib.train import setup as setup_optimizer, main_loop
 from lib.utils import print_section
-from models import build_model
 
 
 logger = logging.getLogger('cortex')
@@ -31,8 +30,7 @@ def main(eval_mode=False):
     print_section('MODEL') #####################################################
     logger.info('Building model...')
     logger.info('Model args: {}'.format(model_args))
-    models, procedures = build_model(DATA_HANDLER, **model_args)
-    setup_model(models, procedures)
+    setup_model(**model_args)
 
     print_section('OPTIMIZER') #################################################
     setup_optimizer(**optimizer_args)

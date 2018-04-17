@@ -16,6 +16,7 @@ from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
 from . import config, exp
+#from .cub import CUB
 
 
 logger = logging.getLogger('cortex.data')
@@ -32,6 +33,8 @@ _default_normalization = {
     'CIFAR100': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
     'STL10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 }
+
+IMAGE_SCALE = [0, 1]
 
 
 class CelebA(torchvision.datasets.ImageFolder):
@@ -91,10 +94,11 @@ class CelebA(torchvision.datasets.ImageFolder):
 
 
 def make_transform(source, normalize=True, image_crop=None, image_size=None, isfolder=False):
+    global IMAGE_SCALE
     transform_ = []
 
     if isfolder:
-        if source != 'CelebA':
+        if source not in ('CelebA', 'CUB'):
             transform_.append(transforms.RandomSizedCrop(224))
         image_size = (64, 64)
         normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
@@ -109,12 +113,17 @@ def make_transform(source, normalize=True, image_crop=None, image_size=None, isf
 
     if normalize and isinstance(normalize, bool):
         if source in _default_normalization.keys():
-            transform_.append(transforms.Normalize(*_default_normalization[source]))
+            normalize = _default_normalization[source]
+            if normalize[0] == (0.5, 0.5, 0.5):
+                IMAGE_SCALE = [-1, 1]
+            transform_.append(transforms.Normalize(*normalize))
         else:
             raise ValueError('Default normalization for source {} not found. Please enter custom normalization.'
                              ''.format(source))
     else:
         transform_.append(transforms.Normalize(*normalize))
+        if normalize[0] == (0.5, 0.5, 0.5):
+            IMAGE_SCALE = [-1, 1]
 
     transform = transforms.Compose(transform_)
     return transform
@@ -182,13 +191,16 @@ class DataHandler(object):
         elif source_type == 'folder':
             if source == 'CelebA':
                 dataset = CelebA
+            elif source == 'CUB':
+                dataset = CUB
             else:
                 dataset = torchvision.datasets.ImageFolder
 
         transform = make_transform(source, isfolder=(source_type=='folder'), **source_args)
-
+        self.image_scale = IMAGE_SCALE
         dataset = make_indexing(dataset)
 
+        output_sources = ['images', 'targets']
         if source == 'LSUN':
             train_set = dataset(train_path, classes=['bedroom_train'], transform=transform)
             if test_on_train:
@@ -204,12 +216,18 @@ class DataHandler(object):
         elif source_type == 'folder':
             if source == 'CelebA':
                 train_set = dataset(root=train_path, transform=transform, download=True)
+            elif source == 'CUB':
+                output_sources += ['attributes']
+                train_set = dataset(root=train_path, transform=transform, split_type='train')
             else:
                 train_set = dataset(root=train_path, transform=transform)
             if test_on_train:
                 test_set = train_set
             else:
-                test_set = dataset(root=test_path, transform=transform)
+                if source == 'CUB':
+                    test_set = dataset(root=test_path, transform=transform, split_type='test')
+                else:
+                    test_set = dataset(root=test_path, transform=transform)
         elif source_type == 'hdf5':
             train_set = dataset(train_path, train=True, transform=transform)
             test_set = dataset(train_path, train=True, transform=transform)
@@ -249,11 +267,14 @@ class DataHandler(object):
             dim_l = len(np.unique(labels))
 
         dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, n_train=N_train, n_test=N_test)
+        if source == 'CUB':
+            dim_a = train_set.attrs.shape[1]
+            dims['a'] = dim_a
 
         if not duplicate:
             self.dims[source] = dims
             logger.debug('Data has the following dimensions: {}'.format(self.dims[source]))
-            self.input_names[source] = ['images', 'targets', 'index']
+            self.input_names[source] = output_sources + ['index']
             self.loaders.update(**{source: dict(train=train_loader, test=test_loader)})
             self.sources.append(source)
         else:
@@ -261,7 +282,7 @@ class DataHandler(object):
                 source_ = source + '_{}'.format(i)
                 self.dims[source_] = dims
                 logger.debug('Data has the following dimensions: {}'.format(self.dims[source_]))
-                self.input_names[source_] = ['images', 'targets', 'index']
+                self.input_names[source_] = output_sources + ['index']
                 self.loaders.update(**{source_: dict(train=train_loader, test=test_loader)})
                 self.sources.append(source_)
 
@@ -331,7 +352,7 @@ class DataHandler(object):
             raise KeyError('Batch not set')
 
         if not item in self.batch.keys():
-            raise KeyError('Data with label `{}` found. Available: {}'.format(item, self.batch.keys()))
+            raise KeyError('Data with label `{}` not found. Available: {}'.format(item, self.batch.keys()))
         batch = self.batch[item]
 
         return batch
@@ -350,8 +371,10 @@ class DataHandler(object):
                 raise KeyError('Data with label `{}` not found. Available: {}'.format(i, self.batch.keys()))
             else:
                 batch.append(self.batch[i])
-
-        return batch
+        if len(batch) == 1:
+            return batch[0]
+        else:
+            return batch
 
     def get_dims(self, *q):
         if q[0] in self.dims.keys():
@@ -364,7 +387,10 @@ class DataHandler(object):
             d = [dims[q_] for q_ in q]
         except KeyError:
             raise KeyError('Cannot resolve dimensions {}, provided {}'.format(q, dims))
-        return d
+        if len(d) == 1:
+            return d[0]
+        else:
+            return d
 
     def make_iterator(self, source):
         loader = self.loaders[source][self.mode]
