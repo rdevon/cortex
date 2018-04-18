@@ -12,15 +12,15 @@ from .modules.densenet import DenseNet
 from .classifier import classify
 
 
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
-resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=3, n_steps=4)
+resnet_generator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=3, n_steps=4)
 
-mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
+mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=5, pad=2, stride=2, min_dim=7,
                                  nonlinearity='LeakyReLU')
-mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
+mnist_generator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
-dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, n_steps=3, nonlinearity='LeakyReLU')
+dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, n_steps=3)
 
 
 def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.):
@@ -131,8 +131,9 @@ def build_model(data, models, dim_embedding=312, model_type='convnet', discrimin
 
     discriminator = Discriminator(shape, dim_out=dim_embedding, **discriminator_args_)
     generator = Generator(shape, dim_in=dim_z+dim_a, **generator_args_)
-    classifier_f = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
-    classifier_r = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    # TODO: Pass the option for layer norm here
+    classifier_f = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, layer_norm=False, dropout=0.2)
+    classifier_r = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, layer_norm=False, dropout=0.2)
 
     models.update(generator=generator, discriminator=discriminator, classifier=(classifier_f, classifier_r))
 
