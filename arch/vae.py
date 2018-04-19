@@ -8,8 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from .modules.densenet import DenseNet
-from .classifier import classify as classify_
+from .modules.densenet import FullyConnectedNet
+from .classifier import classify
 from .utils import cross_correlation
 
 
@@ -51,7 +51,7 @@ class VAE(nn.Module):
         return self.decoder(self.latent, nonlinearity=nonlinearity)
 
 
-def vae(data, models, losses, results, viz, criterion=None, beta_kld=1.):
+def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.):
     X, Y, Z = data.get_batch('images', 'targets', 'z')
     vae_net = models['vae']
 
@@ -63,7 +63,7 @@ def vae(data, models, losses, results, viz, criterion=None, beta_kld=1.):
     losses.update(vae=r_loss + beta_kld * kl)
     correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 
-    results.update(kld=kl.data[0])
+    results.update(KL_divergence=kl.data[0])
     viz.add_image(outputs, name='reconstruction')
     viz.add_image(gen, name='generated')
     viz.add_image(X, name='ground truth')
@@ -71,12 +71,13 @@ def vae(data, models, losses, results, viz, criterion=None, beta_kld=1.):
     viz.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
 
-def classify(data, models, losses, results, viz, **kwargs):
+def classifier_routine(data, models, losses, results, viz, **kwargs):
     X, Y = data.get_batch('images', 'targets')
     vae_net = models['vae']
+    classifier = models['classifier']
 
     vae_net(X, nonlinearity=F.tanh)
-    classify_(data, models, losses, results, viz, aux_inputs=vae_net.mu, **kwargs)
+    classify(classifier, vae_net.mu, Y, losses=losses, results=results, **kwargs)
 
 
 def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
@@ -107,12 +108,12 @@ def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None,
     encoder = Encoder(shape, **encoder_args_)
     decoder = Decoder(shape, dim_in=dim_z, **decoder_args_)
     vae = VAE(encoder, decoder, dim_out=encoder_args_['dim_out'], dim_z=dim_z)
-    classifier = DenseNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
 
     models.update(vae=vae, classifier=classifier)
 
 
-ROUTINES = dict(vae=vae, classifier=classify)
+ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
@@ -126,7 +127,6 @@ DEFAULT_CONFIG = dict(
                   classifier=dict(criterion=nn.CrossEntropyLoss())),
     train=dict(
         epochs=500,
-        summary_updates=100,
         archive_every=10
     )
 )
