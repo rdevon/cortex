@@ -78,7 +78,11 @@ def update_dict_of_lists(d_to_update, **d):
 
     '''
     for k, v in d.items():
-        if k in d_to_update.keys():
+        if isinstance(v, dict):
+            if k not in d_to_update.keys():
+                d_to_update[k] = {}
+            update_dict_of_lists(d_to_update[k], **v)
+        elif k in d_to_update.keys():
             d_to_update[k].append(v)
         else:
             d_to_update[k] = [v]
@@ -87,12 +91,17 @@ def update_dict_of_lists(d_to_update, **d):
 def bad_values(d):
     failed = {}
     for k, v in d.items():
-        if isinstance(v, torch.autograd.variable.Variable):
-            v_ = v.data[0]
+        if isinstance(v, dict):
+            v_ = bad_values(v)
+            if v_:
+                failed[k] = v_
         else:
-            v_ = v
-        if np.isnan(v_) or np.isinf(v_):
-            failed[k] = v_
+            if isinstance(v, torch.autograd.variable.Variable):
+                v_ = v.data[0]
+            else:
+                v_ = v
+            if np.isnan(v_) or np.isinf(v_):
+                failed[k] = v_
 
     if len(failed) == 0:
         return False
