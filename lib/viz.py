@@ -153,28 +153,48 @@ class VizHandler():
 
 
 def plot():
+    def get_Y_legend(key, v_train, v_test):
+        Y = []
+        legend = []
+
+        Y.append(np.array(v_train))
+        if v_test is not None:
+            Y.append(np.array(v_test))
+            legend.append('{} (train)'.format(key))
+            legend.append('{} (test)'.format(key))
+        else:
+            legend.append(key)
+
+        return Y, legend
+
     train_summary = exp.SUMMARY['train']
     test_summary = exp.SUMMARY['test']
     for k in train_summary.keys():
-        v_tr = np.array(train_summary[k])
-        v_te = np.array(test_summary[k]) if k in test_summary.keys() else None
-        if len(v_tr.shape) > 1:
-            continue
-        if v_te is not None:
-            opts = dict(
-                xlabel='epochs',
-                legend=['train', 'test'],
-                ylabel=k,
-                title=k)
-            Y = np.column_stack((v_tr, v_te))
-            X = np.column_stack((np.arange(v_tr.shape[0]), np.arange(v_tr.shape[0])))
+        v_train = train_summary[k]
+        v_test = test_summary[k] if k in test_summary.keys() else None
+        if isinstance(v_train, dict):
+            Y = []
+            legend = []
+            for k_ in v_train:
+                Y_, legend_ = get_Y_legend(k_, v_train[k_], v_test[k_] if v_test is not None else None)
+                Y += Y_
+                legend += legend_
         else:
-            opts = dict(
-                xlabel='epochs',
-                ylabel=k,
-                title=k)
-            Y = v_tr
-            X = np.arange(v_tr.shape[0])
+            Y, legend = get_Y_legend(k, v_train, v_test)
+
+        opts = dict(
+            xlabel='epochs',
+            legend=legend,
+            ylabel=k,
+            title=k)
+
+        if len(Y) == 1:
+            Y = Y[0]
+            X = np.arange(Y.shape[0])
+        else:
+            Y = np.column_stack(Y)
+            X = np.column_stack([np.arange(Y.shape[0])] * Y.shape[1])
+
         visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
 
 
