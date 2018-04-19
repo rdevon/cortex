@@ -8,6 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .modules import View
+from .densenet import LayerNorm
+
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -19,25 +21,30 @@ def infer_conv_size(w, k, s, p):
 
 
 class MNISTDeConv(nn.Module):
-    def __init__(self, shape, dim_in=64, dim_h=64, batch_norm=True):
+    def __init__(self, shape, dim_in=64, dim_h=64, batch_norm=True, layer_norm=False):
         super(MNISTDeConv, self).__init__()
         models = nn.Sequential()
 
         models.add_module('dense1', nn.Linear(dim_in, 1024))
         models.add_module('dense1_relu', nn.ReLU())
-        if batch_norm:
+        if layer_norm:
+            models.add_module('dense1_ln', LayerNorm(1024))
+        elif batch_norm:
             models.add_module('dense1_bn', nn.BatchNorm1d(1024))
 
         models.add_module('dense2', nn.Linear(1024, dim_h * 2 * 7 * 7))
         models.add_module('dense2_relu', nn.ReLU())
-
-        if batch_norm:
+        if layer_norm:
+            models.add_module('dense2_ln', LayerNorm(2 * dim_h * 7 * 7))
+        elif batch_norm:
             models.add_module('dense2_bn', nn.BatchNorm1d(2 * dim_h * 7 * 7))
         models.add_module('view', View(-1, 2 * dim_h, 7, 7))
 
         models.add_module('deconv1', nn.ConvTranspose2d(2 * dim_h, dim_h, 4, 2, 1))
         models.add_module('deconv1_relu', nn.ReLU())
-        if batch_norm:
+        if layer_norm:
+            models.add_module('deconv1_ln', LayerNorm(dim_h))
+        elif batch_norm:
             models.add_module('deconv1_bn', nn.BatchNorm2d(dim_h))
 
         models.add_module('deconv2', nn.ConvTranspose2d(dim_h, 1, 4, 2, 1))
@@ -59,7 +66,8 @@ class MNISTDeConv(nn.Module):
 
 
 class SimpleConvDecoder(nn.Module):
-    def __init__(self, shape, dim_in=None, initial_layer=None, dim_h=64, batch_norm=True, dropout=False, nonlinearity='ReLU',
+    def __init__(self, shape, dim_in=None, initial_layer=None, dim_h=64, batch_norm=True, 
+                 layer_norm=False, dropout=False, nonlinearity='ReLU',
                  f_size=4, stride=2, pad=1, n_steps=3):
         super(SimpleConvDecoder, self).__init__()
         models = nn.Sequential()
@@ -93,7 +101,9 @@ class SimpleConvDecoder(nn.Module):
             models.add_module(name, nn.Linear(dim_in, initial_layer))
             if dropout:
                 models.add_module(name + '_do', nn.Dropout1d(p=dropout))
-            if batch_norm:
+            if layer_norm:
+                models.add_module(name + '_ln', nn.LayerNorm(initial_layer))
+            elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm1d(initial_layer))
             dim_in = initial_layer
 
@@ -104,7 +114,9 @@ class SimpleConvDecoder(nn.Module):
         models.add_module(name + '_reshape', View(-1, dim_h, dim_x, dim_y))
         if dropout:
             models.add_module(name + '_do', nn.Dropout2d(p=dropout))
-        if batch_norm:
+        if layer_norm:
+            models.add_module(name + '_ln', LayerNorm(dim_h))
+        elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_h))
         dim_out = dim_h
 
@@ -122,7 +134,9 @@ class SimpleConvDecoder(nn.Module):
 
             if dropout:
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
-            if batch_norm:
+            if layer_norm:
+                models.add_module(name + '_ln', LayerNorm(dim_out))
+            elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
 
             models.add_module('{}_{}'.format(name, nonlin), nonlinearity)

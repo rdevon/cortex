@@ -6,6 +6,8 @@ import logging
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .densenet import LayerNorm
+
 
 logger = logging.getLogger('cortex.models' + __name__)
 
@@ -65,7 +67,8 @@ class UpsampleConv(nn.Module):
 
 
 class ResBlock(nn.Module):
-    def __init__(self, dim_in, dim_out, f_size, resample=None, batch_norm=True, prefix=''):
+    def __init__(self, dim_in, dim_out, f_size, resample=None, batch_norm=True,
+                 layer_norm=False, prefix=''):
         super(ResBlock, self).__init__()
         models = nn.Sequential()
         skip_models = nn.Sequential()
@@ -80,18 +83,24 @@ class ResBlock(nn.Module):
         else:
             raise Exception('invalid resample value')
 
-        if batch_norm:
+        if layer_norm:
+            models.add_module(name + '_ln', LayerNorm(dim_in))
+        elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_in))
 
         models.add_module('{}_{}'.format(name, 'rectify'), nn.ReLU())
 
         if resample == 'down':
             models.add_module(name + '_stage1', nn.Conv2d(dim_in, dim_in, f_size, 1, 1))
-            if batch_norm:
+            if layer_norm:
+                models.add_module(name + '_ln2', LayerNorm(dim_in))
+            elif batch_norm:
                 models.add_module(name + '_bn2', nn.BatchNorm2d(dim_in))
         elif resample == 'up':
             models.add_module(name + '_stage1', UpsampleConv(dim_in, dim_out, f_size, prefix=prefix))
-            if batch_norm:
+            if layer_norm:
+                models.add_module(name + '_ln2', LayerNorm(dim_out))
+            elif batch_norm:
                 models.add_module(name + '_bn2', nn.BatchNorm2d(dim_out))
         else:
             raise Exception('invalid resample value')
@@ -125,7 +134,8 @@ class View(nn.Module):
 
 
 class ResDecoder(nn.Module):
-    def __init__(self, shape, dim_in=None, f_size=3, dim_h=64, batch_norm=True, n_steps=3):
+    def __init__(self, shape, dim_in=None, f_size=3, dim_h=64, batch_norm=True,
+                 layer_norm=False, n_steps=3):
         super(ResDecoder, self).__init__()
         models = nn.Sequential()
 
@@ -150,7 +160,9 @@ class ResDecoder(nn.Module):
         name = 'initial_({}/{})_0'.format(dim_in, dim_out)
         models.add_module(name, nn.Linear(dim_in, dim_out))
         models.add_module(name + '_reshape', View(-1, dim_h, dim_x, dim_y))
-        if batch_norm:
+        if layer_norm:
+            models.add_module(name + '_ln', LayerNorm(dim_h))
+        elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_h))
         dim_out = dim_h
 
@@ -161,10 +173,12 @@ class ResDecoder(nn.Module):
             dim_out = dim_in // 2
             name = 'resblock_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, ResBlock(dim_in, dim_out, f_size, resample='up',
-                                             batch_norm=batch_norm, prefix=name))
+                                             batch_norm=batch_norm, layer_norm=layer_norm, prefix=name))
 
         name = 'conv_({}/{})_{}'.format(dim_in, dim_out, 'final')
-        if batch_norm:
+        if layer_norm:
+            models.add_module(name + '_ln', LayerNorm(dim_out))
+        elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
 
         models.add_module('{}_{}'.format(name, 'relu'), nonlinearity)
@@ -186,7 +200,8 @@ class ResDecoder(nn.Module):
 
 
 class ResEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, f_size=3, batch_norm=True, n_steps=3):
+    def __init__(self, shape, dim_out=None, dim_h=64, f_size=3, batch_norm=True, 
+                 layer_norm=False, n_steps=3):
         super(ResEncoder, self).__init__()
         models = nn.Sequential()
 
@@ -206,7 +221,7 @@ class ResEncoder(nn.Module):
 
             name = 'resblock_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, ResBlock(dim_in, dim_out, f_size, resample='down',
-                                             batch_norm=batch_norm, prefix=name))
+                                             batch_norm=batch_norm, layer_norm=layer_norm, prefix=name))
 
             dim_x //= 2
             dim_y //= 2

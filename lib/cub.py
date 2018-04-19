@@ -260,6 +260,7 @@ class CUB(data.Dataset):
         self.seed = seed
         self.split_type = split_type
         self.compute_class_embedding()
+        self.compute_basis_coefficients()
 
         # If this is False bboxes will not be used. Useful when testing on the
         # data during classify
@@ -320,6 +321,48 @@ class CUB(data.Dataset):
                 self.attrs > 0.5, 1., 0.).astype('float32')
 
         in_file.close()
+
+    def compute_basis_coefficients(self):
+        # assert(self.attrs)
+        self.train_class_embeddings = self.attrs[self.train_indices]
+        self.test_class_embeddings = self.attrs[self.test_indices]
+        # import ipdb; ipdb.set_trace()
+
+        self.test_gammas = []
+        self.train_gammas = []
+
+        # Train
+        for i in range(self.train_class_embeddings.shape[0]):
+            # 312, 149
+            A = numpy.concatenate([
+                self.train_class_embeddings[:i, :],
+                self.train_class_embeddings[i+1:, :]]).T
+
+            res = numpy.linalg.lstsq(
+                A, self.train_class_embeddings[i, :].T,
+                rcond=None)[0].T
+            res = numpy.concatenate([res[:i], [0.], res[i:]])
+            self.train_gammas.append(res)
+
+        self.train_gammas = numpy.stack(self.train_gammas)
+
+        # Test
+        for i in range(self.test_class_embeddings.shape[0]):
+            # 312, 150
+            A = self.train_class_embeddings.T
+
+            res = numpy.linalg.lstsq(
+                A, self.test_class_embeddings[i, :].T,
+                rcond=None)[0].T
+            # res = numpy.concatenate([res[:i], [0.], res[i:]])
+            self.test_gammas.append(res)
+            # import ipdb; ipdb.set_trace()
+
+        self.train_gammas = numpy.stack(self.train_gammas)
+        self.test_gammas = numpy.stack(self.test_gammas)
+
+        self.train_gammas[numpy.abs(self.train_gammas) < 0.05] = 0.
+        self.test_gammas[numpy.abs(self.test_gammas) < 0.05] = 0.
 
     def get_class_embedding(self):
         """Get the attributes.
@@ -408,3 +451,17 @@ class CUB(data.Dataset):
             filename_bbox[key] = bbox
 
         return filename_bbox
+
+
+if __name__ == "__main__":
+    train_set = CUB(split_type="train")
+    test_set = CUB(split_type="test")
+    # val_set = CUBStandard(split_type="val")
+
+    # import ipdb; ipdb.set_trace()
+
+    # Counting classes
+    classes = []
+    for i in range(len(train_set.imgs)):
+        classes.append(train_set.imgs[i][1])
+    print(len(set(classes)))
