@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from .modules import View
 
 
-logger = logging.getLogger('cortex.models' + __name__)
+logger = logging.getLogger('cortex.arch' + __name__)
 
 
 def infer_conv_size(w, k, s, p):
@@ -112,10 +112,10 @@ class SimpleConvEncoder(nn.Module):
         #dim_out = dim_h
         '''
         name = 'conv_({}/{})_0'.format(dim_in, dim_out)
-        models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
-        models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+        arch.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+        arch.add_module('{}_{}'.format(name, nonlin), nonlinearity)
         if dropout:
-            models.add_module(name + '_do', nn.Dropout2d(p=dropout))
+            arch.add_module(name + '_do', nn.Dropout2d(p=dropout))
         dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
         '''
 
@@ -184,7 +184,7 @@ class SimpleConvEncoder(nn.Module):
 
         return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])

@@ -2,7 +2,6 @@
 
 '''
 
-import logging
 import math
 
 import torch
@@ -172,7 +171,7 @@ def discriminator_routine(data, models, losses, results, viz, measure=None, **pe
     losses.update(discriminator=-difference)
     apply_gradient_penalty(data, models, losses, results, inputs=(X_P, X_Q), model='discriminator', **penalty_args)
 
-    results.update(Ep=Ep.data[0], Eq=Eq.data[0])
+    results.update(Scores=dict(Ep=Ep.data[0], Eq=Eq.data[0]))
     results['{} distance'.format(measure)] = difference.data[0]
     viz.add_image(X_P, name='ground truth')
     viz.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
@@ -190,7 +189,7 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
     weights = get_weight(samples, measure)
 
     losses.update(generator=g_loss)
-    results.update(weights=weights.mean().data[0])
+    results.update(Weights=weights.mean().data[0])
     viz.add_image(X_Q, name='generated')
 
 
@@ -240,5 +239,5 @@ DEFAULT_CONFIG = dict(
     model=dict(model_type='dcgan', discriminator_args=None, generator_args=None),
     routines=dict(discriminator=dict(measure='GAN', penalty_type='gradient_norm', penalty_amount=1.0),
                   generator=dict(loss_type='non-saturating')),
-    train=dict(epochs=100, summary_updates=100, archive_every=10)
+    train=dict(epochs=100, archive_every=10)
 )
