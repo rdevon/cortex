@@ -6,11 +6,11 @@ import logging
 
 import torch
 import torch.nn.functional as F
-from torch.autograd import Variable
 
-from .ali import update_args, build_extra_networks, network_routine as ali_network_routine
+from .ali import build_extra_networks, network_routine as ali_network_routine
 from .gan import get_positive_expectation, get_negative_expectation, apply_gradient_penalty, generator_loss
-from .modules.densenet import FullyConnectedNet
+from .modules.fully_connected import FullyConnectedNet
+from .vae import update_encoder_args, update_decoder_args
 
 
 logger = logging.getLogger('cortex.arch' + __name__)
@@ -171,8 +171,8 @@ def build_model(data, models, model_type='convnet', use_topnet=False, dim_noise=
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, Decoder, encoder_args, decoder_args = update_args(
-        x_shape, model_type=model_type, encoder_args=encoder_args, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
 
     build_encoder(models, x_shape, dim_noise, Encoder, use_topnet=use_topnet, dim_top=dim_noise, **encoder_args)
     build_discriminator(models, dim_d)

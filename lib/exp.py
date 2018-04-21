@@ -66,6 +66,8 @@ def save(prefix=''):
 
     models = {}
     for k, model in MODELS.items():
+        if k == 'extras':
+            continue
         if isinstance(model, (tuple, list)):
             nets = []
             for net in model:

@@ -6,12 +6,13 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from .ali import build_discriminator, build_extra_networks, score, apply_penalty, update_args
+from .ali import build_discriminator, build_extra_networks, score, apply_penalty
 from .classifier import classify
 from .featnet import (apply_gradient_penalty, build_encoder, build_discriminator as build_noise_discriminator, encode,
                       get_results, score as featnet_score, shape_noise, visualize)
 from .gan import generator_loss
 from .utils import cross_correlation
+from .vae import update_decoder_args, update_encoder_args
 
 
 resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
@@ -118,8 +119,8 @@ def build_model(data, models, model_type='convnet', dim_embedding=None, dim_nois
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, Decoder, encoder_args, decoder_args = update_args(
-        x_shape, model_type=model_type, encoder_args=encoder_args, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
     build_discriminator(models, x_shape, dim_embedding, Encoder, **encoder_args)
     build_encoder(models, x_shape, dim_noise, Encoder, use_topnet=use_topnet, dim_top=dim_noise, **encoder_args)
     build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)

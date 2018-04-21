@@ -55,7 +55,7 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
         raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
 
     for k in exp.ROUTINES.keys():
-        if k not in exp.MODELS:
+        if k not in exp.MODELS or k == 'extras':
             continue
         model = exp.MODELS[k]
         logger.info('Building optimizer for {}'.format(k))
@@ -108,7 +108,8 @@ def summarize_results(results):
         if isinstance(v, dict):
             results_[k] = summarize_results(v)
         else:
-            results_[k] = np.mean(v)
+            if len(v) > 0:
+                results_[k] = np.mean(v)
     return results_
 
 
@@ -124,6 +125,8 @@ def summarize_results_std(results):
 
 def train_epoch(epoch, vh, quit_on_bad_values):
     for k, model in exp.MODELS.items():
+        if k == 'extras':
+            continue
         if isinstance(model, (tuple, list)):
             for net in model:
                 net.train()
@@ -145,6 +148,8 @@ def train_epoch(epoch, vh, quit_on_bad_values):
                     DATA_HANDLER.next()
 
                     for mk, model in exp.MODELS.items():
+                        if mk == 'extras':
+                            continue
                         if isinstance(model, (list, tuple)):
                             for net in model:
                                 for p in net.parameters():
@@ -152,8 +157,8 @@ def train_epoch(epoch, vh, quit_on_bad_values):
                         else:
                             for p in model.parameters():
                                 p.requires_grad = (mk == rk)
-
-                    OPTIMIZERS[rk].zero_grad()
+                    if rk != 'extras':
+                        OPTIMIZERS[rk].zero_grad()
 
                     if isinstance(routine, (tuple, list)):
                         routine = routine[0]
@@ -186,9 +191,12 @@ def train_epoch(epoch, vh, quit_on_bad_values):
                     results['time'][rk].append(end_time - start_time)
                     update_dict_of_lists(results, **results_)
 
-                    OPTIMIZERS[rk].step()
+                    if rk != 'extras':
+                        OPTIMIZERS[rk].step()
 
                     if rk in CLIPPING.keys():
+                        if rk == 'extras':
+                            continue
                         clip = CLIPPING[rk]
                         if rk in exp.MODELS:
                             model = exp.MODELS[rk]
@@ -209,6 +217,8 @@ def train_epoch(epoch, vh, quit_on_bad_values):
 
 def test_epoch(epoch, vh, return_std=False):
     for k, model in exp.MODELS.items():
+        if k == 'extras':
+            continue
         if isinstance(model, (tuple, list)):
             for net in model:
                 net.eval()
