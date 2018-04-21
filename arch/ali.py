@@ -4,23 +4,18 @@
 import logging
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch import autograd
 from torch.autograd import Variable
 
 from .classifier import classify
 from .gan import get_positive_expectation, get_negative_expectation
-from .modules.densenet import FullyConnectedNet
+from .modules.fully_connected import FullyConnectedNet
 from .utils import cross_correlation
+from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
 
 
 logger = logging.getLogger('cortex.arch' + __name__)
-
-mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7, dim_out=1028)
-mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
-convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, fully_connected_layers=[1028])
-convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 
 def setup(model=None, data=None, routines=None, **kwargs):
@@ -114,40 +109,6 @@ def network_routine(data, models, losses, results, viz, encoder_key='generator')
     viz.add_image(X_d, name='Reconstruction')
 
 
-def update_args(x_shape, model_type='convnet', encoder_args=None, decoder_args=None):
-    encoder_args = encoder_args or {}
-    decoder_args = decoder_args or {}
-
-    if model_type == 'convnet':
-        from .modules.convnets import SimpleConvEncoder as Encoder
-        from .modules.conv_decoders import SimpleConvDecoder as Decoder
-        encoder_args_ = convnet_encoder_args_
-        decoder_args_ = convnet_decoder_args_
-    elif model_type == 'mnist':
-        from .modules.convnets import SimpleConvEncoder as Encoder
-        from .modules.conv_decoders import SimpleConvDecoder as Decoder
-        encoder_args_ = mnist_encoder_args_
-        decoder_args_ = mnist_decoder_args_
-    else:
-        raise NotImplementedError(model_type)
-
-    encoder_args_.update(**encoder_args)
-    decoder_args_.update(**decoder_args)
-    if x_shape[0] == 64:
-        encoder_args_['n_steps'] = 4
-        decoder_args_['n_steps'] = 4
-
-    return Encoder, Decoder, encoder_args_, decoder_args_
-
-
-def build_generator(models, x_shape, dim_z, Encoder, Decoder, encoder_args=None, decoder_args=None):
-    logger.debug('Forming encoder with class {} and args: {}'.format(Encoder, encoder_args))
-    logger.debug('Forming dencoder with class {} and args: {}'.format(Encoder, decoder_args))
-    encoder = Encoder(x_shape, dim_out=dim_z, **encoder_args)
-    decoder = Decoder(x_shape, dim_in=dim_z, **decoder_args)
-    models.update(generator=(encoder, decoder))
-
-
 def build_discriminator(models, x_shape, dim_z, Encoder, key='discriminator', **encoder_args):
     discriminator_args = {}
     discriminator_args.update(**encoder_args)
@@ -171,9 +132,11 @@ def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None,
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, Decoder, encoder_args, decoder_args = update_args(x_shape, model_type=model_type,
-                                                               encoder_args=encoder_args, decoder_args=decoder_args)
-    build_generator(models, x_shape, dim_z, Encoder, Decoder, encoder_args=encoder_args, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
+    encoder = build_encoder(None, x_shape, dim_z, Encoder, fully_connected_layers=[1028], **encoder_args)
+    decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
+    models.update(generator=(encoder, decoder))
     build_discriminator(models, x_shape, dim_z, Encoder, **encoder_args)
     build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, **decoder_args)
 

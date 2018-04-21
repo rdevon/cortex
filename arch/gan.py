@@ -9,16 +9,7 @@ from torch import autograd
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
-resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
-
-mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
-                                 nonlinearity='LeakyReLU')
-mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
-
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
-dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+from .vae import update_decoder_args, update_encoder_args
 
 
 def log_sum_exp(x, axis=None):
@@ -196,38 +187,14 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
 
 
 def build_model(data, models, model_type='dcgan', discriminator_args=None, generator_args=None):
-    discriminator_args = discriminator_args or {}
-    generator_args = generator_args or {}
-    shape = data.get_dims('x', 'y', 'c')
+    x_shape = data.get_dims('x', 'y', 'c')
     dim_z = data.get_dims('z')
 
-    if model_type == 'resnet':
-        from .modules.resnets import ResEncoder as Discriminator
-        from .modules.resnets import ResDecoder as Generator
-        discriminator_args_ = resnet_discriminator_args_
-        generator_args_ = resnet_generator_args_
-    elif model_type == 'dcgan':
-        from .modules.conv_decoders import SimpleConvDecoder as Generator
-        from .modules.convnets import SimpleConvEncoder as Discriminator
-        discriminator_args_ = dcgan_discriminator_args_
-        generator_args_ = dcgan_generator_args_
-    elif model_type == 'mnist':
-        from .modules.conv_decoders import SimpleConvDecoder as Generator
-        from .modules.convnets import SimpleConvEncoder as Discriminator
-        discriminator_args_ = mnist_discriminator_args_
-        generator_args_ = mnist_generator_args_
-    else:
-        raise NotImplementedError(model_type)
+    Encoder, discriminator_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=discriminator_args)
+    Decoder, generator_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=generator_args)
 
-    discriminator_args_.update(**discriminator_args)
-    generator_args_.update(**generator_args)
-
-    if shape[0] == 64:
-        discriminator_args_['n_steps'] = 4
-        generator_args_['n_steps'] = 4
-
-    discriminator = Discriminator(shape, dim_out=1, **discriminator_args_)
-    generator = Generator(shape, dim_in=dim_z, **generator_args_)
+    discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
+    generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
     models.update(generator=generator, discriminator=discriminator)
 
@@ -238,7 +205,7 @@ DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
               noise_variables=dict(z=('normal', 64), e=('uniform', 1))),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4, updates_per_model=dict(discriminator=1, generator=1)),
-    model=dict(model_type='dcgan', discriminator_args=None, generator_args=None),
+    model=dict(model_type='convnet', discriminator_args=None, generator_args=None),
     routines=dict(discriminator=dict(measure='GAN', penalty_type='gradient_norm', penalty_amount=1.0),
                   generator=dict(loss_type='non-saturating')),
     train=dict(epochs=100, archive_every=10)
