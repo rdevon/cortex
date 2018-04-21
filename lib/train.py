@@ -54,7 +54,10 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
     else:
         raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
 
-    for k, model in exp.MODELS.items():
+    for k in exp.ROUTINES.keys():
+        if k not in exp.MODELS:
+            continue
+        model = exp.MODELS[k]
         logger.info('Building optimizer for {}'.format(k))
 
         if isinstance(model, (tuple, list)):
@@ -130,12 +133,14 @@ def train_epoch(epoch, vh, quit_on_bad_values):
     DATA_HANDLER.reset(string='Training (epoch {}): '.format(epoch))
     vh.ignore = True
 
-    results = {'time': dict((rk, []) for rk in exp.ROUTINES.keys()),
-               'losses': dict((rk, []) for rk in exp.ROUTINES.keys())}
+    results = {'time': dict((rk, []) for rk in exp.MODELS.keys()),
+               'losses': dict((rk, []) for rk in exp.MODELS.keys())}
 
     try:
         while True:
             for rk, routine in exp.ROUTINES.items():
+                if rk not in UPDATES:
+                    continue
                 for _ in range(UPDATES[rk]):
                     DATA_HANDLER.next()
 
@@ -185,14 +190,15 @@ def train_epoch(epoch, vh, quit_on_bad_values):
 
                     if rk in CLIPPING.keys():
                         clip = CLIPPING[rk]
-                        model = exp.MODELS[rk]
-                        if isinstance(model, (list, tuple)):
-                            for net in model:
-                                for p in net.parameters():
+                        if rk in exp.MODELS:
+                            model = exp.MODELS[rk]
+                            if isinstance(model, (list, tuple)):
+                                for net in model:
+                                    for p in net.parameters():
+                                        p.data.clamp_(-clip, clip)
+                            else:
+                                for p in model.parameters():
                                     p.data.clamp_(-clip, clip)
-                        else:
-                            for p in model.parameters():
-                                p.data.clamp_(-clip, clip)
 
     except StopIteration:
         pass
@@ -210,7 +216,7 @@ def test_epoch(epoch, vh, return_std=False):
             model.eval()
 
     DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
-    results = {'losses': dict((rk, []) for rk in exp.ROUTINES.keys())}
+    results = {'losses': dict((rk, []) for rk in exp.MODELS.keys())}
 
     routines = exp.ARGS['test_routines']
 
@@ -219,6 +225,8 @@ def test_epoch(epoch, vh, return_std=False):
         while True:
             DATA_HANDLER.next()
             for rk, routine in exp.ROUTINES.items():
+                if rk not in exp.MODELS:
+                    continue
                 if isinstance(routine, (tuple, list)):
                     routine = routine[1]
                 if rk in routines.keys():
