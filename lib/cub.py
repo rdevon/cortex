@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''CUB dataset
 
-Credit goes to Tristan Silvia and Margaux Luck
+Credit goes to Tristan Sylvain and Margaux Luck
 
 '''
 
