@@ -142,5 +142,5 @@ DEFAULT_CONFIG = dict(
                   noise_discriminator=dict(measure='JSD', penalty_amount=1., noise_type='hypercubes', noise='uniform'),
                   encoder=dict(generator_loss_type='non-saturating'),
                   nets=dict()),
-    train=dict(epochs=500, archive_every=10)
+    train=dict(epochs=2000, archive_every=10)
 )

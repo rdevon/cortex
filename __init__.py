@@ -60,6 +60,14 @@ def setup_out_dir(out_path, name=None, clean=False):
     exp.OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir)
 
 
+_known_args = dict(
+    optimizer=['optimizer', 'learning_rate', 'updates_per_model', 'train_for', 'lr_decay', 'min_lr', 'decay_at_epoch',
+               'clipping', 'weight_decay', 'optimizer_options', 'model_optimizer_options'],
+    train=['epochs', 'archive_every', 'test_mode', 'quit_on_bad_values'],
+    data=['batch_size', 'noise_variables', 'n_workers', 'skip_last_batch', 'test_on_train']
+)
+
+
 def update_args(args, **kwargs):
     if args is not None:
         a = args.split(',')
@@ -73,10 +81,15 @@ def update_args(args, **kwargs):
 
             k_split = k.split('.')
             kw = kwargs
+            k_base = None
             for i, k_ in enumerate(k_split):
                 if i < len(k_split) - 1:
+                    if k_base in _known_args and k_ not in kw:
+                        if k_ in _known_args[k_base]:
+                            kw[k_] = {}
                     if k_ in kw:
                         kw = kw[k_]
+                        k_base = k_
                     else:
                         raise ValueError('Unknown arg {}'.format(k))
                 else:
@@ -123,9 +136,9 @@ def reload_experiment(args):
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     exp.ARGS.update(**d['args'])
-    reloads = reloads or d['arch'].keys()
+    reloads = reloads or d['models'].keys()
     for k in reloads:
-        exp.MODEL_PARAMS_RELOAD.update(**{k: d['arch'][k]})
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
     out_dirs = d['out_dirs']
 
     if name:

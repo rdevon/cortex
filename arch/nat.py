@@ -130,7 +130,8 @@ ROUTINES = dict(encoder=(encoder_train_routine, encoder_test_routine), nets=netw
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=64), skip_last_batch=True),
-    optimizer=dict(optimizer='Adam', learning_rate=1e-4),
+    optimizer=dict(optimizer='Adam', learning_rate=1e-4,
+                   train_for=dict(encoder=3, nets=1, extras=1)),
     model=dict(model_type='convnet', dim_embedding=62, encoder_args=None),
     routines=dict(),
     train=dict(epochs=500, archive_every=10)

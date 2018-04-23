@@ -26,6 +26,7 @@ logger = logging.getLogger('cortex.util')
 OPTIMIZERS = {}
 UPDATES = {}
 CLIPPING = {}
+TRAIN_FOR = None
 
 optimizer_defaults = dict(
     SGD=dict(momentum=0.9, weight_decay=5e-4),
@@ -33,10 +34,11 @@ optimizer_defaults = dict(
 )
 
 
-def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=None, min_lr=None, decay_at_epoch=None,
+def setup(optimizer=None, learning_rate=None, updates_per_model=None, train_for=None,
+          lr_decay=None, min_lr=None, decay_at_epoch=None,
           clipping=None, weight_decay=None, optimizer_options='default', model_optimizer_options=None):
 
-    global CLIPPING, UPDATES
+    global CLIPPING, UPDATES, TRAIN_FOR
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
     clipping = clipping or {}
@@ -44,8 +46,13 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
     if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
         optimizer_options = optimizer_defaults[optimizer]
     updates_per_model = updates_per_model or dict((k, 1) for k in exp.MODELS.keys())
+    for k in exp.MODELS.keys():
+        if k not in updates_per_model:
+            updates_per_model[k] = 1
+
     UPDATES.update(**updates_per_model)
     CLIPPING.update(**clipping)
+    TRAIN_FOR = train_for
 
     if callable(optimizer):
         op = optimizer
@@ -138,13 +145,24 @@ def train_epoch(epoch, vh, quit_on_bad_values):
 
     results = {'time': dict((rk, []) for rk in exp.MODELS.keys()),
                'losses': dict((rk, []) for rk in exp.MODELS.keys())}
-
+    if TRAIN_FOR is not None:
+        total_steps = sum(TRAIN_FOR.values())
+        step = epoch % total_steps
+        ts = 0
+        for mk, s in TRAIN_FOR.items():
+            ts += s
+            if step < ts:
+                break
+        updates = dict((k, 0) for k in exp.ROUTINES.keys())
+        updates[mk] = 1
+    else:
+        updates = UPDATES
     try:
         while True:
             for rk, routine in exp.ROUTINES.items():
-                if rk not in UPDATES:
+                if rk not in updates:
                     continue
-                for _ in range(UPDATES[rk]):
+                for _ in range(updates[rk]):
                     DATA_HANDLER.next()
 
                     for mk, model in exp.MODELS.items():
@@ -229,7 +247,6 @@ def test_epoch(epoch, vh, return_std=False):
     results = {'losses': dict((rk, []) for rk in exp.MODELS.keys())}
 
     routines = exp.ARGS['test_routines']
-
     vh.ignore = False
     try:
         while True:
@@ -281,6 +298,43 @@ def display_results(train_results, test_results, epoch, epochs, epoch_time, tota
             print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))
 
 
+def align_summaries(d_train, d_test):
+    keys = set(d_train.keys()).union(set(d_test.keys()))
+    for k in keys:
+        if k in d_train and k in d_test:
+            v_train = d_train[k]
+            v_test = d_test[k]
+            if isinstance(v_train, dict):
+                max_train_len = max([len(v) for v in v_train.values()])
+                max_test_len = max([len(v) for v in v_test.values()])
+                max_len = max(max_train_len, max_test_len)
+                for k_, v in v_train.items():
+                    if len(v) < max_len:
+                        v_train[k_] = v_train[k_] + [v_train[k_][-1]] * (max_len - len(v_train[k_]))
+                for k_, v in v_test.items():
+                    if len(v) < max_len:
+                        v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
+            else:
+                if len(v_train) > len(v_test):
+                    d_test[k] = v_test + [v_test[-1]] * (len(v_train) - len(v_test))
+                elif len(v_test) > len(v_train):
+                    d_train[k] = v_train + [v_train[-1]] * (len(v_test) - len(v_train))
+        elif k in d_train:
+            v_train = d_train[k]
+            if isinstance(v_train, dict):
+                max_len = max([len(v) for v in v_train.values()])
+                for k_, v in v_train.items():
+                    if len(v) < max_len:
+                        v_train[k_] = v_train[k_] + [v_train[k_][-1]] * (max_len - len(v_train[k_]))
+        elif k in d_test:
+            v_test = d_test[k]
+            if isinstance(v_test, dict):
+                max_len = max([len(v) for v in v_test.values()])
+                for k_, v in v_test.items():
+                    if len(v) < max_len:
+                        v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
+
+
 def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
@@ -307,6 +361,8 @@ def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_valu
             test_results_ = test_epoch(epoch, vh)
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
+
+            align_summaries(exp.SUMMARY['train'], exp.SUMMARY['test'])
 
             # Finishing up
             epoch_time = time.time() - start_time
