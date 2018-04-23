@@ -2,7 +2,6 @@
 
 '''
 
-import logging
 
 import torch
 from torch.autograd import Variable
@@ -15,28 +14,39 @@ mnist_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim
 convnet_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
 
 
-def classify(data, models, losses, results, viz, aux_inputs=None, backprop=False, key='classifier', criterion=None,
-             aux_viz=None):
+def routine(data, models, losses, results, viz, key='classifier', criterion=None):
     classifier = models[key]
     inputs, targets = data.get_batch('images', 'targets')
-    if aux_viz is not None:
-        viz_inputs = aux_viz
-    else:
-        viz_inputs = inputs
-    if aux_inputs is not None:
-        inputs = aux_inputs
-        if not backprop:
-            inputs = Variable(inputs.data.cuda(), requires_grad=False)
 
-    outputs = classifier(inputs, nonlinearity=F.log_softmax)
+    predicted = classify(classifier, inputs, targets, losses=losses, results=results, criterion=criterion, key=key)
 
-    loss = criterion(outputs, targets)
+    visualize(inputs, targets, predicted, viz=viz)
+
+
+def classify(classifier, inputs, targets, losses=None, results=None, criterion=None, backprop_input=False,
+             key='classifier'):
+    criterion = criterion or nn.CrossEntropyLoss()
+
+    if not backprop_input:
+        inputs = Variable(inputs.data.cuda(), requires_grad=False)
+
+    outputs = classifier(inputs, nonlinearity=F.log_softmax, dim=1)
     predicted = torch.max(outputs.data, 1)[1]
-    correct = 100. * predicted.eq(targets.data).cpu().sum() / targets.size(0)
 
-    losses[key] = loss
-    results[key + '_accuracy'] = correct
-    viz.add_image(viz_inputs, labels=(targets, predicted), name=key + '_gt_pred')
+    if losses is not None:
+        loss = criterion(outputs, targets)
+        losses[key] = loss
+
+    if results is not None:
+        correct = 100. * predicted.eq(targets.data).cpu().sum() / targets.size(0)
+        results[key + '_accuracy'] = correct
+
+    return predicted
+
+
+def visualize(viz_inputs, targets, predicted, viz=None, key='classifier'):
+    if viz:
+        viz.add_image(viz_inputs, labels=(targets, predicted), name=key + '_gt_pred')
 
 
 def build_model(data, models, model_type='convnet', dropout=0.2, classifier_args=None):
@@ -65,7 +75,7 @@ def build_model(data, models, model_type='convnet', dropout=0.2, classifier_args
     models.update(classifier=classifier)
 
 
-ROUTINES = dict(classifier=classify)
+ROUTINES = dict(classifier=routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=128),
@@ -77,7 +87,6 @@ DEFAULT_CONFIG = dict(
     routines=dict(criterion=nn.CrossEntropyLoss()),
     train=dict(
         epochs=200,
-        summary_updates=100,
         archive_every=10
     )
 )

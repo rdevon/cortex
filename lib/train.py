@@ -54,7 +54,10 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
     else:
         raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
 
-    for k, model in exp.MODELS.items():
+    for k in exp.ROUTINES.keys():
+        if k not in exp.MODELS:
+            continue
+        model = exp.MODELS[k]
         logger.info('Building optimizer for {}'.format(k))
 
         if isinstance(model, (tuple, list)):
@@ -99,6 +102,26 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
         cudnn.benchmark = True
 
 
+def summarize_results(results):
+    results_ = {}
+    for k, v in results.items():
+        if isinstance(v, dict):
+            results_[k] = summarize_results(v)
+        else:
+            results_[k] = np.mean(v)
+    return results_
+
+
+def summarize_results_std(results):
+    results_ = {}
+    for k, v in results.items():
+        if isinstance(v, dict):
+            results_[k] = summarize_results(v)
+        else:
+            results_[k] = np.std(v)
+    return results_
+
+
 def train_epoch(epoch, vh, quit_on_bad_values):
     for k, model in exp.MODELS.items():
         if isinstance(model, (tuple, list)):
@@ -110,11 +133,14 @@ def train_epoch(epoch, vh, quit_on_bad_values):
     DATA_HANDLER.reset(string='Training (epoch {}): '.format(epoch))
     vh.ignore = True
 
-    results = {}
+    results = {'time': dict((rk, []) for rk in exp.MODELS.keys()),
+               'losses': dict((rk, []) for rk in exp.MODELS.keys())}
 
     try:
         while True:
             for rk, routine in exp.ROUTINES.items():
+                if rk not in UPDATES:
+                    continue
                 for _ in range(UPDATES[rk]):
                     DATA_HANDLER.next()
 
@@ -154,36 +180,30 @@ def train_epoch(epoch, vh, quit_on_bad_values):
                         loss = losses
 
                     if loss is not None:
-                        results_['{}_loss'.format(rk)] = loss.data[0]
+                        results['losses'][rk].append(loss.data[0])
                         loss.backward()
                     end_time = time.time()
-                    results_['{}_time'.format(rk)] = end_time - start_time
+                    results['time'][rk].append(end_time - start_time)
                     update_dict_of_lists(results, **results_)
 
                     OPTIMIZERS[rk].step()
 
                     if rk in CLIPPING.keys():
                         clip = CLIPPING[rk]
-                        model = exp.MODELS[rk]
-                        if isinstance(model, (list, tuple)):
-                            for net in model:
-                                for p in net.parameters():
+                        if rk in exp.MODELS:
+                            model = exp.MODELS[rk]
+                            if isinstance(model, (list, tuple)):
+                                for net in model:
+                                    for p in net.parameters():
+                                        p.data.clamp_(-clip, clip)
+                            else:
+                                for p in model.parameters():
                                     p.data.clamp_(-clip, clip)
-                        else:
-                            for p in model.parameters():
-                                p.data.clamp_(-clip, clip)
 
-            '''
-            tens = [obj for obj in gc.get_objects()
-                if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data))]
-            print(len(tens))
-            for ten in tens:
-                del ten
-            '''
     except StopIteration:
         pass
 
-    results = dict((k, np.mean(v)) for k, v in results.items())
+    results = summarize_results(results)
     return results
 
 
@@ -196,7 +216,7 @@ def test_epoch(epoch, vh, return_std=False):
             model.eval()
 
     DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
-    results = {}
+    results = {'losses': dict((rk, []) for rk in exp.MODELS.keys())}
 
     routines = exp.ARGS['test_routines']
 
@@ -205,6 +225,8 @@ def test_epoch(epoch, vh, return_std=False):
         while True:
             DATA_HANDLER.next()
             for rk, routine in exp.ROUTINES.items():
+                if rk not in exp.MODELS:
+                    continue
                 if isinstance(routine, (tuple, list)):
                     routine = routine[1]
                 if rk in routines.keys():
@@ -214,28 +236,46 @@ def test_epoch(epoch, vh, return_std=False):
                 results_ = {}
                 losses = {}
                 routine(DATA_HANDLER, exp.MODELS, losses, results_, vh, **args)
-
                 if rk in losses:
-                    results_[rk + '_loss'] = losses[rk].data[0]
+                    results['losses'][rk].append(losses[rk].data[0])
                 update_dict_of_lists(results, **results_)
             vh.ignore = True
     except StopIteration:
         pass
 
-    means = dict((k, np.mean(v)) for k, v in results.items())
+    means = summarize_results(results)
     if return_std:
-        stds = dict((k, np.std(v)) for k, v in results.items())
+        stds = summarize_results_std(results)
+
         return means, stds
 
     return means
 
 
-def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive_every=None, test_mode=False,
-              quit_on_bad_values=False):
+def display_results(train_results, test_results, epoch, epochs, epoch_time, total_time):
+    print('\n\tEpoch {}/{} took {:.3f}s. Total time: {:.2f}'.format(epoch + 1, epochs, epoch_time, total_time))
+    times = train_results.pop('time')
+    print('\tAvg update times: ' + ' | '.join(['{}: {:.2f}'.format(k, v) for k, v in times.items()]))
+    train_losses = train_results.pop('losses')
+    test_losses = test_results.pop('losses')
+    print('\tAvg loss: ' + ' | '.join(['{}: {:.2f} / {:.2f}'.format(k, train_losses[k], test_losses[k])
+                                       for k in train_losses.keys()]))
+
+    for k in train_results.keys():
+        v_train = train_results[k]
+        v_test = test_results[k]
+        if isinstance(v_train, dict):
+            print('\t' + k + ': ' + ' | '.join(['{}: {:.2f} / {:.2f}'.format(k_, v_train[k_], v_test[k_])
+                                                for k_ in v_train.keys()]))
+        else:
+            print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))
+
+
+def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     vh = VizHandler()
-
+    total_time = 0.
     if test_mode:
         test_results, test_std = test_epoch('Testing', vh, return_std=True)
         logger.info(' | '.join(
@@ -247,16 +287,21 @@ def main_loop(summary_updates=None, epochs=None, updates_per_model=None, archive
             epoch = exp.INFO['epoch']
 
             start_time = time.time()
+
+            # TRAINING
             train_results_ = train_epoch(epoch, vh, quit_on_bad_values)
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
+            # TESTING
             test_results_ = test_epoch(epoch, vh)
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
-            logger.info(' | '.join(['{}: {:.2f}/{:.2f}'.format(k, train_results_[k], test_results_[k] if k in test_results_.keys() else 0)
-                                    for k in train_results_.keys()]))
-            logger.info('Total Epoch {} of {} took {:.3f}s'.format(epoch + 1, epochs, time.time() - start_time))
+
+            # Finishing up
+            epoch_time = time.time() - start_time
+            total_time += epoch_time
+            display_results(train_results_, test_results_, e, epochs, epoch_time, total_time)
             plot()
             vh.show()
             vh.clear()

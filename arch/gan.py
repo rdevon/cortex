@@ -2,7 +2,6 @@
 
 '''
 
-import logging
 import math
 
 import torch
@@ -33,7 +32,7 @@ def raise_measure_error(measure):
     raise NotImplementedError('Measure `{}` not supported. Supported: {}'.format(measure, supported_measures))
 
 
-def get_P_expectation(p_samples, measure):
+def get_positive_expectation(p_samples, measure):
     log_2 = math.log(2.)
 
     if   measure == 'GAN': Ep = -F.softplus(-p_samples)
@@ -50,7 +49,7 @@ def get_P_expectation(p_samples, measure):
     return Ep.mean()
 
 
-def get_Q_expectation(q_samples, measure):
+def get_negative_expectation(q_samples, measure):
     log_2 = math.log(2.)
 
     if   measure == 'GAN': Eq = F.softplus(-q_samples) + q_samples
@@ -92,9 +91,9 @@ def get_weight(samples, measure):
 
 def generator_loss(q_samples, measure, loss_type=None):
     if not loss_type:
-        return get_Q_expectation(q_samples, measure)
+        return get_negative_expectation(q_samples, measure)
     elif loss_type == 'non-saturating':
-        return -get_P_expectation(q_samples, measure)
+        return -get_positive_expectation(q_samples, measure)
     elif loss_type == 'boundary-seek':
         return get_boundary(q_samples, measure)
     else:
@@ -104,6 +103,8 @@ def generator_loss(q_samples, measure, loss_type=None):
 
 def apply_gradient_penalty(data, models, losses, results, inputs=None, model=None, penalty_type='gradient_norm',
                            penalty_amount=1.0):
+    if penalty_amount == 0.:
+        return
     if not inputs:
         raise ValueError('No inputs provided')
     if not model:
@@ -165,14 +166,14 @@ def discriminator_routine(data, models, losses, results, viz, measure=None, **pe
     P_samples = discriminator(X_P)
     Q_samples = discriminator(X_Q)
 
-    Ep = get_P_expectation(P_samples, measure)
-    Eq = get_Q_expectation(Q_samples, measure)
-    difference = Ep - Eq
+    E_pos = get_positive_expectation(P_samples, measure)
+    E_neg = get_negative_expectation(Q_samples, measure)
+    difference = E_pos - E_neg
 
     losses.update(discriminator=-difference)
     apply_gradient_penalty(data, models, losses, results, inputs=(X_P, X_Q), model='discriminator', **penalty_args)
 
-    results.update(Ep=Ep.data[0], Eq=Eq.data[0])
+    results.update(Scores=dict(Ep=P_samples.mean().data[0], Eq=Q_samples.mean().data[0]))
     results['{} distance'.format(measure)] = difference.data[0]
     viz.add_image(X_P, name='ground truth')
     viz.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
@@ -190,7 +191,7 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
     weights = get_weight(samples, measure)
 
     losses.update(generator=g_loss)
-    results.update(weights=weights.mean().data[0])
+    results.update(Weights=weights.mean().data[0])
     viz.add_image(X_Q, name='generated')
 
 
@@ -240,5 +241,5 @@ DEFAULT_CONFIG = dict(
     model=dict(model_type='dcgan', discriminator_args=None, generator_args=None),
     routines=dict(discriminator=dict(measure='GAN', penalty_type='gradient_norm', penalty_amount=1.0),
                   generator=dict(loss_type='non-saturating')),
-    train=dict(epochs=100, summary_updates=100, archive_every=10)
+    train=dict(epochs=100, archive_every=10)
 )

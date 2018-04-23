@@ -8,19 +8,19 @@ from torch.autograd import Variable
 from torch import nn
 import torch.nn.functional as F
 
-from .modules.densenet import DenseNet
-from .classifier import classify
+from .modules.densenet import FullyConnectedNet
+from .classifier import classify, visualize
 
 
-resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=3, n_steps=4)
-resnet_generator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=3, n_steps=4)
+resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
+resnet_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
 
-mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=5, pad=2, stride=2, min_dim=7,
+mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7,
                                  nonlinearity='LeakyReLU')
-mnist_generator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, f_size=4, pad=1, stride=2, n_steps=2)
+mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, n_steps=3, nonlinearity='LeakyReLU')
-dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, layer_norm=False, n_steps=3)
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
+dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 
 def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.):
@@ -62,39 +62,46 @@ def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.)
         results['gradient penalty'] = p_term.data[0]
 
     losses.update(discriminator=d_loss)
-    results.update(S_P=S_P.mean().data[0], fake=S_Q.mean().data[0])
+    results.update(Scores=dict(PP=S_P.mean().data[0], Q=S_Q.mean().data[0]))
     viz.add_image(X_P, name='ground truth')
     viz.add_histogram(dict(fake=S_Q.view(-1).data, real=S_P.view(-1).data), name='discriminator output')
 
 
 def generator_routine(data, models, losses, results, viz):
-    Z, A = data.get_batch('z','attributes')
+    Z, A, T = data.get_batch('z','attributes', 'targets')
     discriminator = models['discriminator']
     generator = models['generator']
+    classifier = models['classifier'][0]
 
     X_Q = generator(torch.cat([Z, A], 1), nonlinearity=F.tanh)
     W_Q = discriminator(X_Q)
     S_Q = (W_Q * A).sum(1)
 
-    losses.update(generator=-S_Q.mean())
+    losses_ = {}
+    classify(classifier, W_Q, T, losses=losses_)
+
+    losses.update(generator=-S_Q.mean() + losses_['classifier'])
     viz.add_image(X_Q, name='generated')
 
 
 def classifier_routine(data, models, losses, results, viz, **kwargs):
-    Z, X_P, A = data.get_batch('z', 'images', 'attributes')
+    Z, X_P, A, T = data.get_batch('z', 'images', 'attributes', 'targets')
     discriminator = models['discriminator']
     generator = models['generator']
-    classifier_f, classifier_r = models['classifier']
+    classifier_f, classifier_r, classifier = models['classifier']
 
     X_Q = generator(torch.cat([Z, A], 1), nonlinearity=F.tanh)
     W_P = discriminator(X_P)
     W_Q = discriminator(X_Q)
 
-    classifiers = dict(classifier_fake=classifier_f, classifier_real=classifier_r)
-
-    classify(data, classifiers, losses, results, viz, key='classifier_real', aux_inputs=W_P, **kwargs)
-    classify(data, classifiers, losses, results, viz, key='classifier_fake', aux_inputs=W_Q, aux_viz=X_Q, **kwargs)
-    losses['classifier'] = losses['classifier_fake'] + losses['classifier_real']
+    losses_ = dict()
+    results_ = dict()
+    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='real_class', **kwargs)
+    classify(classifier_f, W_Q, T, losses=losses_, results=results_, key='fake_class', **kwargs)
+    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(real)', **kwargs)
+    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(fake)', **kwargs)
+    losses['classifier'] = sum(losses_.values())
+    results['Accuracies'] = dict((k[:-9], v) for k, v in results_.items())
 
 
 def build_model(data, models, dim_embedding=312, model_type='convnet', discriminator_args=None, generator_args=None):
@@ -131,15 +138,15 @@ def build_model(data, models, dim_embedding=312, model_type='convnet', discrimin
 
     discriminator = Discriminator(shape, dim_out=dim_embedding, **discriminator_args_)
     generator = Generator(shape, dim_in=dim_z+dim_a, **generator_args_)
-    # TODO: Pass the option for layer norm here
-    classifier_f = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, layer_norm=False, dropout=0.2)
-    classifier_r = DenseNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, layer_norm=False, dropout=0.2)
+    classifier_f = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier_r = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
 
-    models.update(generator=generator, discriminator=discriminator, classifier=(classifier_f, classifier_r))
+    models.update(generator=generator, discriminator=discriminator, classifier=(classifier_f, classifier_r, classifier))
 
 
 DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
+    data=dict(batch_size=dict(train=64, test=64), skip_last_batch=True,
               noise_variables=dict(z=('normal', 64), e=('uniform', 1))),
     optimizer=dict(
         optimizer='Adam',
@@ -147,12 +154,11 @@ DEFAULT_CONFIG = dict(
         updates_per_model=dict(discriminator=1, generator=1, classifier=1)
     ),
     model=dict(model_type='dcgan', discriminator_args=None, generator_args=None, dim_embedding=312),
-    routines=dict(discriminator=dict(penalty_amount=1.0),
+    routines=dict(discriminator=dict(penalty_amount=5.0),
                   generator=dict(),
                   classifier=dict(criterion=nn.CrossEntropyLoss())),
     train=dict(
         epochs=1000,
-        summary_updates=100,
         archive_every=10
     )
 )

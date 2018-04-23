@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-logger = logging.getLogger('cortex.models' + __name__)
+logger = logging.getLogger('cortex.arch' + __name__)
 
 
 class LayerNorm(nn.Module):
@@ -26,10 +26,10 @@ class LayerNorm(nn.Module):
         return self.gamma * (x - mean) / (std + self.eps) + self.beta
 
 
-class DenseNet(nn.Module):
+class FullyConnectedNet(nn.Module):
     def __init__(self, dim_in, dim_out=None, dim_h=64, batch_norm=True, layer_norm=False,
                  dropout=False, nonlinearity='ReLU', n_levels=None):
-        super(DenseNet, self).__init__()
+        super(FullyConnectedNet, self).__init__()
         models = nn.Sequential()
 
         dim_out_ = dim_out
@@ -74,7 +74,7 @@ class DenseNet(nn.Module):
 
         self.models = models
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
 
