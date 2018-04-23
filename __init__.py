@@ -108,9 +108,10 @@ def setup_reload(arch, use_cuda, exp_file):
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     exp.ARGS.update(**d['args'])
-    reloads = d['arch'].keys()
+    # reloads = d['arch'].keys()
+    reloads = d['models'].keys()
     for k in reloads:
-        exp.MODEL_PARAMS_RELOAD.update(**{k: d['arch'][k]})
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
 
 
 def reload_experiment(args):
@@ -123,9 +124,12 @@ def reload_experiment(args):
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     exp.ARGS.update(**d['args'])
-    reloads = reloads or d['arch'].keys()
+    # import ipdb; ipdb.set_trace()
+    # reloads = reloads or d['arch'].keys()
+    reloads = reloads or d['models'].keys()
     for k in reloads:
-        exp.MODEL_PARAMS_RELOAD.update(**{k: d['arch'][k]})
+        # exp.MODEL_PARAMS_RELOAD.update(**{k: d['arch'][k]})
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
     out_dirs = d['out_dirs']
 
     if name:

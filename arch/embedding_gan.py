@@ -98,8 +98,8 @@ def classifier_routine(data, models, losses, results, viz, **kwargs):
     results_ = dict()
     classify(classifier_r, W_P, T, losses=losses_, results=results_, key='real_class', **kwargs)
     classify(classifier_f, W_Q, T, losses=losses_, results=results_, key='fake_class', **kwargs)
-    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(real)', **kwargs)
-    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(fake)', **kwargs)
+    classify(classifier, W_P, T, losses=losses_, results=results_, key='full_class(real)', **kwargs)
+    classify(classifier, W_Q, T, losses=losses_, results=results_, key='full_class(fake)', **kwargs)
     losses['classifier'] = sum(losses_.values())
     results['Accuracies'] = dict((k[:-9], v) for k, v in results_.items())
 
