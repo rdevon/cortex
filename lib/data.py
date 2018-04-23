@@ -192,6 +192,8 @@ class DataHandler(object):
         elif source_type == 'folder':
             if source == 'CelebA':
                 dataset = CelebA
+
+            # TODO: Add the option to specify the rescale size here. This will speed up computation
             elif source == 'CUB':
                 dataset = CUB
             elif source == 'CUB_ZSL':
