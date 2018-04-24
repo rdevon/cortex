@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .modules import View
-from .densenet import LayerNorm
+# from .densenet import nn.LayerNorm
 
 
 logger = logging.getLogger('cortex.arch' + __name__)
@@ -55,14 +55,14 @@ class MNISTConv(nn.Module):
         models.add_module('conv1', nn.Conv2d(1, dim_h, 5, 2, 2))
         models.add_module('conv1_nonlin', nonlinearity)
         if layer_norm:
-            models.add_module('conv1_ln', LayerNorm(dim_h))
+            models.add_module('conv1_ln', nn.LayerNorm(dim_h))
         elif batch_norm:
             models.add_module('conv1_bn', nn.BatchNorm2d(dim_h))
 
         models.add_module('conv2', nn.Conv2d(dim_h, 2 * dim_h, 5, 2, 2))
         models.add_module('conv2_nonlin', nonlinearity)
         if layer_norm:
-            models.add_module('conv2_ln', LayerNorm(2 * dim_h))
+            models.add_module('conv2_ln', nn.LayerNorm(2 * dim_h))
         elif batch_norm:
             models.add_module('conv2_bn', nn.BatchNorm2d(2 * dim_h))
 
@@ -71,7 +71,7 @@ class MNISTConv(nn.Module):
         models.add_module('dense1', nn.Linear(2 * dim_h * 7 * 7, 1024))
         models.add_module('dense1_nonlin', nonlinearity)
         if layer_norm:
-            models.add_module('dense1_ln', LayerNorm(1024))
+            models.add_module('dense1_ln', nn.LayerNorm(1024))
         elif batch_norm:
             models.add_module('dense1_bn', nn.BatchNorm1d(1024))
 
@@ -137,15 +137,20 @@ class SimpleConvEncoder(nn.Module):
                 dim_out = dim_in * 2
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+            dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
+
             if dropout:
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
             if layer_norm:
-                models.add_module(name + '_ln', LayerNorm(dim_out))
+                models.add_module(name + '_ln', nn.LayerNorm((dim_out, dim_x, dim_y)))
             elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
             if nonlinearity:
-                models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
-            dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
+                # import ipdb; ipdb.set_trace()
+                # To avoid the dot in module name
+                nonlin_name = str(nonlin).replace(".", "_")
+                models.add_module('{}_{}'.format(name, nonlin_name), nonlinearity)
+            
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
 
@@ -160,7 +165,7 @@ class SimpleConvEncoder(nn.Module):
             if dropout:
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
             if layer_norm:
-                models.add_module(name + '_ln', LayerNorm(dim_out))
+                models.add_module(name + '_ln', nn.LayerNorm((dim_out)))
             elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
             if nonlinearity:
@@ -198,6 +203,7 @@ class SimpleConvEncoder(nn.Module):
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
         nonlinearity_args = nonlinearity_args or {}
+
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
 

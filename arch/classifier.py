@@ -30,6 +30,7 @@ def classify(classifier, inputs, targets, losses=None, results=None, criterion=N
     if not backprop_input:
         inputs = Variable(inputs.data.cuda(), requires_grad=False)
 
+    # import ipdb; ipdb.set_trace()
     outputs = classifier(inputs, nonlinearity=F.log_softmax, dim=1)
     predicted = torch.max(outputs.data, 1)[1]
 
@@ -42,6 +43,9 @@ def classify(classifier, inputs, targets, losses=None, results=None, criterion=N
         results[key + '_accuracy'] = correct
 
     return predicted
+
+
+# def classify_prototypes(inputs, targets, losses=None, results=None, criterion=None, backprop_input=False)
 
 
 def visualize(viz_inputs, targets, predicted, viz=None, key='classifier'):

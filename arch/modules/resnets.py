@@ -6,7 +6,7 @@ import logging
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .densenet import LayerNorm
+# from .densenet import nn.LayerNorm
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -84,7 +84,7 @@ class ResBlock(nn.Module):
             raise Exception('invalid resample value')
 
         if layer_norm:
-            models.add_module(name + '_ln', LayerNorm(dim_in))
+            models.add_module(name + '_ln', nn.LayerNorm(dim_in))
         elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_in))
 
@@ -93,13 +93,13 @@ class ResBlock(nn.Module):
         if resample == 'down':
             models.add_module(name + '_stage1', nn.Conv2d(dim_in, dim_in, f_size, 1, 1))
             if layer_norm:
-                models.add_module(name + '_ln2', LayerNorm(dim_in))
+                models.add_module(name + '_ln2', nn.LayerNorm(dim_in))
             elif batch_norm:
                 models.add_module(name + '_bn2', nn.BatchNorm2d(dim_in))
         elif resample == 'up':
             models.add_module(name + '_stage1', UpsampleConv(dim_in, dim_out, f_size, prefix=prefix))
             if layer_norm:
-                models.add_module(name + '_ln2', LayerNorm(dim_out))
+                models.add_module(name + '_ln2', nn.LayerNorm(dim_out))
             elif batch_norm:
                 models.add_module(name + '_bn2', nn.BatchNorm2d(dim_out))
         else:
@@ -161,7 +161,7 @@ class ResDecoder(nn.Module):
         models.add_module(name, nn.Linear(dim_in, dim_out))
         models.add_module(name + '_reshape', View(-1, dim_h, dim_x, dim_y))
         if layer_norm:
-            models.add_module(name + '_ln', LayerNorm(dim_h))
+            models.add_module(name + '_ln', nn.LayerNorm(dim_h))
         elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_h))
         dim_out = dim_h
@@ -177,7 +177,7 @@ class ResDecoder(nn.Module):
 
         name = 'conv_({}/{})_{}'.format(dim_in, dim_out, 'final')
         if layer_norm:
-            models.add_module(name + '_ln', LayerNorm(dim_out))
+            models.add_module(name + '_ln', nn.LayerNorm(dim_out))
         elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
 

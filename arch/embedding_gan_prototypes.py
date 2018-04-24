@@ -19,16 +19,22 @@ mnist_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, str
                                  nonlinearity='LeakyReLU')
 mnist_generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
 
-dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
-dcgan_generator_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+dcgan_discriminator_args_ = dict(dim_h=64, batch_norm=False, layer_norm=True, n_steps=3, nonlinearity='LeakyReLU')
+dcgan_generator_args_ = dict(dim_h=64, batch_norm=False, layer_norm= True, n_steps=3)
 
 
 def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.):
     Z, X_P, A = data.get_batch('z', 'images', 'attributes')
-    discriminator = models['discriminator']
+    discriminator = models['discriminator'][0]
+    attribute_embedder = models['discriminator'][1]
     generator = models['generator']
 
+    # Attribute_embedder None if no need
+
     X_Q = generator(torch.cat([Z, A], 1), nonlinearity=F.tanh)
+
+    if attribute_embedder:
+        A = attribute_embedder(A)
     W_P = discriminator(X_P)
     W_Q = discriminator(X_Q)
 
@@ -71,11 +77,16 @@ def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.)
 
 def generator_routine(data, models, losses, results, viz):
     Z, A, T = data.get_batch('z','attributes', 'targets')
-    discriminator = models['discriminator']
+    discriminator = models['discriminator'][0]
+    attribute_embedder = models['discriminator'][1]
     generator = models['generator']
     classifier = models['classifier'][0]
 
     X_Q = generator(torch.cat([Z, A], 1), nonlinearity=F.tanh)
+
+    # Attribute_embedder None if no need
+    if attribute_embedder:
+        A = attribute_embedder(A)
     W_Q = discriminator(X_Q)
     S_Q = (W_Q * A).sum(1)
 
@@ -88,7 +99,8 @@ def generator_routine(data, models, losses, results, viz):
 
 def classifier_routine(data, models, losses, results, viz, **kwargs):
     Z, X_P, A, T = data.get_batch('z', 'images', 'attributes', 'targets')
-    discriminator = models['discriminator']
+    discriminator = models['discriminator'][0]
+    attribute_embedder = models['discriminator'][1]
     generator = models['generator']
     classifier_f, classifier_r, classifier = models['classifier']
 
@@ -98,20 +110,23 @@ def classifier_routine(data, models, losses, results, viz, **kwargs):
 
     losses_ = dict()
     results_ = dict()
-    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='real_class', **kwargs)
-    classify(classifier_f, W_Q, T, losses=losses_, results=results_, key='fake_class', **kwargs)
-    classify(classifier, W_P, T, losses=losses_, results=results_, key='full_class(real)', **kwargs)
-    classify(classifier, W_Q, T, losses=losses_, results=results_, key='full_class(fake)', **kwargs)
+    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='real_class', backprop_input=True, **kwargs)
+    classify(classifier_f, W_Q, T, losses=losses_, results=results_, key='fake_class', backprop_input=True, **kwargs)
+    classify(classifier, W_P, T, losses=losses_, results=results_, key='full_class(real)', backprop_input=True, **kwargs)
+    classify(classifier, W_Q, T, losses=losses_, results=results_, key='full_class(fake)', backprop_input=True, **kwargs)
     losses['classifier'] = sum(losses_.values())
     results['Accuracies'] = dict((k[:-9], v) for k, v in results_.items())
 
 
-def build_model(data, models, dim_embedding=312, model_type='convnet', discriminator_args=None, generator_args=None):
+def build_model(
+        data, models, dim_embedding=312, embed_atttributes=True,
+        model_type='dcgan', discriminator_args=None, generator_args=None):
     discriminator_args = discriminator_args or {}
     generator_args = generator_args or {}
     shape = data.get_dims('x', 'y', 'c')
     dim_a, dim_l = data.get_dims('a', 'labels')
     dim_z = data.get_dims('z')
+    dim_embedding = dim_a if not embed_atttributes else dim_embedding
 
     if model_type == 'resnet':
         from .modules.resnets import ResEncoder as Discriminator
@@ -139,12 +154,22 @@ def build_model(data, models, dim_embedding=312, model_type='convnet', discrimin
         generator_args_['n_steps'] = 4
 
     discriminator = Discriminator(shape, dim_out=dim_embedding, **discriminator_args_)
+
+    # print(dim_z+dim_a)
     generator = Generator(shape, dim_in=dim_z+dim_a, **generator_args_)
     classifier_f = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
     classifier_r = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
     classifier = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
 
-    models.update(generator=generator, discriminator=discriminator, classifier=(classifier_f, classifier_r, classifier))
+    attribute_embedder = None
+    if embed_atttributes:
+        # Linear embedding
+        attribute_embedder = FullyConnectedNet(
+            dim_a, dim_h=[], dim_out=dim_embedding, batch_norm=True, dropout=0.2)
+
+    models.update(
+        generator=generator, discriminator=(discriminator, attribute_embedder),
+        classifier=(classifier_f, classifier_r, classifier))
 
 
 DEFAULT_CONFIG = dict(
@@ -153,9 +178,9 @@ DEFAULT_CONFIG = dict(
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
-        updates_per_model=dict(discriminator=1, generator=1, classifier=1)
+        updates_per_model=dict(discriminator=0, generator=0, classifier=1)
     ),
-    model=dict(model_type='dcgan', discriminator_args=None, generator_args=None, dim_embedding=312),
+    model=dict(model_type='dcgan', discriminator_args=None, generator_args=None, dim_embedding=1024),
     routines=dict(discriminator=dict(penalty_amount=5.0),
                   generator=dict(),
                   classifier=dict(criterion=nn.CrossEntropyLoss())),

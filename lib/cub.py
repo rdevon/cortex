@@ -316,6 +316,10 @@ class CUB(data.Dataset):
         # Simply normalizing by 100
         self.attrs /= 100
 
+        # Setting norm to 1 for each class
+        # att_norms = numpy.linalg.norm(self.attrs, 2, 1)
+        # self.attrs /= att_norms.reshape(self.attrs.shape[0], 1)
+
         if self.threshold_attrs:
             self.attrs = numpy.where(
                 self.attrs > 0.5, 1., 0.).astype('float32')
@@ -458,7 +462,7 @@ if __name__ == "__main__":
     test_set = CUB(split_type="test")
     # val_set = CUBStandard(split_type="val")
 
-    # import ipdb; ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
 
     # Counting classes
     classes = []

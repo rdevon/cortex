@@ -7,23 +7,29 @@ import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+# from torch.nn.regularization import nn.LayerNorm
+
+# # For nn.LayerNorm
+# import numbers
+# from torch.nn.parameter import Parameter
 
 
 logger = logging.getLogger('cortex.arch' + __name__)
 
 
-class LayerNorm(nn.Module):
+# class nn.LayerNorm(nn.Module):
 
-    def __init__(self, features, eps=1e-6):
-        super(LayerNorm, self).__init__()
-        self.gamma = nn.Parameter(torch.ones(features))
-        self.beta = nn.Parameter(torch.zeros(features))
-        self.eps = eps
+#     def __init__(self, features, eps=1e-6):
+#         super(nn.LayerNorm, self).__init__()
+#         self.gamma = nn.Parameter(torch.ones(features))
+#         self.beta = nn.Parameter(torch.zeros(features))
+#         self.eps = eps
 
-    def forward(self, x):
-        mean = x.mean(-1, keepdim=True)
-        std = x.std(-1, keepdim=True)
-        return self.gamma * (x - mean) / (std + self.eps) + self.beta
+#     def forward(self, x):
+#         mean = x.mean(-1, keepdim=True)
+#         std = x.std(-1, keepdim=True)
+#         return self.gamma * (x - mean) / (std + self.eps) + self.beta
+
 
 
 class FullyConnectedNet(nn.Module):
@@ -62,11 +68,13 @@ class FullyConnectedNet(nn.Module):
             if dropout:
                 models.add_module(name + '_do', nn.Dropout(p=dropout))
             if layer_norm:
-                models.add_module(name + '_ln', LayerNorm(dim_out))
+                models.add_module(name + '_ln', nn.LayerNorm(dim_out))
             elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm1d(dim_out))
             if nonlinearity:
-                models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+                # To avoid the . in module name
+                nonlin_name = str(nonlin).replace(".", "_")
+                models.add_module('{}_{}'.format(name, nonlin_name), nonlinearity)
 
         if dim_out_:
             name = 'dense_({}/{})_{}'.format(dim_out, dim_out_, 'final')

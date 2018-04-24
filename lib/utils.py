@@ -96,7 +96,7 @@ def bad_values(d):
             if v_:
                 failed[k] = v_
         else:
-            if isinstance(v, torch.autograd.variable.Variable):
+            if isinstance(v, torch.Tensor):
                 v_ = v.data[0]
             else:
                 v_ = v
@@ -109,7 +109,7 @@ def bad_values(d):
 
 
 def convert_to_numpy(o):
-    if isinstance(o, torch.autograd.variable.Variable):
+    if isinstance(o, torch.Tensor):
         o = o.data.cpu().numpy()
         if len(o.shape) == 1 and o.shape[0] == 1:
             o = o[0]

@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .modules import View
-from .densenet import LayerNorm
+# from .densenet import LayerNorm
 
 
 
@@ -28,14 +28,14 @@ class MNISTDeConv(nn.Module):
         models.add_module('dense1', nn.Linear(dim_in, 1024))
         models.add_module('dense1_relu', nn.ReLU())
         if layer_norm:
-            models.add_module('dense1_ln', LayerNorm(1024))
+            models.add_module('dense1_ln', nn.LayerNorm(1024))
         elif batch_norm:
             models.add_module('dense1_bn', nn.BatchNorm1d(1024))
 
         models.add_module('dense2', nn.Linear(1024, dim_h * 2 * 7 * 7))
         models.add_module('dense2_relu', nn.ReLU())
         if layer_norm:
-            models.add_module('dense2_ln', LayerNorm(2 * dim_h * 7 * 7))
+            models.add_module('dense2_ln', nn.LayerNorm(2 * dim_h * 7 * 7))
         elif batch_norm:
             models.add_module('dense2_bn', nn.BatchNorm1d(2 * dim_h * 7 * 7))
         models.add_module('view', View(-1, 2 * dim_h, 7, 7))
@@ -43,7 +43,7 @@ class MNISTDeConv(nn.Module):
         models.add_module('deconv1', nn.ConvTranspose2d(2 * dim_h, dim_h, 4, 2, 1))
         models.add_module('deconv1_relu', nn.ReLU())
         if layer_norm:
-            models.add_module('deconv1_ln', LayerNorm(dim_h))
+            models.add_module('deconv1_ln', nn.LayerNorm(dim_h))
         elif batch_norm:
             models.add_module('deconv1_bn', nn.BatchNorm2d(dim_h))
 
@@ -90,19 +90,24 @@ class SimpleConvDecoder(nn.Module):
         dim_y = dim_y_
         dim_h = dim_h_
 
+        saved_spatial_dimensions = [(dim_x, dim_y)]
+
         for n in range(n_steps):
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
+            saved_spatial_dimensions.append((dim_x, dim_y))
             if n < n_steps - 1:
                 dim_h *= 2
 
         dim_out = dim_x * dim_y * dim_h
         if initial_layer:
+            # print("here")
             name = 'initial_({}/{})'.format(dim_in, initial_layer)
             models.add_module(name, nn.Linear(dim_in, initial_layer))
             if dropout:
                 models.add_module(name + '_do', nn.Dropout1d(p=dropout))
             if layer_norm:
-                models.add_module(name + '_ln', nn.LayerNorm(initial_layer))
+                # models.add_module(name + '_ln', nn.LayerNorm(initial_layer))
+                models.add_module(name + '_ln', nn.LayerNorm(dim_h, dim_x, dim_y))
             elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm1d(initial_layer))
             dim_in = initial_layer
@@ -115,12 +120,17 @@ class SimpleConvDecoder(nn.Module):
         if dropout:
             models.add_module(name + '_do', nn.Dropout2d(p=dropout))
         if layer_norm:
-            models.add_module(name + '_ln', LayerNorm(dim_h))
+            # models.add_module(name + '_ln', nn.LayerNorm(dim_h))
+            # import ipdb; ipdb.set_trace()
+            saved_spatial_dimensions.pop()
+            models.add_module(name + '_ln', nn.LayerNorm((dim_h, dim_x, dim_y)))
         elif batch_norm:
             models.add_module(name + '_bn', nn.BatchNorm2d(dim_h))
         dim_out = dim_h
 
-        models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+        # To avoid the . in module name
+        nonlin_name = str(nonlin).replace(".", "_")
+        models.add_module('{}_{}'.format(name, nonlin_name), nonlinearity)
 
         for i in range(n_steps):
             dim_in = dim_out
@@ -135,11 +145,16 @@ class SimpleConvDecoder(nn.Module):
             if dropout:
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
             if layer_norm:
-                models.add_module(name + '_ln', LayerNorm(dim_out))
+                # models.add_module(name + '_ln', nn.LayerNorm(dim_out))
+                _dim_x, _dim_y = saved_spatial_dimensions.pop()
+                models.add_module(name + '_ln', nn.LayerNorm((dim_out, _dim_x, _dim_y)))
             elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
 
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            # To avoid the . in module name
+            nonlin_name = str(nonlin).replace(".", "_")
+            models.add_module('{}_{}'.format(name, nonlin_name), nonlinearity)
+            # models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
 
         models.add_module(name+'f', nn.Conv2d(dim_out, dim_out_, 3, 1, 1, bias=False))
 
