@@ -13,16 +13,6 @@ from .modules.fully_connected import FullyConnectedNet
 from .vae import update_encoder_args, update_decoder_args
 
 
-logger = logging.getLogger('cortex.arch' + __name__)
-
-resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-resnet_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7)
-mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
-convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
-convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
-
-
 def shape_noise(Y_P, U, noise_type, epsilon=1e-6):
     if noise_type == 'hypercubes':
         pass
@@ -66,11 +56,11 @@ def encode(models, X, Y_P, output_nonlin=False, noise_type='hypercubes'):
 def score(models, Z_P, Z_Q, measure, Y_P=None, Y_Q=None, key='discriminator'):
     discriminator = models[key]
     if Y_Q is not None:
-        Z_Q = torch.cat([Y_Q, Z_Q], 1)
         Z_P = torch.cat([Y_P, Z_P], 1)
+        Z_Q = torch.cat([Y_Q, Z_Q], 1)
 
-    Q_samples = discriminator(Z_Q)
     P_samples = discriminator(Z_P)
+    Q_samples = discriminator(Z_Q)
 
     E_pos = get_positive_expectation(P_samples, measure)
     E_neg = get_negative_expectation(Q_samples, measure)
@@ -115,7 +105,7 @@ def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.,
 
     Z_P, Z_Q, Y_Q = encode(models, X, Y_P, output_nonlin=output_nonlin, noise_type=noise_type)
     E_pos, E_neg, _, _ = score(models, Z_P, Z_Q, measure, Y_P=Y_P, Y_Q=Y_Q)
-    losses.update(discriminator=E_pos - E_neg)
+    losses.update(discriminator=E_neg - E_pos)
 
     if Y_Q is not None:
         Z_Q = torch.cat([Y_Q, Z_Q], 1)
