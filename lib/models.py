@@ -42,7 +42,7 @@ def add_directory(p, name):
             if not success:
                 pass
             elif not hasattr(m, 'DEFAULT_CONFIG'):
-                logger.warning('Architecture (module) {} lacks `DEFAULT_ARGS` dictionary, skipping'.format(fnp))
+                logger.warning('Architecture (module) {} lacks `DEFAULT_CONFIG` dictionary, skipping'.format(fnp))
             elif not hasattr(m, 'build_model'):
                 logger.warning('Architecture (module) {} lacks `build_model` method, skipping'.format(fnp))
             elif not hasattr(m, 'ROUTINES'):

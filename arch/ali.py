@@ -116,8 +116,8 @@ def build_discriminator(models, x_shape, dim_z, Encoder, key='discriminator', **
     logger.debug('Forming discriminator with class {} and args: {}'.format(Encoder, discriminator_args))
 
     x_disc = Encoder(x_shape, dim_out=256, **discriminator_args)
-    z_disc = FullyConnectedNet(dim_z, dim_h=[dim_z], dim_out=dim_z)
-    topnet = FullyConnectedNet(256 + dim_z, dim_h=[512, 128], dim_out=1, batch_norm=False)
+    z_disc = FullyConnectedNet(dim_z, dim_h=[dim_z], dim_out=256)
+    topnet = FullyConnectedNet(2 * 256, dim_h=[512, 128], dim_out=1, batch_norm=False)
     models[key]= (x_disc, z_disc, topnet)
 
 

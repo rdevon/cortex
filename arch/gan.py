@@ -96,12 +96,14 @@ def apply_gradient_penalty(data, models, losses, results, inputs=None, model=Non
                            penalty_amount=1.0):
     if penalty_amount == 0.:
         return
-    if not inputs:
+    if inputs is None:
         raise ValueError('No inputs provided')
     if not model:
         raise ValueError('No model provided')
 
     model_ = models[model]
+    if not isinstance(inputs, (list, tuple)):
+        inputs = [inputs]
 
     inputs = [Variable(inp.data.cuda(), requires_grad=True) for inp in inputs]
 
