@@ -77,7 +77,6 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
         for p in model_params:
             p.requires_grad = True
 
-        logger.info('Training with {} and optimizer options {}'.format(optimizer, optimizer_options))
         if isinstance(learning_rate, dict):
             eta = learning_rate[k]
         else:
@@ -94,6 +93,8 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, lr_decay=N
 
         optimizer = op(model_params, lr=eta, weight_decay=wd, **optimizer_options_)
         OPTIMIZERS[k] = optimizer
+
+        logger.info('Training {} routine with {}'.format(k, optimizer))
 
         if k in CLIPPING.keys():
             logger.info('Clipping {} with {}'.format(k, CLIPPING[k]))
@@ -138,12 +139,14 @@ def train_epoch(epoch, vh, quit_on_bad_values):
 
     try:
         while True:
+            DATA_HANDLER.next()
             for rk, routine in exp.ROUTINES.items():
                 if rk not in UPDATES:
                     continue
-                for _ in range(UPDATES[rk]):
-                    DATA_HANDLER.next()
-
+                for u in range(UPDATES[rk]):
+                    if u > 0:
+                        DATA_HANDLER.next()
+                    
                     for mk, model in exp.MODELS.items():
                         if isinstance(model, (list, tuple)):
                             for net in model:
@@ -180,7 +183,7 @@ def train_epoch(epoch, vh, quit_on_bad_values):
                         loss = losses
 
                     if loss is not None:
-                        results['losses'][rk].append(loss.data[0])
+                        results['losses'][rk].append(loss.item())
                         loss.backward()
                     end_time = time.time()
                     results['time'][rk].append(end_time - start_time)
@@ -237,7 +240,7 @@ def test_epoch(epoch, vh, return_std=False):
                 losses = {}
                 routine(DATA_HANDLER, exp.MODELS, losses, results_, vh, **args)
                 if rk in losses:
-                    results['losses'][rk].append(losses[rk].data[0])
+                    results['losses'][rk].append(losses[rk].item())
                 update_dict_of_lists(results, **results_)
             vh.ignore = True
     except StopIteration:
@@ -263,12 +266,19 @@ def display_results(train_results, test_results, epoch, epochs, epoch_time, tota
 
     for k in train_results.keys():
         v_train = train_results[k]
-        v_test = test_results[k]
-        if isinstance(v_train, dict):
-            print('\t' + k + ': ' + ' | '.join(['{}: {:.2f} / {:.2f}'.format(k_, v_train[k_], v_test[k_])
-                                                for k_ in v_train.keys()]))
+        v_test = test_results[k] if k in test_results else None
+        if v_test is None:
+            if isinstance(v_train, dict):
+                print('\t' + k + ': ' + ' | '.join(['{}: {:.2f}'.format(k_, v_train[k_])
+                                                    for k_ in v_train.keys()]))
+            else:
+                print('\t{}: {:.2f}'.format(k, v_train))
         else:
-            print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))
+            if isinstance(v_train, dict):
+                print('\t' + k + ': ' + ' | '.join(['{}: {:.2f} / {:.2f}'.format(k_, v_train[k_], v_test[k_])
+                                                    for k_ in v_train.keys()]))
+            else:
+                print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))
 
 
 def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False):

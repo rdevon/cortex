@@ -99,11 +99,12 @@ class SimpleConvEncoder(nn.Module):
         if not nonlinearity:
             pass
         elif hasattr(nn, nonlinearity):
-            nonlin = getattr(nn, nonlinearity)
+            nonlin = nonlinearity
+            nonlinearity = getattr(nn, nonlinearity)
             if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlin(0.02, inplace=True)
+                nonlinearity = nonlinearity(0.02, inplace=True)
             else:
-                nonlinearity = nonlin()
+                nonlinearity = nonlinearity()
         else:
             raise ValueError(nonlinearity)
 
