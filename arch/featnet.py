@@ -69,8 +69,8 @@ def score(models, Z_P, Z_Q, measure, Y_P=None, Y_Q=None, key='discriminator'):
 
 def get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=None):
     if results is not None:
-        results.update(Scores=dict(Ep=P_samples.mean().data[0], Eq=Q_samples.mean().data[0]))
-        results['{} distance'.format(measure)] = (E_pos - E_neg).data[0]
+        results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
+        results['{} distance'.format(measure)] = (E_pos - E_neg).item()
 
 
 def visualize(Z_Q, P_samples, Q_samples, X, T, Y_Q=None, viz=None):
