@@ -43,11 +43,12 @@ class MNISTConv(nn.Module):
         models = nn.Sequential()
 
         if hasattr(nn, nonlinearity):
-            nonlin = getattr(nn, nonlinearity)
+            nonlin = nonlinearity
+            nonlinearity = getattr(nn, nonlinearity)
             if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlin(0.02, inplace=True)
+                nonlinearity = nonlinearity(0.02, inplace=True)
             else:
-                nonlinearity = nonlin()
+                nonlinearity = nonlinearity()
         else:
             raise ValueError(nonlinearity)
 
@@ -149,9 +150,9 @@ class SimpleConvEncoder(nn.Module):
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
             models.add_module(name, nn.Linear(dim_in, dim_out))
             if dropout:
-                models.add_module(name + '_do', nn.Dropout2d(p=dropout))
+                models.add_module(name + '_do', nn.Dropout1d(p=dropout))
             if batch_norm:
-                models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
+                models.add_module(name + '_bn', nn.BatchNorm1d(dim_out))
             if nonlinearity:
                 models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
 

@@ -6,7 +6,6 @@ import logging
 import torch
 import torch.nn.functional as F
 from torch import autograd
-from torch.autograd import Variable
 
 from .classifier import classify
 from .gan import get_positive_expectation, get_negative_expectation
@@ -26,8 +25,10 @@ def setup(model=None, data=None, routines=None, **kwargs):
 def apply_penalty(models, losses, results, X, Z, penalty_amount):
     x_disc, z_disc, topnet = models['discriminator']
     if penalty_amount:
-        X = Variable(X.data.cuda(), requires_grad=True)
-        Z = Variable(Z.data.cuda(), requires_grad=True)
+        X = X.detach()
+        Z = Z.detach()
+        X.requires_grad_()
+        Z.requires_grad_()
         W = x_disc(X, nonlinearity=F.relu)
         U = z_disc(Z, nonlinearity=F.relu)
         S = topnet(torch.cat([W, U], 1))
@@ -38,7 +39,7 @@ def apply_penalty(models, losses, results, X, Z, penalty_amount):
         G = G.view(G.size()[0], -1)
         G = (G ** 2).sum(1).mean()
         losses['discriminator'] += penalty_amount * G
-        results['gradient penalty'] = G.data[0]
+        results['gradient penalty'] = G.item()
 
 
 def score(models, X_P, X_Q, Z_P, Z_Q, measure):
@@ -69,8 +70,8 @@ def discriminator_routine(data, models, losses, results, viz, measure=None, pena
     losses.update(discriminator=-difference)
     apply_penalty(models, losses, results, X_P, Z_P, penalty_amount)
 
-    results.update(Scores=dict(Ep=P_samples.mean().data[0], Eq=Q_samples.mean().data[0]))
-    results['{} distance'.format(measure)] = difference.data[0]
+    results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
+    results['{} distance'.format(measure)] = difference.item()
     viz.add_image(X_P, name='ground truth')
     viz.add_image(X_Q, name='generated')
     viz.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
@@ -98,7 +99,7 @@ def network_routine(data, models, losses, results, viz, encoder_key='generator')
     classifier, decoder = models['nets']
     Z_P = encoder(X)
 
-    Z_t = Variable(Z_P.data.cuda(), requires_grad=False)
+    Z_t = Z_P.detach()
     X_d = decoder(Z_t, nonlinearity=F.tanh)
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
@@ -131,7 +132,6 @@ def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, **decoder_args)
 def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
-
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
     encoder = build_encoder(None, x_shape, dim_z, Encoder, fully_connected_layers=[1028], **encoder_args)
