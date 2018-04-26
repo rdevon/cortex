@@ -335,8 +335,7 @@ class DataHandler(object):
 
             if n_var.size()[0] != batch_size:
                 n_var = n_var[0:batch_size]
-
-            output[k] = Variable(n_var, volatile=(self.mode=='test'))
+            output[k] = n_var
 
         self.batch = output
         self.u += 1
@@ -402,10 +401,7 @@ class DataHandler(object):
                 inputs_ = []
 
                 for i, inp in enumerate(inputs):
-                    if i == 0:
-                        inputs_.append(Variable(inp, volatile=(self.mode=='test')))
-                    else:
-                        inputs_.append(Variable(inp))
+                    inputs_.append(inp)
 
                 yield inputs_
 

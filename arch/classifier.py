@@ -28,10 +28,10 @@ def classify(classifier, inputs, targets, losses=None, results=None, criterion=N
     criterion = criterion or nn.CrossEntropyLoss()
 
     if not backprop_input:
-        inputs = Variable(inputs.data.cuda(), requires_grad=False)
+        inputs = inputs.detach()
 
-    outputs = classifier(inputs, nonlinearity=F.log_softmax, dim=1)
-    predicted = torch.max(outputs.data, 1)[1]
+    outputs = classifier(inputs)
+    predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
 
     if losses is not None:
         loss = criterion(outputs, targets)

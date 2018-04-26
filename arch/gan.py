@@ -6,7 +6,6 @@ import math
 
 import torch
 from torch import autograd
-from torch.autograd import Variable
 import torch.nn.functional as F
 
 from .vae import update_decoder_args, update_encoder_args
@@ -105,11 +104,11 @@ def apply_gradient_penalty(data, models, losses, results, inputs=None, model=Non
     if not isinstance(inputs, (list, tuple)):
         inputs = [inputs]
 
-    inputs = [Variable(inp.data.cuda(), requires_grad=True) for inp in inputs]
-
+    inputs = [inp.detach() for inp in inputs]
+    [inp.requires_grad_() for inp in inputs]
 
     def get_gradient(inp, output):
-        gradient = autograd.grad(outputs=output, inputs=inp, grad_outputs=torch.ones(output.size()).cuda(),
+        gradient = autograd.grad(outputs=output, inputs=inp, grad_outputs=torch.ones_like(output),
                                  create_graph=True, retain_graph=True, only_inputs=True)[0]
         return gradient
 
@@ -120,7 +119,7 @@ def apply_gradient_penalty(data, models, losses, results, inputs=None, model=Non
             gradient = get_gradient(inp, output)
             gradient = gradient.view(gradient.size()[0], -1)
             penalties.append((gradient ** 2).sum(1).mean())
-        penalty = sum(penalties) / float(len(penalties))
+        penalty = sum(penalties)
 
     elif penalty_type == 'interpolate':
         if len(inputs) != 2:
@@ -131,26 +130,31 @@ def apply_gradient_penalty(data, models, losses, results, inputs=None, model=Non
             epsilon = data['e'].view(-1, 1, 1, 1)
         except:
             raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
-        mid_in = Variable(((1. - epsilon) * inp1 + epsilon * inp2), requires_grad=True)
+        mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)
+        mid_in.requires_grad_()
 
         mid_out = model_(mid_in)
         gradient = get_gradient(mid_in, mid_out)
         gradient = gradient.view(gradient.size()[0], -1)
-        penalty = (gradient ** 2).sum(1).mean()
+        penalty = ((gradient.norm(1) - 1.) ** 2).mean()
 
     else:
         raise NotImplementedError('Unsupported penalty {}'.format(penalty_type))
 
-    results[model + '_loss_wo_penalty'] = losses[model].data[0]
-    results[model + '_penalty'] = penalty.data[0]
-    losses[model] += penalty_amount * penalty
+    if model in losses:
+        losses[model] += penalty_amount * penalty
+    else:
+        losses[model] = penalty_amount * penalty
+
+    results[model + '_loss_wo_penalty'] = losses[model].item()
+    results[model + '_penalty'] = penalty.item()
 
 
 def setup(routines=None, **kwargs):
     routines['generator']['measure'] = routines['discriminator']['measure']
 
 
-def discriminator_routine(data, models, losses, results, viz, measure=None, **penalty_args):
+def discriminator_routine_test(data, models, losses, results, viz, measure=None, **penalty_args):
     Z, X_P = data.get_batch('z', 'images')
     discriminator = models['discriminator']
     generator = models['generator']
@@ -164,12 +168,22 @@ def discriminator_routine(data, models, losses, results, viz, measure=None, **pe
     difference = E_pos - E_neg
 
     losses.update(discriminator=-difference)
-    apply_gradient_penalty(data, models, losses, results, inputs=(X_P, X_Q), model='discriminator', **penalty_args)
 
-    results.update(Scores=dict(Ep=P_samples.mean().data[0], Eq=Q_samples.mean().data[0]))
-    results['{} distance'.format(measure)] = difference.data[0]
+    results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
+    results['{} distance'.format(measure)] = difference.item()
     viz.add_image(X_P, name='ground truth')
     viz.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
+
+    return X_P, X_Q
+
+
+def discriminator_routine(data, models, losses, results, viz, measure=None, **penalty_args):
+    Z, X_P = data.get_batch('z', 'images')
+    generator = models['generator']
+
+    X_Q = generator(Z, nonlinearity=F.tanh)
+    discriminator_routine_test(data, models, losses, results, viz, measure=measure)
+    apply_gradient_penalty(data, models, losses, results, inputs=(X_P, X_Q), model='discriminator', **penalty_args)
 
 
 def generator_routine(data, models, losses, results, viz, measure=None, loss_type=None):
@@ -184,7 +198,7 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
     weights = get_weight(samples, measure)
 
     losses.update(generator=g_loss)
-    results.update(Weights=weights.mean().data[0])
+    results.update(Weights=weights.mean().item())
     viz.add_image(X_Q, name='generated')
 
 
@@ -201,7 +215,7 @@ def build_model(data, models, model_type='dcgan', discriminator_args=None, gener
     models.update(generator=generator, discriminator=discriminator)
 
 
-ROUTINES = dict(discriminator=discriminator_routine, generator=generator_routine)
+ROUTINES = dict(discriminator=(discriminator_routine, discriminator_routine_test), generator=generator_routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,

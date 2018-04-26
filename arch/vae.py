@@ -65,7 +65,7 @@ def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.)
     losses.update(vae=r_loss + beta_kld * kl)
     correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 
-    results.update(KL_divergence=kl.data[0])
+    results.update(KL_divergence=kl.item())
     viz.add_image(outputs, name='reconstruction')
     viz.add_image(gen, name='generated')
     viz.add_image(X, name='ground truth')
