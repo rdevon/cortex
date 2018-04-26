@@ -286,13 +286,120 @@ class DataHandler(object):
                 self.loaders.update(**{source_: dict(train=train_loader, test=test_loader)})
                 self.sources.append(source_)
 
-    def add_noise(self, key, dist, dim):
-        var = torch.FloatTensor(self.batch_size['train'], dim)
-        var_t = torch.FloatTensor(self.batch_size['test'], dim)
-        if exp.USE_CUDA:
-            var = var.cuda()
-            var_t = var_t.cuda()
-        self.noise[key] = (var, var_t, dist)
+    def add_noise(self, key, dist=None, size=None, **kwargs):
+        if size is None:
+            raise ValueError
+
+        dim = size
+
+        if not isinstance(size, tuple):
+            size = (size,)
+
+        train_size = (self.batch_size['train'],) + size
+        test_size = (self.batch_size['test'],) + size
+
+        def expand_train(*args):
+            return (torch.zeros(train_size) + a for a in args)
+
+        def expand_test(*args):
+            return (torch.zeros(test_size) + a for a in args)
+
+        if dist == 'bernoulli':
+            Dist = torch.distributions.bernoulli.Bernoulli
+        elif dist == 'beta':
+            Dist = torch.distributions.beta.Beta
+        elif dist == 'binomial':
+            Dist = torch.distributions.binomial.Binomial
+        elif dist == 'categorical':
+            Dist = torch.distributions.categorical.Categorical
+        elif dist == 'cauchy':
+            Dist = torch.distributions.cauchy.Cauchy
+        elif dist == 'chi2':
+            Dist = torch.distributions.chi2.Chi2
+        elif dist == 'dirichlet':
+            Dist = torch.distributions.dirichlet.Dirichlet
+        elif dist == 'exponential':
+            Dist = torch.distributions.exponential.Exponential
+        elif dist == 'fishersnedecor':
+            Dist = torch.distributions.fishersnedecor.FisherSnedecor
+        elif dist == 'gamma':
+            Dist = torch.distributions.gamma.Gamma
+        elif dist == 'geometric':
+            Dist = torch.distributions.geometric.Geometric
+        elif dist == 'gumbel':
+            Dist = torch.distributions.gumbel.Gumbel
+            loc = kwargs.get('loc', 0)
+            scale = kwargs.get('scale', 1)
+        elif dist == 'laplace':
+            Dist = torch.distributions.laplace.Laplace
+            loc = kwargs.get('loc', 0)
+            scale = kwargs.get('scale', 1)
+        elif dist == 'log_normal':
+            Dist = torch.distributions.log_normal.LogNormal
+            loc = kwargs.get('loc', 0)
+            scale = kwargs.get('scale', 1)
+        elif dist == 'multinomial':
+            Dist = torch.distributions.multinomial.Multinomial
+        elif dist == 'multivariate_normal':
+            Dist = torch.distributions.multivariate_normal.MultivariateNormal
+        elif dist == 'normal':
+            Dist = torch.distributions.normal.Normal
+            loc = kwargs.pop('loc', 0.)
+            scale = kwargs.pop('scale', 1.)
+            loc_tr, scale_tr = expand_train(loc, scale)
+            loc_te, scale_te = expand_test(loc, scale)
+
+            var = Dist(loc_tr, scale_tr, **kwargs)
+            var_t = Dist(loc_te, scale_te, **kwargs)
+
+        elif dist == 'one_hot_categorical':
+            Dist = torch.distributions.one_hot_categorical.OneHotCategorical
+        elif dist == 'pareto':
+            Dist = torch.distributions.pareto.Pareto
+        elif dist == 'poisson':
+            Dist = torch.distributions.poisson.Poisson
+        elif dist == 'relaxed_bernoulli':
+            Dist = torch.distributions.relaxed_bernoulli.RelaxedBernoulli
+        elif dist == 'relaxed_categorical':
+            Dist = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical
+        elif dist == 'studentT':
+            Dist = torch.distributions.studentT.StudentT
+        elif dist == 'uniform':
+            Dist = torch.distributions.uniform.Uniform
+            low = kwargs.pop('low', 0.)
+            high = kwargs.pop('high', 1.)
+
+            low_tr, high_tr = expand_train(low, high)
+            low_te, high_te = expand_test(low, high)
+
+            var = Dist(low_tr, high_tr, **kwargs)
+            var_t = Dist(low_te, high_te, **kwargs)
+
+        else:
+            raise NotImplementedError('`{}` distribution not found'.format(dist))
+
+        d_args = dict(
+            beta=['concentration1', 'concentration0'],
+            cachy=['loc', 'scale'],
+            chi2=['df'],
+            dirichlet=['concentration'],
+            exponential=['rate'],
+            fishersnedecor=['df1', 'df2'],
+            gamma=['concentration', 'rate'],
+            gumbel=['loc', 'scale'],
+            laplace=['loc', 'scale'],
+            log_normal=['loc', 'scale'],
+            multivariate_normal=['loc'],
+            normal=['loc', 'scale'],
+            pareto=['scale', 'alpha'],
+            poisson=['rate'],
+            relaxed_bernoulli=['temperature'],
+            relaxed_categorical=['temperature'],
+            studentT=['df'],
+            uniform=['high', 'low']
+        )
+
+        self.noise[key] = (var, var_t)
         self.dims[key] = dim
 
     def get_label_names(self, source=None):
@@ -322,16 +429,14 @@ class DataHandler(object):
             else:
                 output.update(**data)
 
-        for k, (n_var, n_var_t, dist) in self.noise.items():
+        for k, (n_var, n_var_t) in self.noise.items():
             if self.mode == 'test':
                 n_var = n_var_t
 
-            if dist == 'normal':
-                n_var = n_var.normal_(0, 1)
-            elif dist == 'uniform':
-                n_var = n_var.uniform_(0, 1)
-            else:
-                raise NotImplementedError(dist)
+            n_var = n_var.sample()
+
+            if exp.USE_CUDA:
+                n_var = n_var.to('cuda')
 
             if n_var.size()[0] != batch_size:
                 n_var = n_var[0:batch_size]
@@ -445,5 +550,5 @@ def setup(source=None, batch_size=64, noise_variables=None, n_workers=4, skip_la
             DATA_HANDLER.add_dataset(source_, test_on_train, n_workers=n_workers, **source_args)
 
     if noise_variables:
-        for k, (dist, dim) in noise_variables.items():
-            DATA_HANDLER.add_noise(k, dist, dim)
+        for k, v in noise_variables.items():
+            DATA_HANDLER.add_noise(k, **v)

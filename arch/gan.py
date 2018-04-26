@@ -219,7 +219,8 @@ ROUTINES = dict(discriminator=(discriminator_routine, discriminator_routine_test
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1000), skip_last_batch=True,
-              noise_variables=dict(z=('normal', 64), e=('uniform', 1))),
+              noise_variables=dict(z=dict(dist='normal', size=64, loc=0, scale=1),
+                                   e=dict(dist='uniform', size=1, low=0, high=1))),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4, updates_per_model=dict(discriminator=1, generator=1)),
     model=dict(model_type='convnet', discriminator_args=None, generator_args=None),
     routines=dict(discriminator=dict(measure='GAN', penalty_type='gradient_norm', penalty_amount=1.0),
