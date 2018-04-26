@@ -175,7 +175,7 @@ DEFAULT_CONFIG = dict(
         optimizer='Adam',
         learning_rate=1e-4,
     ),
-    model=dict(dim_z=64, dim_encoder_out=1028, encoder_args=None, decoder_args=None),
+    model=dict(dim_z=64, model_type='convnet', dim_encoder_out=1028, encoder_args=None, decoder_args=None),
     routines=dict(vae=dict(criterion=F.mse_loss, beta_kld=1.),
                   classifier=dict(criterion=nn.CrossEntropyLoss())),
     train=dict(
