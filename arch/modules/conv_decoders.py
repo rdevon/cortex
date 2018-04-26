@@ -67,11 +67,12 @@ class SimpleConvDecoder(nn.Module):
         dim_h_ = dim_h
 
         if hasattr(nn, nonlinearity):
-            nonlin = getattr(nn, nonlinearity)
+            nonlin = nonlinearity
+            nonlinearity = getattr(nn, nonlinearity)
             if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlin(0.2, inplace=True)
+                nonlinearity = nonlinearity(0.2, inplace=True)
             else:
-                nonlinearity = nonlin()
+                nonlinearity = nonlinearity()
         else:
             raise ValueError(nonlinearity)
 
