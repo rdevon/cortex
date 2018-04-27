@@ -2,7 +2,7 @@
 
 '''
 
-
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -10,6 +10,7 @@ from .ali import build_extra_networks, network_routine as ali_network_routine
 from .gan import get_positive_expectation, get_negative_expectation, apply_gradient_penalty, generator_loss
 from .modules.fully_connected import FullyConnectedNet
 from .vae import update_encoder_args, update_decoder_args
+from .utils import perform_svc
 
 
 def shape_noise(Y_P, U, noise_type, epsilon=1e-6):
@@ -118,6 +119,54 @@ def network_routine(data, models, losses, results, viz, **kwargs):
     ali_network_routine(data, models, losses, results, viz, encoder_key='encoder', **kwargs)
 
 
+SVM = None
+
+def collect_embeddings(data, models, encoder_key='encoder'):
+    encoder = models[encoder_key]
+    if isinstance(encoder, (list, tuple)):
+        encoder = encoder[0]
+    encoder.eval()
+
+    data.reset(test=True, string='Performing Linear SVC... ')
+
+    Zs = []
+    Ys = []
+    try:
+        while True:
+            data.next()
+            X, Y = data.get_batch('images', 'targets')
+            Z = encoder(X)
+            Ys.append(Y.data.cpu().numpy())
+            Zs.append(Z.data.cpu().numpy())
+
+    except StopIteration:
+        pass
+
+    Y = np.concatenate(Ys, axis=0)
+    Z = np.concatenate(Zs, axis=0)
+
+    return Y, Z
+
+def train_final(data, models, losses, results, viz, encoder_key='encoder'):
+    global SVM
+
+    Y, Z = collect_embeddings(data, models, encoder_key=encoder_key)
+
+    new_svm, predicted = perform_svc(Z, Y)
+    correct = 100. * (predicted == Y).sum() / Y.shape[0]
+    results['SVC_accuracy'] = correct
+
+    SVM = new_svm
+
+
+def test_final(data, models, losses, results, viz, encoder_key='encoder'):
+    Y, Z = collect_embeddings(data, models, encoder_key=encoder_key)
+
+    new_svm, predicted = perform_svc(Z, Y, clf=SVM)
+    correct = 100. * (predicted == Y).sum() / Y.shape[0]
+    results['SVC_accuracy'] = correct
+
+
 # Cortex ===============================================================================================================
 
 
@@ -181,6 +230,7 @@ DEFAULT_CONFIG = dict(
     model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, encoder_args=None, use_topnet=False),
     routines=dict(discriminator=dict(measure='JSD', penalty_amount=1., noise_type='hypercubes', noise='uniform'),
                   encoder=dict(generator_loss_type='non-saturating'),
-                  nets=dict()),
+                  nets=dict(),
+                  final=dict()),
     train=dict(epochs=500, archive_every=10)
 )

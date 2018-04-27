@@ -2,6 +2,7 @@
 
 '''
 
+from sklearn import svm
 import torch
 
 
@@ -16,3 +17,13 @@ def cross_correlation(X, remove_diagonal=False):
         correlations -= Id
 
     return correlations
+
+
+def perform_svc(X, Y, clf=None):
+    if clf is None:
+        clf = svm.LinearSVC()
+        clf.fit(X, Y)
+
+    Y_hat = clf.predict(X)
+
+    return clf, Y_hat

@@ -34,8 +34,9 @@ optimizer_defaults = dict(
 
 
 def setup(optimizer=None, learning_rate=None, updates_per_model=None, train_for=None,
-          lr_decay=None, min_lr=None, decay_at_epoch=None,
           clipping=None, weight_decay=None, l1_decay=None, optimizer_options='default', model_optimizer_options=None):
+
+    global TRAIN_FOR
 
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
@@ -61,7 +62,7 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, train_for=
         raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
 
     for k in exp.ROUTINES.keys():
-        if k not in exp.MODELS or k == 'extras':
+        if k not in exp.MODELS or k in ('extras', 'final'):
             continue
         model = exp.MODELS[k]
         logger.info('Building optimizer for {}'.format(k))
@@ -133,7 +134,98 @@ def summarize_results_std(results):
     return results_
 
 
-def train_epoch(epoch, vh, quit_on_bad_values):
+def train_on_routine(routine_key, quit_on_bad_values, results, viz_handler):
+    if routine_key == 'final':
+        return
+    if routine_key == 'extras':
+        OPTIMIZERS[routine_key].zero_grad()
+
+    if routine_key in exp.ARGS['routines'].keys():
+        args = exp.ARGS['routines'][routine_key]
+    else:
+        args = exp.ARGS['routines']
+
+    routine = exp.ROUTINES[routine_key]
+
+    if isinstance(routine, (tuple, list)):
+        routine = routine[0]
+
+    # Perform routine
+    start_time = time.time()
+
+    losses = {}
+    routine_results = {}
+    routine(DATA_HANDLER, exp.MODELS, losses, routine_results, viz_handler, **args)
+    bads = bad_values(routine_results)
+
+    if bads and quit_on_bad_values:
+        logger.error('Bad values found (quitting): {} \n All:{}'.format(
+            bads, routine_results))
+        exit(0)
+
+    if isinstance(losses, dict):
+        if routine_key in losses:
+            loss = losses[routine_key]
+        else:
+            loss = None
+    else:
+        loss = losses
+
+    # Do backward step
+    if loss is not None:
+        results['losses'][routine_key].append(loss.item())
+        loss.backward()
+
+    end_time = time.time()
+    results['time'][routine_key].append(end_time - start_time)
+    update_dict_of_lists(results, **routine_results)
+
+    OPTIMIZERS[routine_key].step()
+
+    reg.clip(routine_key)  # weight clipping
+    reg.l1_decay(routine_key)  # l1 weight decay
+
+
+def perform_routine(routine_key, results, viz_handler, test=False):
+    if routine_key in exp.ARGS['routines'].keys():
+        args = exp.ARGS['test_routines'][routine_key]
+    else:
+        args = exp.ARGS['test_routines']
+
+    routine = exp.ROUTINES[routine_key]
+
+    if isinstance(routine, (tuple, list)):
+        if test:
+            routine = routine[1]
+        else:
+            routine = routine[0]
+
+    routine_results = {}
+    losses = {}
+    routine(DATA_HANDLER, exp.MODELS, losses, routine_results, viz_handler, **args)
+    if routine_key in losses:
+        results['losses'][routine_key].append(losses[routine_key].item())
+    update_dict_of_lists(results, **routine_results)
+
+
+def set_updates_dict(epoch):
+    if TRAIN_FOR is not None:
+        total_steps = sum(TRAIN_FOR.values())
+        step = epoch % total_steps
+        ts = 0
+        for mk, s in TRAIN_FOR.items():
+            ts += s
+            if step < ts:
+                break
+        num_updates_dict = dict((k, 0) for k in exp.ROUTINES.keys())
+        num_updates_dict[mk] = 1
+    else:
+        num_updates_dict = UPDATES
+
+    return num_updates_dict
+
+
+def train_epoch(epoch, viz_handler, quit_on_bad_values):
     for k, model in exp.MODELS.items():
         if k == 'extras':
             continue
@@ -144,89 +236,35 @@ def train_epoch(epoch, vh, quit_on_bad_values):
             model.train()
 
     DATA_HANDLER.reset(string='Training (epoch {}): '.format(epoch))
-    vh.ignore = True
+    viz_handler.ignore = True
 
     results = {'time': dict((rk, []) for rk in exp.MODELS.keys()),
                'losses': dict((rk, []) for rk in exp.MODELS.keys())}
-    if TRAIN_FOR is not None:
-        total_steps = sum(TRAIN_FOR.values())
-        step = epoch % total_steps
-        ts = 0
-        for mk, s in TRAIN_FOR.items():
-            ts += s
-            if step < ts:
-                break
-        updates = dict((k, 0) for k in exp.ROUTINES.keys())
-        updates[mk] = 1
-    else:
-        updates = UPDATES
+
+    num_updates_dict = set_updates_dict(epoch)
+
     try:
         while True:
             DATA_HANDLER.next()
-            for rk, routine in exp.ROUTINES.items():
-                if rk not in updates:
-                    continue
-                for u in range(UPDATES[rk]):
+            for routine_key in exp.ROUTINES.keys():
+                num_updates = num_updates_dict.get(routine_key, 0)
+                for u in range(num_updates):
                     if u > 0:
                         DATA_HANDLER.next()
-                    
-                    for mk, model in exp.MODELS.items():
-                        if mk == 'extras':
-                            continue
-                        if isinstance(model, (list, tuple)):
-                            for net in model:
-                                for p in net.parameters():
-                                    p.requires_grad = (mk == rk)
-                        else:
-                            for p in model.parameters():
-                                p.requires_grad = (mk == rk)
-                    if rk != 'extras':
-                        OPTIMIZERS[rk].zero_grad()
-
-                    if isinstance(routine, (tuple, list)):
-                        routine = routine[0]
-                    start_time = time.time()
-                    if rk in exp.ARGS['routines'].keys():
-                        args = exp.ARGS['routines'][rk]
-                    else:
-                        args = exp.ARGS['routines']
-                    losses = {}
-                    results_ = {}
-                    routine(DATA_HANDLER, exp.MODELS, losses, results_, vh, **args)
-                    bads = bad_values(results_)
-                    if bads and quit_on_bad_values:
-                        logger.error('Bad values found (quitting): {} \n All:{}'.format(
-                            bads, results_))
-                        exit(0)
-
-                    if isinstance(losses, dict):
-                        if rk in losses:
-                            loss = losses[rk]
-                        else:
-                            loss = None
-                    else:
-                        loss = losses
-
-                    if loss is not None:
-                        results['losses'][rk].append(loss.item())
-                        loss.backward()
-                    end_time = time.time()
-                    results['time'][rk].append(end_time - start_time)
-                    update_dict_of_lists(results, **results_)
-
-                    OPTIMIZERS[rk].step()
-                    
-                    reg.clip(rk)  # weight clipping
-                    reg.l1_decay(rk)  # l1 weight decay
-                 
+                    train_on_routine(routine_key, quit_on_bad_values, results, viz_handler)
     except StopIteration:
         pass
 
+    if 'final' in exp.ROUTINES:
+        assert False
+        perform_routine('final', results, viz_handler)
+
     results = summarize_results(results)
+
     return results
 
 
-def test_epoch(epoch, vh, return_std=False):
+def test_epoch(epoch, viz_handler, return_std=False):
     for k, model in exp.MODELS.items():
         if k == 'extras':
             continue
@@ -239,34 +277,26 @@ def test_epoch(epoch, vh, return_std=False):
     DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
     results = {'losses': dict((rk, []) for rk in exp.MODELS.keys())}
 
-    routines = exp.ARGS['test_routines']
-    vh.ignore = False
+    viz_handler.ignore = False
     try:
         while True:
             DATA_HANDLER.next()
-            for rk, routine in exp.ROUTINES.items():
-                if rk not in exp.MODELS:
+            for routine_key in exp.ROUTINES.keys():
+                if routine_key == 'final':
                     continue
-                if isinstance(routine, (tuple, list)):
-                    routine = routine[1]
-                if rk in routines.keys():
-                    args = routines[rk]
-                else:
-                    args = routines
-                results_ = {}
-                losses = {}
-                routine(DATA_HANDLER, exp.MODELS, losses, results_, vh, **args)
-                if rk in losses:
-                    results['losses'][rk].append(losses[rk].item())
-                update_dict_of_lists(results, **results_)
-            vh.ignore = True
+                perform_routine(routine_key, results, viz_handler, test=True)
+            viz_handler.ignore = True
     except StopIteration:
         pass
 
+    if 'final' in exp.ROUTINES:
+        assert False
+        perform_routine('final', results, viz_handler, test=True)
+
     means = summarize_results(results)
+
     if return_std:
         stds = summarize_results_std(results)
-
         return means, stds
 
     return means

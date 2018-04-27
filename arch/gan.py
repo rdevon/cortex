@@ -181,7 +181,7 @@ def discriminator_routine(data, models, losses, results, viz, measure=None, **pe
     Z, X_P = data.get_batch('z', 'images')
     generator = models['generator']
 
-    X_Q = generator(Z, nonlinearity=F.tanh)
+    X_Q = generator(Z, nonlinearity=F.tanh).detach()
     discriminator_routine_test(data, models, losses, results, viz, measure=measure)
     apply_gradient_penalty(data, models, losses, results, inputs=(X_P, X_Q), model='discriminator', **penalty_args)
 
