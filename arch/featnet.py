@@ -2,7 +2,6 @@
 
 '''
 
-import logging
 
 import torch
 import torch.nn.functional as F
@@ -127,8 +126,8 @@ def setup(model=None, data=None, routines=None, **kwargs):
     noise_type = routines['discriminator']['noise_type']
     if noise_type in ('unitsphere', 'unitball'):
         noise = 'normal'
-    data['noise_variables'] = dict(y=(noise, model['dim_noise']))
-    data['noise_variables']['u'] = ('uniform', 1)
+    data['noise_variables'] = dict(y=dict(dist=noise, size=model['dim_noise']))
+    data['noise_variables']['u'] = dict(dist='uniform', size=1)
     routines['encoder'].update(**routines['discriminator'])
 
 
@@ -145,11 +144,11 @@ def build_encoder(models, x_shape, dim_z, Encoder, use_topnet=False, dim_top=Non
 
 
 def build_discriminator(models, dim_in, key='discriminator'):
-    discriminator = FullyConnectedNet(dim_in, dim_h=[2048, 1028, 512], dim_out=1, batch_norm=False)
+    discriminator = FullyConnectedNet(dim_in, dim_h=[2048, 1028], dim_out=1, layer_norm=False)
     models[key] = discriminator
 
 
-def build_model(data, models, model_type='convnet', use_topnet=False, dim_noise=16, dim_embedding=16,
+def build_model(data, models, model_type='convnet', use_topnet=False, dim_noise=None, dim_embedding=None,
                 encoder_args=None, decoder_args=None):
 
     if not use_topnet:
@@ -160,11 +159,12 @@ def build_model(data, models, model_type='convnet', use_topnet=False, dim_noise=
 
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
+    encoder_args = dict(batch_norm=False, layer_norm=True)
 
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
 
-    build_encoder(models, x_shape, dim_noise, Encoder, use_topnet=use_topnet, dim_top=dim_noise, **encoder_args)
+    build_encoder(models, x_shape, dim_embedding, Encoder, use_topnet=use_topnet, dim_top=dim_noise, **encoder_args)
     build_discriminator(models, dim_d)
     build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
 

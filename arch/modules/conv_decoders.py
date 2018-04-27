@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .modules import View
-# from .densenet import LayerNorm
+from .utils import apply_nonlinearity, get_nonlinearity, finish_layer_1d, finish_layer_2d
 
 
 
@@ -51,38 +51,21 @@ class MNISTDeConv(nn.Module):
 
         self.models = models
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
-
-        if nonlinearity:
-            if callable(nonlinearity):
-                x = nonlinearity(x, **nonlinearity_args)
-            elif hasattr(F, nonlinearity):
-                x = getattr(F, nonlinearity)(x, **nonlinearity_args)
-            else:
-                raise ValueError()
-        return x
+        return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
 
 
 class SimpleConvDecoder(nn.Module):
-    def __init__(self, shape, dim_in=None, initial_layer=None, dim_h=64, batch_norm=True, 
-                 layer_norm=False, dropout=False, nonlinearity='ReLU',
-                 f_size=4, stride=2, pad=1, n_steps=3):
+    def __init__(self, shape, dim_in=None, initial_layer=None, dim_h=64, nonlinearity='ReLU',
+                 f_size=4, stride=2, pad=1, n_steps=3, **layer_args):
         super(SimpleConvDecoder, self).__init__()
         models = nn.Sequential()
 
         dim_h_ = dim_h
 
-        if hasattr(nn, nonlinearity):
-            nonlin = nonlinearity
-            nonlinearity = getattr(nn, nonlinearity)
-            if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlinearity(0.2, inplace=True)
-            else:
-                nonlinearity = nonlinearity()
-        else:
-            raise ValueError(nonlinearity)
+        nonlinearity = get_nonlinearity(nonlinearity)
 
         logger.debug('Input shape: {}'.format(shape))
         dim_x_, dim_y_, dim_out_ = shape
@@ -103,54 +86,29 @@ class SimpleConvDecoder(nn.Module):
         if initial_layer:
             name = 'initial_({}/{})'.format(dim_in, initial_layer)
             models.add_module(name, nn.Linear(dim_in, initial_layer))
-            if dropout:
-                models.add_module(name + '_do', nn.Dropout1d(p=dropout))
-            if layer_norm:
-                models.add_module(name + '_ln', nn.LayerNorm(dim_h, dim_x, dim_y))
-            elif batch_norm:
-                models.add_module(name + '_bn', nn.BatchNorm1d(initial_layer))
+            finish_layer_1d(models, name, initial_layer, nonlinearity=nonlinearity, **layer_args)
             dim_in = initial_layer
-
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
 
         name = 'first_({}/{})_0'.format(dim_in, dim_out)
         models.add_module(name, nn.Linear(dim_in, dim_out))
         models.add_module(name + '_reshape', View(-1, dim_h, dim_x, dim_y))
-        if dropout:
-            models.add_module(name + '_do', nn.Dropout2d(p=dropout))
-        if layer_norm:
-            saved_spatial_dimensions.pop()
-            models.add_module(name + '_ln', nn.LayerNorm((dim_h, dim_x, dim_y)))
-        elif batch_norm:
-            models.add_module(name + '_bn', nn.BatchNorm2d(dim_h))
-        dim_out = dim_h
 
-        # To avoid the . in module name
-        nonlin_name = str(nonlin).replace(".", "_")
-        models.add_module('{}_{}'.format(name, nonlin_name), nonlinearity)
+        finish_layer_2d(models, name, dim_x, dim_y, dim_h, nonlinearity=nonlinearity, **layer_args)
+        dim_out = dim_h
 
         for i in range(n_steps):
             dim_in = dim_out
 
             if i == n_steps - 1:
-                pass
+                nonlinearity = None
+                layer_args.update(batch_norm=False, layer_norm=False)
             else:
                 dim_out = dim_in // 2
+
             name = 'tconv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, nn.ConvTranspose2d(dim_in, dim_out, f_size, stride, pad, bias=False))
 
-            if dropout:
-                models.add_module(name + '_do', nn.Dropout2d(p=dropout))
-            if layer_norm:
-                _dim_x, _dim_y = saved_spatial_dimensions.pop()
-                models.add_module(name + '_ln', nn.LayerNorm((dim_out, _dim_x, _dim_y)))
-            elif batch_norm:
-                models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
-
-            # To avoid the . in module name
-            nonlin_name = str(nonlin).replace(".", "_")
-            models.add_module('{}_{}'.format(name, nonlin_name), nonlinearity)
-            # models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            finish_layer_2d(models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity, **layer_args)
 
         models.add_module(name+'f', nn.Conv2d(dim_out, dim_out_, 3, 1, 1, bias=False))
 
@@ -175,13 +133,5 @@ class SimpleConvDecoder(nn.Module):
         return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, nonlinearity_args=None):
-        nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
-        if nonlinearity:
-            if callable(nonlinearity):
-                x = nonlinearity(x, **nonlinearity_args)
-            elif hasattr(F, nonlinearity):
-                x = getattr(F, nonlinearity)(x, **nonlinearity_args)
-            else:
-                raise ValueError()
-        return x
+        return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)

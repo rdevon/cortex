@@ -122,10 +122,12 @@ def build_discriminator(models, x_shape, dim_z, Encoder, key='discriminator', **
     models[key]= (x_disc, z_disc, topnet)
 
 
-def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, **decoder_args):
+def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, batch_norm=False, layer_norm=Falses, dropout=0.1,
+                         **decoder_args):
     logger.debug('Forming dencoder with class {} and args: {}'.format(Decoder, decoder_args))
     decoder = Decoder(x_shape, dim_in=dim_z, **decoder_args)
-    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=batch_norm, dropout=dropout,
+                                   layer_norm=layer_norm)
     models.update(nets=(classifier, decoder))
 
 

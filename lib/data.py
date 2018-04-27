@@ -502,7 +502,7 @@ class DataHandler(object):
         def iterator():
             for inputs in loader:
                 if exp.USE_CUDA:
-                    inputs = [inp.cuda() for inp in inputs]
+                    inputs = [inp.to('cuda') for inp in inputs]
                 inputs_ = []
 
                 for i, inp in enumerate(inputs):
