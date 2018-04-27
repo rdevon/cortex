@@ -1,8 +1,6 @@
 '''Adversarially learned inference and Bi-GAN
 '''
 
-import logging
-
 import torch
 import torch.nn.functional as F
 from torch import autograd
@@ -12,9 +10,6 @@ from .gan import get_positive_expectation, get_negative_expectation
 from .modules.fully_connected import FullyConnectedNet
 from .utils import cross_correlation
 from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
-
-
-logger = logging.getLogger('cortex.arch' + __name__)
 
 
 def setup(model=None, data=None, routines=None, **kwargs):

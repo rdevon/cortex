@@ -5,11 +5,9 @@
 import logging
 
 import torch.nn as nn
-import torch.nn.functional as F
 
 from .modules import View
 from .utils import apply_nonlinearity, get_nonlinearity, finish_layer_1d, finish_layer_2d
-
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -100,14 +98,12 @@ class SimpleConvDecoder(nn.Module):
             dim_in = dim_out
 
             if i == n_steps - 1:
-                nonlinearity = None
-                layer_args.update(batch_norm=False, layer_norm=False)
+                pass
             else:
                 dim_out = dim_in // 2
 
             name = 'tconv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, nn.ConvTranspose2d(dim_in, dim_out, f_size, stride, pad, bias=False))
-
             finish_layer_2d(models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity, **layer_args)
 
         models.add_module(name+'f', nn.Conv2d(dim_out, dim_out_, 3, 1, 1, bias=False))
@@ -132,6 +128,6 @@ class SimpleConvDecoder(nn.Module):
 
         return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         x = self.models(x)
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
