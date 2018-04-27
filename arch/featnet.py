@@ -164,10 +164,10 @@ def build_model(data, models, model_type='convnet', use_topnet=False, dim_noise=
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
 
-    build_encoder(models, x_shape, dim_embedding, Encoder, use_topnet=use_topnet, dim_top=dim_noise, **encoder_args)
+    build_encoder(models, x_shape, dim_embedding, Encoder, use_topnet=use_topnet, dim_top=dim_noise,
+                  fully_connected_layers=[1028], **encoder_args)
     build_discriminator(models, dim_d)
     build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
-
 
 ROUTINES = dict(discriminator=discriminator_routine, encoder=encoder_routine, nets=network_routine)
 

@@ -1,6 +1,8 @@
 '''Adversarially learned inference and Bi-GAN
 '''
 
+import logging
+
 import torch
 import torch.nn.functional as F
 from torch import autograd
@@ -12,8 +14,11 @@ from .utils import cross_correlation
 from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
 
 
+logger = logging.getLogger('cortex.arch' + __name__)
+
+
 def setup(model=None, data=None, routines=None, **kwargs):
-    data['noise_variables']['z'] = (data['noise_variables']['z'][0], model['dim_z'])
+    data['noise_variables']['z']['size'] = model['dim_z']
     routines['generator']['measure'] = routines['discriminator']['measure']
 
 
@@ -117,12 +122,11 @@ def build_discriminator(models, x_shape, dim_z, Encoder, key='discriminator', **
     models[key]= (x_disc, z_disc, topnet)
 
 
-def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, batch_norm=False, layer_norm=Falses, dropout=0.1,
+def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, dropout=0.1,
                          **decoder_args):
     logger.debug('Forming dencoder with class {} and args: {}'.format(Decoder, decoder_args))
     decoder = Decoder(x_shape, dim_in=dim_z, **decoder_args)
-    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=batch_norm, dropout=dropout,
-                                   layer_norm=layer_norm)
+    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, dropout=dropout, batch_norm=True)
     models.update(nets=(classifier, decoder))
 
 
@@ -143,7 +147,7 @@ ROUTINES = dict(discriminator=discriminator_routine, generator=generator_routine
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
-              noise_variables=dict(z=('normal', 64))),
+              noise_variables=dict(z=dict(dist='normal', size=64))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,

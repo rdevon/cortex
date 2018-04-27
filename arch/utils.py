@@ -3,7 +3,6 @@
 '''
 
 import torch
-from torch import nn
 
 
 def cross_correlation(X, remove_diagonal=False):
