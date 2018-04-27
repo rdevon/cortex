@@ -13,7 +13,7 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
 from .data import DATA_HANDLER
-from . import exp, viz
+from . import exp, viz, reg
 from .utils import bad_values, convert_to_numpy, update_dict_of_lists
 from .viz import VizHandler, plot
 
@@ -25,7 +25,6 @@ logger = logging.getLogger('cortex.util')
 
 OPTIMIZERS = {}
 UPDATES = {}
-CLIPPING = {}
 TRAIN_FOR = None
 
 optimizer_defaults = dict(
@@ -36,11 +35,11 @@ optimizer_defaults = dict(
 
 def setup(optimizer=None, learning_rate=None, updates_per_model=None, train_for=None,
           lr_decay=None, min_lr=None, decay_at_epoch=None,
-          clipping=None, weight_decay=None, optimizer_options='default', model_optimizer_options=None):
+          clipping=None, weight_decay=None, l1_decay=None, optimizer_options='default', model_optimizer_options=None):
 
-    global CLIPPING, UPDATES, TRAIN_FOR
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
+    l1_decay = l1_decay or {}
     clipping = clipping or {}
 
     if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
@@ -51,8 +50,8 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, train_for=
             updates_per_model[k] = 1
 
     UPDATES.update(**updates_per_model)
-    CLIPPING.update(**clipping)
     TRAIN_FOR = train_for
+    reg.init(clipping=clipping, weight_decay=l1_decay)  # initialize regularization
 
     if callable(optimizer):
         op = optimizer
@@ -103,8 +102,11 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, train_for=
 
         logger.info('Training {} routine with {}'.format(k, optimizer))
 
-        if k in CLIPPING.keys():
-            logger.info('Clipping {} with {}'.format(k, CLIPPING[k]))
+        if k in reg.CLIPPING.keys():
+            logger.info('Clipping {} with {}'.format(k, reg.CLIPPING[k]))
+
+        if k in reg.L1_DECAY.keys():
+            logger.info('L1 Decay {} with {}'.format(k, reg.L1_DECAY[k]))
 
     if exp.USE_CUDA:
         cudnn.benchmark = True
@@ -212,23 +214,11 @@ def train_epoch(epoch, vh, quit_on_bad_values):
                     results['time'][rk].append(end_time - start_time)
                     update_dict_of_lists(results, **results_)
 
-                    if rk != 'extras':
-                        OPTIMIZERS[rk].step()
-
-                    if rk in CLIPPING.keys():
-                        if rk == 'extras':
-                            continue
-                        clip = CLIPPING[rk]
-                        if rk in exp.MODELS:
-                            model = exp.MODELS[rk]
-                            if isinstance(model, (list, tuple)):
-                                for net in model:
-                                    for p in net.parameters():
-                                        p.data.clamp_(-clip, clip)
-                            else:
-                                for p in model.parameters():
-                                    p.data.clamp_(-clip, clip)
-
+                    OPTIMIZERS[rk].step()
+                    
+                    reg.clip(rk)  # weight clipping
+                    reg.l1_decay(rk)  # l1 weight decay
+                 
     except StopIteration:
         pass
 
