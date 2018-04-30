@@ -80,7 +80,6 @@ def visualize(Z_Q, P_samples, Q_samples, X, T, Y_Q=None, viz=None):
             viz.add_scatter(Y_Q, labels=T.data, name='latent values')
         else:
             viz.add_scatter(Z_Q, labels=T.data, name='latent values')
-        viz.add_image(X, name='ground truth')
         viz.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
 
 
@@ -121,13 +120,13 @@ def network_routine(data, models, losses, results, viz, **kwargs):
 
 SVM = None
 
-def collect_embeddings(data, models, encoder_key='encoder'):
+def collect_embeddings(data, models, encoder_key='encoder', test=False):
     encoder = models[encoder_key]
     if isinstance(encoder, (list, tuple)):
         encoder = encoder[0]
     encoder.eval()
 
-    data.reset(test=True, string='Performing Linear SVC... ')
+    data.reset(test=test, string='Performing Linear SVC... ')
 
     Zs = []
     Ys = []
@@ -160,7 +159,7 @@ def train_final(data, models, losses, results, viz, encoder_key='encoder'):
 
 
 def test_final(data, models, losses, results, viz, encoder_key='encoder'):
-    Y, Z = collect_embeddings(data, models, encoder_key=encoder_key)
+    Y, Z = collect_embeddings(data, models, encoder_key=encoder_key, test=True)
 
     new_svm, predicted = perform_svc(Z, Y, clf=SVM)
     correct = 100. * (predicted == Y).sum() / Y.shape[0]
@@ -193,7 +192,7 @@ def build_encoder(models, x_shape, dim_z, Encoder, use_topnet=False, dim_top=Non
 
 
 def build_discriminator(models, dim_in, key='discriminator'):
-    discriminator = FullyConnectedNet(dim_in, dim_h=[2048, 1028], dim_out=1, layer_norm=False)
+    discriminator = FullyConnectedNet(dim_in, dim_h=[2048, 1028, 512], dim_out=1, layer_norm=False, batch_norm=False)
     models[key] = discriminator
 
 
@@ -208,7 +207,9 @@ def build_model(data, models, model_type='convnet', use_topnet=False, dim_noise=
 
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
-    encoder_args = dict(batch_norm=False, layer_norm=True)
+
+    encoder_args = encoder_args or {}
+    encoder_args.update(batch_norm=True, layer_norm=False)
 
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)

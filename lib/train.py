@@ -81,9 +81,6 @@ def setup(optimizer=None, learning_rate=None, updates_per_model=None, train_for=
                 model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
             model_params = list(model.parameters())
 
-        for p in model_params:
-            p.requires_grad = True
-
         if isinstance(learning_rate, dict):
             eta = learning_rate[k]
         else:
@@ -137,13 +134,24 @@ def summarize_results_std(results):
 def train_on_routine(routine_key, quit_on_bad_values, results, viz_handler):
     if routine_key == 'final':
         return
-    if routine_key == 'extras':
+    if routine_key != 'extras':
         OPTIMIZERS[routine_key].zero_grad()
 
     if routine_key in exp.ARGS['routines'].keys():
         args = exp.ARGS['routines'][routine_key]
     else:
         args = exp.ARGS['routines']
+
+    for mk, model in exp.MODELS.items():
+        if mk == 'extras':
+            continue
+        if isinstance(model, (list, tuple)):
+            for net in model:
+                for p in net.parameters():
+                    p.requires_grad = (mk == routine_key)
+        else:
+            for p in model.parameters():
+                p.requires_grad = (mk == routine_key)
 
     routine = exp.ROUTINES[routine_key]
 
@@ -180,10 +188,11 @@ def train_on_routine(routine_key, quit_on_bad_values, results, viz_handler):
     results['time'][routine_key].append(end_time - start_time)
     update_dict_of_lists(results, **routine_results)
 
-    OPTIMIZERS[routine_key].step()
+    if routine_key != 'extras':
+        OPTIMIZERS[routine_key].step()
 
-    reg.clip(routine_key)  # weight clipping
-    reg.l1_decay(routine_key)  # l1 weight decay
+        reg.clip(routine_key)  # weight clipping
+        reg.l1_decay(routine_key)  # l1 weight decay
 
 
 def perform_routine(routine_key, results, viz_handler, test=False):
@@ -235,13 +244,13 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
         else:
             model.train()
 
-    DATA_HANDLER.reset(string='Training (epoch {}): '.format(epoch))
-    viz_handler.ignore = True
-
     results = {'time': dict((rk, []) for rk in exp.MODELS.keys()),
                'losses': dict((rk, []) for rk in exp.MODELS.keys())}
 
     num_updates_dict = set_updates_dict(epoch)
+    is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
+    DATA_HANDLER.reset(string='Training (epoch {}) ({}): '.format(epoch, is_training))
+    viz_handler.ignore = True
 
     try:
         while True:
@@ -256,7 +265,6 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
         pass
 
     if 'final' in exp.ROUTINES:
-        assert False
         perform_routine('final', results, viz_handler)
 
     results = summarize_results(results)
@@ -290,7 +298,6 @@ def test_epoch(epoch, viz_handler, return_std=False):
         pass
 
     if 'final' in exp.ROUTINES:
-        assert False
         perform_routine('final', results, viz_handler, test=True)
 
     means = summarize_results(results)

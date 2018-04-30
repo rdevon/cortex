@@ -6,7 +6,7 @@ import logging
 
 from torch import nn
 
-logger = logging.getLogger('cortex.arch' + __name__)
+logger = logging.getLogger('cortex.arch.modules' + __name__)
 
 
 def get_nonlinearity(nonlinearity=None):

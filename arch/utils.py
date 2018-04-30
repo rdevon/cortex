@@ -2,7 +2,17 @@
 
 '''
 
-from sklearn import svm
+import logging
+
+logger = logging.getLogger('cortex.arch' + __name__)
+
+try:
+    import thundersvmScikit as svm
+    use_thundersvm = True
+except ImportError:
+    from sklearn import svm
+    logger.warning('Using sklearn SVM. This will be SLOW. Install thundersvm and add to your PYTHONPATH')
+    use_thundersvm = False
 import torch
 
 
@@ -21,7 +31,10 @@ def cross_correlation(X, remove_diagonal=False):
 
 def perform_svc(X, Y, clf=None):
     if clf is None:
-        clf = svm.LinearSVC()
+        if use_thundersvm:
+            clf = svm.SVC(kernel=0, verbose=True)
+        else:
+            clf = svm.LinearSVC()
         clf.fit(X, Y)
 
     Y_hat = clf.predict(X)

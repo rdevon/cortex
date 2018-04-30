@@ -2,28 +2,17 @@
 
 '''
 
-import logging
-
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 import torch
 from torch import nn
-import torch.nn.functional as F
-from torch.autograd import Variable
 
 from .ali import build_extra_networks, network_routine as ali_network_routine
 from .gan import apply_gradient_penalty
-from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
+from .vae import update_decoder_args, update_encoder_args, build_encoder
 
 
-def setup(model=None, data=None, procedures=None, test_procedures=None, **kwargs):
-    global Id
-    Id = torch.Tensor(model['dim_embedding'], model['dim_embedding'])
-    nn.init.eye(Id)
-    Id = torch.autograd.Variable(Id.cuda(), requires_grad=False)
-
-
-def make_assignment(P, I_, J_, Z_P, Z_Q):
+def make_assignment(P, I_, J_, Z_P, Z_Q, results):
     batch_size = I_.shape[0]
 
     Z_Q_e = Z_Q.unsqueeze(2).expand(Z_Q.size(0), Z_Q.size(1), Z_Q.size(0))
@@ -33,15 +22,18 @@ def make_assignment(P, I_, J_, Z_P, Z_Q):
     rows, cols = linear_sum_assignment(h_loss.data.cpu().numpy())
     P_n = np.zeros((batch_size, batch_size)).astype('int8')
     P_n[rows, cols] = 1
-
+    n_updates = 0
     for ii, i in enumerate(I_):
         for jj, j in enumerate(J_):
+            n_updates += (P[i, j] != P_n[ii, jj]).sum().item() / 2.
             P[i, j] = P_n[ii, jj]
+
+    results.update(n_updates_per_batch=n_updates)
 
 
 def get_embeddings(encoder, X, P, C, I, epsilon=1e-6):
-    P = Variable(torch.FloatTensor(P[I, :].astype('float32')), requires_grad=False).cuda()
-    C = Variable(torch.FloatTensor(C), requires_grad=False).cuda()
+    P = torch.FloatTensor(P[I, :].astype('float32')).cuda()
+    C = torch.FloatTensor(C.astype('float32')).cuda()
 
     Z_Q = encoder(X)
     Z_Q = Z_Q / (torch.sqrt((Z_Q ** 2).sum(1, keepdim=True)) + epsilon)
@@ -72,7 +64,7 @@ def assign_train(data, models, losses, results, viz):
 
     Z_P, Z_Q = get_embeddings(encoder, X, P, C, I_)
 
-    make_assignment(P, I_, J_, Z_P, Z_Q)
+    make_assignment(P, I_, J_, Z_P, Z_Q, results)
 
 
 def encoder_test_routine(data, models, losses, results, viz):
@@ -101,7 +93,7 @@ def assign_test(data, models, losses, results, viz):
 
     Z_P, Z_Q = get_embeddings(encoder, X, P, C, I_)
 
-    make_assignment(P, I_, J_, Z_P, Z_Q)
+    make_assignment(P, I_, J_, Z_P, Z_Q, results)
 
 
 def build_model(data, models, model_type='convnet', dim_embedding=None, encoder_args=None, decoder_args=None):
@@ -131,8 +123,8 @@ ROUTINES = dict(encoder=(encoder_train_routine, encoder_test_routine), nets=netw
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=64), skip_last_batch=True),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4,
-                   train_for=dict(encoder=3, nets=1, extras=1)),
-    model=dict(model_type='convnet', dim_embedding=62, encoder_args=None),
+                   train_for=dict(encoder=1, nets=1, extras=1)),
+    model=dict(model_type='convnet', dim_embedding=64, encoder_args=None),
     routines=dict(),
     train=dict(epochs=500, archive_every=10)
 )

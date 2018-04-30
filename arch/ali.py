@@ -72,7 +72,6 @@ def discriminator_routine(data, models, losses, results, viz, measure=None, pena
 
     results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
     results['{} distance'.format(measure)] = difference.item()
-    viz.add_image(X_P, name='ground truth')
     viz.add_image(X_Q, name='generated')
     viz.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
     viz.add_scatter(Z_P, labels=T.data, name='latent values')
@@ -107,6 +106,7 @@ def network_routine(data, models, losses, results, viz, encoder_key='generator')
 
     correlations = cross_correlation(Z_P, remove_diagonal=True)
     viz.add_heatmap(correlations.data, name='latent correlations')
+    viz.add_image(X, name='Ground truth')
     viz.add_image(X_d, name='Reconstruction')
 
 
