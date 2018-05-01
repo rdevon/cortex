@@ -28,11 +28,11 @@ def setup(model=None, data=None, routines=None, **kwargs):
     noise_type = routines['noise_discriminator']['noise_type']
     if noise_type in ('unitsphere', 'unitball'):
         noise = 'normal'
-    data['noise_variables'] = dict(y=(noise, model['dim_noise']))
-    data['noise_variables']['u'] = ('uniform', 1)
-    routines['discriminator'].update(noise=noise, noise_type=noise_type)
-    routines['encoder'].update(**routines['discriminator'])
-    routines['encoder'].update(noise_measure=routines['noise_discriminator']['measure'])
+    data['noise_variables'] = dict(y=dict(dist=noise, size=model['dim_noise']))
+    data['noise_variables']['u'] = dict(dist='uniform', size=1)
+    routines['encoder'].update(noise_measure=routines['noise_discriminator']['measure'],
+                               noise_type=routines['noise_discriminator']['noise_type'],
+                               **routines['discriminator'])
 
 
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_measure=None, noise_type='hypercubes',
@@ -45,7 +45,7 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_meas
     E_pos_DV, E_neg_DV, _, _ = score(models, X_P, X_Q, Z, Z, 'DV')
 
     losses.update(encoder=E_neg - E_pos)
-    results.update(Mutual_Information=dict(DV=E_pos_DV-E_neg_DV,KL=E_pos_KL-E_neg_KL))
+    results.update(Mutual_Information=dict(DV=(E_pos_DV-E_neg_DV).mean().item(),KL=(E_pos_KL-E_neg_KL).mean().item()))
     get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=results)
     visualize(Z, P_samples, Q_samples, X_P, T, Y_Q=Y_Q, viz=viz)
 
@@ -134,12 +134,12 @@ ROUTINES = dict(discriminator=discriminator_routine, noise_discriminator=noise_d
 
 
 DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=1028), skip_last_batch=True, duplicate=2),
+    data=dict(batch_size=dict(train=64, test=1028), duplicate=2),
     optimizer=dict( optimizer='Adam', learning_rate=1e-4),
     model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, match_noise=False, use_topnet=False,
                encoder_args=None),
-    routines=dict(discriminator=dict(measure='JSD', penalty_amount=1.),
-                  noise_discriminator=dict(measure='JSD', penalty_amount=1., noise_type='hypercubes', noise='uniform'),
+    routines=dict(discriminator=dict(measure='JSD', penalty_amount=0.5),
+                  noise_discriminator=dict(measure='JSD', penalty_amount=0.5, noise_type='hypercubes', noise='uniform'),
                   encoder=dict(generator_loss_type='non-saturating'),
                   nets=dict()),
     train=dict(epochs=2000, archive_every=10)

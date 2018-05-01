@@ -117,7 +117,11 @@ def summarize_results(results):
             results_[k] = summarize_results(v)
         else:
             if len(v) > 0:
-                results_[k] = np.mean(v)
+                try:
+                    results_[k] = np.mean(v)
+                except:
+                    raise ValueError('Something is wrong with result {} of type {}.'.format(k, type(v[0])))
+
     return results_
 
 
@@ -133,6 +137,8 @@ def summarize_results_std(results):
 
 def train_on_routine(routine_key, quit_on_bad_values, results, viz_handler):
     if routine_key == 'final':
+        return
+    if routine_key not in exp.MODELS:
         return
     if routine_key != 'extras':
         OPTIMIZERS[routine_key].zero_grad()
@@ -196,6 +202,9 @@ def train_on_routine(routine_key, quit_on_bad_values, results, viz_handler):
 
 
 def perform_routine(routine_key, results, viz_handler, test=False):
+    if routine_key not in exp.MODELS:
+        return
+
     if routine_key in exp.ARGS['routines'].keys():
         args = exp.ARGS['test_routines'][routine_key]
     else:

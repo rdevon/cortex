@@ -1,8 +1,6 @@
 '''Simple classifier model. Credit goes to Samuel Lavoie
 '''
 
-import logging
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,8 +11,6 @@ from .classifier import classify
 from .utils import cross_correlation
 
 
-logger = logging.getLogger('cortex.arch' + __name__)
-
 resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 resnet_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7)
@@ -24,7 +20,7 @@ convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 
 def setup(model=None, data=None, **kwargs):
-    data['noise_variables']['z'] = (data['noise_variables']['z'][0], model['dim_z'])
+    data['noise_variables']['z']['size'] = model['dim_z']
 
 
 class VAE(nn.Module):
@@ -170,7 +166,7 @@ ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
-              noise_variables=dict(z=('normal', 64))),
+              noise_variables=dict(z=dict(dist='normal', size=64))),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,

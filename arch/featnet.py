@@ -80,7 +80,7 @@ def visualize(Z_Q, P_samples, Q_samples, X, T, Y_Q=None, viz=None):
             viz.add_scatter(Y_Q, labels=T.data, name='latent values')
         else:
             viz.add_scatter(Z_Q, labels=T.data, name='latent values')
-        viz.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
+        viz.add_histogram(dict(real=P_samples.view(-1).data, fake=Q_samples.view(-1).data), name='discriminator output')
 
 
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_type='hypercubes',

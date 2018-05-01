@@ -1,8 +1,6 @@
 '''Adversarially learned inference and Bi-GAN
 '''
 
-import logging
-
 import torch
 import torch.nn.functional as F
 from torch import autograd
@@ -12,9 +10,6 @@ from .gan import get_positive_expectation, get_negative_expectation
 from .modules.fully_connected import FullyConnectedNet
 from .utils import cross_correlation
 from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
-
-
-logger = logging.getLogger('cortex.arch' + __name__)
 
 
 def setup(model=None, data=None, routines=None, **kwargs):
@@ -126,7 +121,7 @@ def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, dropout=0.1,
                          **decoder_args):
     logger.debug('Forming dencoder with class {} and args: {}'.format(Decoder, decoder_args))
     decoder = Decoder(x_shape, dim_in=dim_z, **decoder_args)
-    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, dropout=dropout, batch_norm=True)
+    classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, dropout=dropout, batch_norm=True)
     models.update(nets=(classifier, decoder))
 
 
