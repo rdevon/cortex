@@ -209,6 +209,9 @@ def perform_routine(routine_key, results, viz_handler, test=False):
         else:
             routine = routine[0]
 
+    if not routine:
+        return
+
     routine_results = {}
     losses = {}
     routine(DATA_HANDLER, exp.MODELS, losses, routine_results, viz_handler, **args)
@@ -264,7 +267,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
     except StopIteration:
         pass
 
-    if 'final' in exp.ROUTINES:
+    if 'final' in exp.ROUTINES and num_updates_dict['final'] > 0:
         perform_routine('final', results, viz_handler)
 
     results = summarize_results(results)
@@ -297,7 +300,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
     except StopIteration:
         pass
 
-    if 'final' in exp.ROUTINES:
+    if 'final' in exp.ROUTINES and exp.ROUTINES['final']:
         perform_routine('final', results, viz_handler, test=True)
 
     means = summarize_results(results)
@@ -372,7 +375,7 @@ def align_summaries(d_train, d_test):
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False):
+def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False, save_on_best=None):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     vh = VizHandler()
@@ -382,7 +385,7 @@ def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_valu
         logger.info(' | '.join(
             ['{}: {:.5f}({:.5f})'.format(k, test_results[k], test_std[k]) for k in test_results.keys()]))
         exit(0)
-
+    best = None
     try:
         for e in range(epochs):
             epoch = exp.INFO['epoch']
@@ -393,6 +396,13 @@ def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_valu
             train_results_ = train_epoch(epoch, vh, quit_on_bad_values)
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
+
+            if save_on_best and save_on_best in train_results_:
+                current = train_results_[save_on_best]
+                if not best or current > best:
+                    best = current
+                    print('Found best {} (train): {}'.format(save_on_best, best))
+                    exp.save(prefix='best_' + save_on_best)
 
             # TESTING
             test_results_ = test_epoch(epoch, vh)

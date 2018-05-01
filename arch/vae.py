@@ -162,7 +162,7 @@ def build_model(data, models, model_type='convnet', dim_z=64, dim_encoder_out=10
     decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
     vae = VAE(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
 
-    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, batch_norm=True, dropout=0.2)
     models.update(vae=vae, classifier=classifier)
 
 
