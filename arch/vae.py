@@ -56,8 +56,8 @@ def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.)
     outputs = vae_net(X, nonlinearity=F.tanh)
     gen = vae_net.decoder(Z, nonlinearity=F.tanh)
 
-    r_loss = criterion(outputs, X, size_average=False)
-    kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum()
+    r_loss = criterion(outputs, X)
+    kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).mean()
     losses.update(vae=r_loss + beta_kld * kl)
     correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 

@@ -58,13 +58,13 @@ def main_routine(data, models, losses, results, viz, measure=None, noise_type='h
 
     X_R = decode(models, Z_Q)
     X_G = decode(models, Z_P)
-    reconstruction_loss = F.mse_loss(X_R, X_P, size_average=False)
+    reconstruction_loss = F.mse_loss(X_R, X_P)
     encoder_loss = generator_loss(Q_samples, measure, loss_type=generator_loss_type)
     losses.update(autoencoder=encoder_loss + reconstruction_loss)
     results.update(reconstruction_loss=reconstruction_loss.item(), gan_loss=encoder_loss.item())
 
     correlations = cross_correlation(Z_Q, remove_diagonal=True)
-    
+
     viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X_G, name='generated')
     viz.add_image(X_P, name='ground truth')
