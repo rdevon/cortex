@@ -26,8 +26,8 @@ def shape_noise(Y_P, U, noise_type, epsilon=1e-6):
     return Y_P
 
 
-def encode(models, X, Y_P, output_nonlin=False, noise_type='hypercubes'):
-    encoder = models['encoder']
+def encode(models, X, Y_P, output_nonlin=False, noise_type='hypercubes', key='encoder'):
+    encoder = models[key]
 
     if isinstance(encoder, (tuple, list)) and len(encoder) == 3:
         encoder, topnet, revnet = encoder
@@ -35,7 +35,10 @@ def encode(models, X, Y_P, output_nonlin=False, noise_type='hypercubes'):
         topnet = None
 
     Z_Q = encoder(X)
-    if output_nonlin:
+
+    if callable(output_nonlin):
+        Z_Q = output_nonlin(Z_Q)
+    elif output_nonlin:
         if noise_type == 'hypercubes':
             Z_Q = F.sigmoid(Z_Q)
         elif noise_type == 'unitsphere':

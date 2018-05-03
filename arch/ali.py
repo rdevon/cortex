@@ -17,8 +17,8 @@ def setup(model=None, data=None, routines=None, **kwargs):
     routines['generator']['measure'] = routines['discriminator']['measure']
 
 
-def apply_penalty(models, losses, results, X, Z, penalty_amount):
-    x_disc, z_disc, topnet = models['discriminator']
+def apply_penalty(models, losses, results, X, Z, penalty_amount, key='discriminator'):
+    x_disc, z_disc, topnet = models[key]
     if penalty_amount:
         X = X.detach()
         Z = Z.detach()
@@ -33,12 +33,12 @@ def apply_penalty(models, losses, results, X, Z, penalty_amount):
 
         G = G.view(G.size()[0], -1)
         G = (G ** 2).sum(1).mean()
-        losses['discriminator'] += penalty_amount * G
+        losses[key] += penalty_amount * G
         results['gradient penalty'] = G.item()
 
 
-def score(models, X_P, X_Q, Z_P, Z_Q, measure):
-    x_disc, z_disc, topnet = models['discriminator']
+def score(models, X_P, X_Q, Z_P, Z_Q, measure, key='discriminator'):
+    x_disc, z_disc, topnet = models[key]
     W_Q = x_disc(X_Q, nonlinearity=F.relu)
     W_P = x_disc(X_P, nonlinearity=F.relu)
     U_Q = z_disc(Z_Q, nonlinearity=F.relu)

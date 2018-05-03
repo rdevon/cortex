@@ -318,6 +318,12 @@ class DataHandler(object):
             Dist = torch.distributions.chi2.Chi2
         elif dist == 'dirichlet':
             Dist = torch.distributions.dirichlet.Dirichlet
+            conc = kwargs.pop('concentration', 1.)
+            conc_tr, = expand_train(conc)
+            conc_te, = expand_test(conc)
+            var = Dist(conc_tr, **kwargs)
+            var_t = Dist(conc_te, **kwargs)
+
         elif dist == 'exponential':
             Dist = torch.distributions.exponential.Exponential
         elif dist == 'fishersnedecor':
@@ -328,16 +334,16 @@ class DataHandler(object):
             Dist = torch.distributions.geometric.Geometric
         elif dist == 'gumbel':
             Dist = torch.distributions.gumbel.Gumbel
-            loc = kwargs.get('loc', 0)
-            scale = kwargs.get('scale', 1)
+            loc = kwargs.pop('loc', 0)
+            scale = kwargs.pop('scale', 1)
         elif dist == 'laplace':
             Dist = torch.distributions.laplace.Laplace
-            loc = kwargs.get('loc', 0)
-            scale = kwargs.get('scale', 1)
+            loc = kwargs.pop('loc', 0)
+            scale = kwargs.pop('scale', 1)
         elif dist == 'log_normal':
             Dist = torch.distributions.log_normal.LogNormal
-            loc = kwargs.get('loc', 0)
-            scale = kwargs.get('scale', 1)
+            loc = kwargs.pop('loc', 0)
+            scale = kwargs.pop('scale', 1)
         elif dist == 'multinomial':
             Dist = torch.distributions.multinomial.Multinomial
         elif dist == 'multivariate_normal':

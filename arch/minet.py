@@ -36,11 +36,11 @@ def setup(model=None, data=None, routines=None, **kwargs):
 
 
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_measure=None, noise_type='hypercubes',
-                    output_nonlin=False, generator_loss_type=None, **kwargs):
+                    output_nonlin=False, generator_loss_type=None, key='discriminator', **kwargs):
     X_P, X_Q, T, Y_P, U = data.get_batch('1.images', '2.images', '1.targets', 'y', 'u')
 
     Z_P, Z, Y_Q = encode(models, X_P, Y_P, output_nonlin=output_nonlin, noise_type=noise_type)
-    E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure)
+    E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure, key=key)
     E_pos_KL, E_neg_KL, _, _ = score(models, X_P, X_Q, Z, Z, 'KL')
     E_pos_DV, E_neg_DV, _, _ = score(models, X_P, X_Q, Z, Z, 'DV')
 
@@ -138,8 +138,8 @@ DEFAULT_CONFIG = dict(
     optimizer=dict( optimizer='Adam', learning_rate=1e-4),
     model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, match_noise=False, use_topnet=False,
                encoder_args=None),
-    routines=dict(discriminator=dict(measure='JSD', penalty_amount=0.5),
-                  noise_discriminator=dict(measure='JSD', penalty_amount=0.5, noise_type='hypercubes', noise='uniform'),
+    routines=dict(discriminator=dict(measure='JSD', penalty_amount=0.2),
+                  noise_discriminator=dict(measure='JSD', penalty_amount=0.2, noise_type='hypercubes', noise='uniform'),
                   encoder=dict(generator_loss_type='non-saturating'),
                   nets=dict()),
     train=dict(epochs=2000, archive_every=10)

@@ -58,7 +58,7 @@ def main_routine(data, models, losses, results, viz, measure=None, noise_type='h
 
     X_R = decode(models, Z_Q)
     X_G = decode(models, Z_P)
-    reconstruction_loss = F.mse_loss(X_R, X_P)
+    reconstruction_loss = F.mse_loss(X_R, X_P) / X_P.size(0)
     encoder_loss = generator_loss(Q_samples, measure, loss_type=generator_loss_type)
     losses.update(autoencoder=encoder_loss + reconstruction_loss)
     results.update(reconstruction_loss=reconstruction_loss.item(), gan_loss=encoder_loss.item())
