@@ -56,6 +56,7 @@ def make_argument_parser():
                         help=('Arguments for the main file'))
     parser.add_argument('-S', '--source', type=str, default=None,
                         help='Dataset (location (full path) or name).')
+    parser.add_argument('-C', '--copy_to_local', action='store_true', default=False)
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
                         help=('Configuration yaml file. '
@@ -67,6 +68,59 @@ def make_argument_parser():
                         help='Verbosity of the logging. (0, 1, 2)')
     parser.add_argument('-t', '--test', action='store_true', default=False)
     return parser
+
+
+class Handler(dict):
+    '''
+    Simple dict-like container with support for `.` access
+    Note: some of the functionalty might not work correctly as a dict, but so far simple tests pass.
+    '''
+
+    __delattr__ = dict.__delitem__
+    _protected = dir({})
+    _type = None
+    _get_error_string = 'Keyword `{}` not found (add as a dict entry). Found: {}'
+
+
+    def check_key_value(self, k, v):
+        if k in self._protected:
+            raise KeyError('Keyword `{}` is protected.'.format(k))
+
+        if self._type and not isinstance(v, self._type):
+            raise ValueError('Type `{}` of `{}` not allowed. Only `{}` and subclasses are supported'.format(
+                type(v), k, self._type))
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            self.check_key_value(k, v)
+        super().__init__(**kwargs)
+
+    def __setitem__(self, k, v):
+        self.check_key_value(k, v)
+        super().__setitem__(k, v)
+
+    def __setattr__(self, k, v):
+        self.__setitem__(k, v)
+
+    def __getattr__(self, k):
+        v = super().get(k)
+        if v is None:
+            raise AttributeError(self._get_error_string.format(k, tuple(self.keys())))
+        return v
+
+    def update(self, **kwargs):
+        for k, v in kwargs.items():
+            self.check_key_value(k, v)
+        super().update(**kwargs)
+
+
+def convert_nested_dict_to_handler(d, _class=Handler):
+    if not isinstance(d, dict):
+        return d
+    for k, v in d.items():
+        d[k] = convert_nested_dict_to_handler(v)
+
+    return _class(**d)
 
 
 def update_dict_of_lists(d_to_update, **d):

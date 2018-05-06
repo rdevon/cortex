@@ -12,11 +12,6 @@ from .utils import cross_correlation
 from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
 
 
-def setup(model=None, data=None, routines=None, **kwargs):
-    data['noise_variables']['z']['size'] = model['dim_z']
-    routines['generator']['measure'] = routines['discriminator']['measure']
-
-
 def apply_penalty(models, losses, results, X, Z, penalty_amount, key='discriminator'):
     x_disc, z_disc, topnet = models[key]
     if penalty_amount:
@@ -24,17 +19,21 @@ def apply_penalty(models, losses, results, X, Z, penalty_amount, key='discrimina
         Z = Z.detach()
         X.requires_grad_()
         Z.requires_grad_()
-        W = x_disc(X, nonlinearity=F.relu)
-        U = z_disc(Z, nonlinearity=F.relu)
-        S = topnet(torch.cat([W, U], 1))
+
+        with torch.set_grad_enabled(True):
+            W = x_disc(X, nonlinearity=F.relu)
+            U = z_disc(Z, nonlinearity=F.relu)
+            S = topnet(torch.cat([W, U], 1))
 
         G = autograd.grad(outputs=S, inputs=[X, Z], grad_outputs=torch.ones(S.size()).cuda(),
                             create_graph=True, retain_graph=True, only_inputs=True)[0]
 
         G = G.view(G.size()[0], -1)
         G = (G ** 2).sum(1).mean()
-        losses[key] += penalty_amount * G
-        results['gradient penalty'] = G.item()
+
+        return penalty_amount * G
+    else:
+        return None
 
 
 def score(models, X_P, X_Q, Z_P, Z_Q, measure, key='discriminator'):
@@ -52,18 +51,20 @@ def score(models, X_P, X_Q, Z_P, Z_Q, measure, key='discriminator'):
 
     return E_pos, E_neg, P_samples, Q_samples
 
-def discriminator_routine(data, models, losses, results, viz, measure=None, penalty_amount=None):
-    X_P, T, Z_Q = data.get_batch('images', 'targets', 'z')
-    encoder, decoder = models['generator']
+# ROUTINES =============================================================================================================
+# Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
-    X_Q = decoder(Z_Q, nonlinearity=F.tanh)
-    Z_P = encoder(X_P)
+def discriminator_routine(data, models, losses, results, viz, measure=None):
+    X_P, T, Z_Q = data.get_batch('images', 'targets', 'z')
+    encoder, decoder = models.generator
+
+    X_Q = decoder(Z_Q, nonlinearity=F.tanh).detach()
+    Z_P = encoder(X_P).detach()
 
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z_P, Z_Q, measure)
     difference = E_pos - E_neg
 
-    losses.update(discriminator=-difference)
-    apply_penalty(models, losses, results, X_P, Z_P, penalty_amount)
+    losses.discriminator = -difference
 
     results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
     results['{} distance'.format(measure)] = difference.item()
@@ -72,9 +73,20 @@ def discriminator_routine(data, models, losses, results, viz, measure=None, pena
     viz.add_scatter(Z_P, labels=T.data, name='latent values')
 
 
+def penalty_routine(data, models, losses, results, viz, penalty_amount=None):
+    X_P, T, Z_Q = data.get_batch('images', 'targets', 'z')
+    encoder, decoder = models.generator
+
+    Z_P = encoder(X_P).detach()
+    penalty = apply_penalty(models, losses, results, X_P, Z_P, penalty_amount)
+
+    if penalty:
+        losses.discriminator = penalty
+
+
 def generator_routine(data, models, losses, results, viz, measure=None):
     X_P, Z_Q = data.get_batch('images', 'z')
-    encoder, decoder = models['generator']
+    encoder, decoder = models.generator
 
     X_Q = decoder(Z_Q, nonlinearity=F.tanh)
     Z_P = encoder(X_P)
@@ -82,7 +94,7 @@ def generator_routine(data, models, losses, results, viz, measure=None):
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z_P, Z_Q, measure)
     difference = E_pos - E_neg
 
-    losses.update(generator=difference)
+    losses.generator = difference
 
 
 def network_routine(data, models, losses, results, viz, encoder_key='generator'):
@@ -97,13 +109,14 @@ def network_routine(data, models, losses, results, viz, encoder_key='generator')
     X_d = decoder(Z_t, nonlinearity=F.tanh)
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
-    losses['nets'] += dd_loss
+    losses.nets += dd_loss
 
     correlations = cross_correlation(Z_P, remove_diagonal=True)
     viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X, name='Ground truth')
     viz.add_image(X_d, name='Reconstruction')
 
+# Bi-directional helper functions ======================================================================================
 
 def build_discriminator(models, x_shape, dim_z, Encoder, key='discriminator', **encoder_args):
     discriminator_args = {}
@@ -124,8 +137,15 @@ def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, dropout=0.1,
     classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, dropout=dropout, batch_norm=True)
     models.update(nets=(classifier, decoder))
 
+# CORTEX ===============================================================================================================
+# Must include `BUILD` and `TRAIN_ROUTINES`
 
-def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
+def SETUP(model=None, data=None, routines=None, **kwargs):
+    data.noise_variables.z.size = model.dim_z
+    routines.generator.measure = routines.discriminator.measure
+
+
+def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
@@ -137,8 +157,8 @@ def build_model(data, models, model_type='convnet', dim_z=64, encoder_args=None,
     build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, **decoder_args)
 
 
-ROUTINES = dict(discriminator=discriminator_routine, generator=generator_routine, nets=network_routine)
-
+TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine,
+                      generator=generator_routine, nets=network_routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
@@ -146,10 +166,11 @@ DEFAULT_CONFIG = dict(
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
-        updates_per_model=dict(discriminator=1, generator=1, nets=1)
+        updates_per_routine=dict(discriminator=1, generator=1, nets=1)
     ),
     model=dict(model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None),
-    routines=dict(discriminator=dict(measure='GAN', penalty_amount=1.0),
+    routines=dict(discriminator=dict(measure='GAN'),
+                  penalty=dict(penalty_amount=0.5),
                   generator=dict(),
                   nets=dict()),
     train=dict(

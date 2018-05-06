@@ -47,8 +47,10 @@ def visualize(viz_inputs, targets, predicted, viz=None, key='classifier'):
     if viz:
         viz.add_image(viz_inputs, labels=(targets, predicted), name=key + '_gt_pred')
 
+# CORTEX ===============================================================================================================
+# Must include `BUILD` and `TRAIN_ROUTINES`
 
-def build_model(data, models, model_type='convnet', dropout=0.2, classifier_args=None):
+def BUILD(data, models, model_type='convnet', dropout=0.2, classifier_args=None):
     classifier_args = classifier_args or {}
     shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
@@ -74,18 +76,11 @@ def build_model(data, models, model_type='convnet', dropout=0.2, classifier_args
     models.update(classifier=classifier)
 
 
-ROUTINES = dict(classifier=routine)
-
+TRAIN_ROUTINES = dict(classify=routine)
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=128),
-    optimizer=dict(
-        optimizer='Adam',
-        learning_rate=1e-4,
-    ),
+    optimizer=dict(optimizer='Adam', learning_rate=1e-4),
     model=dict(dropout=0.2, model_type='convnet'),
     routines=dict(criterion=nn.CrossEntropyLoss()),
-    train=dict(
-        epochs=200,
-        archive_every=10
-    )
+    train=dict(epochs=200, archive_every=10)
 )

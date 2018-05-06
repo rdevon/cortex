@@ -7,9 +7,10 @@ import logging
 import sys
 import os
 
+import torch.nn as nn
+
 from .config import ARCH_PATHS
-from .data import DATA_HANDLER
-from . import exp
+from .utils import Handler
 
 
 logger = logging.getLogger('cortex.models')
@@ -21,7 +22,42 @@ ARCHS = dict()
 ARCH = None
 
 
+class ModelHandler(Handler):
+    '''
+    Simple dict-like container for nn.Module's
+    '''
+
+    _type = nn.Module
+    _get_error_string = 'Model `{}` not found. You must add it in `build_models` (as a dict entry). Found: {}'
+
+    def check_key_value(self, k, v):
+        if k in self._protected:
+            raise KeyError('Keyword `{}` is protected.'.format(k))
+
+        if isinstance(v, (list, tuple)):
+            for v_ in v:
+                self.check_key_value(k, v_)
+        elif self._type and not isinstance(v, self._type):
+            raise ValueError('Type `{}` of `{}` not allowed. Only `{}` and subclasses (or tuples of {}) are supported'.format(
+                type(v), k, self._type, self._type))
+
+
+def setup(arch):
+    global ARCH
+    logger.info('Using architecture `{}`'.format(arch))
+    ARCH = ARCHS.get(arch, None)
+    if ARCH is None:
+        raise ValueError('Arch not found ({}). Did you register it? '
+                         'Available: {}'.format(
+            arch, ARCHS.keys()))
+    return ARCH
+
+
 def add_directory(p, name):
+    '''
+    Adds custom directories to the framwework
+    '''
+
     global ARCHS
 
     if p.endswith('/'):
@@ -43,10 +79,10 @@ def add_directory(p, name):
                 pass
             elif not hasattr(m, 'DEFAULT_CONFIG'):
                 logger.warning('Architecture (module) {} lacks `DEFAULT_CONFIG` dictionary, skipping'.format(fnp))
-            elif not hasattr(m, 'build_model'):
-                logger.warning('Architecture (module) {} lacks `build_model` method, skipping'.format(fnp))
-            elif not hasattr(m, 'ROUTINES'):
-                logger.warning('Architecture (module) {} lacks `ROUTINES` dictionary, skipping'.format(fnp))
+            elif not hasattr(m, 'BUILD'):
+                logger.warning('Architecture (module) {} lacks `BUILD` method, skipping'.format(fnp))
+            elif not hasattr(m, 'TRAIN_ROUTINES'):
+                logger.warning('Architecture (module) {} lacks `TRAIN_ROUTINES` dictionary, skipping'.format(fnp))
             elif name in ARCHS.keys():
                 logger.warning('Architecture (module) {} has the same name '
                                '(and path structure) as another architecture, skipping'.format(name))
@@ -63,18 +99,7 @@ for k, p in ARCH_PATHS.items():
     add_directory(p, k)
 
 
-def setup(arch):
-    global ARCH
-    logger.info('Using architecture `{}`'.format(arch))
-    ARCH = ARCHS.get(arch, None)
-    if ARCH is None:
-        raise ValueError('Arch not found ({}). Did you register it? '
-                         'Available: {}'.format(
-            arch, ARCHS.keys()))
-    return ARCH
-
-
-def setup_model(**model_args):
+def setup_model(data_handler, **model_args):
     '''Builds the generator and discriminator.
 
     If architecture module contains a `build_model` function, use that,
@@ -82,9 +107,17 @@ def setup_model(**model_args):
 
     '''
 
-    models = dict()
+    models = ModelHandler()
     logger.debug('Model args: {}'.format(model_args))
 
-    getattr(ARCH, 'build_model')(DATA_HANDLER, models, **model_args)
+    getattr(ARCH, 'BUILD')(data_handler, models, **model_args)
+    train_routines = ARCH.TRAIN_ROUTINES
+    if hasattr(ARCH, 'TEST_ROUTINES'):
+        test_routines = ARCH.TEST_ROUTINES
+        for k in train_routines:
+            if not k in test_routines:
+                test_routines[k] = train_routines[k]
+    else:
+        test_routines = train_routines
 
-    exp.setup(models, ARCH.ROUTINES)
+    return models, train_routines, test_routines

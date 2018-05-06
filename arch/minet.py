@@ -11,16 +11,8 @@ from .classifier import classify
 from .featnet import (apply_gradient_penalty, build_encoder, build_discriminator as build_noise_discriminator, encode,
                       get_results, score as featnet_score, shape_noise, visualize)
 from .gan import generator_loss
-from .utils import cross_correlation
+from .utils import cross_correlation, ms_ssim
 from .vae import update_decoder_args, update_encoder_args
-
-
-resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-resnet_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7)
-mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
-convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
-convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 
 def setup(model=None, data=None, routines=None, **kwargs):
@@ -36,16 +28,13 @@ def setup(model=None, data=None, routines=None, **kwargs):
 
 
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_measure=None, noise_type='hypercubes',
-                    output_nonlin=False, generator_loss_type=None, key='discriminator', **kwargs):
+                    output_nonlin=False, generator_loss_type=None, beta=None, key='discriminator', **kwargs):
     X_P, X_Q, T, Y_P, U = data.get_batch('1.images', '2.images', '1.targets', 'y', 'u')
 
     Z_P, Z, Y_Q = encode(models, X_P, Y_P, output_nonlin=output_nonlin, noise_type=noise_type)
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure, key=key)
-    E_pos_KL, E_neg_KL, _, _ = score(models, X_P, X_Q, Z, Z, 'KL')
-    E_pos_DV, E_neg_DV, _, _ = score(models, X_P, X_Q, Z, Z, 'DV')
 
     losses.update(encoder=E_neg - E_pos)
-    results.update(Mutual_Information=dict(DV=(E_pos_DV-E_neg_DV).mean().item(),KL=(E_pos_KL-E_neg_KL).mean().item()))
     get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=results)
     visualize(Z, P_samples, Q_samples, X_P, T, Y_Q=Y_Q, viz=viz)
 
@@ -57,7 +46,7 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_meas
         get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n, noise_measure, results={})
         results_ = dict(('noise_' + k, v) for k, v in results_.items())
         results.update(**results_)
-        losses['encoder'] += generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
+        losses['encoder'] += beta * generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
 
 
 def discriminator_routine(data, models, losses, results, viz, measure=None, penalty_amount=None, output_nonlin=False,
@@ -101,6 +90,8 @@ def network_routine(data, models, losses, results, viz):
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
     losses['nets'] += dd_loss
+    msssim = ms_ssim(X, X_d).item()
+    results.update(reconstruction_loss=dd_loss.item(), ms_ssim=msssim)
 
     correlations = cross_correlation(Z_P, remove_diagonal=True)
     viz.add_heatmap(correlations.data, name='latent correlations')
@@ -122,25 +113,25 @@ def build_model(data, models, model_type='convnet', dim_embedding=None, dim_nois
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
     build_discriminator(models, x_shape, dim_embedding, Encoder, **encoder_args)
-    build_encoder(models, x_shape, dim_noise, Encoder, use_topnet=use_topnet, dim_top=dim_noise, **encoder_args)
+    build_encoder(models, x_shape, dim_noise, Encoder, fully_connected_layers=[1028], use_topnet=use_topnet,
+                  dim_top=dim_noise, **encoder_args)
     build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
 
     if match_noise:
         build_noise_discriminator(models, dim_d, key='noise_discriminator')
 
 
-ROUTINES = dict(discriminator=discriminator_routine, noise_discriminator=noise_discriminator_routine,
-                encoder=encoder_routine, nets=network_routine)
-
+TRAIN_ROUTINES = dict(discriminator=discriminator_routine, noise_discriminator=noise_discriminator_routine,
+                      ncoder=encoder_routine, nets=network_routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1028), duplicate=2),
     optimizer=dict( optimizer='Adam', learning_rate=1e-4),
     model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, match_noise=False, use_topnet=False,
                encoder_args=None),
-    routines=dict(discriminator=dict(measure='JSD', penalty_amount=0.2),
+    routines=dict(discriminator=dict(measure='JSD', penalty_amount=0.5),
                   noise_discriminator=dict(measure='JSD', penalty_amount=0.2, noise_type='hypercubes', noise='uniform'),
-                  encoder=dict(generator_loss_type='non-saturating'),
+                  encoder=dict(generator_loss_type='non-saturating', beta=1.0),
                   nets=dict()),
     train=dict(epochs=2000, archive_every=10)
 )

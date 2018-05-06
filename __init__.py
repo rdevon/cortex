@@ -12,7 +12,7 @@ import torch
 
 from lib import config, models, exp
 from lib.log_utils import set_file_logger, set_stream_logger
-from lib.utils import make_argument_parser
+from lib.utils import convert_nested_dict_to_handler, Handler, make_argument_parser
 from lib.viz import init as viz_init
 
 
@@ -99,6 +99,18 @@ def update_args(args, **kwargs):
                         kw[k_] = v
 
 
+def undeprecate(data=None, model=None, optimizer=None, routines=None, test_routines=None, train=None):
+    if 'noise_variables' in data:
+        for k, v in data['noise_variables'].items():
+            if isinstance(v, tuple):
+                DeprecationWarning('Old-stype tuple found in noise argument. Converting.')
+                data['noise_variables'][k] = dict(dist=v[0], size=v[1])
+
+    if 'updates_per_model' in optimizer:
+        DeprecationWarning('Old-stype `updates_per_model` found. Use `updates_per_routine`')
+        optimizer['updates_per_routine'] = optimizer.pop('updates_per_model')
+
+
 def setup_reload(arch, use_cuda, exp_file):
     exp.USE_CUDA = use_cuda
 
@@ -135,7 +147,9 @@ def reload_experiment(args):
     exp.INFO.update(**d['info'])
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
-    exp.ARGS.update(**d['args'])
+    kwargs = convert_nested_dict_to_handler(d['args'])
+    undeprecate(**kwargs)
+    exp.ARGS.update(**kwargs)
     reloads = reloads or d['models'].keys()
     for k in reloads:
         exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
@@ -151,21 +165,29 @@ def reload_experiment(args):
 
 
 def setup(use_cuda):
+
+    # Parse args and set logger, cuda
     parser = make_argument_parser()
     args = parser.parse_args()
     set_stream_logger(args.verbosity)
     exp.USE_CUDA = use_cuda
-
     if exp.USE_CUDA:
         logger.info('Using GPU')
     else:
         logger.info('Using CPU')
 
+    # Setup file paths
     config_file_path = path.join(path.dirname(
         path.abspath(__file__)), 'config.yaml')
     if not path.isfile(config_file_path): config_file_path = None
+
+    # User config
     config.update_config(config_file_path)
+
+    # Initialize visualizer
     viz_init()
+
+    # Set up the architecture, build the models
     arch = models.setup(args.arch)
 
     if args.reload:
@@ -181,6 +203,7 @@ def setup(use_cuda):
         for k, v in arch.DEFAULT_CONFIG.items():
             kwargs[k] = {}
             kwargs[k].update(**v)
+        kwargs = convert_nested_dict_to_handler(kwargs)
 
         if 'test_routines' not in kwargs.keys():
             kwargs['test_routines'] = {}
@@ -197,7 +220,24 @@ def setup(use_cuda):
         exp.ARGS.update(**kwargs)
         setup_out_dir(args.out_path, name, clean=args.clean)
 
-    if hasattr(arch, 'setup'):
-        getattr(arch, 'setup')(**exp.ARGS)
+    if hasattr(arch, 'SETUP'):
+        getattr(arch, 'SETUP')(**exp.ARGS)
+
+    if hasattr(arch, 'DataLoader'):
+        DataLoader = getattr(arch, 'DataLoader')
+        logger.info('Loading custom DataLoader class, {}'.format(DataLoader))
+        exp.ARGS['data']['DataLoader'] = DataLoader
+
+    if hasattr(arch, 'Dataset'):
+        Dataset = getattr('Dataset')
+        logger.info('Loading custom Dataset class, {}'.format(Dataset))
+        exp.ARGS['data']['Dataset'] = Dataset
+
+    if hasattr(arch, 'transform'):
+        transform = getattr('transform')
+        logger.info('Loading custom transform function, {}'.format(transform))
+        exp.ARGS['data']['transform'] = transform
+
+    exp.ARGS['data']['copy_to_local'] = args.copy_to_local
 
     exp.ARGS['train']['test_mode'] = args.test

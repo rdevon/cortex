@@ -2,6 +2,11 @@
 
 '''
 
+import sys
+if sys.version_info < (3, 0):
+    sys.stdout.write('Cortex requires Python 3.x, Python 2.x not supported\n')
+    sys.exit(1)
+
 import logging
 
 from __init__ import setup, setup_reload
@@ -30,7 +35,10 @@ def main(eval_mode=False):
     print_section('MODEL') #####################################################
     logger.info('Building model...')
     logger.info('Model args: {}'.format(model_args))
-    setup_model(**model_args)
+    models, train_routines, test_routines = setup_model(DATA_HANDLER, **model_args)
+
+    print_section('EXPERIMENT')
+    exp.setup(models, train_routines, test_routines)
 
     print_section('OPTIMIZER') #################################################
     setup_optimizer(**optimizer_args)

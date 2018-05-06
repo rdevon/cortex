@@ -10,7 +10,7 @@ logger = logging.getLogger('cortex')
 logger.propagate = False
 
 file_formatter = logging.Formatter(
-    '%(asctime)s:%(name)s[%(levelname)s]:%(message)s\n')
+    '%(asctime)s:%(name)s[%(levelname)s]: %(message)s\n')
 stream_formatter = logging.Formatter(
     '[%(levelname)s:%(name)s]:%(message)s' + ' ' * 40 + '\n')
 

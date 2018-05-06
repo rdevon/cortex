@@ -23,9 +23,10 @@ INFO = {'name': NAME, 'epoch': 0}
 MODEL_PARAMS_RELOAD = {}
 
 # Models criteria and results
-MODELS = {}
+MODEL_HANDLER = None
 CRITERIA = {}
-ROUTINES = {}
+TRAIN_ROUTINES = {}
+TEST_ROUTINES = {}
 
 
 def file_string(prefix=''):
@@ -65,7 +66,7 @@ def save(prefix=''):
         return
 
     models = {}
-    for k, model in MODELS.items():
+    for k, model in MODEL_HANDLER.items():
         if k == 'extras':
             continue
         if isinstance(model, (tuple, list)):
@@ -89,21 +90,23 @@ def save(prefix=''):
     torch.save(state, file_path)
 
 
-def setup(models, routines):
-    global MODELS, ROUTINES
+def setup(models, train_routines, test_routines):
+    global MODEL_HANDLER, TRAIN_ROUTINES, TEST_ROUTINES
 
-    MODELS.update(**models)
-    ROUTINES.update(**routines)
+    MODEL_HANDLER = models
+    TRAIN_ROUTINES.update(**train_routines)
+    TEST_ROUTINES.update(**test_routines)
 
     if MODEL_PARAMS_RELOAD:
         reload_models()
 
 
 def reload_models():
-    global MODELS
-    for k in MODELS.keys():
-        v_ = MODEL_PARAMS_RELOAD.get(k, None)
-        if v_:
-            logger.info('Reloading model {}'.format(k))
-            logger.debug(v_)
-            MODELS[k] = v_
+    global MODEL_HANDLER
+    if MODEL_HANDLER is None:
+        raise RuntimeError('MODEL_HANDLER not set. `reload_models` should only be used after '
+                           '`models.setup_models` has been called.')
+    for k, v in MODEL_PARAMS_RELOAD.items():
+        logger.info('Reloading model {}'.format(k))
+        logger.debug(v)
+        MODEL_HANDLER[k] = v

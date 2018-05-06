@@ -2,7 +2,10 @@
 
 '''
 
+import copy
 import logging
+import shutil
+import signal
 import os
 from os import path
 
@@ -20,19 +23,6 @@ from . import config, exp
 
 
 logger = logging.getLogger('cortex.data')
-
-_default_normalization = {
-    'MNIST': [(0.5,), (0.5,)],
-    'Fashion-MNIST': [(0.5,), (0.5,)],
-    'EMNIST': [(0.5,), (0.5,)],
-    'PhotoTour': [(0.5,), (0.5,)],
-    'Imagenet-12': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
-    'LSUN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
-    'SVHN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
-    'CIFAR10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
-    'CIFAR100': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
-    'STL10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
-}
 
 IMAGE_SCALE = [0, 1]
 
@@ -93,37 +83,52 @@ class CelebA(torchvision.datasets.ImageFolder):
         zip_ref.close()
 
 
-def make_transform(source, normalize=True, image_crop=None, image_size=None, isfolder=False):
+def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None):
+    default_normalization = {
+        'MNIST': [(0.5,), (0.5,)],
+        'Fashion-MNIST': [(0.5,), (0.5,)],
+        'EMNIST': [(0.5,), (0.5,)],
+        'PhotoTour': [(0.5,), (0.5,)],
+        'Imagenet-12': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'LSUN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'SVHN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'CIFAR10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'CIFAR100': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'CUB': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'CelebA': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'STL10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
+    }
+
     global IMAGE_SCALE
     transform_ = []
 
-    if isfolder:
-        if source not in ('CelebA', 'CUB'):
-            transform_.append(transforms.RandomSizedCrop(224))
-        image_size = (64, 64)
-        normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
+    if random_crop:
+        transform_.append(transforms.RandomSizedCrop(random_crop))
+    elif center_crop:
+        transform_.append(transforms.CenterCrop(image_crop))
 
     if image_size:
+        if isinstance(image_size, int):
+            image_size = (image_size, image_size)
         transform_.append(transforms.Resize(image_size))
 
-    if image_crop:
-        transform_.append(transforms.CenterCrop(image_crop))
+    if flip:
+        if isinstance(flip, bool):
+            flip = 0.5
+        torchvision.transforms.RandomVerticalFlip(flip)
 
     transform_.append(transforms.ToTensor())
 
     if normalize and isinstance(normalize, bool):
-        if source in _default_normalization.keys():
-            normalize = _default_normalization[source]
-            if normalize[0] == (0.5, 0.5, 0.5):
-                IMAGE_SCALE = [-1, 1]
-            transform_.append(transforms.Normalize(*normalize))
+        if source in default_normalization.keys():
+            normalize = default_normalization[source]
         else:
             raise ValueError('Default normalization for source {} not found. Please enter custom normalization.'
                              ''.format(source))
-    else:
-        transform_.append(transforms.Normalize(*normalize))
-        if normalize[0] == (0.5, 0.5, 0.5):
-            IMAGE_SCALE = [-1, 1]
+
+    transform_.append(transforms.Normalize(*normalize))
+    if normalize[0] == (0.5, 0.5, 0.5):
+        IMAGE_SCALE = [-1, 1]
 
     transform = transforms.Compose(transform_)
     return transform
@@ -138,13 +143,30 @@ def make_indexing(C):
     return IndexingDataset
 
 
+def copy_to_local_path(from_path):
+    if from_path.endswith('/'):
+        from_path = from_path[:-1]
+    basename = path.basename(from_path)
+    if not config.LOCAL_PATH:
+        raise ValueError('`local_path` not set in `config.yaml`. Set this path if you want local copying.')
+    to_path = path.join(config.LOCAL_PATH, basename)
+    if ((not path.exists(to_path)) and path.exists(from_path)):
+        logger.info('Copying {} to {}'.format(from_path, to_path))
+        if path.isdir(from_path):
+            shutil.copytree(from_path, to_path)
+        else:
+            shutil.copy(from_path, config.LOCAL_PATH)
+
+    return to_path
+
+
 class DataHandler(object):
     def __init__(self):
         self.dims = {}
         self.input_names = {}
         self.noise = {}
         self.loaders = {}
-        self.batch = {}
+        self.batch = None
         self.noise = {}
         self.iterator = {}
         self.sources = []
@@ -160,91 +182,106 @@ class DataHandler(object):
             self.batch_size['test'] = self.batch_size['train']
         self.skip_last_batch = skip_last_batch
 
-    def add_dataset(self, source, test_on_train, n_workers=4, duplicate=None, **source_args):
-        if path.isdir(source):
-            logger.info('Using train set as testing set. For more options, use `data_paths` in `config.yaml`')
+    def add_dataset(self, source, test_on_train, n_workers=4, duplicate=None, shuffle=True, copy_to_local=False,
+                    DataLoader=None, Dataset=None, transform=None, **transform_args):
+
+        DataLoader = DataLoader or torch.utils.data.DataLoader
+
+        if hasattr(torchvision.datasets, source):
+            # Dataset is in torchvision
+            source_type = 'torchvision'
+            if config.TV_PATH is None:
+                raise ValueError('torchvision dataset must have corresponding torchvision folder specified in '
+                                 '`config.yaml`')
+            Dataset = getattr(torchvision.datasets, source)
+
+            if copy_to_local:
+                copy_to_local_path(path.join(config.TV_PATH, source))
+                base_path = config.LOCAL_PATH
+            else:
+                base_path = config.TV_PATH
+
+            train_path = path.join(base_path, source)
+            test_path = train_path
+        elif source in config.DATA_PATHS:
+            # Dataset is specified in config.DATA_PATHS
             source_type = 'folder'
-            dataset = torchvision.datasets.ImageFolder
+            data_path = config.DATA_PATHS[source]
+            if isinstance(data_path, dict):
+                train_path = data_path['train']
+                test_path = data_path['test']
+                if copy_to_local:
+                    train_path = copy_to_local_path(train_path)
+                    test_path = copy_to_local_path(test_path)
+            elif isinstance(data_path, (tuple, list)):
+                train_path, test_path = data_path
+                if copy_to_local:
+                    train_path = copy_to_local_path(train_path)
+                    test_path = copy_to_local_path(test_path)
+            else:
+                train_path = data_path
+                if copy_to_local:
+                    train_path = copy_to_local_path(train_path)
+                test_path = data_path
+
+        elif path.isdir(source):
+            # Dataset is a path to a folder
+            source_type = 'folder'
+            logger.info('Using train set as testing set. For more options, use `data_paths` in `config.yaml`')
+            Dataset = Dataset or torchvision.datasets.ImageFolder
             train_path = source
             test_path = source
-        elif hasattr(torchvision.datasets, source):
-            source_type = 'torchvision'
-
-            if config.TV_PATH is None:
-                raise ValueError(
-                    'torchvision dataset must have corresponding torchvision folder specified in `config.yaml`')
-            train_path = path.join(config.TV_PATH, source)
-            test_path = train_path
         else:
-            if source not in config.DATA_PATHS.keys():
-                raise ValueError('Custom dataset not specified in `config.yaml` data_paths.')
-            if isinstance(config.DATA_PATHS[source], dict):
-                train_path = path.join(config.DATA_PATHS[source]['train'])
-                test_path = path.join(config.DATA_PATHS[source]['test'])
-            else:
-                train_path = path.join(config.DATA_PATHS[source])
-                test_path = path.join(config.DATA_PATHS[source])
-            source_type = 'folder'
+            raise ValueError('Dataset not from torchvision, or is not specified in `config.yaml` data_paths.')
 
-        if source_type == 'torchvision':
-            dataset = getattr(torchvision.datasets, source)
-        elif source_type == 'folder':
-            if source == 'CelebA':
-                dataset = CelebA
-            elif source == 'CUB':
-                dataset = CUB
-            else:
-                dataset = torchvision.datasets.ImageFolder
-
-        transform = make_transform(source, isfolder=(source_type=='folder'), **source_args)
-        self.image_scale = IMAGE_SCALE
-        dataset = make_indexing(dataset)
-
-        output_sources = ['images', 'targets']
-        if source == 'LSUN':
-            train_set = dataset(train_path, classes=['bedroom_train'], transform=transform)
-            if test_on_train:
-                test_set = train_set
-            else:
-                test_set = dataset(test_path, classes=['bedroom_test'], transform=transform)
+        transform = make_transform(source, **transform_args)
+        if source == 'CelebA':
+            Dataset = Dataset or CelebA
+            Dataset = make_indexing(Dataset)
+            train_set = Dataset(root=train_path, transform=transform, download=True)
+            test_set = Dataset(root=test_path, transform=transform)
+            output_sources = ['images', 'targets']
+        elif source == 'CUB':
+            Dataset = Dataset or CUB
+            Dataset = make_indexing(Dataset)
+            train_set = Dataset(root=train_path, transform=transform, split_type='train')
+            test_set = Dataset(root=test_path, transform=transform, split_type='test')
+            output_sources = ['images', 'targets', 'attributes']
         elif source == 'SVHN':
-            train_set = dataset(train_path, split='train', transform=transform, download=True)
-            if test_on_train:
-                test_set = train_set
-            else:
-                test_set = dataset(test_path, split='test', transform=transform, download=True)
+            Dataset = make_indexing(Dataset)
+            train_set = Dataset(train_path, split='train', transform=transform, download=True)
+            test_set = Dataset(test_path, split='test', transform=transform, download=True)
+            output_sources = ['images', 'targets']
+        elif source == 'LSUN':
+            Dataset = make_indexing(Dataset)
+            train_set = Dataset(train_path, classes=['bedroom_train'], transform=transform)
+            test_set = Dataset(test_path, classes=['bedroom_test'], transform=transform)
+            output_sources = ['images', 'targets']
         elif source_type == 'folder':
-            if source == 'CelebA':
-                train_set = dataset(root=train_path, transform=transform, download=True)
-            elif source == 'CUB':
-                output_sources += ['attributes']
-                train_set = dataset(root=train_path, transform=transform, split_type='train')
-            else:
-                train_set = dataset(root=train_path, transform=transform)
-            if test_on_train:
-                test_set = train_set
-            else:
-                if source == 'CUB':
-                    test_set = dataset(root=test_path, transform=transform, split_type='test')
-                else:
-                    test_set = dataset(root=test_path, transform=transform)
-        elif source_type == 'hdf5':
-            train_set = dataset(train_path, train=True, transform=transform)
-            test_set = dataset(train_path, train=True, transform=transform)
+            Dataset = make_indexing(Dataset)
+            train_set = Dataset(root=train_path, transform=transform)
+            test_set = Dataset(root=test_path, transform=transform)
+            output_sources = ['images', 'targets']
         else:
-            train_set = dataset(root=train_path, train=True, download=True, transform=transform)
-            if test_on_train:
-                test_set = train_set
-            else:
-                test_set = dataset(root=test_path, train=False, download=True, transform=transform)
+            Dataset = make_indexing(Dataset)
+            train_set = Dataset(root=train_path, train=True, download=True, transform=transform)
+            test_set = Dataset(root=test_path, train=False, download=True, transform=transform)
+            output_sources = ['images', 'targets']
+
+        output_sources += ['index']
+
+        if test_on_train:
+            test_set = copy.deepcopy(train_set)
+
+        self.image_scale = IMAGE_SCALE # A bit of a hack. Needs to be fixed.
 
         N_train = len(train_set)
         N_test = len(test_set)
 
-        train_loader = torch.utils.data.DataLoader(train_set, batch_size=self.batch_size['train'], shuffle=True,
-                                                   num_workers=n_workers)
-        test_loader = torch.utils.data.DataLoader(test_set, batch_size=self.batch_size['test'], shuffle=True,
-                                                  num_workers=n_workers)
+        train_loader = DataLoader(train_set, batch_size=self.batch_size['train'], shuffle=shuffle, num_workers=n_workers,
+                                  worker_init_fn=lambda x: signal.signal(signal.SIGINT, signal.SIG_IGN))
+        test_loader = DataLoader(test_set, batch_size=self.batch_size['test'], shuffle=shuffle, num_workers=n_workers,
+                                 worker_init_fn=lambda x: signal.signal(signal.SIGINT, signal.SIG_IGN))
 
         if source_type == 'folder':
             for sample in train_loader:
@@ -271,18 +308,17 @@ class DataHandler(object):
             dim_a = train_set.attrs.shape[1]
             dims['a'] = dim_a
 
+        logger.debug('Data has the following dimensions: {}'.format(dims))
         if not duplicate:
             self.dims[source] = dims
-            logger.debug('Data has the following dimensions: {}'.format(self.dims[source]))
-            self.input_names[source] = output_sources + ['index']
+            self.input_names[source] = output_sources
             self.loaders.update(**{source: dict(train=train_loader, test=test_loader)})
             self.sources.append(source)
         else:
             for i in range(duplicate):
                 source_ = source + '_{}'.format(i)
                 self.dims[source_] = dims
-                logger.debug('Data has the following dimensions: {}'.format(self.dims[source_]))
-                self.input_names[source_] = output_sources + ['index']
+                self.input_names[source_] = output_sources
                 self.loaders.update(**{source_: dict(train=train_loader, test=test_loader)})
                 self.sources.append(source_)
 
@@ -306,16 +342,22 @@ class DataHandler(object):
 
         if dist == 'bernoulli':
             Dist = torch.distributions.bernoulli.Bernoulli
+            raise NotImplementedError(dist)
         elif dist == 'beta':
             Dist = torch.distributions.beta.Beta
+            raise NotImplementedError(dist)
         elif dist == 'binomial':
             Dist = torch.distributions.binomial.Binomial
+            raise NotImplementedError(dist)
         elif dist == 'categorical':
             Dist = torch.distributions.categorical.Categorical
+            raise NotImplementedError(dist)
         elif dist == 'cauchy':
             Dist = torch.distributions.cauchy.Cauchy
+            raise NotImplementedError(dist)
         elif dist == 'chi2':
             Dist = torch.distributions.chi2.Chi2
+            raise NotImplementedError(dist)
         elif dist == 'dirichlet':
             Dist = torch.distributions.dirichlet.Dirichlet
             conc = kwargs.pop('concentration', 1.)
@@ -323,31 +365,39 @@ class DataHandler(object):
             conc_te, = expand_test(conc)
             var = Dist(conc_tr, **kwargs)
             var_t = Dist(conc_te, **kwargs)
-
         elif dist == 'exponential':
             Dist = torch.distributions.exponential.Exponential
+            raise NotImplementedError(dist)
         elif dist == 'fishersnedecor':
             Dist = torch.distributions.fishersnedecor.FisherSnedecor
+            raise NotImplementedError(dist)
         elif dist == 'gamma':
             Dist = torch.distributions.gamma.Gamma
+            raise NotImplementedError(dist)
         elif dist == 'geometric':
             Dist = torch.distributions.geometric.Geometric
+            raise NotImplementedError(dist)
         elif dist == 'gumbel':
             Dist = torch.distributions.gumbel.Gumbel
             loc = kwargs.pop('loc', 0)
             scale = kwargs.pop('scale', 1)
+            raise NotImplementedError(dist)
         elif dist == 'laplace':
             Dist = torch.distributions.laplace.Laplace
             loc = kwargs.pop('loc', 0)
             scale = kwargs.pop('scale', 1)
+            raise NotImplementedError(dist)
         elif dist == 'log_normal':
             Dist = torch.distributions.log_normal.LogNormal
             loc = kwargs.pop('loc', 0)
             scale = kwargs.pop('scale', 1)
+            raise NotImplementedError(dist)
         elif dist == 'multinomial':
             Dist = torch.distributions.multinomial.Multinomial
+            raise NotImplementedError(dist)
         elif dist == 'multivariate_normal':
             Dist = torch.distributions.multivariate_normal.MultivariateNormal
+            raise NotImplementedError(dist)
         elif dist == 'normal':
             Dist = torch.distributions.normal.Normal
             loc = kwargs.pop('loc', 0.)
@@ -360,16 +410,22 @@ class DataHandler(object):
 
         elif dist == 'one_hot_categorical':
             Dist = torch.distributions.one_hot_categorical.OneHotCategorical
+            raise NotImplementedError(dist)
         elif dist == 'pareto':
             Dist = torch.distributions.pareto.Pareto
+            raise NotImplementedError(dist)
         elif dist == 'poisson':
             Dist = torch.distributions.poisson.Poisson
+            raise NotImplementedError(dist)
         elif dist == 'relaxed_bernoulli':
             Dist = torch.distributions.relaxed_bernoulli.RelaxedBernoulli
+            raise NotImplementedError(dist)
         elif dist == 'relaxed_categorical':
             Dist = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical
+            raise NotImplementedError(dist)
         elif dist == 'studentT':
             Dist = torch.distributions.studentT.StudentT
+            raise NotImplementedError(dist)
         elif dist == 'uniform':
             Dist = torch.distributions.uniform.Uniform
             low = kwargs.pop('low', 0.)
@@ -459,17 +515,17 @@ class DataHandler(object):
 
     def __getitem__(self, item):
         if self.batch is None:
-            raise KeyError('Batch not set')
+            raise RuntimeError('Batch not set')
 
         if not item in self.batch.keys():
-            raise KeyError('Data with label `{}` not found. Available: {}'.format(item, self.batch.keys()))
+            raise KeyError('Data with label `{}` not found. Available: {}'.format(item, tuple(self.batch.keys())))
         batch = self.batch[item]
 
         return batch
 
     def get_batch(self, *item):
         if self.batch is None:
-            raise KeyError('Batch not set')
+            raise RuntimeError('Batch not set')
 
         batch = []
         for i in item:
@@ -478,7 +534,7 @@ class DataHandler(object):
                 j = int(j)
                 batch.append(self.batch[list(self.batch.keys())[j-1]][i_])
             elif not i in self.batch.keys():
-                raise KeyError('Data with label `{}` not found. Available: {}'.format(i, self.batch.keys()))
+                raise KeyError('Data with label `{}` not found. Available: {}'.format(i, tuple(self.batch.keys())))
             else:
                 batch.append(self.batch[i])
         if len(batch) == 1:

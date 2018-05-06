@@ -48,10 +48,12 @@ class VAE(nn.Module):
         self.latent = self.reparametrize(self.mu, self.std)
         return self.decoder(self.latent, nonlinearity=nonlinearity)
 
+# ROUTINES =============================================================================================================
+# Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
 def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.):
     X, Y, Z = data.get_batch('images', 'targets', 'z')
-    vae_net = models['vae']
+    vae_net = models.vae
 
     outputs = vae_net(X, nonlinearity=F.tanh)
     gen = vae_net.decoder(Z, nonlinearity=F.tanh)
@@ -72,12 +74,13 @@ def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.)
 
 def classifier_routine(data, models, losses, results, viz, **kwargs):
     X, Y = data.get_batch('images', 'targets')
-    vae_net = models['vae']
-    classifier = models['classifier']
+    vae_net = models.vae
+    classifier = models.classifier
 
     vae_net(X, nonlinearity=F.tanh)
     classify(classifier, vae_net.mu, Y, losses=losses, results=results, **kwargs)
 
+# Building helper functions for autoencoders ===========================================================================
 
 def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
     encoder_args = encoder_args or {}
@@ -119,7 +122,7 @@ def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
         raise NotImplementedError(model_type)
 
     decoder_args_.update(**decoder_args)
-    if x_shape[0] == 64:
+    if x_shape[0] >= 64:
         decoder_args_['n_steps'] = 4
     elif x_shape[0] == 128:
         decoder_args_['n_steps'] = 5
@@ -146,9 +149,10 @@ def build_decoder(models, x_shape, dim_in, Decoder, key='decoder', **decoder_arg
 
     return decoder
 
+# CORTEX ===============================================================================================================
+# Must include `BUILD` and `TRAIN_ROUTINES`
 
-def build_model(data, models, model_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args=None,
-                decoder_args=None):
+def BUILD(data, models, model_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args=None, decoder_args=None):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
@@ -163,8 +167,7 @@ def build_model(data, models, model_type='convnet', dim_z=64, dim_encoder_out=10
     models.update(vae=vae, classifier=classifier)
 
 
-ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
-
+TRAIN_ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
               noise_variables=dict(z=dict(dist='normal', size=64))),
