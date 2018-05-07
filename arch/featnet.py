@@ -105,7 +105,7 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_type
 
 
 def discriminator_routine(data, models, losses, results, viz, measure=None, noise_type='hypercubes',
-                          output_nonlin=False):
+                          output_nonlin=False, noise=None):
     X, Y_P, U = data.get_batch('images', 'y', 'u')
     Y_P = shape_noise(Y_P, U, noise_type)
 
@@ -204,7 +204,7 @@ def build_discriminator(models, dim_in, key='discriminator'):
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 def SETUP(model=None, data=None, routines=None, **kwargs):
-    noise = routines.discriminator.pop('noise')
+    noise = routines.discriminator.noise
     noise_type = routines.discriminator.noise_type
     if noise_type in ('unitsphere', 'unitball'):
         noise = 'normal'
@@ -219,7 +219,8 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
 
 
 def BUILD(data, models, model_type='convnet', use_topnet=False, dim_noise=None, dim_embedding=None, encoder_args=None,
-          decoder_args=None):
+          decoder_args=None, add_supervision=False):
+    global TRAIN_ROUTINES, FINISH_TRAIN_ROUTINES, FINISH_TEST_ROUTINES
 
     if not use_topnet:
         dim_embedding = dim_noise
@@ -239,12 +240,16 @@ def BUILD(data, models, model_type='convnet', use_topnet=False, dim_noise=None, 
     build_encoder(models, x_shape, dim_embedding, Encoder, use_topnet=use_topnet, dim_top=dim_noise,
                   fully_connected_layers=[1028], **encoder_args)
     build_discriminator(models, dim_d)
-    build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
+    if add_supervision:
+        build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
+        TRAIN_ROUTINES.update(nets=network_routine)
+        #FINISH_TRAIN_ROUTINES.update(svm=svm_routine_train)
+        #FINISH_TEST_ROUTINES.update(svm=svm_routine_test)
 
-TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine,
-                      encoder=encoder_routine, nets=network_routine)
-FINISH_TRAIN_ROUTINES = dict(svm=svm_routine_train)
-FINISH_TEST_ROUTINES = dict(svm=svm_routine_test)
+
+TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, encoder=encoder_routine)
+FINISH_TRAIN_ROUTINES = dict()
+FINISH_TEST_ROUTINES = dict()
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1028), skip_last_batch=True),
@@ -252,7 +257,8 @@ DEFAULT_CONFIG = dict(
         optimizer='Adam',
         learning_rate=dict(discriminator=1e-4, nets=1e-4, encoder=1e-4),
         updates_per_routine=dict(discriminator=1, nets=1, encoder=1)),
-    model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, encoder_args=None, use_topnet=False),
+    model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, encoder_args=None, use_topnet=False,
+               add_supervision=False),
     routines=dict(discriminator=dict(measure='JSD', noise_type='hypercubes', noise='uniform'),
                   penalty=dict(penalty_amount=0.2),
                   encoder=dict(generator_loss_type='non-saturating', output_nonlin=False),

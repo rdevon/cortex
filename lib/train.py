@@ -73,10 +73,13 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
         raise ValueError('Default optimizer options for `{}` not available.'.format(optimizer))
 
     # Set the number of updates per routine
-    updates_per_routine = updates_per_routine or dict((k, 1) for k in exp.TRAIN_ROUTINES.keys())
+    updates_per_routine = updates_per_routine or {}
+    updates_per_routine = dict((k, (1 if k not in updates_per_routine else updates_per_routine[k]))
+                               for k in exp.TRAIN_ROUTINES)
     for k in list(exp.TRAIN_ROUTINES.keys()) + list(exp.FINISH_TRAIN_ROUTINES.keys()):
         if k not in updates_per_routine:
             updates_per_routine[k] = 1
+
     UPDATES.update(**updates_per_routine)
     TRAIN_FOR = train_for
 
@@ -242,6 +245,7 @@ def set_updates_dict(epoch):
     routines = {}
     routines.update(**exp.TRAIN_ROUTINES)
     routines.update(**exp.FINISH_TRAIN_ROUTINES)
+
     if TRAIN_FOR is not None:
         total_steps = sum(TRAIN_FOR.values())
         step = epoch % total_steps

@@ -145,20 +145,27 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
     routines.generator.measure = routines.discriminator.measure
 
 
-def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None):
+def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None,
+          add_supervision=False):
+    global TRAIN_ROUTINES
+
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
+
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
     encoder = build_encoder(None, x_shape, dim_z, Encoder, fully_connected_layers=[1028], **encoder_args)
     decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
     models.update(generator=(encoder, decoder))
+
     build_discriminator(models, x_shape, dim_z, Encoder, **encoder_args)
-    build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, **decoder_args)
+
+    if add_supervision:
+        build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, **decoder_args)
+        TRAIN_ROUTINES.update(nets=network_routine)
 
 
-TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine,
-                      generator=generator_routine, nets=network_routine)
+TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, generator=generator_routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
@@ -168,13 +175,10 @@ DEFAULT_CONFIG = dict(
         learning_rate=1e-4,
         updates_per_routine=dict(discriminator=1, generator=1, nets=1)
     ),
-    model=dict(model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None),
+    model=dict(model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None, add_supervision=False),
     routines=dict(discriminator=dict(measure='GAN'),
                   penalty=dict(penalty_amount=0.5),
                   generator=dict(),
                   nets=dict()),
-    train=dict(
-        epochs=500,
-        archive_every=10
-    )
+    train=dict(epochs=500, archive_every=10, save_on_best='losses.generator')
 )

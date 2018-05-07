@@ -36,7 +36,7 @@ def decode(models, Z, key='autoencoder'):
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
 def discriminator_routine(data, models, losses, results, viz, measure=None, noise_type='hypercubes',
-                          output_nonlin=False, **kwargs):
+                          output_nonlin=False, noise=None, **kwargs):
     X, Z_P, U = data.get_batch('images', 'y', 'u')
     Z_P = shape_noise(Z_P, U, noise_type)
 

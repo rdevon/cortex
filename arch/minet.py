@@ -41,7 +41,7 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_meas
 
 
 def discriminator_routine(data, models, losses, results, viz, measure=None, penalty_amount=None, output_nonlin=False,
-                          noise_type='hypercubes', **kwargs):
+                          noise_type='hypercubes', noise=None, **kwargs):
     X_P, X_Q, T = data.get_batch('1.images', '2.images', '1.targets')
 
     _, Z, Y_Q = encode(models, X_P, None, output_nonlin=output_nonlin, noise_type=noise_type)
@@ -93,7 +93,7 @@ def network_routine(data, models, losses, results, viz):
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 def SETUP(model=None, data=None, routines=None, **kwargs):
-    noise = routines.noise_discriminator.pop('noise')
+    noise = routines.noise_discriminator.noise
     noise_type = routines.noise_discriminator.noise_type
     if noise_type in ('unitsphere', 'unitball'):
         noise = 'normal'
@@ -106,7 +106,7 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
 
 
 def BUILD(data, models, model_type='convnet', dim_embedding=None, dim_noise=None,
-          encoder_args=None, decoder_args=None, use_topnet=None, match_noise=None):
+          encoder_args=None, decoder_args=None, use_topnet=None, match_noise=None, add_supervision=False):
     global TRAIN_ROUTINES
 
     if not use_topnet:
@@ -123,20 +123,23 @@ def BUILD(data, models, model_type='convnet', dim_embedding=None, dim_noise=None
     build_discriminator(models, x_shape, dim_embedding, Encoder, **encoder_args)
     build_encoder(models, x_shape, dim_noise, Encoder, fully_connected_layers=[1028], use_topnet=use_topnet,
                   dim_top=dim_noise, **encoder_args)
-    build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
 
     if match_noise:
         build_noise_discriminator(models, dim_d, key='noise_discriminator')
         TRAIN_ROUTINES.update(noise_discriminator=noise_discriminator_routine)
 
+    if add_supervision:
+        build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
+        TRAIN_ROUTINES.update(nets=network_routine)
 
-TRAIN_ROUTINES = dict(discriminator=discriminator_routine, encoder=encoder_routine, nets=network_routine)
+
+TRAIN_ROUTINES = dict(discriminator=discriminator_routine, encoder=encoder_routine)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1028), duplicate=2),
     optimizer=dict( optimizer='Adam', learning_rate=1e-4),
     model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, match_noise=False, use_topnet=False,
-               encoder_args=None),
+               encoder_args=None, add_supervision=False),
     routines=dict(discriminator=dict(measure='JSD', penalty_amount=0.5),
                   noise_discriminator=dict(measure='JSD', penalty_amount=0.2, noise_type='hypercubes', noise='uniform'),
                   encoder=dict(generator_loss_type='non-saturating', beta=1.0),

@@ -155,14 +155,15 @@ def network_routine(data, models, losses, results, viz):
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 
-def BUILD(data, models, model_type='convnet', dim_embedding=None, encoder_args=None, decoder_args=None):
+def BUILD(data, models, model_type='convnet', dim_embedding=None, encoder_args=None, decoder_args=None,
+          add_supervision=False):
+    global TRAIN_ROUTINES, TEST_ROUTINES
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
     build_encoder(models, x_shape, dim_embedding, Encoder, fully_connected_layers=[1028], dropout=0.5, **encoder_args)
-    build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
 
     N, M = data.get_dims('n_train', 'n_test')
     C = np.random.normal(size=(N + M, dim_embedding))
@@ -171,14 +172,18 @@ def BUILD(data, models, model_type='convnet', dim_embedding=None, encoder_args=N
 
     models.add_special(assignments=(P, C))
 
+    if add_supervision:
+        TRAIN_ROUTINES.update(nets=network_routine)
+        build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
 
-TRAIN_ROUTINES = dict(encoder=encoder_train_routine, nets=network_routine, assign=assign)
+
+TRAIN_ROUTINES = dict(encoder=encoder_train_routine, assign=assign)
 TEST_ROUTINES = dict(encoder=encoder_test_routine, assign=None)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=64)),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4, train_for=dict(encoder=1, nets=1, assign=1)),
-    model=dict(model_type='convnet', dim_embedding=64, encoder_args=None),
+    model=dict(model_type='convnet', dim_embedding=64, encoder_args=None, add_supervision=False),
     routines=dict(),
     train=dict(epochs=500, archive_every=10, save_on_best='losses.encoder')
 )
