@@ -258,15 +258,18 @@ class DataHandler(object):
             test_set = Dataset(test_path, classes=['bedroom_test'], transform=transform)
             output_sources = ['images', 'targets']
         elif source_type == 'folder':
+            Dataset = Dataset or torchvision.datasets.ImageFolder
             Dataset = make_indexing(Dataset)
             train_set = Dataset(root=train_path, transform=transform)
             test_set = Dataset(root=test_path, transform=transform)
             output_sources = ['images', 'targets']
-        else:
+        elif Dataset:
             Dataset = make_indexing(Dataset)
             train_set = Dataset(root=train_path, train=True, download=True, transform=transform)
             test_set = Dataset(root=test_path, train=False, download=True, transform=transform)
             output_sources = ['images', 'targets']
+        else:
+            raise Exception
 
         output_sources += ['index']
 
