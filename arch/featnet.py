@@ -208,7 +208,7 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
     noise_type = routines.discriminator.noise_type
     if noise_type in ('unitsphere', 'unitball'):
         noise = 'normal'
-    data.noise_variables = dict(y=dict(dist=noise, size=model['dim_noise']),
+    data.noise_variables = dict(y=dict(dist=noise, size=model.dim_noise),
                                 u=dict(dist='uniform', size=1))
 
     routines.encoder.noise_type = routines.discriminator.noise_type

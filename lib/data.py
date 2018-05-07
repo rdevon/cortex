@@ -115,7 +115,7 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
     if flip:
         if isinstance(flip, bool):
             flip = 0.5
-        torchvision.transforms.RandomVerticalFlip(flip)
+        torchvision.transforms.RandomHorizontalFlip()
 
     transform_.append(transforms.ToTensor())
 
