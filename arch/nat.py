@@ -9,7 +9,6 @@ import torch
 from torch import nn
 
 from .ali import build_extra_networks, network_routine as ali_network_routine
-from .gan import apply_gradient_penalty
 from .vae import update_decoder_args, update_encoder_args, build_encoder
 
 
@@ -21,7 +20,7 @@ def make_assignment(P, I_, J_, Z_P, Z_Q, results):
     h_loss = 1 - nn.CosineSimilarity(dim=1, eps=1e-6)(Z_Q_e, Z_P_e)
 
     rows, cols = linear_sum_assignment(h_loss.data.cpu().numpy())
-    P_n = np.zeros((batch_size, batch_size)).astype('int8')
+    P_n = np.zeros((batch_size, batch_size)).astype('byte')
     P_n[rows, cols] = 1
     n_updates = 0
     for ii, i in enumerate(I_):
@@ -43,52 +42,6 @@ def get_embeddings(encoder, X, P, C, I, epsilon=1e-6):
     return Z_P, Z_Q
 
 
-def encoder_train_routine(data, models, losses, results, viz):
-    X, I = data.get_batch('images', 'index')
-    encoder = models['encoder']
-    P, C = models['extras']
-    N = data.get_dims('n_train')
-    P_ = P[:N]
-    I_ = I.data.cpu().numpy()
-    Z_P, Z_Q = get_embeddings(encoder, X, P_, C, I_)
-    e_loss = -nn.CosineSimilarity(dim=1, eps=1e-6)(Z_P, Z_Q).mean()
-
-    losses.update(encoder=e_loss)
-    apply_gradient_penalty(data, models, losses, results, inputs=X, model='encoder', penalty_amount=0.)
-
-
-def encoder_test_routine(data, models, losses, results, viz):
-    X, I = data.get_batch('images', 'index')
-    encoder = models['encoder']
-    P, C = models['extras']
-    N = data.get_dims('n_train')
-    P_ = P[N:]
-    I_ = I.data.cpu().numpy()
-    Z_P, Z_Q = get_embeddings(encoder, X, P_, C, I_)
-    e_loss = -nn.CosineSimilarity(dim=1, eps=1e-6)(Z_P, Z_Q).mean()
-
-    losses.update(encoder=e_loss)
-
-
-def network_routine(data, models, losses, results, viz):
-    ali_network_routine(data, models, losses, results, viz, encoder_key='encoder')
-
-
-def assign_train(data, models, losses, results, viz):
-    X, I = data.get_batch('images', 'index')
-    encoder = models['encoder']
-    P, C = models['extras']
-    N = data.get_dims('n_train')
-    P = P[:N]
-
-    I_ = I.data.cpu().numpy()
-    J_ = P[I_, :].argmax(1)
-
-    Z_P, Z_Q = get_embeddings(encoder, X, P, C, I_)
-
-    make_assignment(P, I_, J_, Z_P, Z_Q, results)
-
-
 def collect_embeddings(data, models, encoder_key='encoder', test=False):
     encoder = models[encoder_key]
     if isinstance(encoder, (list, tuple)):
@@ -97,7 +50,7 @@ def collect_embeddings(data, models, encoder_key='encoder', test=False):
 
     data.reset(test=test, string='Performing assignment... ')
 
-    P, C = models['extras']
+    P, C = models._special.assignments
     N = data.get_dims('n_train')
 
     if test:
@@ -133,8 +86,8 @@ def collect_embeddings(data, models, encoder_key='encoder', test=False):
 
 def assign(data, models, losses, results, viz, batch_size=64):
     N, M = data.get_dims('n_train', 'n_test')
+    P, C = models._special.assignments
 
-    P, C = models['extras']
     ZP_train, ZQ_train, I_train = collect_embeddings(data, models)
     ZP_test, ZQ_test, I_test = collect_embeddings(data, models, test=True)
 
@@ -164,23 +117,43 @@ def assign(data, models, losses, results, viz, batch_size=64):
         pbar.update(b)
     results['n_updates_per_batch'] = np.mean(results['n_updates_per_batch'])
 
+# ROUTINES =============================================================================================================
+# Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
-def assign_test(data, models, losses, results, viz):
+def encoder_train_routine(data, models, losses, results, viz):
     X, I = data.get_batch('images', 'index')
-    encoder = models['encoder']
-    P, C = models['extras']
+    encoder = models.encoder
+    P, C = models._special.assignments
+
     N = data.get_dims('n_train')
-    P = P[N:]
-
+    P_ = P[:N]
     I_ = I.data.cpu().numpy()
-    J_ = P[I_, :].argmax(1)
+    Z_P, Z_Q = get_embeddings(encoder, X, P_, C, I_)
+    e_loss = -nn.CosineSimilarity(dim=1, eps=1e-6)(Z_P, Z_Q).mean()
 
-    Z_P, Z_Q = get_embeddings(encoder, X, P, C, I_)
+    losses.encoder = e_loss
 
-    make_assignment(P, I_, J_, Z_P, Z_Q, results)
+
+def encoder_test_routine(data, models, losses, results, viz):
+    X, I = data.get_batch('images', 'index')
+    encoder = models.encoder
+    P, C = models._special.assignments
+
+    N = data.get_dims('n_train')
+    P_ = P[N:]
+    I_ = I.data.cpu().numpy()
+    Z_P, Z_Q = get_embeddings(encoder, X, P_, C, I_)
+    e_loss = -nn.CosineSimilarity(dim=1, eps=1e-6)(Z_P, Z_Q).mean()
+
+    losses.encoder = e_loss
+
+
+def network_routine(data, models, losses, results, viz):
+    ali_network_routine(data, models, losses, results, viz, encoder_key='encoder')
 
 # CORTEX ===============================================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
+
 
 def BUILD(data, models, model_type='convnet', dim_embedding=None, encoder_args=None, decoder_args=None):
     x_shape = data.get_dims('x', 'y', 'c')
@@ -196,16 +169,16 @@ def BUILD(data, models, model_type='convnet', dim_embedding=None, encoder_args=N
     C = C / np.linalg.norm(C, axis=1, keepdims=True)
     P = np.eye(N + M, dtype='byte')
 
-    models.update(extras=(P, C))
+    models.add_special(assignments=(P, C))
 
 
-TRAIN_ROUTINES = dict(encoder=encoder_train_routine, nets=network_routine, extras=assign)
-TEST_ROUTINES = dict(encoder=encoder_test_routine, extras=None)
+TRAIN_ROUTINES = dict(encoder=encoder_train_routine, nets=network_routine, assign=assign)
+TEST_ROUTINES = dict(encoder=encoder_test_routine, assign=None)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=64)),
-    optimizer=dict(optimizer='Adam', learning_rate=1e-4, train_for=dict(encoder=1, nets=1, extras=1)),
+    optimizer=dict(optimizer='Adam', learning_rate=1e-4, train_for=dict(encoder=1, nets=1, assign=1)),
     model=dict(model_type='convnet', dim_embedding=64, encoder_args=None),
     routines=dict(),
-    train=dict(epochs=500, archive_every=10, save_on_best='nets_accuracy')
+    train=dict(epochs=500, archive_every=10, save_on_best='losses.encoder')
 )

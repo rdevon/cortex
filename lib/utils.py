@@ -99,6 +99,9 @@ class Handler(dict):
         self.check_key_value(k, v)
         super().__setitem__(k, v)
 
+    def unsafe_set(self, k, v):
+        super().__setitem__(k, v)
+
     def __setattr__(self, k, v):
         self.__setitem__(k, v)
 

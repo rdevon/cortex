@@ -472,14 +472,16 @@ def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_valu
                             flattened_results[k + '.' + k_] = v_
                     else:
                         flattened_results[k] = v
-                if save_on_best not in flattened_results:
-                    raise ValueError('`save_on_best` key `{}` not found. Available: {}'.format(
-                        save_on_best, tuple(flattened_results.keys())))
-                current = flattened_results[save_on_best]
-                if not best or current > best:
-                    best = current
-                    print('\nFound best {} (train): {}'.format(save_on_best, best))
-                    exp.save(prefix='best_' + save_on_best)
+                if save_on_best in flattened_results:
+                    # This needs to be fixed. when train_for is set, result keys vary per epoch
+                    #if save_on_best not in flattened_results:
+                    #    raise ValueError('`save_on_best` key `{}` not found. Available: {}'.format(
+                    #        save_on_best, tuple(flattened_results.keys())))
+                    current = flattened_results[save_on_best]
+                    if not best or current > best:
+                        best = current
+                        print('\nFound best {} (train): {}'.format(save_on_best, best))
+                        exp.save(prefix='best_' + save_on_best)
 
             # TESTING
             test_results_ = test_epoch(epoch, vh)
