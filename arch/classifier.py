@@ -48,7 +48,7 @@ def visualize(viz_inputs, targets, predicted, viz=None, key='classifier'):
         viz.add_image(viz_inputs, labels=(targets, predicted), name=key + '_gt_pred')
 
 # CORTEX ===============================================================================================================
-# Must include `BUILD` and `TRAIN_ROUTINES`
+# Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 def BUILD(data, models, model_type='convnet', dropout=0.2, classifier_args=None):
     classifier_args = classifier_args or {}

@@ -201,7 +201,7 @@ def build_discriminator(models, dim_in, key='discriminator'):
     models[key] = discriminator
 
 # CORTEX ===============================================================================================================
-# Must include `BUILD` and `TRAIN_ROUTINES`
+# Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 def SETUP(model=None, data=None, routines=None, **kwargs):
     noise = routines.discriminator.pop('noise')
@@ -243,6 +243,8 @@ def BUILD(data, models, model_type='convnet', use_topnet=False, dim_noise=None, 
 
 TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine,
                       encoder=encoder_routine, nets=network_routine)
+FINISH_TRAIN_ROUTINES = dict(svm=svm_routine_train)
+FINISH_TEST_ROUTINES = dict(svm=svm_routine_test)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1028), skip_last_batch=True),
@@ -252,9 +254,9 @@ DEFAULT_CONFIG = dict(
         updates_per_routine=dict(discriminator=1, nets=1, encoder=1)),
     model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, encoder_args=None, use_topnet=False),
     routines=dict(discriminator=dict(measure='JSD', noise_type='hypercubes', noise='uniform'),
-                  penalty=dict(penalty_amount=1.),
+                  penalty=dict(penalty_amount=0.2),
                   encoder=dict(generator_loss_type='non-saturating', output_nonlin=False),
                   nets=dict(),
-                  final=dict()),
-    train=dict(epochs=500, archive_every=10)
+                  svm=dict()),
+    train=dict(epochs=500, archive_every=10, save_on_best='losses.encoder')
 )

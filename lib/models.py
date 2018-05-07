@@ -120,4 +120,10 @@ def setup_model(data_handler, **model_args):
     else:
         test_routines = train_routines
 
-    return models, train_routines, test_routines
+    finish_train_routines = getattr(ARCH, 'FINISH_TRAIN_ROUTINES', {})
+    finish_test_routines = getattr(ARCH, 'FINISH_TEST_ROUTINES', {})
+
+    routines = dict(train_routines=train_routines, test_routines=test_routines,
+                    finish_train_routines=finish_train_routines, finish_test_routines=finish_test_routines)
+
+    return models, routines

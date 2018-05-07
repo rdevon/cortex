@@ -179,11 +179,10 @@ def assign_test(data, models, losses, results, viz):
 
     make_assignment(P, I_, J_, Z_P, Z_Q, results)
 
+# CORTEX ===============================================================================================================
+# Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
-# ======================================================================================================================
-
-
-def build_model(data, models, model_type='convnet', dim_embedding=None, encoder_args=None, decoder_args=None):
+def BUILD(data, models, model_type='convnet', dim_embedding=None, encoder_args=None, decoder_args=None):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
@@ -195,13 +194,13 @@ def build_model(data, models, model_type='convnet', dim_embedding=None, encoder_
     N, M = data.get_dims('n_train', 'n_test')
     C = np.random.normal(size=(N + M, dim_embedding))
     C = C / np.linalg.norm(C, axis=1, keepdims=True)
-    P = np.eye(N + M, dtype='int8')
+    P = np.eye(N + M, dtype='byte')
 
     models.update(extras=(P, C))
 
 
-ROUTINES = dict(encoder=(encoder_train_routine, encoder_test_routine), nets=network_routine,
-                extras=(assign, None))
+TRAIN_ROUTINES = dict(encoder=encoder_train_routine, nets=network_routine, extras=assign)
+TEST_ROUTINES = dict(encoder=encoder_test_routine, extras=None)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=64)),

@@ -88,7 +88,7 @@ class MNISTConv(nn.Module):
 
 
 class SimpleConvEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, fully_connected_layers=None,
+    def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None,
                  nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4, n_steps=None, **layer_args):
         super(SimpleConvEncoder, self).__init__()
         models = nn.Sequential()
@@ -125,12 +125,6 @@ class SimpleConvEncoder(nn.Module):
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
             models.add_module(name, nn.Linear(dim_in, dim_out))
             finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
-
-        if final_layer:
-            name = 'linear_({}/{})_{}'.format(dim_out, final_layer, 'final')
-            models.add_module(name, nn.Linear(dim_out, final_layer))
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
-            dim_out = final_layer
 
         if dim_out_:
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')

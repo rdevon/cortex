@@ -27,6 +27,8 @@ MODEL_HANDLER = None
 CRITERIA = {}
 TRAIN_ROUTINES = {}
 TEST_ROUTINES = {}
+FINISH_TRAIN_ROUTINES = {}
+FINISH_TEST_ROUTINES = {}
 
 
 def file_string(prefix=''):
@@ -90,12 +92,14 @@ def save(prefix=''):
     torch.save(state, file_path)
 
 
-def setup(models, train_routines, test_routines):
-    global MODEL_HANDLER, TRAIN_ROUTINES, TEST_ROUTINES
+def setup(models, train_routines=None, test_routines=None, finish_train_routines=None, finish_test_routines=None):
+    global MODEL_HANDLER, TRAIN_ROUTINES, TEST_ROUTINES, FINISH_TRAIN_ROUTINES, FINISH_TEST_ROUTINES
 
     MODEL_HANDLER = models
     TRAIN_ROUTINES.update(**train_routines)
     TEST_ROUTINES.update(**test_routines)
+    FINISH_TRAIN_ROUTINES.update(**finish_train_routines)
+    FINISH_TEST_ROUTINES.update(**finish_test_routines)
 
     if MODEL_PARAMS_RELOAD:
         reload_models()

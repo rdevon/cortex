@@ -61,7 +61,7 @@ def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.)
     r_loss = criterion(outputs, X, size_average=False) / X.size(0)
     kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
 
-    losses.update(vae=r_loss + beta_kld * kl)
+    losses.vae=(r_loss + beta_kld * kl)
     correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 
     results.update(KL_divergence=kl.item())
@@ -150,7 +150,7 @@ def build_decoder(models, x_shape, dim_in, Decoder, key='decoder', **decoder_arg
     return decoder
 
 # CORTEX ===============================================================================================================
-# Must include `BUILD` and `TRAIN_ROUTINES`
+# Must include `BUILD`, `TRAIN_ROUTINES`, `DEFAULT_CONFIG`
 
 def BUILD(data, models, model_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args=None, decoder_args=None):
     x_shape = data.get_dims('x', 'y', 'c')
@@ -171,15 +171,9 @@ TRAIN_ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
               noise_variables=dict(z=dict(dist='normal', size=64))),
-    optimizer=dict(
-        optimizer='Adam',
-        learning_rate=1e-4,
-    ),
+    optimizer=dict(optimizer='Adam', learning_rate=1e-4),
     model=dict(dim_z=64, model_type='convnet', dim_encoder_out=1028, encoder_args=None, decoder_args=None),
     routines=dict(vae=dict(criterion=F.mse_loss, beta_kld=1.),
                   classifier=dict(criterion=nn.CrossEntropyLoss())),
-    train=dict(
-        epochs=500,
-        archive_every=10
-    )
+    train=dict(epochs=500, archive_every=10, save_on_best='losses.vae')
 )

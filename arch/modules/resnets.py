@@ -5,8 +5,7 @@ import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
-
-# from .densenet import nn.LayerNorm
+from .utils import apply_nonlinearity, finish_layer_1d, finish_layer_2d, get_nonlinearity
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -235,12 +234,15 @@ class ResDecoder(nn.Module):
 
 
 class ResEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, f_size=3, batch_norm=True, 
-                 layer_norm=False, n_steps=3):
+    def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None,
+                 f_size=3, batch_norm=True, layer_norm=False, n_steps=3, nonlinearity='ReLU'):
         super(ResEncoder, self).__init__()
         models = nn.Sequential()
 
+        nonlinearity = get_nonlinearity(nonlinearity)
+
         dim_out_ = dim_out
+        fully_connected_layers = fully_connected_layers or []
 
         logger.debug('Input shape: {}'.format(shape))
         dim_x, dim_y, dim_in = shape
@@ -261,22 +263,25 @@ class ResEncoder(nn.Module):
             dim_x //= 2
             dim_y //= 2
 
+        dim_out = dim_x * dim_y * dim_out
+        models.add_module('final_reshape', View(-1, dim_out))
+
+        for dim_h in fully_connected_layers:
+            dim_in = dim_out
+            dim_out = dim_h
+            name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
+            models.add_module(name, nn.Linear(dim_in, dim_out))
+            finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, batch_norm=batch_norm,
+                            layer_norm=layer_norm)
+
         if dim_out_:
-            models.add_module(name + '_reshape', View(-1, dim_out * dim_x * dim_y))
-            name = 'lin_({}/{})_{}'.format(dim_out * dim_x * dim_y, dim_out_, 'final')
-            models.add_module(name, nn.Linear(dim_out * dim_x * dim_y, dim_out_))
+            name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
+            models.add_module(name, nn.Linear(dim_out, dim_out_))
 
         self.models = models
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
-        nonlinearity_args = nonlinearity_args or {}
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
-        if nonlinearity:
-            if callable(nonlinearity):
-                x = nonlinearity(x, **nonlinearity_args)
-            elif hasattr(F, nonlinearity):
-                x = getattr(F, nonlinearity)(x, **nonlinearity_args)
-            else:
-                raise ValueError()
-        return x
+
+        return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)

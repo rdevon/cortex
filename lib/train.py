@@ -74,7 +74,7 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
 
     # Set the number of updates per routine
     updates_per_routine = updates_per_routine or dict((k, 1) for k in exp.TRAIN_ROUTINES.keys())
-    for k in exp.TRAIN_ROUTINES.keys():
+    for k in list(exp.TRAIN_ROUTINES.keys()) + list(exp.FINISH_TRAIN_ROUTINES.keys()):
         if k not in updates_per_routine:
             updates_per_routine[k] = 1
     UPDATES.update(**updates_per_routine)
@@ -153,11 +153,12 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
         data.DATA_HANDLER.reset(make_pbar=False)
         data.DATA_HANDLER.next()
         routine_models = {}
+        args = exp.ARGS['routines']
 
-        for routine_key in exp.TRAIN_ROUTINES:
+        for routine_key, routine in exp.TRAIN_ROUTINES.items():
             logger.info('Testing routine `{}`'.format(routine_key))
             loss_handler = LossHandler()
-            perform_routine(routine_key, loss_handler, {}, VizHandler())
+            perform_routine(routine_key, routine, loss_handler, {}, VizHandler(), args)
             routine_models[routine_key] = tuple(loss_handler.keys())
     ROUTINE_MODELS.update(**routine_models)
 
@@ -187,9 +188,9 @@ def summarize_results_std(results):
     return results_
 
 
-def train_on_routine(routine_key, loss_handler, results, viz_handler, quit_on_bad_values=False):
-    if routine_key in OPTIMIZERS:
-        OPTIMIZERS[routine_key].zero_grad()
+def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, args, quit_on_bad_values=False):
+    for model_key in ROUTINE_MODELS[routine_key]:
+        OPTIMIZERS[model_key].zero_grad()
 
     # Set requires grad from training models.
     for mk, model in exp.MODEL_HANDLER.items():
@@ -203,30 +204,20 @@ def train_on_routine(routine_key, loss_handler, results, viz_handler, quit_on_ba
 
     # Perform routine
     start_time = time.time()
-    perform_routine(routine_key, loss_handler, results, viz_handler, quit_on_bad_values=quit_on_bad_values)
+    perform_routine(routine_key, routine, loss_handler, results, viz_handler, args,
+                    quit_on_bad_values=quit_on_bad_values)
 
     for model_key, loss in loss_handler.items():
         # Do backward step
         if loss is not None:
-            try:
-                loss.backward()
-            except RuntimeError:
-                pass
-
+            loss.backward()
             OPTIMIZERS[model_key].step()
 
     end_time = time.time()
     results['time'][routine_key].append(end_time - start_time)
 
 
-def perform_routine(routine_key, loss_handler, results, viz_handler, test=False, quit_on_bad_values=False):
-    if test:
-        args = exp.ARGS['test_routines']
-        routine = exp.TEST_ROUTINES[routine_key]
-    else:
-        args = exp.ARGS['routines']
-        routine = exp.TRAIN_ROUTINES[routine_key]
-
+def perform_routine(routine_key, routine, loss_handler, results, viz_handler, args, quit_on_bad_values=False):
     if routine is None:
         return
 
@@ -248,6 +239,9 @@ def perform_routine(routine_key, loss_handler, results, viz_handler, test=False,
 
 
 def set_updates_dict(epoch):
+    routines = {}
+    routines.update(**exp.TRAIN_ROUTINES)
+    routines.update(**exp.FINISH_TRAIN_ROUTINES)
     if TRAIN_FOR is not None:
         total_steps = sum(TRAIN_FOR.values())
         step = epoch % total_steps
@@ -256,7 +250,7 @@ def set_updates_dict(epoch):
             ts += s
             if step < ts:
                 break
-        num_updates_dict = dict((k, 0) for k in exp.TRAIN_ROUTINES.keys())
+        num_updates_dict = dict((k, 0) for k in routines.keys())
         num_updates_dict[mk] = 1
     else:
         num_updates_dict = UPDATES
@@ -279,6 +273,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
     is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
     data.DATA_HANDLER.reset(string='Training (epoch {}) ({}): '.format(epoch, is_training))
     viz_handler.ignore = True
+    routine_args = exp.ARGS['routines']
 
     try:
         while True:
@@ -287,15 +282,18 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
 
             # Loop through routines
             losses = {}
-            for routine_key in exp.TRAIN_ROUTINES.keys():
+            for routine_key, routine in exp.TRAIN_ROUTINES.items():
                 num_updates = num_updates_dict.get(routine_key, 0)
                 routine_losses = {}
+
+                loss_handler = LossHandler()
                 for u in range(num_updates):
                     if u > 0:
                         # Iterate more data if this is not the first update
                         data.DATA_HANDLER.next()
-                    loss_handler = LossHandler()
-                    train_on_routine(routine_key, loss_handler, results, viz_handler,
+                        loss_handler = LossHandler()
+
+                    train_on_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args,
                                      quit_on_bad_values=quit_on_bad_values)
 
                 # Update the losses results
@@ -314,8 +312,11 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
     except StopIteration:
         pass
 
-    if 'final' in exp.TRAIN_ROUTINES and num_updates_dict['final'] > 0:
-        perform_routine('final', results, viz_handler)
+    for routine_key, routine in exp.FINISH_TRAIN_ROUTINES.items():
+        for u in range(num_updates_dict[routine_key]):
+            loss_handler = LossHandler()
+            perform_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args,
+                            quit_on_bad_values=quit_on_bad_values)
 
     results = summarize_results(results)
 
@@ -334,6 +335,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
 
     data.DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
     results = {'losses': dict((rk, []) for rk in exp.MODEL_HANDLER.keys())}
+    routine_args = exp.ARGS['test_routines']
 
     viz_handler.ignore = False
     try:
@@ -343,12 +345,12 @@ def test_epoch(epoch, viz_handler, return_std=False):
 
             # Loop through routines
             losses = {}
-            for routine_key in exp.TEST_ROUTINES:
+            for routine_key, routine in exp.TEST_ROUTINES.items():
                 if routine_key == 'final':
                     continue
                 routine_losses = {}
                 loss_handler = LossHandler()
-                perform_routine(routine_key, loss_handler, results, viz_handler, test=True)
+                perform_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args)
 
                 # Update the losses results
                 routine_losses.update(**dict((k, v.item()) for k, v in loss_handler.items()))
@@ -363,8 +365,9 @@ def test_epoch(epoch, viz_handler, return_std=False):
     except StopIteration:
         pass
 
-    if 'final' in exp.TEST_ROUTINES and exp.TEST_ROUTINES['final']:
-        perform_routine('final', results, viz_handler, test=True)
+    for routine_key, routine in exp.FINISH_TEST_ROUTINES.items():
+        loss_handler = LossHandler()
+        perform_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args)
 
     means = summarize_results(results)
 
@@ -461,11 +464,21 @@ def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_valu
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
-            if save_on_best and save_on_best in train_results_:
-                current = train_results_[save_on_best]
+            if save_on_best:
+                flattened_results = {}
+                for k, v in train_results_.items():
+                    if isinstance(v, dict):
+                        for k_, v_ in v.items():
+                            flattened_results[k + '.' + k_] = v_
+                    else:
+                        flattened_results[k] = v
+                if save_on_best not in flattened_results:
+                    raise ValueError('`save_on_best` key `{}` not found. Available: {}'.format(
+                        save_on_best, tuple(flattened_results.keys())))
+                current = flattened_results[save_on_best]
                 if not best or current > best:
                     best = current
-                    print('Found best {} (train): {}'.format(save_on_best, best))
+                    print('\nFound best {} (train): {}'.format(save_on_best, best))
                     exp.save(prefix='best_' + save_on_best)
 
             # TESTING

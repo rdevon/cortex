@@ -35,10 +35,10 @@ def main(eval_mode=False):
     print_section('MODEL') #####################################################
     logger.info('Building model...')
     logger.info('Model args: {}'.format(model_args))
-    models, train_routines, test_routines = setup_model(DATA_HANDLER, **model_args)
+    models, routines = setup_model(DATA_HANDLER, **model_args)
 
     print_section('EXPERIMENT')
-    exp.setup(models, train_routines, test_routines)
+    exp.setup(models, **routines)
 
     print_section('OPTIMIZER') #################################################
     setup_optimizer(**optimizer_args)

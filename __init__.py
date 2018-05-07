@@ -61,7 +61,7 @@ def setup_out_dir(out_path, name=None, clean=False):
 
 
 _known_args = dict(
-    optimizer=['optimizer', 'learning_rate', 'updates_per_model', 'train_for', 'lr_decay', 'min_lr', 'decay_at_epoch',
+    optimizer=['optimizer', 'learning_rate', 'updates_per_routine', 'train_for', 'lr_decay', 'min_lr', 'decay_at_epoch',
                'clipping', 'weight_decay', 'l1_decay', 'optimizer_options', 'model_optimizer_options'],
     train=['epochs', 'archive_every', 'test_mode', 'quit_on_bad_values'],
     data=['batch_size', 'noise_variables', 'n_workers', 'skip_last_batch', 'test_on_train']
@@ -99,7 +99,7 @@ def update_args(args, **kwargs):
                         kw[k_] = v
 
 
-def undeprecate(data=None, model=None, optimizer=None, routines=None, test_routines=None, train=None):
+def handle_deprecated(data=None, model=None, optimizer=None, routines=None, test_routines=None, train=None):
     if 'noise_variables' in data:
         for k, v in data['noise_variables'].items():
             if isinstance(v, tuple):
@@ -148,7 +148,7 @@ def reload_experiment(args):
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     kwargs = convert_nested_dict_to_handler(d['args'])
-    undeprecate(**kwargs)
+    handle_deprecated(**kwargs)
     exp.ARGS.update(**kwargs)
     reloads = reloads or d['models'].keys()
     for k in reloads:
@@ -191,6 +191,7 @@ def setup(use_cuda):
     arch = models.setup(args.arch)
 
     if args.reload:
+        # Reload the old experiment
         if not path.isfile(args.reload):
             raise ValueError('Cannot find {}'.format(args.reload))
         logger.info('Reloading from {}'.format(args.reload))
@@ -199,6 +200,7 @@ def setup(use_cuda):
         update_args(args.args, **exp.ARGS)
 
     else:
+        # Make a new experiment
         kwargs = {}
         for k, v in arch.DEFAULT_CONFIG.items():
             kwargs[k] = {}
