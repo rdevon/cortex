@@ -10,7 +10,7 @@ import os
 from os import path
 
 import numpy as np
-from progressbar import Bar, ProgressBar, Percentage, Timer
+from progressbar import Bar, ProgressBar, Percentage, Timer, ETA
 import torch
 import torch.utils.data as data
 from torch.autograd import Variable
@@ -586,7 +586,7 @@ class DataHandler(object):
         self.u = 0
 
         if make_pbar:
-            widgets = [string, Timer(), Bar()]
+            widgets = [string, Timer(), ' | ', Percentage(), ' | ', ETA(), Bar()]
             if len([len(loader[self.mode]) for loader in self.loaders.values()]) == 0:
                 maxval = 1000
             else:

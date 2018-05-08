@@ -5,3 +5,4 @@ scipy
 sklearn
 torchvision
 visdom
+pyyaml
