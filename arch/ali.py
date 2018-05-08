@@ -111,8 +111,8 @@ def network_routine(data, models, losses, results, viz, encoder_key='generator')
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
     losses.nets += dd_loss
 
-    correlations = cross_correlation(Z_P, remove_diagonal=True)
-    viz.add_heatmap(correlations.data, name='latent correlations')
+    #correlations = cross_correlation(Z_P, remove_diagonal=True)
+    #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X, name='Ground truth')
     viz.add_image(X_d, name='Reconstruction')
 

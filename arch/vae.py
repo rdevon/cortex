@@ -62,13 +62,13 @@ def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.)
     kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
 
     losses.vae=(r_loss + beta_kld * kl)
-    correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
+    #correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 
     results.update(KL_divergence=kl.item())
     viz.add_image(outputs, name='reconstruction')
     viz.add_image(gen, name='generated')
     viz.add_image(X, name='ground truth')
-    viz.add_heatmap(correlations.data, name='latent correlations')
+    #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
 

@@ -81,12 +81,12 @@ def network_routine(data, models, losses, results, viz):
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
 
-    correlations = cross_correlation(Z_P, remove_diagonal=True)
+    #correlations = cross_correlation(Z_P, remove_diagonal=True)
     msssim = ms_ssim(X, X_d).item()
 
     losses.nets += dd_loss
     results.update(reconstruction_loss=dd_loss.item(), ms_ssim=msssim)
-    viz.add_heatmap(correlations.data, name='latent correlations')
+    #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X_d, name='Reconstruction')
 
 # CORTEX ===============================================================================================================
@@ -136,12 +136,12 @@ def BUILD(data, models, model_type='convnet', dim_embedding=None, dim_noise=None
 TRAIN_ROUTINES = dict(discriminator=discriminator_routine, encoder=encoder_routine)
 
 DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=1028), duplicate=2),
+    data=dict(batch_size=dict(train=64, test=64), duplicate=2),
     optimizer=dict( optimizer='Adam', learning_rate=1e-4),
     model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, match_noise=False, use_topnet=False,
                encoder_args=None, add_supervision=False),
     routines=dict(discriminator=dict(measure='JSD', penalty_amount=0.5),
-                  noise_discriminator=dict(measure='JSD', penalty_amount=0.2, noise_type='hypercubes', noise='uniform'),
+                  noise_discriminator=dict(measure='JSD', penalty_amount=0.5, noise_type='hypercubes', noise='uniform'),
                   encoder=dict(generator_loss_type='non-saturating', beta=1.0),
                   nets=dict()),
     train=dict(epochs=2000, archive_every=10, save_on_lowest='losses.encoder')

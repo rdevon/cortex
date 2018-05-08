@@ -8,7 +8,7 @@ from .classifier import classify
 from .gan import generator_loss
 from .featnet import apply_gradient_penalty, build_discriminator, get_results, score, shape_noise, visualize
 from .modules.fully_connected import FullyConnectedNet
-from .utils import cross_correlation
+#from .utils import cross_correlation
 from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
 
 
@@ -72,11 +72,11 @@ def main_routine(data, models, losses, results, viz, measure=None, noise_type='h
     reconstruction_loss = F.mse_loss(X_R, X_P) / X_P.size(0)
     encoder_loss = generator_loss(Q_samples, measure, loss_type=generator_loss_type)
 
-    correlations = cross_correlation(Z_Q, remove_diagonal=True)
+    #correlations = cross_correlation(Z_Q, remove_diagonal=True)
 
     losses.autoencoder = encoder_loss + reconstruction_loss
     results.update(reconstruction_loss=reconstruction_loss.item(), gan_loss=encoder_loss.item())
-    viz.add_heatmap(correlations.data, name='latent correlations')
+    #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X_G, name='generated')
     viz.add_image(X_P, name='ground truth')
     viz.add_image(X_R, name='reconstructed')
