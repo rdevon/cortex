@@ -102,7 +102,7 @@ class UpsampleConv(nn.Module):
 
 class ResBlock(nn.Module):
     def __init__(self, dim_in, dim_out, f_size, resample=None, batch_norm=True,
-                 layer_norm=False, prefix=''):
+                 layer_norm=False, prefix='', dropout=False):
         super(ResBlock, self).__init__()
         models = nn.Sequential()
         skip_models = nn.Sequential()
@@ -117,6 +117,8 @@ class ResBlock(nn.Module):
         else:
             raise Exception('invalid resample value')
 
+        if dropout:
+            models.add_module(name + '_do', nn.Dropout2d(p=dropout))
         if layer_norm:
             models.add_module(name + '_ln', nn.LayerNorm(dim_in))
         elif batch_norm:
@@ -235,7 +237,7 @@ class ResDecoder(nn.Module):
 
 class ResEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None,
-                 f_size=3, batch_norm=True, layer_norm=False, n_steps=3, nonlinearity='ReLU'):
+                 f_size=3, batch_norm=True, layer_norm=False, n_steps=3, nonlinearity='ReLU', dropout=False):
         super(ResEncoder, self).__init__()
         models = nn.Sequential()
 
@@ -272,7 +274,7 @@ class ResEncoder(nn.Module):
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
             models.add_module(name, nn.Linear(dim_in, dim_out))
             finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, batch_norm=batch_norm,
-                            layer_norm=layer_norm)
+                            layer_norm=layer_norm, dropout=dropout)
 
         if dim_out_:
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')

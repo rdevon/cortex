@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-resnet_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
+resnet_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4, fully_connected_layers=[1028])
 mnist_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7, nonlinearity='LeakyReLU')
 convnet_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
 
@@ -82,5 +82,5 @@ DEFAULT_CONFIG = dict(
     optimizer=dict(optimizer='Adam', learning_rate=1e-4),
     model=dict(dropout=0.2, model_type='convnet'),
     routines=dict(criterion=nn.CrossEntropyLoss()),
-    train=dict(epochs=200, archive_every=10)
+    train=dict(epochs=200, archive_every=10, save_on_best='losses.classifier')
 )
