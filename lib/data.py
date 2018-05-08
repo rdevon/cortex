@@ -2,6 +2,9 @@
 
 '''
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
 import copy
 import logging
 import shutil
@@ -18,7 +21,7 @@ import torchvision
 from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
-from . import config, exp
+from . import config, exp, toysets
 #from .cub import CUB
 
 
@@ -144,6 +147,24 @@ def make_indexing(C):
     return IndexingDataset
 
 
+def make_tds_random_and_split(C):
+    class RandomSplitting(C):
+        def __init__(self, *args, idx=None, split=.8, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.idx = idx if idx is not None else torch.randperm(len(self))
+            tensors_ = []
+            print(len(self), int(split * len(self)))
+            for i in range(len(self.tensors)):
+                if split > 0:
+                    tensors_.append(self.tensors[i][self.idx][:int(split * len(self))])
+                else:
+                    tensors_.append(self.tensors[i][self.idx][int(split * len(self)) - 1:])
+
+            self.tensors = tuple(tensors_)
+
+    return RandomSplitting
+
+
 def copy_to_local_path(from_path):
     if from_path.endswith('/'):
         from_path = from_path[:-1]
@@ -188,7 +209,22 @@ class DataHandler(object):
 
         DataLoader = DataLoader or torch.utils.data.DataLoader
 
-        if hasattr(torchvision.datasets, source):
+        if source in toysets.DATASETS:
+            source_type = 'toyset'
+            if config.TOY_PATH is None:
+                raise ValueError('torchvision dataset must have corresponding torchvision folder specified in '
+                                 '`config.yaml`')
+            Dataset = getattr(toysets, source)
+
+            if copy_to_local:
+                copy_to_local_path(path.join(config.TOY_PATH, source))
+                base_path = config.LOCAL_PATH
+            else:
+                base_path = config.TOY_PATH
+
+            train_path = path.join(base_path, source)
+            test_path = train_path
+        elif hasattr(torchvision.datasets, source):
             # Dataset is in torchvision
             source_type = 'torchvision'
             if config.TV_PATH is None:
@@ -234,9 +270,15 @@ class DataHandler(object):
             test_path = source
         else:
             raise ValueError('Dataset not from torchvision, or is not specified in `config.yaml` data_paths.')
-
-        transform = make_transform(source, **transform_args)
-        if source == 'CelebA':
+        if source_type != 'toyset':
+            transform = transform or make_transform(source, **transform_args)
+        if source_type == 'toyset':
+            Dataset = make_indexing(Dataset)
+            Dataset = make_tds_random_and_split(Dataset)
+            train_set = Dataset(root=train_path, download=True, split=0.556)
+            test_set = Dataset(root=test_path, download=True, split=(0.556-1), idx=train_set.idx)
+            output_sources = ['images', 'targets']
+        elif source == 'CelebA':
             Dataset = Dataset or CelebA
             Dataset = make_indexing(Dataset)
             train_set = Dataset(root=train_path, transform=transform, download=True)
@@ -287,30 +329,35 @@ class DataHandler(object):
         test_loader = DataLoader(test_set, batch_size=self.batch_size['test'], shuffle=shuffle, num_workers=n_workers,
                                  worker_init_fn=lambda x: signal.signal(signal.SIGINT, signal.SIG_IGN))
 
-        if source_type == 'folder':
-            for sample in train_loader:
-                break
-            dim_c, dim_x, dim_y = sample[0].size()[1:]
-            dim_l = len(train_set.classes)
-        elif source == 'SVHN':
-            dim_c, dim_x, dim_y = train_set.data.shape[1:]
-            dim_l = len(np.unique(train_set.labels))
+        if source_type == 'toyset':
+            dim_x = train_set.tensors[0].size()[1]
+            dim_l = len(np.unique(np.concatenate([train_set.tensors[1], test_set.tensors[1]])))
+            dims = dict(x=dim_x, labels=dim_l)
         else:
-            if len(train_set.train_data.shape) == 4:
-                dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
+            if source_type == 'folder':
+                for sample in train_loader:
+                    break
+                dim_c, dim_x, dim_y = sample[0].size()[1:]
+                dim_l = len(train_set.classes)
+            elif source == 'SVHN':
+                dim_c, dim_x, dim_y = train_set.data.shape[1:]
+                dim_l = len(np.unique(train_set.labels))
             else:
-                dim_x, dim_y = tuple(train_set.train_data.shape)[1:]
-                dim_c = 1
+                if len(train_set.train_data.shape) == 4:
+                    dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
+                else:
+                    dim_x, dim_y = tuple(train_set.train_data.shape)[1:]
+                    dim_c = 1
 
-            labels = train_set.train_labels
-            if not isinstance(labels, list):
-                labels = labels.numpy()
-            dim_l = len(np.unique(labels))
+                labels = train_set.train_labels
+                if not isinstance(labels, list):
+                    labels = labels.numpy()
+                dim_l = len(np.unique(labels))
 
-        dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, n_train=N_train, n_test=N_test)
-        if source == 'CUB':
-            dim_a = train_set.attrs.shape[1]
-            dims['a'] = dim_a
+            dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, n_train=N_train, n_test=N_test)
+            if source == 'CUB':
+                dim_a = train_set.attrs.shape[1]
+                dims['a'] = dim_a
 
         logger.debug('Data has the following dimensions: {}'.format(dims))
         if not duplicate:

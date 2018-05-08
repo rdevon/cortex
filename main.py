@@ -2,6 +2,9 @@
 
 '''
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
 import sys
 if sys.version_info < (3, 0):
     sys.stdout.write('Cortex requires Python 3.x, Python 2.x not supported\n')

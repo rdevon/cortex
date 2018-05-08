@@ -39,7 +39,7 @@ NUM_VARIANT_DATASETS = ["S_set", "A_set"]
 class SmallDataset(data.TensorDataset):
 
     def __init__(self, root, *select,
-                 stardardize=False, load=False, download=False):
+                 stardardize=False, load=True, download=False):
         """Download or load a small dataset.
 
         Parameters
@@ -79,7 +79,7 @@ class SmallDataset(data.TensorDataset):
 
     def download(self):
         """Download, and unzip in the correct location."""
-        import urllib
+        import urllib.request
         import zipfile
 
         if self.check_exists():
