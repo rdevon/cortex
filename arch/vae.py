@@ -175,5 +175,5 @@ DEFAULT_CONFIG = dict(
     model=dict(dim_z=64, model_type='convnet', dim_encoder_out=1028, encoder_args=None, decoder_args=None),
     routines=dict(vae=dict(criterion=F.mse_loss, beta_kld=1.),
                   classifier=dict(criterion=nn.CrossEntropyLoss())),
-    train=dict(epochs=500, archive_every=10, save_on_best='losses.vae')
+    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.vae')
 )

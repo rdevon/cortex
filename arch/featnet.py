@@ -72,10 +72,12 @@ def score(models, Z_P, Z_Q, measure, Y_P=None, Y_Q=None, key='discriminator'):
     return E_pos, E_neg, P_samples, Q_samples
 
 
-def get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=None):
+def get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=None, name=None):
     if results is not None:
-        results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
-        results['{} distance'.format(measure)] = (E_pos - E_neg).item()
+        score_name = 'Scores' if name is None else '{} Score'.format(name)
+        distance_name = '{} distance'.format(measure) if name is None else '{} {} distance'.format(name, measure)
+        results[score_name] = dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item())
+        results[distance_name] = (E_pos - E_neg).item()
 
 
 def visualize(Z_Q, P_samples, Q_samples, X, T, Y_Q=None, viz=None):
@@ -264,5 +266,5 @@ DEFAULT_CONFIG = dict(
                   encoder=dict(generator_loss_type='non-saturating', output_nonlin=False),
                   nets=dict(),
                   svm=dict()),
-    train=dict(epochs=500, archive_every=10, save_on_best='losses.encoder')
+    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.encoder')
 )

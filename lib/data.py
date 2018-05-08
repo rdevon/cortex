@@ -90,6 +90,7 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
         'EMNIST': [(0.5,), (0.5,)],
         'PhotoTour': [(0.5,), (0.5,)],
         'Imagenet-12': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
+        'Tiny-Imagenet': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
         'LSUN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
         'SVHN': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],
         'CIFAR10': [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)],

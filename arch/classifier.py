@@ -26,8 +26,8 @@ def classify(classifier, inputs, targets, losses=None, results=None, criterion=N
              key='classifier'):
     criterion = criterion or nn.CrossEntropyLoss()
 
-    if not backprop_input:
-        inputs = inputs.detach()
+    #if not backprop_input:
+    #    inputs = inputs.detach()
 
     outputs = classifier(inputs)
     predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
@@ -45,7 +45,7 @@ def classify(classifier, inputs, targets, losses=None, results=None, criterion=N
 
 def visualize(viz_inputs, targets, predicted, viz=None, key='classifier'):
     if viz:
-        viz.add_image(viz_inputs, labels=(targets, predicted), name=key + '_gt_pred')
+        viz.add_image(viz_inputs.data, labels=(targets.data, predicted.data), name=key + '_gt_pred')
 
 # CORTEX ===============================================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`

@@ -185,5 +185,5 @@ DEFAULT_CONFIG = dict(
     optimizer=dict(optimizer='Adam', learning_rate=1e-4, train_for=dict(encoder=1, nets=1, assign=1)),
     model=dict(model_type='convnet', dim_embedding=64, encoder_args=None, add_supervision=False),
     routines=dict(),
-    train=dict(epochs=500, archive_every=10, save_on_best='losses.encoder')
+    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.encoder')
 )

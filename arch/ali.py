@@ -180,5 +180,5 @@ DEFAULT_CONFIG = dict(
                   penalty=dict(penalty_amount=0.5),
                   generator=dict(),
                   nets=dict()),
-    train=dict(epochs=500, archive_every=10, save_on_best='losses.generator')
+    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.generator')
 )

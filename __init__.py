@@ -63,7 +63,8 @@ def setup_out_dir(out_path, name=None, clean=False):
 _known_args = dict(
     optimizer=['optimizer', 'learning_rate', 'updates_per_routine', 'train_for', 'lr_decay', 'min_lr', 'decay_at_epoch',
                'clipping', 'weight_decay', 'l1_decay', 'optimizer_options', 'model_optimizer_options'],
-    train=['epochs', 'archive_every', 'test_mode', 'quit_on_bad_values'],
+    train=['epochs', 'archive_every', 'test_mode', 'quit_on_bad_values', 'save_on_best', 'save_on_lowest',
+           'save_on_highest'],
     data=['batch_size', 'noise_variables', 'n_workers', 'skip_last_batch', 'test_on_train']
 )
 

@@ -221,5 +221,5 @@ DEFAULT_CONFIG = dict(
     routines=dict(discriminator=dict(measure='GAN'),
                   penalty=dict(penalty_type='gradient_norm', penalty_amount=0.5),
                   generator=dict(loss_type='non-saturating')),
-    train=dict(epochs=100, archive_every=10)
+    train=dict(epochs=100, archive_every=10, save_on_lowest='losses.gan')
 )

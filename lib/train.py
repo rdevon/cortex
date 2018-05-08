@@ -445,7 +445,8 @@ def align_summaries(d_train, d_test):
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False, save_on_best=None):
+def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False, save_on_best=None,
+              save_on_lowest=None, save_on_highest=None):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     vh = VizHandler()
@@ -468,7 +469,7 @@ def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_valu
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
-            if save_on_best:
+            if save_on_best or save_on_highest or save_on_lowest:
                 flattened_results = {}
                 for k, v in train_results_.items():
                     if isinstance(v, dict):
@@ -482,7 +483,13 @@ def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_valu
                     #    raise ValueError('`save_on_best` key `{}` not found. Available: {}'.format(
                     #        save_on_best, tuple(flattened_results.keys())))
                     current = flattened_results[save_on_best]
-                    if not best or current > best:
+                    if not best:
+                        found_best = True
+                    elif save_on_lowest:
+                        found_best = current < best
+                    else:
+                        found_best = current > best
+                    if found_best:
                         best = current
                         print('\nFound best {} (train): {}'.format(save_on_best, best))
                         exp.save(prefix='best_' + save_on_best)

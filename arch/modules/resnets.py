@@ -128,12 +128,16 @@ class ResBlock(nn.Module):
 
         if resample == 'down':
             models.add_module(name + '_stage1', nn.Conv2d(dim_in, dim_in, f_size, 1, 1))
+            if dropout:
+                models.add_module(name + '_do2', nn.Dropout2d(p=dropout))
             if layer_norm:
                 models.add_module(name + '_ln2', nn.LayerNorm(dim_in))
             elif batch_norm:
                 models.add_module(name + '_bn2', nn.BatchNorm2d(dim_in))
         elif resample == 'up':
             models.add_module(name + '_stage1', UpsampleConv(dim_in, dim_out, f_size, prefix=prefix))
+            if dropout:
+                models.add_module(name + '_do2', nn.Dropout2d(p=dropout))
             if layer_norm:
                 models.add_module(name + '_ln2', nn.LayerNorm(dim_out))
             elif batch_norm:
