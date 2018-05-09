@@ -208,6 +208,11 @@ def setup(use_cuda):
         logger.info('Reloading from {}'.format(args.reload))
         copyfile(args.reload, args.reload + '.bak')
         reload_experiment(args)
+        for k, v in vars(args).items():
+            if v is not None:
+                if '.' in k:
+                    head, tail = k.split('.')
+                    exp.ARGS[head][tail] = v
         update_args(args.args, **exp.ARGS)
 
     else:
