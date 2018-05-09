@@ -24,6 +24,7 @@ from lib.viz import init as viz_init
 logger = logging.getLogger('cortex.init')
 
 _args = dict(data=data._args, optimizer=optimizer._args, train=train._args)
+_args_help = dict(data=data._args_help, optimizer=optimizer._args_help, train=train._args_help)
 
 
 def setup_out_dir(out_path, name=None, clean=False):
@@ -170,6 +171,13 @@ def setup(use_cuda):
 
     # Parse args and set logger, cuda
     parser = make_argument_parser()
+    for arg_k in _args:
+        args = _args[arg_k]
+        for k, v in args.items():
+            if isinstance(v, dict):
+                pass
+            type_ = type(v) if v is not None else str
+            parser.add_argument('--' + arg_k + '.' + k, default=None, type=type_, help=_args_help[arg_k][k])
     args = parser.parse_args()
 
     set_stream_logger(args.verbosity)
@@ -209,12 +217,17 @@ def setup(use_cuda):
             if k not in kwargs:
                 kwargs[k] = {}
             kwargs[k].update(**v)
+        for k, v in vars(args).items():
+            if v is not None:
+                if '.' in k:
+                    head, tail = k.split('.')
+                    kwargs[head][tail] = v
+
         kwargs = convert_nested_dict_to_handler(kwargs)
-     
+
         if 'test_routines' not in kwargs.keys():
             kwargs['test_routines'] = {}
 
-        kwargs['data']['source'] = args.source
         update_args(args.args, **kwargs)
 
         name = args.name

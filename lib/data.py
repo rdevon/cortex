@@ -32,11 +32,17 @@ IMAGE_SCALE = [0, 1]
 _args = dict(
     source=None,
     batch_size=64,
-    noise_variables=None,
     n_workers=4,
     skip_last_batch=False,
-    test_on_train=False,
-    setup_fn=None
+    test_on_train=False
+)
+
+_args_help = dict(
+    source='Dataset (location (full path) or name).',
+    batch_size='Batch size',
+    n_workers='Number of workers',
+    skip_last_batch='Skip the last batch of the epoch',
+    test_on_train='Use training set on evaluation'
 )
 
 
@@ -659,7 +665,7 @@ DATA_HANDLER = DataHandler()
 
 
 def setup(source=None, batch_size=None, noise_variables=None, n_workers=None, skip_last_batch=None,
-          test_on_train=None, setup_fn=None, **kwargs):
+          test_on_train=None, **kwargs):
     global DATA_HANDLER, NOISE
 
     if source and not isinstance(source, (list, tuple)):

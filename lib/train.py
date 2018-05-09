@@ -24,12 +24,22 @@ ROUTINE_MODELS = {}
 
 _args = dict(
     epochs=500,
-    archive_every=None,
+    archive_every=10,
     test_mode=False,
     quit_on_bad_values=False,
     save_on_best=None,
     save_on_lowest=None,
     save_on_highest=None
+)
+
+_args_help = dict(
+    epochs='Number of epochs',
+    archive_every='Number of epochs for writing checkpoints.',
+    test_mode='Testing mode. No training.',
+    quit_on_bad_values='Quit when nans or infs found.',
+    save_on_best='Saves when highest of this result is found.',
+    save_on_highest='Saves when highest of this result is found.',
+    save_on_lowest='Saves when lowest of this result is found.'
 )
 
 

@@ -20,20 +20,32 @@ OPTIMIZERS = {}
 TRAIN_FOR = None
 
 _optimizer_defaults = dict(
-    SGD=dict(momentum=0.9, weight_decay=5e-4),
+    SGD=dict(momentum=0.9),
     Adam=dict(betas=(0.5, 0.999))
 )
 
 _args = dict(
     optimizer='Adam',
-    learning_rate=1e-4,
-    updates_per_routine=None,
-    train_for=None,
-    clipping=None,
-    weight_decay=None,
-    l1_decay=None,
-    optimizer_options='default',
-    model_optimizer_options=None
+    learning_rate=1.e-4,
+    updates_per_routine=dict(),
+    train_for=dict(),
+    clipping=dict(),
+    weight_decay=dict(),
+    l1_decay=dict(),
+    optimizer_options=dict(),
+    model_optimizer_options=dict()
+)
+
+_args_help = dict(
+    optimizer='Optimizer type. See `torch.optim` for supported optimizers.',
+    learning_rate='Learning rate',
+    updates_per_routine='Updates per routine.',
+    train_for='If set, this is the number of epochs to train for each routine in sequence.',
+    clipping='If set, this is the clipping for each model.',
+    weight_decay='If set, this is the weight decay for specified model.',
+    l1_decay='If set, this is the l1 decay for specified model.',
+    optimizer_options='Optimizer options.',
+    model_optimizer_options='Optimizer options for specified model.'
 )
 
 
@@ -48,6 +60,8 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
     clipping = clipping or {}
 
     # Set the optimizer options
+    if len(optimizer_options) == 0:
+        optimizer_options = 'default'
     if optimizer_options == 'default' and optimizer in _optimizer_defaults.keys():
         optimizer_options = _optimizer_defaults[optimizer]
     elif optimizer_options == 'default':
@@ -62,6 +76,8 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
             updates_per_routine[k] = 1
 
     UPDATES.update(**updates_per_routine)
+    if len(train_for) == 0:
+        train_for = None
     TRAIN_FOR = train_for
 
     # Initialize regularization

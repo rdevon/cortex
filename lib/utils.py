@@ -30,7 +30,7 @@ def print_section(s):
     print(h)
 
 
-_protected_args = ['arch', 'out_path', 'name', 'reload', 'args', 'source', 'copy_to_local', 'meta', 'config_file',
+_protected_args = ['arch', 'out_path', 'name', 'reload', 'args', 'copy_to_local', 'meta', 'config_file',
                   'clean', 'verbosity', 'test']
 
 def make_argument_parser():
@@ -60,8 +60,6 @@ def make_argument_parser():
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
     parser.add_argument('-a', '--args', default=None, type=str,
                         help=('Arguments for the main file'))
-    parser.add_argument('-S', '--source', type=str, default=None,
-                        help='Dataset (location (full path) or name).')
     parser.add_argument('-C', '--copy_to_local', action='store_true', default=False)
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
