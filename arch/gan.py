@@ -187,7 +187,7 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
     weights = get_weight(samples, measure)
 
     losses.generator = g_loss
-    if weights:
+    if weights is not None:
         results.update(Weights=weights.mean().item())
     viz.add_image(X_Q, name='generated')
 
