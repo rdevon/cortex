@@ -129,10 +129,11 @@ def apply_gradient_penalty(data, models, inputs=None, model=None, penalty_type='
         mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)
         mid_in.requires_grad_()
 
-        mid_out = model_(mid_in)
+        with torch.set_grad_enabled(True):
+            mid_out = model_(mid_in)
         gradient = get_gradient(mid_in, mid_out)
         gradient = gradient.view(gradient.size()[0], -1)
-        penalty = ((gradient.norm(1) - 1.) ** 2).mean()
+        penalty = ((gradient.norm(2, dim=1) - 1.) ** 2).mean()
 
     else:
         raise NotImplementedError('Unsupported penalty {}'.format(penalty_type))
@@ -186,7 +187,8 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
     weights = get_weight(samples, measure)
 
     losses.generator = g_loss
-    results.update(Weights=weights.mean().item())
+    if weights:
+        results.update(Weights=weights.mean().item())
     viz.add_image(X_Q, name='generated')
 
 # CORTEX ===============================================================================================================

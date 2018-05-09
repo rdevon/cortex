@@ -26,17 +26,14 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_meas
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure, key=key)
 
     losses.encoder = E_neg - E_pos
-    get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=results)
+    get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=results, name='mine')
     visualize(Z, P_samples, Q_samples, X_P, T, Y_Q=Y_Q, viz=viz)
 
     if 'noise_discriminator' in models:
         Y_P = shape_noise(Y_P, U, noise_type)
         E_pos_n, E_neg_n, P_samples_n, Q_samples_n = featnet_score(models, Z_P, Z, measure, Y_P=Y_P, Y_Q=Y_Q,
                                                                    key='noise_discriminator')
-        results_ = {}
-        get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n, noise_measure, results={})
-        results_ = dict(('noise_' + k, v) for k, v in results_.items())
-        results.update(**results_)
+        get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n, noise_measure, results=results, name='noise')
         losses.encoder += beta * generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
 
 
