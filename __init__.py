@@ -6,6 +6,7 @@ __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 import ast
+import copy
 import logging
 import os
 from os import path
@@ -15,11 +16,14 @@ import torch
 
 from lib import config, models, exp
 from lib.log_utils import set_file_logger, set_stream_logger
-from lib.utils import convert_nested_dict_to_handler, Handler, make_argument_parser
+from lib.utils import convert_nested_dict_to_handler, make_argument_parser, _protected_args
+from lib import data, optimizer, train
 from lib.viz import init as viz_init
 
 
 logger = logging.getLogger('cortex.init')
+
+_args = dict(data=data._args, optimizer=optimizer._args, train=train._args)
 
 
 def setup_out_dir(out_path, name=None, clean=False):
@@ -63,13 +67,7 @@ def setup_out_dir(out_path, name=None, clean=False):
     exp.OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir)
 
 
-_known_args = dict(
-    optimizer=['optimizer', 'learning_rate', 'updates_per_routine', 'train_for', 'lr_decay', 'min_lr', 'decay_at_epoch',
-               'clipping', 'weight_decay', 'l1_decay', 'optimizer_options', 'model_optimizer_options'],
-    train=['epochs', 'archive_every', 'test_mode', 'quit_on_bad_values', 'save_on_best', 'save_on_lowest',
-           'save_on_highest'],
-    data=['batch_size', 'noise_variables', 'n_workers', 'skip_last_batch', 'test_on_train']
-)
+_known_args = dict((k, list(v.keys())) for k, v in _args.items())
 
 
 def update_args(args, **kwargs):
@@ -173,6 +171,7 @@ def setup(use_cuda):
     # Parse args and set logger, cuda
     parser = make_argument_parser()
     args = parser.parse_args()
+
     set_stream_logger(args.verbosity)
     exp.USE_CUDA = use_cuda
     if exp.USE_CUDA:
@@ -205,12 +204,13 @@ def setup(use_cuda):
 
     else:
         # Make a new experiment
-        kwargs = {}
+        kwargs = copy.deepcopy(_args)
         for k, v in arch.DEFAULT_CONFIG.items():
-            kwargs[k] = {}
+            if k not in kwargs:
+                kwargs[k] = {}
             kwargs[k].update(**v)
         kwargs = convert_nested_dict_to_handler(kwargs)
-
+     
         if 'test_routines' not in kwargs.keys():
             kwargs['test_routines'] = {}
 

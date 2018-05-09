@@ -30,6 +30,9 @@ def print_section(s):
     print(h)
 
 
+_protected_args = ['arch', 'out_path', 'name', 'reload', 'args', 'source', 'copy_to_local', 'meta', 'config_file',
+                  'clean', 'verbosity', 'test']
+
 def make_argument_parser():
     '''Generic experiment parser.
 

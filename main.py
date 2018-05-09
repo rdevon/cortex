@@ -16,7 +16,8 @@ from __init__ import setup, setup_reload
 from lib import exp
 from lib.data import setup as setup_data, DATA_HANDLER
 from lib.models import setup_model
-from lib.train import setup as setup_optimizer, main_loop
+from lib.optimizer import setup as setup_optimizer
+from lib.train import setup as setup_train, main_loop
 from lib.utils import print_section
 
 
@@ -36,19 +37,21 @@ def main(eval_mode=False):
     setup_data(**data_args)
 
     print_section('MODEL') #####################################################
-    logger.info('Building model...')
-    logger.info('Model args: {}'.format(model_args))
+    logger.info('Building model with args {}'.format(model_args))
     models, routines = setup_model(DATA_HANDLER, **model_args)
 
-    print_section('EXPERIMENT')
+    print_section('EXPERIMENT') ################################################
     exp.setup(models, **routines)
 
     print_section('OPTIMIZER') #################################################
+    logger.info('Setting up optimizer with args {}'.format(optimizer_args))
     setup_optimizer(**optimizer_args)
 
     if eval_mode:
         return
     print_section('TRAIN') #####################################################
+    logger.info('Training loop with args {}'.format(train_args))
+    setup_train()
     main_loop(**train_args)
 
 

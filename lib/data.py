@@ -29,6 +29,16 @@ logger = logging.getLogger('cortex.data')
 
 IMAGE_SCALE = [0, 1]
 
+_args = dict(
+    source=None,
+    batch_size=64,
+    noise_variables=None,
+    n_workers=4,
+    skip_last_batch=False,
+    test_on_train=False,
+    setup_fn=None
+)
+
 
 class CelebA(torchvision.datasets.ImageFolder):
     url = "https://www.dropbox.com/sh/8oqt9vytwxb3s4r/AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1"
@@ -648,8 +658,8 @@ class DataHandler(object):
 DATA_HANDLER = DataHandler()
 
 
-def setup(source=None, batch_size=64, noise_variables=None, n_workers=4, skip_last_batch=False,
-          test_on_train=False, setup_fn=None, **kwargs):
+def setup(source=None, batch_size=None, noise_variables=None, n_workers=None, skip_last_batch=None,
+          test_on_train=None, setup_fn=None, **kwargs):
     global DATA_HANDLER, NOISE
 
     if source and not isinstance(source, (list, tuple)):

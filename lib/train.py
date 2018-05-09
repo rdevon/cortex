@@ -12,29 +12,24 @@ import time
 
 import numpy as np
 import torch
-import torch.optim as optim
-import torch.backends.cudnn as cudnn
 
-from . import data, exp, viz, reg
+from . import data, exp, optimizer, viz, reg
 from .utils import bad_values, convert_to_numpy, Handler, update_dict_of_lists
 from .viz import VizHandler, plot
 
 
-try:
-    input = raw_input #Python2 compatibility
-except NameError:
-    pass
+logger = logging.getLogger('cortex.train')
 
-logger = logging.getLogger('cortex.util')
-
-OPTIMIZERS = {}
-UPDATES = {}
-TRAIN_FOR = None
 ROUTINE_MODELS = {}
 
-optimizer_defaults = dict(
-    SGD=dict(momentum=0.9, weight_decay=5e-4),
-    Adam=dict(betas=(0.5, 0.999))
+_args = dict(
+    epochs=500,
+    archive_every=None,
+    test_mode=False,
+    quit_on_bad_values=False,
+    save_on_best=None,
+    save_on_lowest=None,
+    save_on_highest=None
 )
 
 
@@ -59,101 +54,7 @@ class LossHandler(Handler):
         super().__setitem__(k, v)
 
 
-def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_for=None,
-          clipping=None, weight_decay=None, l1_decay=None, optimizer_options='default', model_optimizer_options=None):
-
-    global TRAIN_FOR, ROUTINE_MODELS
-
-    model_optimizer_options = model_optimizer_options or {}
-    weight_decay = weight_decay or {}
-    l1_decay = l1_decay or {}
-    clipping = clipping or {}
-
-    # Set the optimizer options
-    if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
-        optimizer_options = optimizer_defaults[optimizer]
-    elif optimizer_options == 'default':
-        raise ValueError('Default optimizer options for `{}` not available.'.format(optimizer))
-
-    # Set the number of updates per routine
-    updates_per_routine = updates_per_routine or {}
-    updates_per_routine = dict((k, (1 if k not in updates_per_routine else updates_per_routine[k]))
-                               for k in exp.TRAIN_ROUTINES)
-    for k in list(exp.TRAIN_ROUTINES.keys()) + list(exp.FINISH_TRAIN_ROUTINES.keys()):
-        if k not in updates_per_routine:
-            updates_per_routine[k] = 1
-
-    UPDATES.update(**updates_per_routine)
-    TRAIN_FOR = train_for
-
-    # Initialize regularization
-    reg.init(clipping=clipping, weight_decay=l1_decay)  # initialize regularization
-
-    # Set the optimizers
-    if callable(optimizer):
-        op = optimizer
-    elif hasattr(optim, optimizer):
-        op = getattr(optim, optimizer)
-    else:
-        raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
-
-    for model_key, model in exp.MODEL_HANDLER.items():
-        if model_key in ('extras', 'final'):
-            continue
-        logger.info('Building optimizer for {}'.format(model_key))
-
-        # Set model parameters to cpu or gpu
-        if isinstance(model, (tuple, list)):
-            model_params = []
-            for net in model:
-                if exp.USE_CUDA:
-                    net.cuda()
-                    net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
-                logger.debug('Getting parameters for {}'.format(net))
-                model_params += list(net.parameters())
-        else:
-            if exp.USE_CUDA:
-                model.cuda()
-                model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
-            model_params = list(model.parameters())
-
-        # Needed for reloading.
-        for p in model_params:
-            p.requires_grad = True
-
-        # Learning rates
-        if isinstance(learning_rate, dict):
-            eta = learning_rate[model_key]
-        else:
-            eta = learning_rate
-
-        # Weight decay
-        if isinstance(weight_decay, dict):
-            wd = weight_decay.get(model_key, 0)
-        else:
-            wd = weight_decay
-
-        # Update the optimizer options
-        optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
-        if model_key in model_optimizer_options.keys():
-            optimizer_options_.update(**model_optimizer_options)
-
-        # Creat the optimizer
-        optimizer = op(model_params, lr=eta, weight_decay=wd, **optimizer_options_)
-        OPTIMIZERS[model_key] = optimizer
-
-        logger.info('Training {} routine with {}'.format(model_key, optimizer))
-
-        # Additional regularization
-        if model_key in reg.CLIPPING.keys():
-            logger.info('Clipping {} with {}'.format(model_key, reg.CLIPPING[k]))
-
-        if model_key in reg.L1_DECAY.keys():
-            logger.info('L1 Decay {} with {}'.format(model_key, reg.L1_DECAY[k]))
-
-    if exp.USE_CUDA:
-        cudnn.benchmark = True
-
+def setup():
     # Test the routines and recover the loss keys
     with torch.no_grad():
         data.DATA_HANDLER.reset(make_pbar=False)
@@ -166,6 +67,7 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
             loss_handler = LossHandler()
             perform_routine(routine_key, routine, loss_handler, {}, VizHandler(), args)
             routine_models[routine_key] = tuple(loss_handler.keys())
+
     ROUTINE_MODELS.update(**routine_models)
 
 
@@ -196,7 +98,7 @@ def summarize_results_std(results):
 
 def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, args, quit_on_bad_values=False):
     for model_key in ROUTINE_MODELS[routine_key]:
-        OPTIMIZERS[model_key].zero_grad()
+        optimizer.OPTIMIZERS[model_key].zero_grad()
 
     # Set requires grad from training models.
     for mk, model in exp.MODEL_HANDLER.items():
@@ -217,7 +119,7 @@ def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, a
         # Do backward step
         if loss is not None:
             loss.backward()
-            OPTIMIZERS[model_key].step()
+            optimizer.OPTIMIZERS[model_key].step()
 
     end_time = time.time()
     results['time'][routine_key].append(end_time - start_time)
@@ -249,18 +151,18 @@ def set_updates_dict(epoch):
     routines.update(**exp.TRAIN_ROUTINES)
     routines.update(**exp.FINISH_TRAIN_ROUTINES)
 
-    if TRAIN_FOR is not None:
-        total_steps = sum(TRAIN_FOR.values())
+    if optimizer.TRAIN_FOR is not None:
+        total_steps = sum(optimizer.TRAIN_FOR.values())
         step = epoch % total_steps
         ts = 0
-        for mk, s in TRAIN_FOR.items():
+        for mk, s in optimizer.TRAIN_FOR.items():
             ts += s
             if step < ts:
                 break
         num_updates_dict = dict((k, 0) for k in routines.keys())
         num_updates_dict[mk] = 1
     else:
-        num_updates_dict = UPDATES
+        num_updates_dict = optimizer.UPDATES
 
     return num_updates_dict
 
@@ -448,7 +350,7 @@ def align_summaries(d_train, d_test):
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False, save_on_best=None,
+def main_loop(epochs=None, archive_every=None, test_mode=None, quit_on_bad_values=None, save_on_best=None,
               save_on_lowest=None, save_on_highest=None):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
