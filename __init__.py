@@ -114,13 +114,19 @@ def handle_deprecated(data=None, model=None, optimizer=None, routines=None, test
         optimizer['updates_per_routine'] = optimizer.pop('updates_per_model')
 
 
-def setup_reload(arch, use_cuda, exp_file):
-    exp.USE_CUDA = use_cuda
-
-    if exp.USE_CUDA:
-        logger.info('Using GPU')
+def setup_device(device):
+    if torch.cuda.is_available():
+        if device < torch.cuda.device_count():
+            logger.info('Using GPU ' + str(device))
+            exp.DEVICE = torch.device(device)
+        else:
+            logger.info('GPU ' + str(device) + ' doesn\'t exists. Using CPU')
     else:
         logger.info('Using CPU')
+
+def setup_reload(arch, exp_file):
+        
+    setup_device(d['args']['device'])
 
     config_file_path = path.join(path.dirname(
         path.abspath(__file__)), 'config.yaml')
@@ -167,7 +173,7 @@ def reload_experiment(args):
     exp.OUT_DIRS.update(**out_dirs)
 
 
-def setup(use_cuda):
+def setup():
 
     # Parse args and set logger, cuda
     parser = make_argument_parser()
@@ -181,11 +187,8 @@ def setup(use_cuda):
     args = parser.parse_args()
 
     set_stream_logger(args.verbosity)
-    exp.USE_CUDA = use_cuda
-    if exp.USE_CUDA:
-        logger.info('Using GPU')
-    else:
-        logger.info('Using CPU')
+
+    setup_device(args.device)
 
     # Setup file paths
     config_file_path = path.join(path.dirname(

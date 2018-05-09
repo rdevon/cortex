@@ -71,6 +71,7 @@ def make_argument_parser():
     parser.add_argument('-v', '--verbosity', type=int, default=1,
                         help='Verbosity of the logging. (0, 1, 2)')
     parser.add_argument('-t', '--test', action='store_true', default=False)
+    parser.add_argument('-d', '--device', type=int, default=0)
     return parser
 
 

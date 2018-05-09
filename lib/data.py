@@ -563,9 +563,7 @@ class DataHandler(object):
                 n_var = n_var_t
 
             n_var = n_var.sample()
-
-            if exp.USE_CUDA:
-                n_var = n_var.to('cuda')
+            n_var = n_var.to(exp.DEVICE)
 
             if n_var.size()[0] != batch_size:
                 n_var = n_var[0:batch_size]
@@ -630,8 +628,8 @@ class DataHandler(object):
 
         def iterator():
             for inputs in loader:
-                if exp.USE_CUDA:
-                    inputs = [inp.to('cuda') for inp in inputs]
+                
+                inputs = [inp.to(exp.DEVICE) for inp in inputs]
                 inputs_ = []
 
                 for i, inp in enumerate(inputs):

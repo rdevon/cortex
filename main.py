@@ -56,16 +56,12 @@ def main(eval_mode=False):
 
 
 def reload_model(arch, model_file):
-    import torch
-    use_cuda = torch.cuda.is_available()
-    setup_reload(arch, use_cuda, model_file)
+    setup_reload(arch, model_file)
     main(eval_mode=True)
 
 
 if __name__ == '__main__':
-    import torch
-    use_cuda = torch.cuda.is_available()
-    setup(use_cuda)
+    setup()
 
     try:
         main()
