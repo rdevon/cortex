@@ -1,4 +1,6 @@
 # cortex2.0
+[![Build Status](https://travis-ci.com/joeljpoulin/cortex2.0.svg?token=ezyDh2SipopgCKvFzE6w&branch=travis-pylint)](https://travis-ci.com/joeljpoulin/cortex2.0)
+
 A machine learning library for PyTorch
 
 ## SETUP
