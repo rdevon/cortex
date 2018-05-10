@@ -22,6 +22,7 @@ from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
 from . import config, exp, toysets
+from .custom_transforms import Sobel
 #from .cub import CUB
 
 
@@ -103,7 +104,7 @@ class CelebA(torchvision.datasets.ImageFolder):
 
 
 def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None,
-                   random_sized_crop=None):
+                   random_sized_crop=None, use_sobel=False):
     default_normalization = {
         'MNIST': [(0.5,), (0.5,)],
         'Fashion-MNIST': [(0.5,), (0.5,)],
@@ -127,7 +128,7 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
         transform_.append(transforms.RandomSizedCrop(random_crop))
     elif center_crop:
         transform_.append(transforms.CenterCrop(image_crop))
-    elif random_resized_crop:
+    elif random_sized_crop:
         transform_.append(transforms.RandomSizedCrop(random_sized_crop))
 
     if image_size:
@@ -138,7 +139,10 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
     if flip:
         if isinstance(flip, bool):
             flip = 0.5
-        torchvision.transforms.RandomHorizontalFlip()
+        transform_.append(transforms.RandomHorizontalFlip())
+
+    if use_sobel:
+        transform_.append(Sobel())
 
     transform_.append(transforms.ToTensor())
 
