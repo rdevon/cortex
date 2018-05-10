@@ -36,10 +36,11 @@ SD_VARIANT_DATASETS = ["G2"]
 NUM_VARIANT_DATASETS = ["S_set", "A_set"]
 
 
-class _SmallDataset(data.TensorDataset):
+class SmallDataset(data.TensorDataset):
 
     def __init__(self, root, *select,
-                 stardardize=False, load=False, download=False):
+                 stardardize=False, load=True, download=False):
+
         """Download or load a small dataset.
 
         Parameters
@@ -79,7 +80,9 @@ class _SmallDataset(data.TensorDataset):
 
     def download(self):
         """Download, and unzip in the correct location."""
-        import urllib
+
+        import urllib.request
+
         import zipfile
 
         if self.check_exists():
@@ -137,7 +140,9 @@ class _SmallDataset(data.TensorDataset):
         return True
 
 
-class G2(_SmallDataset):
+
+class G2(SmallDataset):
+
     """Download and use G2 dataset.
 
     Select arguments
@@ -214,7 +219,9 @@ class G2(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 'g2-1-10.txt'))
 
 
-class S_set(_SmallDataset):
+
+class S_set(SmallDataset):
+
     """Download and use S-sets dataset.
 
     Synthetic 2-d data with N=5000 vectors and k=15 Gaussian clusters
@@ -249,7 +256,9 @@ class S_set(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 's1.txt'))
 
 
-class A_set(_SmallDataset):
+
+class A_set(SmallDataset):
+
     """Download and use A-sets dataset.
 
     Synthetic 2-d data with varying number of vectors (N) and clusters (k).
@@ -286,7 +295,9 @@ class A_set(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 'a1.txt'))
 
 
-class DIM_set(_SmallDataset):
+
+class DIM_set(SmallDataset):
+
     """Download and use the (high) DIM-sets dataset.
 
     High-dimensional data sets N=1024 and k=16 Gaussian clusters.
@@ -326,7 +337,8 @@ class DIM_set(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 'dim032.txt'))
 
 
-class Unbalance(_SmallDataset):
+class Unbalance(SmallDataset):
+
     """Download and use the Unbalance dataset.
 
     Synthetic 2-d data with N=6500 vectors and k=8 Gaussian clusters
@@ -356,7 +368,9 @@ class Unbalance(_SmallDataset):
             os.path.exists(os.path.join(self.root, labels))
 
 
-class _Shapes(_SmallDataset):
+
+class Shapes(SmallDataset):
+
     """Wrap shapes datasets from the website."""
 
     def prepare(self):
@@ -385,7 +399,9 @@ class _Shapes(_SmallDataset):
         return os.path.exists(os.path.join(self.root, datafile))
 
 
-class Aggregation(_Shapes):
+
+class Aggregation(Shapes):
+
     """Download and use the Aggregation dataset.
 
     N=788, k=7, D=2
@@ -398,7 +414,8 @@ class Aggregation(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/Aggregation.txt"]
 
 
-class Compound(_Shapes):
+class Compound(Shapes):
+
     """Download and use the Compound dataset.
 
     N=399, k=6, D=2
@@ -411,7 +428,8 @@ class Compound(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/Compound.txt"]
 
 
-class Pathbased(_Shapes):
+class Pathbased(Shapes):
+
     """Download and use the Pathbased dataset.
 
     N=300, k=3, D=2
@@ -424,7 +442,9 @@ class Pathbased(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/pathbased.txt"]
 
 
-class Spiral(_Shapes):
+
+class Spiral(Shapes):
+
     """Download and use the Spiral dataset.
 
     N=312, k=3, D=2
@@ -437,7 +457,9 @@ class Spiral(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/spiral.txt"]
 
 
-class D31(_Shapes):
+
+class D31(Shapes):
+
     """Download and use the D31 dataset.
 
     N=3100, k=31, D=2
@@ -450,7 +472,9 @@ class D31(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/D31.txt"]
 
 
-class R15(_Shapes):
+
+class R15(Shapes):
+
     """Download and use the R15 dataset.
 
     N=600, k=15, D=2
@@ -463,7 +487,9 @@ class R15(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/R15.txt"]
 
 
-class Jain(_Shapes):
+
+class Jain(Shapes):
+
     """Download and use the ORIGINAL (2 moons) Jain dataset.
 
     N=373, k=2, D=2
@@ -476,7 +502,9 @@ class Jain(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/jain.txt"]
 
 
-class Flame(_Shapes):
+
+class Flame(Shapes):
+
     """Download and use the Flame dataset.
 
     N=240, k=2, D=2

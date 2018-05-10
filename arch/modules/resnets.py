@@ -5,9 +5,9 @@ import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
-from .SpectralNormLayer import SNConv2d, SNLinear
 
-# from .densenet import nn.LayerNorm
+from .utils import apply_nonlinearity, finish_layer_1d, finish_layer_2d, get_nonlinearity
+
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -20,23 +20,15 @@ class ConvMeanPool(nn.Module):
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
 
         models = nn.Sequential()
+        nonlinearity = get_nonlinearity(nonlinearity)
         name = 'cmp' + prefix
-        models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
-        models.add_module(name + '_pool', nn.AvgPool2d(2, count_include_pad=False))
 
-        if not nonlinearity:
-            pass
-        elif hasattr(nn, nonlinearity):
-            nonlin = nonlinearity
-            nonlinearity = getattr(nn, nonlinearity)
-            if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlinearity(0.02, inplace=True)
-            else:
-                nonlinearity = nonlinearity()
-        else:
-            raise ValueError(nonlinearity)
+
+        models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
+
+        models.add_module(name + '_pool', nn.AvgPool2d(2, count_include_pad=False))
         if nonlinearity:
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            models.add_module('{}_{}'.format(name, nonlinearity.__class__.__name__), nonlinearity)
 
         self.models = models
 
@@ -52,24 +44,15 @@ class MeanPoolConv(nn.Module):
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
 
         models = nn.Sequential()
+        nonlinearity = get_nonlinearity(nonlinearity)
         name = 'mpc' + prefix
 
         models.add_module(name + '_pool', nn.AvgPool2d(2, count_include_pad=False))
-        models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
 
-        if not nonlinearity:
-            pass
-        elif hasattr(nn, nonlinearity):
-            nonlin = nonlinearity
-            nonlinearity = getattr(nn, nonlinearity)
-            if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlinearity(0.02, inplace=True)
-            else:
-                nonlinearity = nonlinearity()
-        else:
-            raise ValueError(nonlinearity)
+        models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
+
         if nonlinearity:
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            models.add_module('{}_{}'.format(name, nonlinearity.__class__.__name__), nonlinearity)
 
         self.models = models
 
@@ -85,24 +68,15 @@ class UpsampleConv(nn.Module):
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
 
         models = nn.Sequential()
+        nonlinearity = get_nonlinearity(nonlinearity)
         name = prefix + '_usc'
-        models.add_module(name + '_up', nn.Upsample(scale_factor=2))
-        models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
 
-        if not nonlinearity:
-            pass
-        elif hasattr(nn, nonlinearity):
-            nonlin = nonlinearity
-            nonlinearity = getattr(nn, nonlinearity)
-            if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlinearity(0.02, inplace=True)
-            else:
-                nonlinearity = nonlinearity()
-        else:
-            raise ValueError(nonlinearity)
+        models.add_module(name + '_up', nn.Upsample(scale_factor=2))
+
+        models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
 
         if nonlinearity:
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            models.add_module('{}_{}'.format(name, nonlinearity.__class__.__name__), nonlinearity)
 
         self.models = models
 
@@ -112,57 +86,56 @@ class UpsampleConv(nn.Module):
 
 
 class ResBlock(nn.Module):
-    def __init__(self, dim_in, dim_out, f_size, resample=None, batch_norm=True,
-                 layer_norm=False, prefix='', spectral_norm=False):
+
+    def __init__(self, dim_in, dim_out, dim_x, dim_y, f_size, resample=None, name='resblock', nonlinearity='ReLU',
+                 **layer_args):
+
         super(ResBlock, self).__init__()
 
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
 
         models = nn.Sequential()
         skip_models = nn.Sequential()
-        name = prefix + '_resblock'
+        nonlinearity = get_nonlinearity(nonlinearity)
 
+        if resample not in ('up', 'down'):
+            raise Exception('invalid resample value: {}'.format(resample))
+
+        # Skip model
         if resample== 'down':
-            skip_models.add_module(
-                name + '_skip', MeanPoolConv(dim_in, dim_out, f_size, prefix=prefix, spectral_norm=spectral_norm))
-        elif resample == 'up':
-            skip_models.add_module(
-                name + '_skip', UpsampleConv(dim_in, dim_out, f_size, prefix=prefix, spectral_norm=spectral_norm))
+
+            conv = MeanPoolConv(dim_in, dim_out, f_size, prefix=name)
+
         else:
-            raise Exception('invalid resample value')
+            conv = UpsampleConv(dim_in, dim_out, f_size, prefix=name)
+        skip_models.add_module(name + '_skip', conv)
 
-        if layer_norm:
-            models.add_module(name + '_ln', nn.LayerNorm(dim_in))
-        elif batch_norm:
-            models.add_module(name + '_bn', nn.BatchNorm2d(dim_in))
+        finish_layer_2d(models, name, dim_x, dim_y, dim_in, nonlinearity=nonlinearity, **layer_args)
 
-        models.add_module('{}_{}'.format(name, 'rectify'), nn.ReLU())
+        # Up or down sample
+        if resample == 'down':
+
+            conv = nn.Conv2d(dim_in, dim_in, f_size, 1, 1)
+            models.add_module(name + '_stage1', conv)
+            finish_layer_2d(models, name + '_stage1', dim_x // 2, dim_y // 2, dim_in, nonlinearity=nonlinearity,
+                            **layer_args)
+
+        else:
+            conv = UpsampleConv(dim_in, dim_out, f_size, prefix=name + '_stage1')
+            models.add_module(name + '_stage1', conv)
+            finish_layer_2d(models, name + '_stage1', dim_x * 2, dim_y * 2, dim_out, nonlinearity=nonlinearity,
+                            **layer_args)
 
         if resample == 'down':
-            models.add_module(name + '_stage1', Conv2d(dim_in, dim_in, f_size, 1, 1))
-            if layer_norm:
-                models.add_module(name + '_ln2', nn.LayerNorm(dim_in))
-            elif batch_norm:
-                models.add_module(name + '_bn2', nn.BatchNorm2d(dim_in))
+
+            conv = ConvMeanPool(dim_in, dim_out, f_size, prefix=name)
         elif resample == 'up':
-            models.add_module(name + '_stage1', UpsampleConv(dim_in, dim_out, f_size, prefix=prefix,
-                                                             spectral_norm=spectral_norm))
-            if layer_norm:
-                models.add_module(name + '_ln2', nn.LayerNorm(dim_out))
-            elif batch_norm:
-                models.add_module(name + '_bn2', nn.BatchNorm2d(dim_out))
+            conv = nn.Conv2d(dim_out, dim_out, f_size, 1, 1)
+
         else:
             raise Exception('invalid resample value')
 
-        models.add_module('{}_{}'.format(name, 'rectify2'), nn.ReLU())
-
-        if resample == 'down':
-            models.add_module(name + '_stage2', ConvMeanPool(dim_in, dim_out, f_size, prefix=prefix,
-                                                             spectral_norm=spectral_norm))
-        elif resample == 'up':
-            models.add_module(name + '_stage2', Conv2d(dim_out, dim_out, f_size, 1, 1))
-        else:
-            raise Exception('invalid resample value')
+        models.add_module(name + '_stage2', conv)
 
         self.models = models
         self.skip_models = skip_models
@@ -184,11 +157,9 @@ class View(nn.Module):
 
 
 class ResDecoder(nn.Module):
-    def __init__(self, shape, dim_in=None, f_size=3, dim_h=64, batch_norm=True,
-                 layer_norm=False, n_steps=3):
+    def __init__(self, shape, dim_in=None, f_size=3, dim_h=64, n_steps=3, nonlinearity='ReLU', **layer_args):
         super(ResDecoder, self).__init__()
         models = nn.Sequential()
-
         dim_h_ = dim_h
 
         logger.debug('Output shape: {}'.format(shape))
@@ -197,7 +168,7 @@ class ResDecoder(nn.Module):
         dim_x = dim_x_
         dim_y = dim_y_
         dim_h = dim_h_
-        nonlinearity = nn.ReLU()
+        nonlinearity = get_nonlinearity(nonlinearity)
 
         for n in range(n_steps):
             dim_x //= 2
@@ -210,55 +181,45 @@ class ResDecoder(nn.Module):
         name = 'initial_({}/{})_0'.format(dim_in, dim_out)
         models.add_module(name, nn.Linear(dim_in, dim_out))
         models.add_module(name + '_reshape', View(-1, dim_h, dim_x, dim_y))
-        if layer_norm:
-            models.add_module(name + '_ln', nn.LayerNorm(dim_h))
-        elif batch_norm:
-            models.add_module(name + '_bn', nn.BatchNorm2d(dim_h))
+        finish_layer_2d(models, name, dim_x, dim_y, dim_h, nonlinearity=nonlinearity, **layer_args)
         dim_out = dim_h
-
-        models.add_module('{}_{}'.format(name, 'relu'), nonlinearity)
 
         for i in range(n_steps):
             dim_in = dim_out
             dim_out = dim_in // 2
             name = 'resblock_({}/{})_{}'.format(dim_in, dim_out, i + 1)
-            models.add_module(name, ResBlock(dim_in, dim_out, f_size, resample='up',
-                                             batch_norm=batch_norm, layer_norm=layer_norm, prefix=name))
+            resblock = ResBlock(dim_in, dim_out, dim_x, dim_y, f_size, resample='up', name=name, **layer_args)
+            models.add_module(name, resblock)
+            dim_x *= 2
+            dim_y *= 2
 
         name = 'conv_({}/{})_{}'.format(dim_in, dim_out, 'final')
-        if layer_norm:
-            models.add_module(name + '_ln', nn.LayerNorm(dim_out))
-        elif batch_norm:
-            models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
-
-        models.add_module('{}_{}'.format(name, 'relu'), nonlinearity)
+        finish_layer_2d(models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity, **layer_args)
         models.add_module(name, nn.ConvTranspose2d(dim_out, dim_out_, f_size, 1, 1, bias=False))
 
         self.models = models
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         nonlinearity_args = nonlinearity_args or {}
         x = self.models(x)
-        if nonlinearity:
-            if callable(nonlinearity):
-                x = nonlinearity(x, **nonlinearity_args)
-            elif hasattr(F, nonlinearity):
-                x = getattr(F, nonlinearity)(x, **nonlinearity_args)
-            else:
-                raise ValueError()
-        return x
+
+        return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
 
 
 class ResEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, f_size=3, batch_norm=True, 
-                 layer_norm=False, n_steps=3, spectral_norm=False):
+
+    def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None,
+                 f_size=3, n_steps=3, nonlinearity='ReLU', **layer_args):
+
         super(ResEncoder, self).__init__()
         models = nn.Sequential()
+        nonlinearity = get_nonlinearity(nonlinearity)
 
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
         Linear = SNLinear if spectral_norm else nn.Linear
 
         dim_out_ = dim_out
+        fully_connected_layers = fully_connected_layers or []
 
         logger.debug('Input shape: {}'.format(shape))
         dim_x, dim_y, dim_in = shape
@@ -273,28 +234,34 @@ class ResEncoder(nn.Module):
             dim_out = dim_in * 2
 
             name = 'resblock_({}/{})_{}'.format(dim_in, dim_out, i + 1)
-            models.add_module(name, ResBlock(dim_in, dim_out, f_size, resample='down', batch_norm=batch_norm,
-                                             layer_norm=layer_norm, prefix=name, spectral_norm=True))
+
+            resblock = ResBlock(dim_in, dim_out, dim_x, dim_y, f_size, resample='down', name=name, **layer_args)
+            models.add_module(name, resblock)
+
 
             dim_x //= 2
             dim_y //= 2
 
+        dim_out = dim_x * dim_y * dim_out
+        models.add_module('final_reshape', View(-1, dim_out))
+
+        for dim_h in fully_connected_layers:
+            dim_in = dim_out
+            dim_out = dim_h
+            name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
+            models.add_module(name, nn.Linear(dim_in, dim_out))
+            finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
+
         if dim_out_:
-            models.add_module(name + '_reshape', View(-1, dim_out * dim_x * dim_y))
-            name = 'lin_({}/{})_{}'.format(dim_out * dim_x * dim_y, dim_out_, 'final')
-            models.add_module(name, Linear(dim_out * dim_x * dim_y, dim_out_))
+
+            name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
+            models.add_module(name, nn.Linear(dim_out, dim_out_))
+
 
         self.models = models
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
-        nonlinearity_args = nonlinearity_args or {}
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
-        if nonlinearity:
-            if callable(nonlinearity):
-                x = nonlinearity(x, **nonlinearity_args)
-            elif hasattr(F, nonlinearity):
-                x = getattr(F, nonlinearity)(x, **nonlinearity_args)
-            else:
-                raise ValueError()
-        return x
+
+        return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)

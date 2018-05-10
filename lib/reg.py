@@ -1,5 +1,8 @@
 from . import exp
 
+__author__ = 'Bradley Baker'
+__author_email__ = 'bbaker@mrn.org'
+
 ''' CLIPPING is a global dictionary of clipping boundaries,
     keyed by model name'''
 CLIPPING = {}

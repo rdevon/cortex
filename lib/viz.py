@@ -2,6 +2,9 @@
 
 '''
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
 import logging
 from os import path
 
@@ -14,8 +17,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import visdom
 
-from . import config, exp
-from .data import DATA_HANDLER
+from . import config, data, exp
 from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
 
@@ -66,8 +68,8 @@ class VizHandler():
         self.clear()
         self.ignore = True
         self.image_dir = exp.OUT_DIRS.get('image_dir', None)
-        self.prefix = exp.file_string('')
-        self.image_scale = DATA_HANDLER.image_scale
+        self.prefix = exp._file_string('')
+        self.image_scale = data.DATA_HANDLER.image_scale
 
     def clear(self):
         self.images = {}
@@ -329,7 +331,7 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='', image
     else:
         Y = None
 
-    names = DATA_HANDLER.get_label_names()
+    names = data.DATA_HANDLER.get_label_names()
     Y = Y - min(Y) + 1
     if len(names) != max(Y):
         names = ['{}'.format(i+1) for i in range(max(Y))]

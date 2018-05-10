@@ -1,8 +1,6 @@
 '''Simple classifier model. Credit goes to Samuel Lavoie
 '''
 
-import logging
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,8 +11,6 @@ from .classifier import classify
 from .utils import cross_correlation
 
 
-logger = logging.getLogger('cortex.arch' + __name__)
-
 resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 resnet_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7)
@@ -24,7 +20,7 @@ convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 
 def setup(model=None, data=None, **kwargs):
-    data['noise_variables']['z'] = (data['noise_variables']['z'][0], model['dim_z'])
+    data['noise_variables']['z']['size'] = model['dim_z']
 
 
 class VAE(nn.Module):
@@ -52,35 +48,39 @@ class VAE(nn.Module):
         self.latent = self.reparametrize(self.mu, self.std)
         return self.decoder(self.latent, nonlinearity=nonlinearity)
 
+# ROUTINES =============================================================================================================
+# Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
 def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.):
     X, Y, Z = data.get_batch('images', 'targets', 'z')
-    vae_net = models['vae']
+    vae_net = models.vae
 
     outputs = vae_net(X, nonlinearity=F.tanh)
     gen = vae_net.decoder(Z, nonlinearity=F.tanh)
 
-    r_loss = criterion(outputs, X, size_average=False)
-    kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum()
-    losses.update(vae=r_loss + beta_kld * kl)
-    correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
+    r_loss = criterion(outputs, X, size_average=False) / X.size(0)
+    kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
+
+    losses.vae=(r_loss + beta_kld * kl)
+    #correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 
     results.update(KL_divergence=kl.item())
     viz.add_image(outputs, name='reconstruction')
     viz.add_image(gen, name='generated')
     viz.add_image(X, name='ground truth')
-    viz.add_heatmap(correlations.data, name='latent correlations')
+    #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
 
 def classifier_routine(data, models, losses, results, viz, **kwargs):
     X, Y = data.get_batch('images', 'targets')
-    vae_net = models['vae']
-    classifier = models['classifier']
+    vae_net = models.vae
+    classifier = models.classifier
 
     vae_net(X, nonlinearity=F.tanh)
     classify(classifier, vae_net.mu, Y, losses=losses, results=results, **kwargs)
 
+# Building helper functions for autoencoders ===========================================================================
 
 def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
     encoder_args = encoder_args or {}
@@ -122,7 +122,7 @@ def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
         raise NotImplementedError(model_type)
 
     decoder_args_.update(**decoder_args)
-    if x_shape[0] == 64:
+    if x_shape[0] >= 64:
         decoder_args_['n_steps'] = 4
     elif x_shape[0] == 128:
         decoder_args_['n_steps'] = 5
@@ -149,9 +149,10 @@ def build_decoder(models, x_shape, dim_in, Decoder, key='decoder', **decoder_arg
 
     return decoder
 
+# CORTEX ===============================================================================================================
+# Must include `BUILD`, `TRAIN_ROUTINES`, `DEFAULT_CONFIG`
 
-def build_model(data, models, model_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args=None,
-                decoder_args=None):
+def BUILD(data, models, model_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args=None, decoder_args=None):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
@@ -162,24 +163,17 @@ def build_model(data, models, model_type='convnet', dim_z=64, dim_encoder_out=10
     decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
     vae = VAE(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
 
-    classifier = FullyConnectedNet(dim_z, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, batch_norm=True, dropout=0.2)
     models.update(vae=vae, classifier=classifier)
 
 
-ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
-
+TRAIN_ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
-              noise_variables=dict(z=('normal', 64))),
-    optimizer=dict(
-        optimizer='Adam',
-        learning_rate=1e-4,
-    ),
+              noise_variables=dict(z=dict(dist='normal', size=64))),
+    optimizer=dict(optimizer='Adam', learning_rate=1e-4),
     model=dict(dim_z=64, model_type='convnet', dim_encoder_out=1028, encoder_args=None, decoder_args=None),
     routines=dict(vae=dict(criterion=F.mse_loss, beta_kld=1.),
                   classifier=dict(criterion=nn.CrossEntropyLoss())),
-    train=dict(
-        epochs=500,
-        archive_every=10
-    )
+    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.vae')
 )
