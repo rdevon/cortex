@@ -150,9 +150,16 @@ def reload_experiment(args):
     exp.INFO.update(**d['info'])
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
-    kwargs = convert_nested_dict_to_handler(d['args'])
+    kwargs = copy.deepcopy(_args)
+    for k in d['args']:
+        if k in kwargs:
+            kwargs[k].update(**d['args'][k])
+        else:
+            kwargs[k] = d['args'][k]
+    kwargs = convert_nested_dict_to_handler(kwargs)
     handle_deprecated(**kwargs)
     exp.ARGS.update(**kwargs)
+
     reloads = reloads or d['models'].keys()
     for k in reloads:
         exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
