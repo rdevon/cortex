@@ -19,7 +19,7 @@ def shape_noise(Y_P, U, noise_type, epsilon=1e-6):
     if noise_type == 'hypercubes':
         pass
     elif noise_type == 'unitsphere':
-        Y_P = Y_P / (torch.sqrt((Y_p ** 2).sum(1, keepdim=True)) + epsilon)
+        Y_P = Y_P / (torch.sqrt((Y_P ** 2).sum(1, keepdim=True)) + epsilon)
     elif noise_type == 'unitball':
         Y_P = Y_P / (torch.sqrt((Y_P ** 2).sum(1, keepdim=True)) + epsilon) * U.expand(Y_P.size())
     else:
