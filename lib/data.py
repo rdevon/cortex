@@ -102,7 +102,8 @@ class CelebA(torchvision.datasets.ImageFolder):
         zip_ref.close()
 
 
-def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None):
+def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None,
+                   random_sized_crop=None):
     default_normalization = {
         'MNIST': [(0.5,), (0.5,)],
         'Fashion-MNIST': [(0.5,), (0.5,)],
@@ -126,6 +127,8 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
         transform_.append(transforms.RandomSizedCrop(random_crop))
     elif center_crop:
         transform_.append(transforms.CenterCrop(image_crop))
+    elif random_resized_crop:
+        transform_.append(transforms.RandomSizedCrop(random_sized_crop))
 
     if image_size:
         if isinstance(image_size, int):
