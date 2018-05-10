@@ -11,7 +11,7 @@ import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from . import exp, reg
+from . import exp, models, reg
 
 logger = logging.getLogger('cortex.optimizer')
 
@@ -70,13 +70,13 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
     # Set the number of updates per routine
     updates_per_routine = updates_per_routine or {}
     updates_per_routine = dict((k, (1 if k not in updates_per_routine else updates_per_routine[k]))
-                               for k in exp.TRAIN_ROUTINES)
-    for k in list(exp.TRAIN_ROUTINES.keys()) + list(exp.FINISH_TRAIN_ROUTINES.keys()):
+                               for k in models.ARCH.train_routines)
+    for k in list(models.ARCH.train_routines.keys()) + list(models.ARCH.finish_train_routines.keys()):
         if k not in updates_per_routine:
             updates_per_routine[k] = 1
 
     UPDATES.update(**updates_per_routine)
-    if len(train_for) == 0:
+    if train_for is not None and len(train_for) == 0:
         train_for = None
     TRAIN_FOR = train_for
 
@@ -91,7 +91,7 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
     else:
         raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
 
-    for model_key, model in exp.MODEL_HANDLER.items():
+    for model_key, model in models.MODEL_HANDLER.items():
         if model_key in ('extras', 'final'):
             continue
         logger.info('Building optimizer for {}'.format(model_key))

@@ -11,12 +11,14 @@ if sys.version_info < (3, 0):
     sys.exit(1)
 
 import logging
+from os import path
 
-from __init__ import setup, setup_reload
-from lib import exp
+from lib import setup_cortex, exp
+from lib.config import update_config
 from lib.data import setup as setup_data, DATA_HANDLER
 from lib.models import setup_model
 from lib.optimizer import setup as setup_optimizer
+from lib.parsing import parse_args
 from lib.train import setup as setup_train, main_loop
 from lib.utils import print_section
 
@@ -25,34 +27,37 @@ logger = logging.getLogger('cortex')
 
 
 def main(eval_mode=False):
-    '''Main function for continuous BGAN.
+    '''Main function.
 
     '''
-    data_args = exp.ARGS['data']
-    model_args = exp.ARGS['model']
-    optimizer_args = exp.ARGS['optimizer']
-    train_args = exp.ARGS['train']
+
+    # Setup file paths
+    config_file_path = path.join(path.dirname(
+        path.abspath(__file__)), 'config.yaml')
+    if not path.isfile(config_file_path):
+        config_file_path = None
+
+    # User config
+    update_config(config_file_path)
+
+    # Parse the command-line arguments
+    args = parse_args()
+    setup_cortex(args)
 
     print_section('LOADING DATA') ##############################################
-    setup_data(**data_args)
+    setup_data(**exp.ARGS.data)
 
     print_section('MODEL') #####################################################
-    logger.info('Building model with args {}'.format(model_args))
-    models, routines = setup_model(DATA_HANDLER, **model_args)
-
-    print_section('EXPERIMENT') ################################################
-    exp.setup(models, **routines)
+    setup_model(DATA_HANDLER, **exp.ARGS.model)
 
     print_section('OPTIMIZER') #################################################
-    logger.info('Setting up optimizer with args {}'.format(optimizer_args))
-    setup_optimizer(**optimizer_args)
+    setup_optimizer(**exp.ARGS.optimizer)
 
     if eval_mode:
         return
     print_section('TRAIN') #####################################################
-    logger.info('Training loop with args {}'.format(train_args))
     setup_train()
-    main_loop(**train_args)
+    main_loop(**exp.ARGS.train)
 
 
 def reload_model(arch, model_file):
@@ -61,8 +66,6 @@ def reload_model(arch, model_file):
 
 
 if __name__ == '__main__':
-    setup()
-
     try:
         main()
     except KeyboardInterrupt:

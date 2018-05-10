@@ -144,7 +144,7 @@ def apply_gradient_penalty(data, models, inputs=None, model=None, penalty_type='
 # ROUTINES =============================================================================================================
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
-def discriminator_routine(data, models, losses, results, viz, measure=None):
+def discriminator_routine(data, models, losses, results, viz, measure='GAN'):
     Z, X_P = data.get_batch('z', 'images')
     discriminator = models.discriminator
     generator = models.generator
@@ -164,18 +164,19 @@ def discriminator_routine(data, models, losses, results, viz, measure=None):
     losses.discriminator = -difference
 
 
-def penalty_routine(data, models, losses, results, viz, **penalty_args):
+def penalty_routine(data, models, losses, results, viz, penalty_type='gradient_norm', penalty_amount=0.5):
     Z, X_P = data.get_batch('z', 'images')
     generator = models.generator
 
     X_Q = generator(Z, nonlinearity=F.tanh).detach()
-    penalty = apply_gradient_penalty(data, models, inputs=(X_P, X_Q), model='discriminator', **penalty_args)
+    penalty = apply_gradient_penalty(data, models, inputs=(X_P, X_Q), model='discriminator',
+                                     penalty_type=penalty_type, penalty_amount=penalty_amount)
 
     if penalty:
         losses.discriminator = penalty
 
 
-def generator_routine(data, models, losses, results, viz, measure=None, loss_type=None):
+def generator_routine(data, models, losses, results, viz, measure=None, loss_type='non-saturating'):
     Z = data['z']
     discriminator = models.discriminator
     generator = models.generator
@@ -194,7 +195,7 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
 # CORTEX ===============================================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
-def BUILD(data, models, model_type='dcgan', discriminator_args=None, generator_args=None):
+def BUILD(data, models, model_type='convnet', discriminator_args=dict(), generator_args=dict()):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_z = data.get_dims('z')
 
@@ -219,7 +220,6 @@ DEFAULT_CONFIG = dict(
                                    e=dict(dist='uniform', size=1, low=0, high=1))),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4,
                    updates_per_routine=dict(discriminator=1, penalty=1, generator=1)),
-    model=dict(model_type='convnet', discriminator_args=None, generator_args=None),
     routines=dict(discriminator=dict(measure='GAN'),
                   penalty=dict(penalty_type='gradient_norm', penalty_amount=0.5),
                   generator=dict(loss_type='non-saturating')),

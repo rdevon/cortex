@@ -22,7 +22,6 @@ root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 arch_dir = os.path.abspath(os.path.join(root, 'arch'))
 ARCH_PATHS.update(core=arch_dir)
 ARCHS = dict()
-ARCH = None
 
 
 class ModelHandler(Handler):
@@ -39,6 +38,10 @@ class ModelHandler(Handler):
         #super().unsafe_set('special', Handler())
 
     def check_key_value(self, k, v):
+        if k in self:
+            logger.warning('Key {} already in MODEL_HANDLER, ignoring.'.format(k))
+            return False
+
         if k in self._protected:
             raise KeyError('Keyword `{}` is protected.'.format(k))
 
@@ -49,14 +52,33 @@ class ModelHandler(Handler):
             raise ValueError('Type `{}` of `{}` not allowed. Only `{}` and subclasses (or tuples of {}) are supported'.format(
                 type(v), k, self._type, self._type))
 
+        return True
+
     def get_special(self, key):
         return self._special[key]
 
     def add_special(self, **kwargs):
         self._special.update(**kwargs)
 
+MODEL_HANDLER = ModelHandler()
 
-def setup(arch):
+
+class ArchHandler(object):
+    def __init__(self, defaults=None, setup=None, build=None, Dataset=None, DataLoader=None, transform=None,
+                 train_routines=None, test_routines=None, finish_train_routines=None, finish_test_routines=None):
+        self.defaults = defaults
+        self.setup = setup
+        self.build = build
+        self.Dataset = Dataset
+        self.DataLoader = DataLoader
+        self.transform = transform
+        self.train_routines = train_routines
+        self.test_routines = test_routines or {}
+        self.finish_train_routines = finish_train_routines or {}
+        self.finish_test_routines = finish_test_routines or {}
+
+
+def setup_arch(arch):
     global ARCH
     logger.info('Using architecture `{}`'.format(arch))
     ARCH = ARCHS.get(arch, None)
@@ -65,6 +87,23 @@ def setup(arch):
                          'Available: {}'.format(
             arch, ARCHS.keys()))
     return ARCH
+
+
+_arch_keys_required = dict(
+    DEFAULT_CONFIG='defaults',
+    TRAIN_ROUTINES='train_routines',
+    BUILD='build'
+)
+
+_arch_keys_optional = dict(
+    TEST_ROUTINES='test_routines',
+    FINISH_TRAIN_ROUTINES='finish_train_routines',
+    FINISH_TEST_ROUTINES='finish_test_routines',
+    SETUP='setup',
+    Dataset='Dataset',
+    DataLoader='DataLoader',
+    transform='transform'
+)
 
 
 def add_directory(p, name):
@@ -89,21 +128,30 @@ def add_directory(p, name):
             except Exception as e:
                 logger.warning('Import of architecture (module) {} failed ({})'.format(fnp, type(e)))
                 success = False
-            if not success:
-                pass
-            elif not hasattr(m, 'DEFAULT_CONFIG'):
-                logger.warning('Architecture (module) {} lacks `DEFAULT_CONFIG` dictionary, skipping'.format(fnp))
-            elif not hasattr(m, 'BUILD'):
-                logger.warning('Architecture (module) {} lacks `BUILD` method, skipping'.format(fnp))
-            elif not hasattr(m, 'TRAIN_ROUTINES'):
-                logger.warning('Architecture (module) {} lacks `TRAIN_ROUTINES` dictionary, skipping'.format(fnp))
-            elif name in ARCHS.keys():
+
+            arch_dict = {}
+            for k, v in _arch_keys_required.items():
+                if not hasattr(m, k):
+                    logger.warning('Architecture (module) {} lacks `{}` skipping'.format(fnp, k))
+                    success = False
+                else:
+                    arch_dict[v] = getattr(m, k)
+
+            for k, v in _arch_keys_optional.items():
+                if hasattr(m, k):
+                    arch_dict[v] = getattr(m, k)
+                else:
+                    arch_dict[v] = None
+
+            if name in ARCHS.keys():
                 logger.warning('Architecture (module) {} has the same name '
                                '(and path structure) as another architecture, skipping'.format(name))
-            else:
+                success = False
+
+            if success:
                 namep = name + '.' + fn[:-3]
                 m.logger = logging.getLogger('cortex.arch' + namep)
-                ARCHS[namep] = m
+                ARCHS[namep] = ArchHandler(**arch_dict)
         elif os.path.isdir(fn):
             if fn.endswith('/'):
                 fn = fn[:-1]
@@ -120,24 +168,25 @@ def setup_model(data_handler, **model_args):
     otherwise, use the one found in this module.
 
     '''
+    global ARCH, MODEL_HANDLER
 
-    models = ModelHandler()
     logger.debug('Model args: {}'.format(model_args))
+    ARCH.build(data_handler, MODEL_HANDLER, **model_args)
 
-    getattr(ARCH, 'BUILD')(data_handler, models, **model_args)
-    train_routines = ARCH.TRAIN_ROUTINES
-    if hasattr(ARCH, 'TEST_ROUTINES'):
-        test_routines = ARCH.TEST_ROUTINES
-        for k in train_routines:
-            if not k in test_routines:
-                test_routines[k] = train_routines[k]
+    if ARCH.test_routines is not None:
+        for k in ARCH.train_routines:
+            if not k in ARCH.test_routines:
+                ARCH.test_routines[k] = ARCH.train_routines[k]
     else:
-        test_routines = train_routines
+        ARCH.test_routines = ARCH.train_routines
 
-    finish_train_routines = getattr(ARCH, 'FINISH_TRAIN_ROUTINES', {})
-    finish_test_routines = getattr(ARCH, 'FINISH_TEST_ROUTINES', {})
 
-    routines = dict(train_routines=train_routines, test_routines=test_routines,
-                    finish_train_routines=finish_train_routines, finish_test_routines=finish_test_routines)
-
-    return models, routines
+def reload_models(**reload_models):
+    global MODEL_HANDLER
+    if MODEL_HANDLER is None:
+        raise RuntimeError('MODEL_HANDLER not set. `reload_models` should only be used after '
+                           '`models.setup_models` has been called.')
+    for k, v in reload_models.items():
+        logger.info('Reloading model {}'.format(k))
+        logger.debug(v)
+        MODEL_HANDLER[k] = v

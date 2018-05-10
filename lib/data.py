@@ -663,7 +663,7 @@ DATA_HANDLER = DataHandler()
 
 
 def setup(source=None, batch_size=None, noise_variables=None, n_workers=None, skip_last_batch=None,
-          test_on_train=None, **kwargs):
+          test_on_train=None, Dataset=None, DataLoader=None, transform=None, **kwargs):
     global DATA_HANDLER, NOISE
 
     if source and not isinstance(source, (list, tuple)):
@@ -671,10 +671,26 @@ def setup(source=None, batch_size=None, noise_variables=None, n_workers=None, sk
 
     DATA_HANDLER.set_batch_size(batch_size, skip_last_batch=skip_last_batch)
 
+    if DataLoader is not None:
+        logger.info('Loading custom DataLoader class, {}'.format(DataLoader))
+        exp.ARGS['data']['DataLoader'] = DataLoader
+
+    if Dataset is not None:
+        logger.info('Loading custom Dataset class, {}'.format(Dataset))
+        exp.ARGS['data']['Dataset'] = Dataset
+
+    if transform is not None:
+        logger.info('Loading custom transform function, {}'.format(transform))
+        exp.ARGS['data']['transform'] = transform
+
     if source:
         for source_ in source:
             source_args = kwargs.get(source_, kwargs)
-            DATA_HANDLER.add_dataset(source_, test_on_train, n_workers=n_workers, **source_args)
+            DATA_HANDLER.add_dataset(source_, test_on_train, n_workers=n_workers,
+                                     DataLoader=DataLoader, Dataset=Dataset, transform=transform,
+                                     **source_args)
+    else:
+        raise ValueError('No source provided. Use `--data.source`')
 
     if noise_variables:
         for k, v in noise_variables.items():
