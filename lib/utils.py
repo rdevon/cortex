@@ -78,7 +78,11 @@ def update_dict_of_lists(d_to_update, **d):
 
     '''
     for k, v in d.items():
-        if k in d_to_update.keys():
+        if isinstance(v, dict):
+            if k not in d_to_update.keys():
+                d_to_update[k] = {}
+            update_dict_of_lists(d_to_update[k], **v)
+        elif k in d_to_update.keys():
             d_to_update[k].append(v)
         else:
             d_to_update[k] = [v]
@@ -87,12 +91,17 @@ def update_dict_of_lists(d_to_update, **d):
 def bad_values(d):
     failed = {}
     for k, v in d.items():
-        if isinstance(v, torch.autograd.variable.Variable):
-            v_ = v.data[0]
+        if isinstance(v, dict):
+            v_ = bad_values(v)
+            if v_:
+                failed[k] = v_
         else:
-            v_ = v
-        if np.isnan(v_) or np.isinf(v_):
-            failed[k] = v_
+            if isinstance(v, torch.Tensor):
+                v_ = v.item()
+            else:
+                v_ = v
+            if np.isnan(v_) or np.isinf(v_):
+                failed[k] = v_
 
     if len(failed) == 0:
         return False
@@ -100,15 +109,20 @@ def bad_values(d):
 
 
 def convert_to_numpy(o):
-    if isinstance(o, torch.autograd.variable.Variable):
+    if isinstance(o, torch.Tensor):
         o = o.data.cpu().numpy()
         if len(o.shape) == 1 and o.shape[0] == 1:
             o = o[0]
     elif isinstance(o, (torch.cuda.FloatTensor, torch.cuda.LongTensor)):
         o = o.cpu().numpy()
-    elif isinstance(o, (list, tuple)):
+    elif isinstance(o, list):
         for i in range(len(o)):
             o[i] = convert_to_numpy(o[i])
+    elif isinstance(o, tuple):
+        o_ = tuple()
+        for i in range(len(o)):
+            o_ = o_ + (convert_to_numpy(o[i]),)
+        o = o_
     elif isinstance(o, dict):
         for k in o.keys():
             o[k] = convert_to_numpy(o[k])

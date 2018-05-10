@@ -9,9 +9,10 @@ import torch.nn.functional as F
 from .SpectralNormLayer import SNConv2d, SNLinear
 
 from .modules import View
+# from .densenet import nn.LayerNorm
 
 
-logger = logging.getLogger('cortex.models' + __name__)
+logger = logging.getLogger('cortex.arch' + __name__)
 
 
 def infer_conv_size(w, k, s, p):
@@ -39,37 +40,48 @@ class SimpleNet(nn.Module):
 
 
 class MNISTConv(nn.Module):
-    def __init__(self, shape, dim_out=1, dim_h=64, batch_norm=True, nonlinearity='ReLU'):
+    def __init__(self, shape, dim_out=1, dim_h=64, batch_norm=True, layer_norm=False, nonlinearity='ReLU',
+                 spectral_norm=False):
         super(MNISTConv, self).__init__()
         models = nn.Sequential()
 
+        Conv2d = SNConv2d if spectral_norm else nn.Conv2d
+        Linear = SNLinear if spectral_norm else nn.Linear
+
         if hasattr(nn, nonlinearity):
-            nonlin = getattr(nn, nonlinearity)
+            nonlin = nonlinearity
+            nonlinearity = getattr(nn, nonlinearity)
             if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlin(0.02, inplace=True)
+                nonlinearity = nonlinearity(0.02, inplace=True)
             else:
-                nonlinearity = nonlin()
+                nonlinearity = nonlinearity()
         else:
             raise ValueError(nonlinearity)
 
         models.add_module('conv1', nn.Conv2d(1, dim_h, 5, 2, 2))
         models.add_module('conv1_nonlin', nonlinearity)
-        if batch_norm:
+        if layer_norm:
+            models.add_module('conv1_ln', nn.LayerNorm(dim_h))
+        elif batch_norm:
             models.add_module('conv1_bn', nn.BatchNorm2d(dim_h))
 
-        models.add_module('conv2', nn.Conv2d(dim_h, 2 * dim_h, 5, 2, 2))
+        models.add_module('conv2', Conv2d(dim_h, 2 * dim_h, 5, 2, 2))
         models.add_module('conv2_nonlin', nonlinearity)
-        if batch_norm:
-            models.add_module('conv1_bn', nn.BatchNorm2d(2 * dim_h))
+        if layer_norm:
+            models.add_module('conv2_ln', nn.LayerNorm(2 * dim_h))
+        elif batch_norm:
+            models.add_module('conv2_bn', nn.BatchNorm2d(2 * dim_h))
 
         models.add_module('view', View(-1, 2 * dim_h * 7 * 7))
 
-        models.add_module('dense1', nn.Linear(2 * dim_h * 7 * 7, 1024))
+        models.add_module('dense1', Linear(2 * dim_h * 7 * 7, 1024))
         models.add_module('dense1_nonlin', nonlinearity)
-        if batch_norm:
+        if layer_norm:
+            models.add_module('dense1_ln', nn.LayerNorm(1024))
+        elif batch_norm:
             models.add_module('dense1_bn', nn.BatchNorm1d(1024))
 
-        models.add_module('dense2', nn.Linear(1024, dim_out))
+        models.add_module('dense2', Linear(1024, dim_out))
 
         self.models = models
 
@@ -89,23 +101,26 @@ class MNISTConv(nn.Module):
 
 
 class SimpleConvEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True, fully_connected_layers=None,
-                 dropout=False, nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4, n_steps=None,
-                 spectral_norm=False):
+    def __init__(self, shape, dim_out=None, dim_h=64, final_layer=None, batch_norm=True, layer_norm=False,
+                 fully_connected_layers=None, dropout=False, nonlinearity='ReLU', f_size=4, stride=2,
+                 pad=1, min_dim=4, n_steps=None, spectral_norm=False):
         super(SimpleConvEncoder, self).__init__()
-        conv2d = SNConv2d if spectral_norm else nn.Conv2d
-        linear = SNLinear if spectral_norm else nn.Linear
+        Conv2d = SNConv2d if spectral_norm else nn.Conv2d
+        Linear = SNLinear if spectral_norm else nn.Linear
         models = nn.Sequential()
 
         dim_out_ = dim_out
         fully_connected_layers = fully_connected_layers or []
 
-        if hasattr(nn, nonlinearity):
-            nonlin = getattr(nn, nonlinearity)
+        if not nonlinearity:
+            pass
+        elif hasattr(nn, nonlinearity):
+            nonlin = nonlinearity
+            nonlinearity = getattr(nn, nonlinearity)
             if nonlinearity == 'LeakyReLU':
-                nonlinearity = nonlin(0.02, inplace=True)
+                nonlinearity = nonlinearity(0.02, inplace=True)
             else:
-                nonlinearity = nonlin()
+                nonlinearity = nonlinearity()
         else:
             raise ValueError(nonlinearity)
 
@@ -114,10 +129,10 @@ class SimpleConvEncoder(nn.Module):
         #dim_out = dim_h
         '''
         name = 'conv_({}/{})_0'.format(dim_in, dim_out)
-        models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
-        models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+        arch.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+        arch.add_module('{}_{}'.format(name, nonlin), nonlinearity)
         if dropout:
-            models.add_module(name + '_do', nn.Dropout2d(p=dropout))
+            arch.add_module(name + '_do', nn.Dropout2d(p=dropout))
         dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
         '''
 
@@ -130,13 +145,17 @@ class SimpleConvEncoder(nn.Module):
                 dim_in = dim_out
                 dim_out = dim_in * 2
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
-            models.add_module(name, conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+            models.add_module(name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+            dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             if dropout:
                 models.add_module(name + '_do', nn.Dropout2d(p=dropout))
-            if batch_norm:
+            if layer_norm:
+                models.add_module(name + '_ln', nn.LayerNorm((dim_out, dim_x, dim_y)))
+            elif batch_norm:
                 models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
-            dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
+            if nonlinearity:
+               models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+            
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
 
@@ -147,22 +166,23 @@ class SimpleConvEncoder(nn.Module):
             dim_in = dim_out
             dim_out = dim_h
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
-            models.add_module(name, linear(dim_in, dim_out))
+            models.add_module(name, Linear(dim_in, dim_out))
             if dropout:
-                models.add_module(name + '_do', nn.Dropout2d(p=dropout))
+                models.add_module(name + '_do', nn.Dropout1d(p=dropout))
             if batch_norm:
-                models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
-            models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
+                models.add_module(name + '_bn', nn.BatchNorm1d(dim_out))
+            if nonlinearity:
+               models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
 
         if final_layer:
             name = 'linear_({}/{})_{}'.format(dim_out, final_layer, 'final')
-            models.add_module(name, linear(dim_out, final_layer))
+            models.add_module(name, Linear(dim_out, final_layer))
             models.add_module('{}_{}'.format(name, nonlin), nonlinearity)
             dim_out = final_layer
 
         if dim_out_:
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
-            models.add_module(name, linear(dim_out, dim_out_))
+            models.add_module(name, Linear(dim_out, dim_out_))
 
         self.models = models
 
@@ -184,8 +204,9 @@ class SimpleConvEncoder(nn.Module):
 
         return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
         nonlinearity_args = nonlinearity_args or {}
+
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
 

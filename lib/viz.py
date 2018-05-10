@@ -3,9 +3,9 @@
 '''
 
 import logging
+from os import path
 
 import imageio
-import scipy
 import matplotlib
 
 matplotlib.use('Agg')
@@ -16,6 +16,7 @@ import visdom
 
 from . import config, exp
 from .data import DATA_HANDLER
+from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
 
 logger = logging.getLogger('cortex.viz')
@@ -60,6 +61,143 @@ def setup(use_tanh=None, quantized=None, img=None, label_names=None,
     if char_map is not None: CHAR_MAP = char_map
 
 
+class VizHandler():
+    def __init__(self):
+        self.clear()
+        self.ignore = True
+        self.image_dir = exp.OUT_DIRS.get('image_dir', None)
+        self.prefix = exp.file_string('')
+        self.image_scale = DATA_HANDLER.image_scale
+
+    def clear(self):
+        self.images = {}
+        self.scatters = {}
+        self.histograms = {}
+        self.heatmaps = {}
+
+    def add_image(self, im, name='image', labels=None):
+        if self.ignore:
+            return
+        im = convert_to_numpy(im)
+        mi, ma = self.image_scale
+        im = (im - mi) / float(ma - mi)
+        if labels is not None:
+            labels = convert_to_numpy(labels)
+        if name in self.images:
+            raise KeyError('{} already added to visualization. Use the name kwarg'.format(name))
+        self.images[name] = (im, labels)
+
+    def add_histogram(self, hist, name='histogram'):
+        if self.ignore:
+            return
+        if name in self.histograms:
+            raise KeyError('{} already added to visualization. Use the name kwarg'.format(name))
+        hist = convert_to_numpy(hist)
+        self.histograms[name] = hist
+
+    def add_heatmap(self, hm, name='heatmap'):
+        if self.ignore:
+            return
+        if name in self.heatmaps:
+            raise KeyError('{} already added to visualization. Use the name kwarg'.format(name))
+        hm = convert_to_numpy(hm)
+        self.heatmaps[name] = hm
+
+    def add_scatter(self, sc, labels=None, name='scatter'):
+        sc = convert_to_numpy(sc)
+        labels = convert_to_numpy(labels)
+
+        self.scatters[name] = (sc, labels)
+
+    def show(self):
+        for i, (k, (im, labels)) in enumerate(self.images.items()):
+            if self.image_dir:
+                logger.debug('Saving images to {}'.format(self.image_dir))
+                out_path = path.join(self.image_dir, '{}_{}_image.png'.format(self.prefix, k))
+            else:
+                out_path = None
+
+            save_images(im, 8, 8, out_file=out_path, labels=labels, max_samples=64, image_id=1 + i, caption=k)
+
+        for i, (k, (sc, labels)) in enumerate(self.scatters.items()):
+
+            if sc.shape[1] == 1:
+                raise ValueError('1D-scatter not supported')
+            elif sc.shape[1] > 2:
+                logger.info('Scatter greater than 2D. Performing TSNE to 2D')
+                sc = compute_tsne(sc)
+
+            if self.image_dir:
+                logger.debug('Saving scatter to {}'.format(self.image_dir))
+                out_path = path.join(self.image_dir, '{}_{}_scatter.png'.format(self.prefix, k))
+            else:
+                out_path = None
+
+            save_scatter(sc, out_file=out_path, labels=labels, image_id=i, title=k)
+
+        for i, (k, hist) in enumerate(self.histograms.items()):
+            if self.image_dir:
+                logger.debug('Saving histograms to {}'.format(self.image_dir))
+                out_path = path.join(self.image_dir, '{}_{}_histogram.png'.format(self.prefix, k))
+            else:
+                out_path = None
+            save_hist(hist, out_file=out_path, hist_id=i)
+
+        for i, (k, hm) in enumerate(self.heatmaps.items()):
+            if self.image_dir:
+                logger.debug('Saving heatmap to {}'.format(self.image_dir))
+                out_path = path.join(self.image_dir, '{}_{}_heatmap.png'.format(self.prefix, k))
+            else:
+                out_path = None
+            save_heatmap(hm, out_file=out_path, image_id=i, title=k)
+
+
+def plot():
+    def get_Y_legend(key, v_train, v_test):
+        Y = []
+        legend = []
+
+        Y.append(np.array(v_train))
+        if v_test is not None:
+            Y.append(np.array(v_test))
+            legend.append('{} (train)'.format(key))
+            legend.append('{} (test)'.format(key))
+        else:
+            legend.append(key)
+
+        return Y, legend
+
+    train_summary = exp.SUMMARY['train']
+    test_summary = exp.SUMMARY['test']
+    for k in train_summary.keys():
+        v_train = train_summary[k]
+        v_test = test_summary[k] if k in test_summary.keys() else None
+        if isinstance(v_train, dict):
+            Y = []
+            legend = []
+            for k_ in v_train:
+                Y_, legend_ = get_Y_legend(k_, v_train[k_], v_test[k_] if v_test is not None else None)
+                Y += Y_
+                legend += legend_
+        else:
+            Y, legend = get_Y_legend(k, v_train, v_test)
+
+        opts = dict(
+            xlabel='epochs',
+            legend=legend,
+            ylabel=k,
+            title=k)
+
+        if len(Y) == 1:
+            Y = Y[0]
+            X = np.arange(Y.shape[0])
+        else:
+            Y = np.column_stack(Y)
+            X = np.column_stack([np.arange(Y.shape[0])] * Y.shape[1])
+
+        visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
+
+
 def dequantize(images):
     images = np.argmax(images, axis=1).astype('uint8')
     images_ = []
@@ -91,10 +229,11 @@ def save_text(labels, max_samples=64, out_file=None, text_id=0,
 def save_images(images, num_x, num_y, out_file=None, labels=None,
                 max_samples=None, margin_x=5, margin_y=5, image_id=0,
                 caption='', title=''):
+    if labels is not None:
+        if isinstance(labels, (tuple, list)):
+            labels = zip(*labels)
     if max_samples is not None:
         images = images[:max_samples]
-        if labels is not None:
-            labels = labels[:max_samples]
 
     if labels is not None:
         if _options['is_caption']:
@@ -109,12 +248,9 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
         else:
             margin_x = 5
             margin_y = 12
-        labels = np.argmax(labels, axis=-1)
 
     if _options['quantized']:
         images = dequantize(images)
-    elif _options['use_tanh']:
-        images = 0.5 * (images + 1.)
 
     images = images * 255.
 
@@ -183,6 +319,10 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
         im.save(out_file)
 
 
+def save_heatmap(X, out_file=None, caption='', title='', image_id=0):
+    visualizer.heatmap(X=X, opts=dict(title=title, caption=caption), win='heatmap_{}'.format(image_id), env=exp.NAME)
+
+
 def save_scatter(points, out_file=None, labels=None, caption='', title='', image_id=0):
     if labels is not None:
         Y = (labels + 1.5).astype(int)
@@ -226,7 +366,8 @@ def save_hist(scores, out_file, hist_id=0):
     for k, v in scores.items():
         plt.hist(v, bins, alpha=0.5, label=k)
     plt.legend(loc='upper right')
-    plt.savefig(out_file)
+    if out_file:
+        plt.savefig(out_file)
     hists = tuple(np.histogram(v, bins=bins)[0] for v in s)
     X = np.column_stack(hists)
     visualizer.stem(

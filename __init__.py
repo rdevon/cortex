@@ -8,11 +8,9 @@ import os
 from os import path
 from shutil import copyfile, rmtree
 
-import numpy as np
 import torch
 
-import models
-from lib import config, exp
+from lib import config, models, exp
 from lib.log_utils import set_file_logger, set_stream_logger
 from lib.utils import make_argument_parser
 from lib.viz import init as viz_init
@@ -62,6 +60,14 @@ def setup_out_dir(out_path, name=None, clean=False):
     exp.OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir)
 
 
+_known_args = dict(
+    optimizer=['optimizer', 'learning_rate', 'updates_per_model', 'train_for', 'lr_decay', 'min_lr', 'decay_at_epoch',
+               'clipping', 'weight_decay', 'l1_decay', 'optimizer_options', 'model_optimizer_options'],
+    train=['epochs', 'archive_every', 'test_mode', 'quit_on_bad_values'],
+    data=['batch_size', 'noise_variables', 'n_workers', 'skip_last_batch', 'test_on_train']
+)
+
+
 def update_args(args, **kwargs):
     if args is not None:
         a = args.split(',')
@@ -75,10 +81,15 @@ def update_args(args, **kwargs):
 
             k_split = k.split('.')
             kw = kwargs
+            k_base = None
             for i, k_ in enumerate(k_split):
                 if i < len(k_split) - 1:
+                    if k_base in _known_args and k_ not in kw:
+                        if k_ in _known_args[k_base]:
+                            kw[k_] = {}
                     if k_ in kw:
                         kw = kw[k_]
+                        k_base = k_
                     else:
                         raise ValueError('Unknown arg {}'.format(k))
                 else:
@@ -102,7 +113,7 @@ def setup_reload(arch, use_cuda, exp_file):
     config.update_config(config_file_path)
     viz_init()
 
-    models.setup(arch)
+    arch.setup(arch)
 
     logger.info('Reloading from {}'.format(exp_file))
     d = torch.load(exp_file)
@@ -110,9 +121,9 @@ def setup_reload(arch, use_cuda, exp_file):
     exp.NAME = d['info']['name']
     exp.SUMMARY.update(**d['summary'])
     exp.ARGS.update(**d['args'])
-    reloads = d['models'].keys()
+    reloads = d['arch'].keys()
     for k in reloads:
-        exp.MODEL_PARAMS_RELOAD.update(**{k: d['models'][k]})
+        exp.MODEL_PARAMS_RELOAD.update(**{k: d['arch'][k]})
 
 
 def reload_experiment(args):
@@ -167,12 +178,12 @@ def setup(use_cuda):
 
     else:
         kwargs = {}
-        for k, v in arch.DEFAULTS.items():
+        for k, v in arch.DEFAULT_CONFIG.items():
             kwargs[k] = {}
             kwargs[k].update(**v)
 
-        if 'test_procedures' not in kwargs.keys():
-            kwargs['test_procedures'] = {}
+        if 'test_routines' not in kwargs.keys():
+            kwargs['test_routines'] = {}
 
         kwargs['data']['source'] = args.source
         update_args(args.args, **kwargs)
