@@ -13,7 +13,8 @@ class Sobel(object):
         return torch.sqrt(torch.pow(g_x, 2) + torch.pow(g_y, 2))
 
     def __call__(self, img):
-        return torch.cat([self._apply_sobel(channel.unsqueeze(0).unsqueeze(0)) for channel in img])
+        a = torch.cat([self._apply_sobel(channel.unsqueeze(0).unsqueeze(0)) for channel in img]).squeeze(1)
+        return a
 
     def __repr__(self):
         return self.__class__.__name__ + '()'

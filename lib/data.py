@@ -141,10 +141,10 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
             flip = 0.5
         transform_.append(transforms.RandomHorizontalFlip())
 
+    transform_.append(transforms.ToTensor())
+
     if use_sobel:
         transform_.append(Sobel())
-
-    transform_.append(transforms.ToTensor())
 
     if normalize and isinstance(normalize, bool):
         if source in default_normalization.keys():
