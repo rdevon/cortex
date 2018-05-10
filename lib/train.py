@@ -122,8 +122,7 @@ def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, a
 
     # Perform routine
     start_time = time.time()
-    perform_routine(routine_key, routine, loss_handler, results, viz_handler, args,
-                    quit_on_bad_values=quit_on_bad_values)
+    perform_routine(routine_key, routine, loss_handler, results, viz_handler, args, quit_on_bad_values=quit_on_bad_values)
 
     for model_key, loss in loss_handler.items():
         # Do backward step
@@ -144,7 +143,11 @@ def perform_routine(routine_key, routine, loss_handler, results, viz_handler, ar
 
     # Run routine
     routine_results = {}
-    routine(data.DATA_HANDLER, exp.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
+    if exp.DEVICE == torch.device('cpu'):
+        routine(data.DATA_HANDLER, exp.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
+    else:
+        with torch.cuda.device(exp.DEVICE.index):
+            routine(data.DATA_HANDLER, exp.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
 
     # Check for bad numbers
     bads = bad_values(routine_results)

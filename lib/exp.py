@@ -21,6 +21,7 @@ OUT_DIRS = {}
 ARGS = {}
 INFO = {'name': NAME, 'epoch': 0}
 MODEL_PARAMS_RELOAD = {}
+DEVICE = torch.device('cpu')
 
 # Models criteria and results
 MODEL_HANDLER = None

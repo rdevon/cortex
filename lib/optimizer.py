@@ -100,15 +100,13 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
         if isinstance(model, (tuple, list)):
             model_params = []
             for net in model:
-                if exp.USE_CUDA:
-                    net.cuda()
-                    net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+                net.to(exp.DEVICE)
+                net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
                 logger.debug('Getting parameters for {}'.format(net))
                 model_params += list(net.parameters())
         else:
-            if exp.USE_CUDA:
-                model.cuda()
-                model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
+            model.to(exp.DEVICE)
+            model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
             model_params = list(model.parameters())
 
         # Needed for reloading.
