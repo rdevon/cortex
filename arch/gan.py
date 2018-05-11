@@ -219,7 +219,7 @@ INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', '
                               'DV (Donsker Varahdan KL), W1 (IPM)}'),
             loss_type=dict(choices=['non-saturating', 'minimax', 'boundary-seek'],
                            help='Generator loss type.'),
-            penalty_type=dict(chocies=['gradient_norm', 'interpolate'],
+            penalty_type=dict(choices=['gradient_norm', 'interpolate'],
                               help='Gradient penalty type for the discriminator.'),
             penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
             model_type=dict(choices=['mnist', 'convnet', 'resnet'],
@@ -231,7 +231,5 @@ DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1000),
               noise_variables=dict(z=dict(dist='normal', size=64, loc=0, scale=1),
                                    e=dict(dist='uniform', size=1, low=0, high=1))),
-    optimizer=dict(optimizer='Adam', learning_rate=1e-4,
-                   updates_per_routine=dict(discriminator=1, penalty=1, generator=1)),
-    train=dict(epochs=100, archive_every=10, save_on_lowest='losses.gan')
+    train=dict(save_on_lowest='losses.gan')
 )

@@ -43,7 +43,12 @@ def discriminator_routine(data, models, losses, results, viz, measure='JSD', pen
     _, Z, Y_Q = encode(models, X_P, None, output_nonlin=output_nonlin, noise_type=noise_type)
     E_pos, E_neg, _, _ = score(models, X_P, X_Q, Z, Z, measure)
 
+    penalty = apply_penalty(models, losses, results, X_P, Z, penalty_amount)
+
     losses.discriminator = E_neg - E_pos
+
+    if penalty:
+        losses.discriminator += penalty
 
 
 def noise_discriminator_routine(data, models, losses, results, viz, noise_penalty_amount=0.5, noise_measure='JSD',

@@ -5,7 +5,7 @@
 import torch.nn.functional as F
 
 from classifier import classify
-from ali import build_discriminator as build_mine_discriminator, score
+from ali import apply_penalty, build_discriminator as build_mine_discriminator, score
 from featnet import get_results
 from modules.fully_connected import FullyConnectedNet
 from vae import update_decoder_args, update_encoder_args
@@ -49,7 +49,12 @@ def mine_routine(data, models, losses, results, viz, measure='KL', penalty_amoun
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure, key='mine')
     get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=results, name='mine')
 
+    penalty = apply_penalty(models, losses, results, X_P, Z, penalty_amount, key='mine')
+
     losses.mine = E_neg - E_pos
+
+    if penalty:
+        losses.mine += penalty
 
 
 # CORTEX ===============================================================================================================
