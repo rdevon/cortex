@@ -17,8 +17,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import visdom
 
-from . import config, exp
-from .data import DATA_HANDLER
+from . import data, exp
 from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
 
@@ -36,18 +35,18 @@ CHARS = ['_', '\n', ' ', '!', '"', '%', '&', "'", '(', ')', ',', '-', '.', '/',
 CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 
 
-def init():
+def init(viz_config):
     global visualizer, config_font
-    if config.VIZ is not None and ('server' in config.VIZ.keys() or
-                                           'port' in config.VIZ.keys()):
-        server = config.VIZ.get('server', None)
-        port = config.VIZ.get('port', 8097)
+    if viz_config is not None and ('server' in viz_config.keys() or
+                                           'port' in viz_config.keys()):
+        server = viz_config.get('server', None)
+        port = viz_config.get('port', 8097)
         visualizer = visdom.Visdom(server=server, port=port)
         logger.info('Using visdom server at {}({})'.format(server, port))
     else:
         visualizer = visdom.Visdom()
         logger.info('Using local visdom server')
-    config_font = config.VIZ.get('font')
+    config_font = viz_config.get('font')
 
 
 def setup(use_tanh=None, quantized=None, img=None, label_names=None,
@@ -69,8 +68,8 @@ class VizHandler():
         self.clear()
         self.ignore = True
         self.image_dir = exp.OUT_DIRS.get('image_dir', None)
-        self.prefix = exp.file_string('')
-        self.image_scale = DATA_HANDLER.image_scale
+        self.prefix = exp._file_string('')
+        self.image_scale = data.DATA_HANDLER.image_scale
 
     def clear(self):
         self.images = {}
@@ -332,7 +331,7 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='', image
     else:
         Y = None
 
-    names = DATA_HANDLER.get_label_names()
+    names = data.DATA_HANDLER.get_label_names()
     Y = Y - min(Y) + 1
     if len(names) != max(Y):
         names = ['{}'.format(i+1) for i in range(max(Y))]
