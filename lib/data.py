@@ -704,7 +704,7 @@ def setup(source=None, batch_size=None, noise_variables=None, n_workers=None, sk
                                      DataLoader=DataLoader, Dataset=Dataset, transform=transform,
                                      transform_args=transform_args, duplicate=duplicate, copy_to_local=copy_to_local)
     else:
-        raise ValueError('No source provided. Use `--data.source`')
+        raise ValueError('No source provided. Use `--d.source`')
 
     if noise_variables:
         for k, v in noise_variables.items():

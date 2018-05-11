@@ -108,7 +108,7 @@ def configure_from_yaml(config_file=None):
         ARGS.test_routines.update(**d.get('test_routines', {}))
 
 
-def setup_new(arch_default_args, name, out_path, clean, config):
+def setup_new(arch_default_args, name, out_path, clean, config, model_file, reloads):
     global NAME, INFO
     update_args(arch_default_args)
 
@@ -116,6 +116,12 @@ def setup_new(arch_default_args, name, out_path, clean, config):
     INFO['name'] = name
     setup_out_dir(out_path, config.out_path, name, clean=clean)
 
+    if model_file:
+        d = torch.load(model_file)
+        reloads = reloads or d['models'].keys()
+        for k in reloads:
+            models.reload_models(**{k: d['models'][k]})
+            
 
 def reload(exp_file, reloads, name, out_path, clean, config):
     global ARGS, INFO, MODEL_PARAMS_RELOAD, NAME, OUT_DIRS, SUMMARY

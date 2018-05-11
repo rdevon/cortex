@@ -63,11 +63,12 @@ def setup_cortex():
     models.setup_arch(args.arch)
     viz_init(CONFIG.viz)
 
-    if args.reload:
+    if args.reload and not args.load_models:
         exp.reload(args.reload, args.reloads, args.name, args.out_path, args.clean, CONFIG)
     else:
         name = args.name or args.arch
-        exp.setup_new(models.ARCH.defaults, name, args.out_path, args.clean, CONFIG)
+        exp.setup_new(models.ARCH.defaults, name, args.out_path, args.clean, CONFIG,
+                      args.load_models, args.reloads)
 
     exp.configure_from_yaml(config_file=args.config_file)
 
