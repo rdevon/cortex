@@ -1,4 +1,4 @@
-'''Simple GAN model
+'''Generative adversarial networks with various objectives and penalties.
 
 '''
 
@@ -8,8 +8,8 @@ import torch
 from torch import autograd
 import torch.nn.functional as F
 
-from .vae import update_decoder_args, update_encoder_args
-from .utils import log_sum_exp
+from vae import update_decoder_args, update_encoder_args
+from utils import log_sum_exp
 
 
 def raise_measure_error(measure):
@@ -75,7 +75,7 @@ def get_weight(samples, measure):
 
 
 def generator_loss(q_samples, measure, loss_type=None):
-    if not loss_type:
+    if not loss_type or loss_type == 'minimax':
         return get_negative_expectation(q_samples, measure)
     elif loss_type == 'non-saturating':
         return -get_positive_expectation(q_samples, measure)
@@ -213,6 +213,19 @@ def SETUP(routines=None, **kwargs):
 
 
 TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, generator=generator_routine)
+
+INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', 'W1'],
+                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared Hellinger), '
+                              'DV (Donsker Varahdan KL), W1 (IPM)}'),
+            loss_type=dict(choices=['non-saturating', 'minimax', 'boundary-seek'],
+                           help='Generator loss type.'),
+            penalty_type=dict(chocies=['gradient_norm', 'interpolate'],
+                              help='Gradient penalty type for the discriminator.'),
+            penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
+            model_type=dict(choices=['mnist', 'convnet', 'resnet'],
+                            help='Model type.')
+)
+
 TEST_ROUTINES = dict(penalty=None)
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1000),
@@ -220,8 +233,5 @@ DEFAULT_CONFIG = dict(
                                    e=dict(dist='uniform', size=1, low=0, high=1))),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4,
                    updates_per_routine=dict(discriminator=1, penalty=1, generator=1)),
-    routines=dict(discriminator=dict(measure='GAN'),
-                  penalty=dict(penalty_type='gradient_norm', penalty_amount=0.5),
-                  generator=dict(loss_type='non-saturating')),
     train=dict(epochs=100, archive_every=10, save_on_lowest='losses.gan')
 )

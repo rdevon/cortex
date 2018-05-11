@@ -21,7 +21,7 @@ import torchvision
 from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
-from . import config, exp, toysets
+from . import exp, toysets
 #from .cub import CUB
 
 
@@ -34,7 +34,8 @@ _args = dict(
     batch_size=64,
     n_workers=4,
     skip_last_batch=False,
-    test_on_train=False
+    test_on_train=False,
+    transform_args={},
 )
 
 _args_help = dict(
@@ -42,8 +43,17 @@ _args_help = dict(
     batch_size='Batch size',
     n_workers='Number of workers',
     skip_last_batch='Skip the last batch of the epoch',
-    test_on_train='Use training set on evaluation'
+    test_on_train='Use training set on evaluation',
+    transform_args='Transformation args for the data. Keywords: normalize (bool), center_crop (int), '
+                   'image_size (int or tuple), random_crop (int), random_resize_crop (int), or flip (bool)',
 )
+
+CONFIG = None
+
+
+def set_config(config):
+    global CONFIG
+    CONFIG = config
 
 
 class CelebA(torchvision.datasets.ImageFolder):
@@ -102,7 +112,9 @@ class CelebA(torchvision.datasets.ImageFolder):
         zip_ref.close()
 
 
-def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None):
+def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None,
+                   random_resize_crop=None):
+
     default_normalization = {
         'MNIST': [(0.5,), (0.5,)],
         'Fashion-MNIST': [(0.5,), (0.5,)],
@@ -122,7 +134,9 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
     global IMAGE_SCALE
     transform_ = []
 
-    if random_crop:
+    if random_resize_crop:
+        transform_.append(transforms.RandomResizedCrop(random_resize_crop, scale=(0.5, 1)))
+    elif random_crop:
         transform_.append(transforms.RandomSizedCrop(random_crop))
     elif center_crop:
         transform_.append(transforms.CenterCrop(image_crop))
@@ -185,15 +199,15 @@ def copy_to_local_path(from_path):
     if from_path.endswith('/'):
         from_path = from_path[:-1]
     basename = path.basename(from_path)
-    if not config.LOCAL_PATH:
+    if not CONFIG.local_path:
         raise ValueError('`local_path` not set in `config.yaml`. Set this path if you want local copying.')
-    to_path = path.join(config.LOCAL_PATH, basename)
+    to_path = path.join(config.local_path, basename)
     if ((not path.exists(to_path)) and path.exists(from_path)):
         logger.info('Copying {} to {}'.format(from_path, to_path))
         if path.isdir(from_path):
             shutil.copytree(from_path, to_path)
         else:
-            shutil.copy(from_path, config.LOCAL_PATH)
+            shutil.copy(from_path, CONFIG.local_path)
 
     return to_path
 
@@ -221,45 +235,45 @@ class DataHandler(object):
         self.skip_last_batch = skip_last_batch
 
     def add_dataset(self, source, test_on_train, n_workers=4, duplicate=None, shuffle=True, copy_to_local=False,
-                    DataLoader=None, Dataset=None, transform=None, **transform_args):
+                    DataLoader=None, Dataset=None, transform=None, transform_args={}):
 
         DataLoader = DataLoader or torch.utils.data.DataLoader
 
         if source in toysets.DATASETS:
             source_type = 'toyset'
-            if config.TOY_PATH is None:
+            if CONFIG.toy_data_path is None:
                 raise ValueError('torchvision dataset must have corresponding torchvision folder specified in '
                                  '`config.yaml`')
             Dataset = getattr(toysets, source)
 
             if copy_to_local:
-                copy_to_local_path(path.join(config.TOY_PATH, source))
-                base_path = config.LOCAL_PATH
+                copy_to_local_path(path.join(config.toy_data_path, source))
+                base_path = CONFIG.local_path
             else:
-                base_path = config.TOY_PATH
+                base_path = CONFIG.toy_data_path
 
             train_path = path.join(base_path, source)
             test_path = train_path
         elif hasattr(torchvision.datasets, source):
             # Dataset is in torchvision
             source_type = 'torchvision'
-            if config.TV_PATH is None:
+            if CONFIG.torchvision_data_path is None:
                 raise ValueError('torchvision dataset must have corresponding torchvision folder specified in '
                                  '`config.yaml`')
             Dataset = getattr(torchvision.datasets, source)
 
             if copy_to_local:
-                copy_to_local_path(path.join(config.TV_PATH, source))
-                base_path = config.LOCAL_PATH
+                copy_to_local_path(path.join(config.torchvision_data_path, source))
+                base_path = CONFIG.local_path
             else:
-                base_path = config.TV_PATH
+                base_path = CONFIG.torchvision_data_path
 
             train_path = path.join(base_path, source)
             test_path = train_path
-        elif source in config.DATA_PATHS:
-            # Dataset is specified in config.DATA_PATHS
+        elif source in CONFIG.data_paths:
+            # Dataset is specified in CONFIG.data_paths
             source_type = 'folder'
-            data_path = config.DATA_PATHS[source]
+            data_path = CONFIG.data_paths[source]
             if isinstance(data_path, dict):
                 train_path = data_path['train']
                 test_path = data_path['test']
@@ -663,7 +677,8 @@ DATA_HANDLER = DataHandler()
 
 
 def setup(source=None, batch_size=None, noise_variables=None, n_workers=None, skip_last_batch=None,
-          test_on_train=None, Dataset=None, DataLoader=None, transform=None, **kwargs):
+          test_on_train=None, Dataset=None, DataLoader=None, transform=None, copy_to_local=False,
+          duplicate=None, transform_args={}):
     global DATA_HANDLER, NOISE
 
     if source and not isinstance(source, (list, tuple)):
@@ -685,10 +700,9 @@ def setup(source=None, batch_size=None, noise_variables=None, n_workers=None, sk
 
     if source:
         for source_ in source:
-            source_args = kwargs.get(source_, kwargs)
             DATA_HANDLER.add_dataset(source_, test_on_train, n_workers=n_workers,
                                      DataLoader=DataLoader, Dataset=Dataset, transform=transform,
-                                     **source_args)
+                                     transform_args=transform_args, duplicate=duplicate, copy_to_local=copy_to_local)
     else:
         raise ValueError('No source provided. Use `--data.source`')
 

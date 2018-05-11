@@ -10,13 +10,12 @@ __author_email__ = 'erroneus@gmail.com'
 import logging
 import os
 from os import path
-import pprint
 from shutil import copyfile, rmtree
 import yaml
 
 import torch
 
-from . import config, models
+from . import models
 from .log_utils import set_file_logger
 from .utils import Handler, convert_nested_dict_to_handler
 
@@ -109,16 +108,16 @@ def configure_from_yaml(config_file=None):
         ARGS.test_routines.update(**d.get('test_routines', {}))
 
 
-def setup_new(arch_default_args, name, out_path, clean):
+def setup_new(arch_default_args, name, out_path, clean, config):
     global NAME, INFO
     update_args(arch_default_args)
 
     NAME = name
     INFO['name'] = name
-    setup_out_dir(out_path, name, clean=clean)
+    setup_out_dir(out_path, config.out_path, name, clean=clean)
 
 
-def reload(exp_file, reloads, name, out_path, clean):
+def reload(exp_file, reloads, name, out_path, clean, config):
     global ARGS, INFO, MODEL_PARAMS_RELOAD, NAME, OUT_DIRS, SUMMARY
 
     if not path.isfile(exp_file):
@@ -149,7 +148,7 @@ def reload(exp_file, reloads, name, out_path, clean):
     if name:
         NAME = name
         INFO['name'] = name
-        setup_out_dir(out_path, name, clean=clean)
+        setup_out_dir(out_path, config.out_path, name, clean=clean)
 
     out_path = path.dirname(path.dirname(exp_file))
     out_dirs = dict((k, path.join(out_path, path.basename(v))) for k, v in out_dirs.items())
@@ -187,7 +186,7 @@ def save(prefix=''):
     torch.save(state, file_path)
 
 
-def setup_out_dir(out_path, name=None, clean=False):
+def setup_out_dir(out_path, global_out_path, name=None, clean=False):
     '''Sets up the output directory of an experiment.
 
     '''
@@ -197,7 +196,7 @@ def setup_out_dir(out_path, name=None, clean=False):
         if name is None:
             raise ValueError('If `out_path` (-o) argument is not set, you '
                              'must set the `name` (-n)')
-        out_path = config.OUT_PATH
+        out_path = global_out_path
         if out_path is None:
             raise ValueError('If `--out_path` (`-o`) argument is not set, you '
                              'must set both the name argument and configure '

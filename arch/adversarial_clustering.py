@@ -5,12 +5,12 @@
 from sklearn import metrics
 import torch
 
-from .ali import build_discriminator as build_mine_discriminator, build_extra_networks, score, apply_penalty
-from .featnet import (apply_gradient_penalty, build_encoder, build_discriminator as build_noise_discriminator, encode,
-                      get_results, score as featnet_score, visualize)
-from .minet import network_routine
-from .gan import generator_loss
-from .vae import update_decoder_args, update_encoder_args
+from ali import build_discriminator as build_mine_discriminator, build_extra_networks, score, apply_penalty
+from featnet import (apply_gradient_penalty, build_encoder, build_discriminator as build_noise_discriminator, encode,
+                     get_results, score as featnet_score, visualize)
+from minet import network_routine
+from gan import generator_loss
+from vae import update_decoder_args, update_encoder_args
 
 
 def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise_measure=None, noise_type='hypercubes',

@@ -1,15 +1,18 @@
 '''Adversarially learned inference and Bi-GAN
+
+Currently noise encoder is not implemented.
+
 '''
 
 import torch
 import torch.nn.functional as F
 from torch import autograd
 
-from .classifier import classify
-from .gan import get_positive_expectation, get_negative_expectation
-from .modules.fully_connected import FullyConnectedNet
-from .utils import cross_correlation
-from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
+from classifier import classify
+from gan import get_positive_expectation, get_negative_expectation
+from modules.fully_connected import FullyConnectedNet
+from utils import cross_correlation
+from vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
 
 
 def apply_penalty(models, losses, results, X, Z, penalty_amount, key='discriminator'):
@@ -54,7 +57,7 @@ def score(models, X_P, X_Q, Z_P, Z_Q, measure, key='discriminator'):
 # ROUTINES =============================================================================================================
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
-def discriminator_routine(data, models, losses, results, viz, measure=None):
+def discriminator_routine(data, models, losses, results, viz, measure='GAN'):
     X_P, T, Z_Q = data.get_batch('images', 'targets', 'z')
     encoder, decoder = models.generator
 
@@ -73,7 +76,7 @@ def discriminator_routine(data, models, losses, results, viz, measure=None):
     viz.add_scatter(Z_P, labels=T.data, name='latent values')
 
 
-def penalty_routine(data, models, losses, results, viz, penalty_amount=None):
+def penalty_routine(data, models, losses, results, viz, penalty_amount=0.5):
     X_P, T, Z_Q = data.get_batch('images', 'targets', 'z')
     encoder, decoder = models.generator
 
@@ -140,11 +143,6 @@ def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, dropout=0.1,
 # CORTEX ===============================================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
-def SETUP(model=None, data=None, routines=None, **kwargs):
-    data.noise_variables.z.size = model.dim_z
-    routines.generator.measure = routines.discriminator.measure
-
-
 def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None,
           add_supervision=False):
     global TRAIN_ROUTINES
@@ -167,6 +165,16 @@ def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args=None, decod
 
 TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, generator=generator_routine)
 
+INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', 'W1'],
+                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared Hellinger), '
+                              'DV (Donsker Varahdan KL), W1 (IPM)}'),
+            penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
+            model_type=dict(choices=['mnist', 'convnet', 'resnet'],
+                            help='Model type.'),
+            dim_z=dict(help='Latent dimension.'),
+            add_supervision=dict(help='Use additional networks for monitoring during training.')
+)
+
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
               noise_variables=dict(z=dict(dist='normal', size=64))),
@@ -175,10 +183,5 @@ DEFAULT_CONFIG = dict(
         learning_rate=1e-4,
         updates_per_routine=dict(discriminator=1, generator=1, nets=1)
     ),
-    model=dict(model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None, add_supervision=False),
-    routines=dict(discriminator=dict(measure='GAN'),
-                  penalty=dict(penalty_amount=0.5),
-                  generator=dict(),
-                  nets=dict()),
     train=dict(epochs=500, archive_every=10, save_on_lowest='losses.generator')
 )
