@@ -199,8 +199,6 @@ class ResEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None,
                  f_size=3, n_steps=3, nonlinearity='ReLU', spectral_norm=False, **layer_args):
         super(ResEncoder, self).__init__()
-        print('restnet')
-        print(spectral_norm)
         models = nn.Sequential()
         nonlinearity = get_nonlinearity(nonlinearity)
 

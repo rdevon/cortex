@@ -203,7 +203,6 @@ def BUILD(data, models, model_type='convnet', discriminator_args=dict(), generat
     Decoder, generator_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=generator_args)
 
     discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
-    exit(0)
     generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
     models.update(generator=generator, discriminator=discriminator)
