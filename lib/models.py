@@ -10,6 +10,7 @@ import inspect
 import logging
 import sys
 import os
+import traceback
 
 import torch.nn as nn
 
@@ -164,7 +165,7 @@ def add_directory(p, name):
                         if i < 5 and (sk == 'kwargs' or sv.default != inspect._empty):
                             raise ValueError('First 5 elements of routines ({}) must be parameters'.format(k))
                         elif i >= 5 and (sk != 'kwargs' and sv.default == inspect._empty):
-                            raise ValueError('Only the first 5 elements of routines ({}) must be parameters'.format(k))
+                            raise ValueError('Only the first 5 elements of routines ({}) can be parameters'.format(k))
                         elif i >= 5:
                             if sk == 'kwargs':
                                 pass # For handling old-style files
@@ -178,11 +179,13 @@ def add_directory(p, name):
                 sig = inspect.signature(arch_dict['build'])
                 signatures['model'] = []
                 for i, (sk, sv) in enumerate(sig.parameters.items()):
-                    if i < 2 and sv.default != inspect._empty:
-                        raise ValueError('First 2 elements of BUILD must be parameters'.format(k))
-                    elif i >= 2 and sv.default == inspect._empty:
-                        raise ValueError('Only the first 2 elements of BUILD must be parameters'.format(k))
+                    if i < 2 and (sk == 'kwargs' or sv.default != inspect._empty):
+                        raise ValueError('First 2 elements of BUILD must be parameters ({})'.format(sk))
+                    elif i >= 2 and (sk != 'kwargs' and sv.default == inspect._empty):
+                        raise ValueError('Only the first 2 elements of BUILD can be parameters ({})'.format(sk))
                     elif i >= 2:
+                        if sk == 'kwargs':
+                            pass
                         signatures['model'].append(sv.name)
                         if sv.default is not None:
                             if sv.name in kwargs and kwargs[sv.name] != sv.default:
@@ -209,7 +212,7 @@ def add_directory(p, name):
                     success = False
 
             except Exception as e:
-                logger.warning('Import of architecture (module) {} failed ({})'.format(fnp, type(e)))
+                logger.warning('Import of architecture (module) {} failed ({})'.format(fnp, e))
                 success = False
 
             finally:

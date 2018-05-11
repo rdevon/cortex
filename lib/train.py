@@ -189,8 +189,9 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
         else:
             model.train()
 
+    active_loss_models = list(set([m for ms in ROUTINE_MODELS.values() for m in ms]))
     results = {'time': dict((rk, []) for rk in models.ARCH.train_routines),
-               'losses': dict((mk, []) for mk in models.MODEL_HANDLER.keys())}
+               'losses': dict((mk, []) for mk in active_loss_models)}
 
     num_updates_dict = set_updates_dict(epoch)
     is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
@@ -226,6 +227,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
                         losses[k] += v
                     else:
                         losses[k] = v
+
             update_dict_of_lists(results['losses'], **losses)
 
             for model_key in models.MODEL_HANDLER:

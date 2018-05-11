@@ -4,7 +4,6 @@
 
 import torch
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from ali import build_discriminator, build_extra_networks, score, apply_penalty
 from classifier import classify
@@ -73,7 +72,7 @@ def network_routine(data, models, losses, results, viz):
     classifier, decoder = models.nets
 
     Z_P = encoder(X)
-    Z_t = Variable(Z_P.data.cuda(), requires_grad=False)
+    Z_t = Z_P.detach()
     X_d = decoder(Z_t, nonlinearity=F.tanh)
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
