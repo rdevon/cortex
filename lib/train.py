@@ -13,7 +13,7 @@ import time
 import numpy as np
 import torch
 
-from . import data, exp, optimizer, viz, reg
+from . import data, exp, models, optimizer, viz, reg
 from .utils import bad_values, convert_to_numpy, Handler, update_dict_of_lists
 from .viz import VizHandler, plot
 
@@ -26,7 +26,7 @@ _args = dict(
     epochs=500,
     archive_every=10,
     test_mode=False,
-    quit_on_bad_values=False,
+    quit_on_bad_values=True,
     save_on_best=None,
     save_on_lowest=None,
     save_on_highest=None
@@ -53,15 +53,17 @@ class LossHandler(Handler):
 
     def check_key_value(self, k, v):
         super().check_key_value(k, v)
-        if k not in exp.MODEL_HANDLER:
+        if k not in models.MODEL_HANDLER:
             raise AttributeError('Keyword `{}` not in the model_handler. Found: {}.'.format(
-                k, tuple(exp.MODEL_HANDLER.keys())))
+                k, tuple(models.MODEL_HANDLER.keys())))
+        return True
 
     def __setitem__(self, k, v):
-        self.check_key_value(k, v)
+        passes = self.check_key_value(k, v)
         if len(v.size()) > 0:
             raise ValueError('Loss size must be a scalar. Got {}'.format(v.size()))
-        super().__setitem__(k, v)
+        if passes:
+            super().__setitem__(k, v)
 
 
 def setup():
@@ -72,7 +74,7 @@ def setup():
         routine_models = {}
         args = exp.ARGS['routines']
 
-        for routine_key, routine in exp.TRAIN_ROUTINES.items():
+        for routine_key, routine in models.ARCH.train_routines.items():
             logger.info('Testing routine `{}`'.format(routine_key))
             loss_handler = LossHandler()
             perform_routine(routine_key, routine, loss_handler, {}, VizHandler(), args)
@@ -111,7 +113,7 @@ def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, a
         optimizer.OPTIMIZERS[model_key].zero_grad()
 
     # Set requires grad from training models.
-    for mk, model in exp.MODEL_HANDLER.items():
+    for mk, model in models.MODEL_HANDLER.items():
         if isinstance(model, (list, tuple)):
             for net in model:
                 for p in net.parameters():
@@ -122,8 +124,7 @@ def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, a
 
     # Perform routine
     start_time = time.time()
-    perform_routine(routine_key, routine, loss_handler, results, viz_handler, args,
-                    quit_on_bad_values=quit_on_bad_values)
+    perform_routine(routine_key, routine, loss_handler, results, viz_handler, args, quit_on_bad_values=quit_on_bad_values)
 
     for model_key, loss in loss_handler.items():
         # Do backward step
@@ -139,12 +140,15 @@ def perform_routine(routine_key, routine, loss_handler, results, viz_handler, ar
     if routine is None:
         return
 
-    if isinstance(args, dict) and routine_key in args:
-        args = args[routine_key]
+    args = args.get(routine_key, {})
 
     # Run routine
     routine_results = {}
-    routine(data.DATA_HANDLER, exp.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
+    if exp.DEVICE == torch.device('cpu'):
+        routine(data.DATA_HANDLER, models.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
+    else:
+        with torch.cuda.device(exp.DEVICE.index):
+            routine(data.DATA_HANDLER, models.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
 
     # Check for bad numbers
     bads = bad_values(routine_results)
@@ -158,8 +162,8 @@ def perform_routine(routine_key, routine, loss_handler, results, viz_handler, ar
 
 def set_updates_dict(epoch):
     routines = {}
-    routines.update(**exp.TRAIN_ROUTINES)
-    routines.update(**exp.FINISH_TRAIN_ROUTINES)
+    routines.update(**models.ARCH.train_routines)
+    routines.update(**models.ARCH.finish_train_routines)
 
     if optimizer.TRAIN_FOR is not None:
         total_steps = sum(optimizer.TRAIN_FOR.values())
@@ -178,15 +182,16 @@ def set_updates_dict(epoch):
 
 
 def train_epoch(epoch, viz_handler, quit_on_bad_values):
-    for k, model in exp.MODEL_HANDLER.items():
+    for k, model in models.MODEL_HANDLER.items():
         if isinstance(model, (tuple, list)):
             for net in model:
                 net.train()
         else:
             model.train()
 
-    results = {'time': dict((rk, []) for rk in exp.TRAIN_ROUTINES.keys()),
-               'losses': dict((mk, []) for mk in exp.MODEL_HANDLER.keys())}
+    active_loss_models = list(set([m for ms in ROUTINE_MODELS.values() for m in ms]))
+    results = {'time': dict((rk, []) for rk in models.ARCH.train_routines),
+               'losses': dict((mk, []) for mk in active_loss_models)}
 
     num_updates_dict = set_updates_dict(epoch)
     is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
@@ -201,7 +206,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
 
             # Loop through routines
             losses = {}
-            for routine_key, routine in exp.TRAIN_ROUTINES.items():
+            for routine_key, routine in models.ARCH.train_routines.items():
                 num_updates = num_updates_dict.get(routine_key, 0)
                 routine_losses = {}
 
@@ -222,16 +227,17 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
                         losses[k] += v
                     else:
                         losses[k] = v
+
             update_dict_of_lists(results['losses'], **losses)
 
-            for model_key in exp.MODEL_HANDLER:
+            for model_key in models.MODEL_HANDLER:
                 reg.clip(model_key)  # weight clipping
                 reg.l1_decay(model_key)  # l1 weight decay
 
     except StopIteration:
         pass
 
-    for routine_key, routine in exp.FINISH_TRAIN_ROUTINES.items():
+    for routine_key, routine in models.ARCH.finish_train_routines.items():
         for u in range(num_updates_dict[routine_key]):
             loss_handler = LossHandler()
             perform_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args,
@@ -243,7 +249,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
 
 
 def test_epoch(epoch, viz_handler, return_std=False):
-    for k, model in exp.MODEL_HANDLER.items():
+    for k, model in models.MODEL_HANDLER.items():
         if k == 'extras':
             continue
         if isinstance(model, (tuple, list)):
@@ -253,7 +259,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
             model.eval()
 
     data.DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
-    results = {'losses': dict((rk, []) for rk in exp.MODEL_HANDLER.keys())}
+    results = {'losses': dict((rk, []) for rk in models.MODEL_HANDLER.keys())}
     routine_args = exp.ARGS['test_routines']
 
     viz_handler.ignore = False
@@ -264,7 +270,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
 
             # Loop through routines
             losses = {}
-            for routine_key, routine in exp.TEST_ROUTINES.items():
+            for routine_key, routine in models.ARCH.test_routines.items():
                 if routine_key == 'final':
                     continue
                 routine_losses = {}
@@ -284,7 +290,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
     except StopIteration:
         pass
 
-    for routine_key, routine in exp.FINISH_TEST_ROUTINES.items():
+    for routine_key, routine in models.ARCH.finish_test_routines.items():
         loss_handler = LossHandler()
         perform_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args)
 
@@ -360,7 +366,7 @@ def align_summaries(d_train, d_test):
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=None, archive_every=None, test_mode=None, quit_on_bad_values=None, save_on_best=None,
+def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=True, save_on_best=None,
               save_on_lowest=None, save_on_highest=None):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
