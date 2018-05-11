@@ -68,7 +68,7 @@ def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.)
 
 
 def generator_routine(data, models, losses, results, viz):
-    Z, A, T = data.get_batch('z','attributes', 'targets')
+    Z, A, T, X = data.get_batch('z','attributes', 'targets', 'images')
     discriminator = models['discriminator']
     generator = models['generator']
     classifier = models['classifier'][0]
@@ -110,7 +110,7 @@ def build_model(data, models, dim_embedding=312, model_type='convnet', discrimin
     shape = data.get_dims('x', 'y', 'c')
     dim_a, dim_l = data.get_dims('a', 'labels')
     dim_z = data.get_dims('z')
-
+    
     if model_type == 'resnet':
         from .modules.resnets import ResEncoder as Discriminator
         from .modules.resnets import ResDecoder as Generator
