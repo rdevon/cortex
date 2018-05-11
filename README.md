@@ -1,6 +1,8 @@
 # cortex2.0
 A machine learning library for PyTorch
 
+WARNING: some of these instructions are out-of-date as cortex is under rapid development.
+
 ## SETUP
 The first thing to do is to set up the config.yaml. This file is user-specific (it got tracked at some point, so I need to fix this), and will tell cortex everything user-specific regarding data locations, visualation, and outputs. Here is mine on MILA machines:
 
@@ -41,7 +43,7 @@ There are many command-line options in cortex:
     
 ## Working with cortex
 Cortex is meant to be an API-minimal library for runnning machine learning experiments that use gradient descent and backprop (though in principle should extend beyond this). As such, the actual models as implemented usually only require using one method from a `data_handler` object. Otherwise, as an illustration of how to get cortex working for your models, first look at:
-https://github.com/rdevon/cortex2.0/blob/master/models/classifier.py
+https://github.com/rdevon/cortex2.0/blob/master/arch/classifier.py
 
 Note that this module only imports from .modules, which has some standard Pytorch neural networks. Nowhere is there an import from the cortex core library.
 
