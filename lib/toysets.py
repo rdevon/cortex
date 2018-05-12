@@ -36,10 +36,18 @@ SD_VARIANT_DATASETS = ["G2"]
 NUM_VARIANT_DATASETS = ["S_set", "A_set"]
 
 
+<<<<<<< HEAD
+class SmallDataset(data.TensorDataset):
+
+    def __init__(self, root, *select,
+                 stardardize=False, load=True, download=False):
+
+=======
 class _SmallDataset(data.TensorDataset):
 
     def __init__(self, root, *select,
                  stardardize=False, load=False, download=False):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
         """Download or load a small dataset.
 
         Parameters
@@ -79,7 +87,13 @@ class _SmallDataset(data.TensorDataset):
 
     def download(self):
         """Download, and unzip in the correct location."""
+<<<<<<< HEAD
+
+        import urllib.request
+
+=======
         import urllib
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
         import zipfile
 
         if self.check_exists():
@@ -137,7 +151,13 @@ class _SmallDataset(data.TensorDataset):
         return True
 
 
+<<<<<<< HEAD
+
+class G2(SmallDataset):
+
+=======
 class G2(_SmallDataset):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use G2 dataset.
 
     Select arguments
@@ -214,7 +234,13 @@ class G2(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 'g2-1-10.txt'))
 
 
+<<<<<<< HEAD
+
+class S_set(SmallDataset):
+
+=======
 class S_set(_SmallDataset):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use S-sets dataset.
 
     Synthetic 2-d data with N=5000 vectors and k=15 Gaussian clusters
@@ -249,7 +275,13 @@ class S_set(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 's1.txt'))
 
 
+<<<<<<< HEAD
+
+class A_set(SmallDataset):
+
+=======
 class A_set(_SmallDataset):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use A-sets dataset.
 
     Synthetic 2-d data with varying number of vectors (N) and clusters (k).
@@ -286,7 +318,13 @@ class A_set(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 'a1.txt'))
 
 
+<<<<<<< HEAD
+
+class DIM_set(SmallDataset):
+
+=======
 class DIM_set(_SmallDataset):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the (high) DIM-sets dataset.
 
     High-dimensional data sets N=1024 and k=16 Gaussian clusters.
@@ -326,7 +364,12 @@ class DIM_set(_SmallDataset):
         return os.path.exists(os.path.join(self.root, 'dim032.txt'))
 
 
+<<<<<<< HEAD
+class Unbalance(SmallDataset):
+
+=======
 class Unbalance(_SmallDataset):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the Unbalance dataset.
 
     Synthetic 2-d data with N=6500 vectors and k=8 Gaussian clusters
@@ -356,7 +399,13 @@ class Unbalance(_SmallDataset):
             os.path.exists(os.path.join(self.root, labels))
 
 
+<<<<<<< HEAD
+
+class Shapes(SmallDataset):
+
+=======
 class _Shapes(_SmallDataset):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Wrap shapes datasets from the website."""
 
     def prepare(self):
@@ -385,7 +434,13 @@ class _Shapes(_SmallDataset):
         return os.path.exists(os.path.join(self.root, datafile))
 
 
+<<<<<<< HEAD
+
+class Aggregation(Shapes):
+
+=======
 class Aggregation(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the Aggregation dataset.
 
     N=788, k=7, D=2
@@ -398,7 +453,12 @@ class Aggregation(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/Aggregation.txt"]
 
 
+<<<<<<< HEAD
+class Compound(Shapes):
+
+=======
 class Compound(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the Compound dataset.
 
     N=399, k=6, D=2
@@ -411,7 +471,12 @@ class Compound(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/Compound.txt"]
 
 
+<<<<<<< HEAD
+class Pathbased(Shapes):
+
+=======
 class Pathbased(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the Pathbased dataset.
 
     N=300, k=3, D=2
@@ -424,7 +489,13 @@ class Pathbased(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/pathbased.txt"]
 
 
+<<<<<<< HEAD
+
+class Spiral(Shapes):
+
+=======
 class Spiral(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the Spiral dataset.
 
     N=312, k=3, D=2
@@ -437,7 +508,13 @@ class Spiral(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/spiral.txt"]
 
 
+<<<<<<< HEAD
+
+class D31(Shapes):
+
+=======
 class D31(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the D31 dataset.
 
     N=3100, k=31, D=2
@@ -450,7 +527,13 @@ class D31(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/D31.txt"]
 
 
+<<<<<<< HEAD
+
+class R15(Shapes):
+
+=======
 class R15(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the R15 dataset.
 
     N=600, k=15, D=2
@@ -463,7 +546,13 @@ class R15(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/R15.txt"]
 
 
+<<<<<<< HEAD
+
+class Jain(Shapes):
+
+=======
 class Jain(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the ORIGINAL (2 moons) Jain dataset.
 
     N=373, k=2, D=2
@@ -476,7 +565,13 @@ class Jain(_Shapes):
     urls = ["http://cs.joensuu.fi/sipu/datasets/jain.txt"]
 
 
+<<<<<<< HEAD
+
+class Flame(Shapes):
+
+=======
 class Flame(_Shapes):
+>>>>>>> 7ce3e29fe69950fdc8fbab850e1c129fbed5b2df
     """Download and use the Flame dataset.
 
     N=240, k=2, D=2
