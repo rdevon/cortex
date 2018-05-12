@@ -189,7 +189,7 @@ def make_tds_random_and_split(C):
             super().__init__(*args, **kwargs)
             self.idx = idx if idx is not None else torch.randperm(len(self))
             tensors_ = []
-            print(len(self), int(split * len(self)))
+
             for i in range(len(self.tensors)):
                 if split > 0:
                     tensors_.append(self.tensors[i][self.idx][:int(split * len(self))])
@@ -308,11 +308,12 @@ class DataHandler(object):
             raise ValueError('Dataset not from torchvision, or is not specified in `config.yaml` data_paths.')
         if source_type != 'toyset':
             transform = transform or make_transform(source, **transform_args)
+
         if source_type == 'toyset':
             Dataset = make_indexing(Dataset)
             Dataset = make_tds_random_and_split(Dataset)
-            train_set = Dataset(root=train_path, download=True, split=0.556)
-            test_set = Dataset(root=test_path, download=True, split=(0.556-1), idx=train_set.idx)
+            train_set = Dataset(root=train_path, download=True, split=0.8, load=True)
+            test_set = Dataset(root=test_path, download=True, split=1, idx=train_set.idx, load=True)
             output_sources = ['images', 'targets']
         elif source == 'CelebA':
             Dataset = Dataset or CelebA
