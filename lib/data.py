@@ -45,7 +45,7 @@ _args_help = dict(
     skip_last_batch='Skip the last batch of the epoch',
     test_on_train='Use training set on evaluation',
     transform_args='Transformation args for the data. Keywords: normalize (bool), center_crop (int), '
-                   'image_size (int or tuple), random_crop (int), random_resize_crop (int), or flip (bool)',
+                   'image_size (int or tuple), random_crop (int), use_sobel (bool), random_resize_crop (int), or flip (bool)',
 )
 
 CONFIG = None
@@ -113,7 +113,7 @@ class CelebA(torchvision.datasets.ImageFolder):
 
 
 def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None,
-                   random_resize_crop=None):
+                   random_sized_crop=None, use_sobel=False):
 
     default_normalization = {
         'MNIST': [(0.5,), (0.5,)],
@@ -140,6 +140,8 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
         transform_.append(transforms.RandomSizedCrop(random_crop))
     elif center_crop:
         transform_.append(transforms.CenterCrop(image_crop))
+    elif random_sized_crop:
+        transform_.append(transforms.RandomSizedCrop(random_sized_crop))
 
     if image_size:
         if isinstance(image_size, int):
@@ -149,9 +151,12 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None, ra
     if flip:
         if isinstance(flip, bool):
             flip = 0.5
-        torchvision.transforms.RandomHorizontalFlip()
+        transform_.append(transforms.RandomHorizontalFlip())
 
     transform_.append(transforms.ToTensor())
+
+    if use_sobel:
+        transform_.append(Sobel())
 
     if normalize and isinstance(normalize, bool):
         if source in default_normalization.keys():
