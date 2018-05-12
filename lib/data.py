@@ -112,7 +112,8 @@ class CelebA(torchvision.datasets.ImageFolder):
         zip_ref.close()
 
 
-def make_transform(source, normalize=True, center_crop=None, image_size=None, random_crop=None, flip=None,
+def make_transform(source, normalize=True, center_crop=None, image_size=None,
+                   random_crop=None, flip=None, random_resize_crop=None,
                    random_sized_crop=None, use_sobel=False):
 
     default_normalization = {
@@ -204,15 +205,15 @@ def copy_to_local_path(from_path):
     if from_path.endswith('/'):
         from_path = from_path[:-1]
     basename = path.basename(from_path)
-    if not CONFIG.local_path:
-        raise ValueError('`local_path` not set in `config.yaml`. Set this path if you want local copying.')
-    to_path = path.join(config.local_path, basename)
+    if not CONFIG.local_data_path:
+        raise ValueError('`local_data_path` not set in `config.yaml`. Set this path if you want local copying.')
+    to_path = path.join(CONFIG.local_data_path, basename)
     if ((not path.exists(to_path)) and path.exists(from_path)):
         logger.info('Copying {} to {}'.format(from_path, to_path))
         if path.isdir(from_path):
             shutil.copytree(from_path, to_path)
         else:
-            shutil.copy(from_path, CONFIG.local_path)
+            shutil.copy(from_path, CONFIG.local_data_path)
 
     return to_path
 
