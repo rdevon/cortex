@@ -67,7 +67,8 @@ def make_argument_parser():
 class StoreDictKeyPair(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         d = {}
-        for kv in values.split(','):
+        print(values)
+        for kv in values.split(';'):
             k, v = kv.split('=')
             d[k] = ast.literal_eval(v)
         setattr(namespace, self.dest, d)
@@ -97,7 +98,7 @@ def parse_args(archs):
 
             if isinstance(v, dict):
                 subparser.add_argument(arg_str, dest=k, default=v, action=StoreDictKeyPair,
-                                       help=help, metavar='<k1=v1,k2=v2...>')
+                                       help=help, metavar='<k1=v1;k2=v2...>')
             elif isinstance(v, bool) and not v:
                 if v:
                     action = 'store_false'
@@ -116,7 +117,7 @@ def parse_args(archs):
                 arg_str = '--' + arg_k[0] + '.' + k
                 help = _args_help[arg_k][k]
                 dest = arg_k + '.' + k
-                metavar = '<k1=v1,k2=v2...>'
+                metavar = '<k1=v1;k2=v2...>'
                 if isinstance(v, dict):
                     subparser.add_argument(arg_str, dest=dest, default=None, action=StoreDictKeyPair,
                                            help=help, metavar=metavar)
