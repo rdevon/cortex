@@ -151,6 +151,7 @@ def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
         decoder_args_['n_steps'] = 5
 
     return Decoder, decoder_args_
+
 def to_one_hot(y, K):
     y_ = torch.unsqueeze(y, 1).long()
 
