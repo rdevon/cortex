@@ -138,4 +138,4 @@ DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
               noise_variables=dict(z=dict(dist='normal', size=64))),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4),
-    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.vae')
+    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.vae'))
