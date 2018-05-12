@@ -6,6 +6,7 @@ import logging
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 from .utils import apply_nonlinearity, finish_layer_1d, finish_layer_2d, get_nonlinearity
 
 
@@ -24,7 +25,9 @@ class ConvMeanPool(nn.Module):
         name = 'cmp' + prefix
 
 
+
         models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
+
 
         models.add_module(name + '_pool', nn.AvgPool2d(2, count_include_pad=False))
         if nonlinearity:
@@ -49,7 +52,9 @@ class MeanPoolConv(nn.Module):
 
         models.add_module(name + '_pool', nn.AvgPool2d(2, count_include_pad=False))
 
+
         models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
+
 
         if nonlinearity:
             models.add_module('{}_{}'.format(name, nonlinearity.__class__.__name__), nonlinearity)
@@ -73,7 +78,9 @@ class UpsampleConv(nn.Module):
 
         models.add_module(name + '_up', nn.Upsample(scale_factor=2))
 
+
         models.add_module(name, nn.Conv2d(dim_in, dim_out, f_size, 1, 1, bias=False))
+
 
         if nonlinearity:
             models.add_module('{}_{}'.format(name, nonlinearity.__class__.__name__), nonlinearity)
@@ -86,6 +93,7 @@ class UpsampleConv(nn.Module):
 
 
 class ResBlock(nn.Module):
+
 
     def __init__(self, dim_in, dim_out, dim_x, dim_y, f_size, resample=None, name='resblock', nonlinearity='ReLU',
                  **layer_args):
@@ -106,8 +114,9 @@ class ResBlock(nn.Module):
 
             conv = MeanPoolConv(dim_in, dim_out, f_size, prefix=name)
 
+
         else:
-            conv = UpsampleConv(dim_in, dim_out, f_size, prefix=name)
+            conv = UpsampleConv(dim_in, dim_out, f_size, prefix=name, spectral_norm=spectral_norm)
         skip_models.add_module(name + '_skip', conv)
 
         finish_layer_2d(models, name, dim_x, dim_y, dim_in, nonlinearity=nonlinearity, **layer_args)
@@ -115,13 +124,15 @@ class ResBlock(nn.Module):
         # Up or down sample
         if resample == 'down':
 
+
             conv = nn.Conv2d(dim_in, dim_in, f_size, 1, 1)
             models.add_module(name + '_stage1', conv)
             finish_layer_2d(models, name + '_stage1', dim_x // 2, dim_y // 2, dim_in, nonlinearity=nonlinearity,
                             **layer_args)
 
+
         else:
-            conv = UpsampleConv(dim_in, dim_out, f_size, prefix=name + '_stage1')
+            conv = UpsampleConv(dim_in, dim_out, f_size, prefix=name + '_stage1', spectral_norm=spectral_norm)
             models.add_module(name + '_stage1', conv)
             finish_layer_2d(models, name + '_stage1', dim_x * 2, dim_y * 2, dim_out, nonlinearity=nonlinearity,
                             **layer_args)
@@ -208,8 +219,10 @@ class ResDecoder(nn.Module):
 
 class ResEncoder(nn.Module):
 
+
     def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None,
                  f_size=3, n_steps=3, nonlinearity='ReLU', **layer_args):
+
 
         super(ResEncoder, self).__init__()
         models = nn.Sequential()
@@ -235,8 +248,10 @@ class ResEncoder(nn.Module):
 
             name = 'resblock_({}/{})_{}'.format(dim_in, dim_out, i + 1)
 
+
             resblock = ResBlock(dim_in, dim_out, dim_x, dim_y, f_size, resample='down', name=name, **layer_args)
             models.add_module(name, resblock)
+
 
 
             dim_x //= 2
@@ -249,14 +264,14 @@ class ResEncoder(nn.Module):
             dim_in = dim_out
             dim_out = dim_h
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
-            models.add_module(name, nn.Linear(dim_in, dim_out))
+            models.add_module(name, Linear(dim_in, dim_out))
             finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
 
         if dim_out_:
 
+
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
             models.add_module(name, nn.Linear(dim_out, dim_out_))
-
 
         self.models = models
 

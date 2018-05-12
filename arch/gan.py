@@ -1,4 +1,4 @@
-'''Simple GAN model
+'''Generative adversarial networks with various objectives and penalties.
 
 '''
 
@@ -8,8 +8,8 @@ import torch
 from torch import autograd
 import torch.nn.functional as F
 
-from .vae import update_decoder_args, update_encoder_args
-from .utils import log_sum_exp
+from vae import update_decoder_args, update_encoder_args
+from utils import log_sum_exp
 
 
 def raise_measure_error(measure):
@@ -75,7 +75,7 @@ def get_weight(samples, measure):
 
 
 def generator_loss(q_samples, measure, loss_type=None):
-    if not loss_type:
+    if not loss_type or loss_type == 'minimax':
         return get_negative_expectation(q_samples, measure)
     elif loss_type == 'non-saturating':
         return -get_positive_expectation(q_samples, measure)
@@ -116,6 +116,20 @@ def apply_gradient_penalty(data, models, inputs=None, model=None, penalty_type='
             gradient = gradient.view(gradient.size()[0], -1)
             penalties.append((gradient ** 2).sum(1).mean())
         penalty = sum(penalties)
+
+    elif penalty_type == 'dot':
+        if len(inputs) != 2:
+            raise ValueError('tuple of 2 inputs required to interpolate')
+        inp1, inp2 = inputs
+        with torch.set_grad_enabled(True):
+            output1 = model_(inp1)
+            output2 = model_(inp2)
+            dot = (output1 * output2).sum(dim=1)
+        gradient1 = get_gradient(inp1, dot)
+        gradient1 = gradient1.view(gradient1.size()[0], -1)
+        gradient2 = get_gradient(inp2, dot)
+        gradient2 = gradient2.view(gradient2.size()[0], -1)
+        penalty = ((gradient1 ** 2).sum(1) + (gradient2 ** 2).sum(1)).mean()
 
     elif penalty_type == 'interpolate':
         if len(inputs) != 2:
@@ -213,15 +227,23 @@ def SETUP(routines=None, **kwargs):
 
 
 TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, generator=generator_routine)
+
+INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', 'W1'],
+                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared Hellinger), '
+                              'DV (Donsker Varahdan KL), W1 (IPM)}'),
+            loss_type=dict(choices=['non-saturating', 'minimax', 'boundary-seek'],
+                           help='Generator loss type.'),
+            penalty_type=dict(choices=['gradient_norm', 'interpolate'],
+                              help='Gradient penalty type for the discriminator.'),
+            penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
+            model_type=dict(choices=['mnist', 'convnet', 'resnet'],
+                            help='Model type.')
+)
+
 TEST_ROUTINES = dict(penalty=None)
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1000),
               noise_variables=dict(z=dict(dist='normal', size=64, loc=0, scale=1),
                                    e=dict(dist='uniform', size=1, low=0, high=1))),
-    optimizer=dict(optimizer='Adam', learning_rate=1e-4,
-                   updates_per_routine=dict(discriminator=1, penalty=1, generator=1)),
-    routines=dict(discriminator=dict(measure='GAN'),
-                  penalty=dict(penalty_type='gradient_norm', penalty_amount=0.5),
-                  generator=dict(loss_type='non-saturating')),
-    train=dict(epochs=100, archive_every=10, save_on_lowest='losses.gan')
+    train=dict(save_on_lowest='losses.gan')
 )

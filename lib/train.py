@@ -26,7 +26,7 @@ _args = dict(
     epochs=500,
     archive_every=10,
     test_mode=False,
-    quit_on_bad_values=False,
+    quit_on_bad_values=True,
     save_on_best=None,
     save_on_lowest=None,
     save_on_highest=None
@@ -56,12 +56,14 @@ class LossHandler(Handler):
         if k not in models.MODEL_HANDLER:
             raise AttributeError('Keyword `{}` not in the model_handler. Found: {}.'.format(
                 k, tuple(models.MODEL_HANDLER.keys())))
+        return True
 
     def __setitem__(self, k, v):
-        self.check_key_value(k, v)
+        passes = self.check_key_value(k, v)
         if len(v.size()) > 0:
             raise ValueError('Loss size must be a scalar. Got {}'.format(v.size()))
-        super().__setitem__(k, v)
+        if passes:
+            super().__setitem__(k, v)
 
 
 def setup():
@@ -138,8 +140,7 @@ def perform_routine(routine_key, routine, loss_handler, results, viz_handler, ar
     if routine is None:
         return
 
-    if isinstance(args, dict) and routine_key in args:
-        args = args[routine_key]
+    args = args.get(routine_key, {})
 
     # Run routine
     routine_results = {}
@@ -188,8 +189,9 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
         else:
             model.train()
 
+    active_loss_models = list(set([m for ms in ROUTINE_MODELS.values() for m in ms]))
     results = {'time': dict((rk, []) for rk in models.ARCH.train_routines),
-               'losses': dict((mk, []) for mk in models.MODEL_HANDLER.keys())}
+               'losses': dict((mk, []) for mk in active_loss_models)}
 
     num_updates_dict = set_updates_dict(epoch)
     is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
@@ -225,6 +227,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
                         losses[k] += v
                     else:
                         losses[k] = v
+
             update_dict_of_lists(results['losses'], **losses)
 
             for model_key in models.MODEL_HANDLER:
@@ -363,7 +366,7 @@ def align_summaries(d_train, d_test):
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=None, archive_every=None, test_mode=None, quit_on_bad_values=None, save_on_best=None,
+def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=True, save_on_best=None,
               save_on_lowest=None, save_on_highest=None):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')

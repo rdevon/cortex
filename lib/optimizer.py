@@ -143,5 +143,5 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
         if model_key in reg.L1_DECAY.keys():
             logger.info('L1 Decay {} with {}'.format(model_key, reg.L1_DECAY[k]))
 
-    if exp.USE_CUDA:
+    if not exp.DEVICE == torch.device('cpu'):
         cudnn.benchmark = True

@@ -46,10 +46,12 @@ class MNISTConv(nn.Module):
         models = nn.Sequential()
 
 
+
         nonlinearity = get_nonlinearity(nonlinearity)
 
 
         models.add_module('conv1', nn.Conv2d(1, dim_h, 5, 2, 2))
+
         models.add_module('conv1_nonlin', nonlinearity)
         if layer_norm:
             models.add_module('conv1_ln', nn.LayerNorm(dim_h))
@@ -93,8 +95,10 @@ class MNISTConv(nn.Module):
 
 class SimpleConvEncoder(nn.Module):
 
+
     def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None,
                  nonlinearity='ReLU', f_size=4, stride=2, pad=1, min_dim=4, n_steps=None, **layer_args):
+
         super(SimpleConvEncoder, self).__init__()
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
         Linear = SNLinear if spectral_norm else nn.Linear
@@ -122,6 +126,7 @@ class SimpleConvEncoder(nn.Module):
 
             finish_layer_2d(models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity, **layer_args)
 
+
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
 
@@ -135,6 +140,7 @@ class SimpleConvEncoder(nn.Module):
 
             models.add_module(name, nn.Linear(dim_in, dim_out))
             finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
+
 
 
         if dim_out_:

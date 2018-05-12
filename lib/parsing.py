@@ -6,6 +6,7 @@ __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 import argparse
+import ast
 import logging
 
 from . import data, optimizer, train
@@ -32,7 +33,6 @@ def make_argument_parser():
 
     '''
     parser = argparse.ArgumentParser()
-    parser.add_argument('arch', type=str, help='Architecture name')
     parser.add_argument('-o', '--out_path', default=None,
                         help=('Output path directory. All model results will go'
                               ' here. If a new directory, a new one will be '
@@ -45,6 +45,8 @@ def make_argument_parser():
     parser.add_argument('-r', '--reload', type=str, default=None,
                         help=('Path to model to reload.'))
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
+    parser.add_argument('-M', '--load_models', type=str, default=None,
+                        help=('Path to model to reload. Does not load args, info, etc'))
     parser.add_argument('-a', '--args', default=None, type=str,
                         help=('Arguments for the main file'))
     parser.add_argument('-C', '--copy_to_local', action='store_true', default=False)
@@ -62,58 +64,73 @@ def make_argument_parser():
     return parser
 
 
-def update_args(args, **kwargs):
-    if args is not None:
-        a = args.split(',')
-        for a_ in a:
-            k, v = a_.split('=')
-
-            try:
-                v = ast.literal_eval(v)
-            except ValueError:
-                pass
-
-            k_split = k.split('.')
-            kw = kwargs
-            k_base = None
-            for i, k_ in enumerate(k_split):
-                if i < len(k_split) - 1:
-                    if k_base in _known_args and k_ not in kw:
-                        if k_ in _known_args[k_base]:
-                            kw[k_] = {}
-                    if k_ in kw:
-                        kw = kw[k_]
-                        k_base = k_
-                    else:
-                        raise ValueError('Unknown arg {}'.format(k))
-                else:
-                    if kw is None:
-                        kw = dict(k_=v)
-                    else:
-                        kw[k_] = v
-
 class StoreDictKeyPair(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         d = {}
         for kv in values.split(','):
             k, v = kv.split('=')
-            d[k] = v
+            d[k] = ast.literal_eval(v)
         setattr(namespace, self.dest, d)
 
 
-def parse_args():
+def parse_args(archs):
     # Parse args
     parser = make_argument_parser()
-    for arg_k in _args:
-        args = _args[arg_k]
-        for k, v in args.items():
-            arg_str = '--' + arg_k + '.' + k
+
+    subparsers = parser.add_subparsers(title='Cortex', help='Select an architecture.',
+                                       description='Cortex is a wrapper around pytorch that makes training models '
+                                                   'more convenient.',
+                                       dest='arch')
+    for k, arch in archs.items():
+        subparser = subparsers.add_parser(k, help=arch.doc, description=arch.doc,
+                                          formatter_class=lambda prog: argparse.HelpFormatter(
+                                              prog, max_help_position=50, width=100))
+        for k, v in arch.kwargs.items():
+            arg_str = '--' + k
+            info = arch.info.get(k, None)
+            if info is not None:
+                help = info.get('help', None)
+                choices = info.get('choices', None)
+            else:
+                help = None
+                choices = None
+
             if isinstance(v, dict):
-                parser.add_argument(arg_str, default=None, dest=arg_k + '.' + k, action=StoreDictKeyPair,
-                                    metavar='key1=val1,key2=val2...')
+                subparser.add_argument(arg_str, dest=k, default=v, action=StoreDictKeyPair,
+                                       help=help, metavar='<k1=v1,k2=v2...>')
+            elif isinstance(v, bool) and not v:
+                if v:
+                    action = 'store_false'
+                else:
+                    action = 'store_true'
+                subparser.add_argument(arg_str, dest=k, action=action, default=v, help=help)
             else:
                 type_ = type(v) if v is not None else str
-                parser.add_argument(arg_str, default=None, type=type_, help=_args_help[arg_k][k])
+                metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
+                subparser.add_argument(arg_str, dest=k, choices=choices, metavar=metavar, default=v, type=type_,
+                                       help=help)
+
+        for arg_k in _args:
+            args = _args[arg_k]
+            for k, v in args.items():
+                arg_str = '--' + arg_k[0] + '.' + k
+                help = _args_help[arg_k][k]
+                dest = arg_k + '.' + k
+                metavar = '<k1=v1,k2=v2...>'
+                if isinstance(v, dict):
+                    subparser.add_argument(arg_str, dest=dest, default=None, action=StoreDictKeyPair,
+                                           help=help, metavar=metavar)
+                elif isinstance(v, bool) and not v:
+                    if v:
+                        action = 'store_false'
+                    else:
+                        action = 'store_true'
+                    subparser.add_argument(arg_str, dest=k, action=action, default=v, help=help)
+                else:
+                    type_ = type(v) if v is not None else str
+                    metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
+                    subparser.add_argument(arg_str, dest=dest, default=None, metavar=metavar, type=type_, help=help)
+
     args = parser.parse_args()
 
     return args

@@ -68,9 +68,12 @@ class Handler(dict):
         self.__setitem__(k, v)
 
     def __getattr__(self, k):
-        v = super().get(k)
-        if v is None:
-            raise AttributeError(self._get_error_string.format(k, tuple(self.keys())))
+        if k.startswith('__'):
+            return super.get(k)
+        try:
+            v = super().__getitem__(k)
+        except KeyError:
+            raise KeyError(self._get_error_string.format(k, tuple(self.keys())))
         return v
 
     def update(self, **kwargs):
