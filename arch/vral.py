@@ -84,7 +84,7 @@ def penalty_routine(data, models, losses, results, viz, penalty_amount=0.2, offs
     if Q_penalty:
         losses.fake_discriminator = Q_penalty
 
-    E_penalty = apply_gradient_penalty(data, models, inputs=(X_P, X_Q), penalty_type='dot',
+    E_penalty = apply_gradient_penalty(data, models, inputs=(X_P, X_Q), 
                                        model='encoder', penalty_amount=encoder_penalty_amount)
     if E_penalty:
         losses.encoder = E_penalty

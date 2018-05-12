@@ -47,8 +47,9 @@ def mine_discriminator_routine(data, models, losses, results, viz, measure=None,
     E_pos, E_neg, _, _ = score(models, X_P, X_Q, Z, Z, measure, key='mine_discriminator')
 
     losses.mine_discriminator = E_neg - E_pos
-    apply_penalty(models, losses, results, X_P, Z, penalty_amount, key='mine_discriminator')
+    penalty = apply_penalty(models, losses, results, X_P, Z, penalty_amount, key='mine_discriminator')
 
+    # somethign here
 
 def noise_discriminator_routine(data, models, losses, results, viz, penalty_amount=0., measure=None,
                                 noise_type='hypercubes', output_nonlin=False, **kwargs):

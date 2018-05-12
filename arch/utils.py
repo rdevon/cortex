@@ -76,3 +76,11 @@ def ms_ssim(X_a, X_b, window_size=11, size_average=True, C1=0.01**2, C2=0.03**2)
         return ssim_map.mean()
     else:
         return ssim_map.mean(1).mean(1).mean(1)
+
+
+def to_one_hot(y, K):
+    y_ = torch.unsqueeze(y, 1).long()
+
+    one_hot = torch.zeros(y.size(0), K).cuda()
+    one_hot.scatter_(1, y_.data.cuda(), 1)
+    return torch.tensor(one_hot)
