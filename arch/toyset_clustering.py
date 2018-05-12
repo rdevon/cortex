@@ -2,6 +2,9 @@
 
 '''
 
+import math
+import numpy as np
+from scipy.special import digamma
 from sklearn import metrics
 import torch
 
@@ -12,11 +15,42 @@ from modules.fully_connected import FullyConnectedNet
 from utils import to_one_hot
 
 
+def inverse_digamma(X, iterations=3):
+    L = 1
+    Y = np.exp(X)
+    while L > 10e-8:
+        Y = Y + L * np.sign(X - digamma(Y))
+        L /=  2
+    return Y
+
+
+def fixed_point_alpha(alpha, log_p_hat):
+    alpha_new = inverse_digamma(digamma(sum(alpha)) + log_p_hat)
+    return alpha_new
+
+
 # Must have data, models, losses, results, and viz. **kargs should match the keys in DEFAULT_CONFIG.routines below.
-def noise_discriminator_routine(data, models, losses, results, viz, noise_measure='JSD'):
+def noise_discriminator_routine(data, models, losses, results, viz, noise_measure='JSD', alpha_lr=0.0005,
+                                learn_alpha=False):
     X, Y_P = data.get_batch('1.images', 'y')
     encoder = models.encoder
     Y_Q = encoder(X, nonlinearity=torch.nn.Softmax(dim=1))
+
+    if learn_alpha:
+        alpha = data.noise['y'][0].concentration[1]
+        results.update(dict(Alphas=dict((str(i), alpha) for i, alpha in enumerate(alpha))))
+        log_p_hat = torch.log(Y_Q).mean(0)
+
+        '''
+        g = (digamma(sum(alpha)) - digamma(sum(alpha))).cuda() + log_p_hat
+        data.noise['y'][0].concentration += alpha_lr * g.data.cpu()
+        data.noise['y'][1].concentration += alpha_lr * g.data.cpu()
+        '''
+
+        new_alpha = torch.tensor(fixed_point_alpha(alpha.numpy(), log_p_hat.data.cpu().numpy()))
+        beta = 0.0001
+        data.noise['y'][0].concentration = (1 - beta) * data.noise['y'][0].concentration + beta * new_alpha
+        data.noise['y'][1].concentration = (1 - beta) * torch.zeros_like(data.noise['y'][1].concentration) + beta * new_alpha
 
     E_pos, E_neg, _, _ = featnet_score(models, Y_P, Y_Q, noise_measure, key='noise_discriminator')
     losses.noise_discriminator = E_neg - E_pos
@@ -25,16 +59,6 @@ def noise_discriminator_routine(data, models, losses, results, viz, noise_measur
 def mine_discriminator_routine(data, models, losses, results, viz, mine_measure='JSD'):
     X_P, X_Q, T = data.get_batch('1.images', '2.images', '1.targets')
     encoder = models.encoder
-
-    noise = data.noise['y'][0]
-    with torch.set_grad_enabled(True):
-        N = noise.sample()
-        N.requires_grad_()
-        loss = N.sum()
-
-    loss.backward()
-    print(N.grad)
-    assert False, N.requires_grad
 
     Y_Q = encoder(X_P, nonlinearity=torch.nn.Softmax(dim=1))
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Y_Q, Y_Q, mine_measure, key='mine')
@@ -67,21 +91,26 @@ def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise
         class_numbers['EN_{}'.format(l)] = found_numbers[l]
     results.update(Class_numbers=class_numbers)
 
-    # MINE
-    E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Y_Q, Y_Q, mine_measure, key='mine')
-
-    losses.encoder = E_neg - E_pos
-    get_results(P_samples, Q_samples, E_pos, E_neg, mine_measure, results=results, name='mine')
-    visualize(Y_Q, P_samples, Q_samples, X_P, D, Y_Q=X_P, viz=viz)
-
     # Featnet
     E_pos_n, E_neg_n, P_samples_n, Q_samples_n = featnet_score(models, Y_P, Y_Q, noise_measure,
                                                                key='noise_discriminator')
     get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n, noise_measure, results=results, name='noise')
-    losses.encoder += generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
+    losses.encoder = generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
+
+    '''
+    # MINE
+    E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Y_Q, Y_Q, mine_measure, key='mine')
+
+    losses.encoder += E_neg - E_pos
+    get_results(P_samples, Q_samples, E_pos, E_neg, mine_measure, results=results, name='mine')
+    '''
+
+    viz.add_scatter(X_P, labels=D, name='Clusters')
+    viz.add_histogram(dict(real=P_samples_n.view(-1).data, fake=Q_samples_n.view(-1).data), name='discriminator output')
 
 
-def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=1.0, penalty_amount=5.0):
+def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=1.0, penalty_amount=0.1,
+                    encoder_penalty_amount=5.):
     X_P, X_Q, Y_P = data.get_batch('1.images', '2.images', 'y')
     encoder = models.encoder
     Y_Q = encoder(X_P, nonlinearity=torch.nn.Softmax(dim=1))
@@ -95,23 +124,44 @@ def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=1.0,
     if penalty:
         losses.mine = penalty
 
+    penalty = apply_gradient_penalty(data, models, inputs=X_P, model='encoder', penalty_amount=encoder_penalty_amount)
+    if penalty:
+        losses.encoder = penalty
+
 
 # CORTEX ===============================================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
-def BUILD(data, models, dim_embedding=2, noise_type='dirichlet', noise_parameters=dict(concentration=0.2),
-          encoder_args=dict(dim_h=[20, 20], batch_norm=True),
-          noise_discriminator_args=dict(dim_h=[200, 100, 10], batch_norm=False),
-          mine_discriminator_args=dict(dim_h=[20, 20], batch_norm=False)):
-    dim_in = data.get_dims('x')
-    data.add_noise('y', dist=noise_type, size=dim_embedding, **noise_parameters)
+def BUILD(data, models, noise_type='dirichlet', noise_parameters=dict(concentration=0.1),
+          encoder_args=dict(dim_h=[100, 100], batch_norm=True),
+          noise_discriminator_args=dict(dim_h=[100, 100], batch_norm=False),
+          mine_discriminator_args=dict(dim_h=[20, 20, 20], batch_norm=False)):
+    dim_in, dim_l = data.get_dims('x', 'labels')
+    '''
+    data.reset(make_pbar=False, test=True)
+    data.next()
+    T = data.get_batch('1.targets')
+    target_numbers = to_one_hot(T, dim_l).sum(0)
+    N = sum(target_numbers)
+    target_freqencies = [float(n) / float(N) for n in target_numbers]
+    p1, p2 = target_freqencies
+    m = T.mean().item()
+    v = (1. / float(N)) * ((T - m) ** 2).sum().item() * 0.95
+    alpha = m * ((m * (1 - m) / v) - 1)
+    beta = (1 - m) * ((m * (1 - m) / v) - 1)
+    '''
 
-    encoder = FullyConnectedNet(dim_in, dim_out=dim_embedding, **encoder_args)
-    mine_bot = FullyConnectedNet(dim_in, dim_out=dim_embedding, **mine_discriminator_args)
-    mine_top = FullyConnectedNet(dim_embedding, dim_out=dim_embedding, **mine_discriminator_args)
-    mine_fin = FullyConnectedNet(2 * dim_embedding, dim_out=1, **mine_discriminator_args)
+    #assert False, [(m * (1 - m) / v), (v < m * (1 - m)), m, v, p1, p2, float(alpha), float(beta)]
+    #target_freqencies = [alpha, beta]
+    #noise_parameters = dict(concentration=target_freqencies)
+    data.add_noise('y', dist=noise_type, size=dim_l, **noise_parameters)
 
-    noise_discriminator = FullyConnectedNet(dim_embedding, dim_out=1, **noise_discriminator_args)
+    encoder = FullyConnectedNet(dim_in, dim_out=dim_l, **encoder_args)
+    mine_bot = FullyConnectedNet(dim_in, dim_out=dim_l, **mine_discriminator_args)
+    mine_top = FullyConnectedNet(dim_l, dim_out=dim_l, **mine_discriminator_args)
+    mine_fin = FullyConnectedNet(2 * dim_l, dim_out=1, **mine_discriminator_args)
+
+    noise_discriminator = FullyConnectedNet(dim_l, dim_out=1, **noise_discriminator_args)
 
     models.update(mine=(mine_bot, mine_top, mine_fin), noise_discriminator=noise_discriminator, encoder=encoder)
 
@@ -125,7 +175,7 @@ TEST_ROUTINES = dict(penalty=None)
 
 # Default configuration for this model
 DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=640), duplicate=2),
+    data=dict(batch_size=dict(train=64, test=1000), duplicate=2),
     optimizer=dict(),
-    train=dict()
+    train=dict(epochs=1000)
 )

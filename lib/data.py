@@ -423,10 +423,27 @@ class DataHandler(object):
         test_size = (self.batch_size['test'],) + size
 
         def expand_train(*args):
-            return (torch.zeros(train_size) + a for a in args)
+            expanded = tuple()
+            for arg in args:
+                zeros = torch.zeros(train_size)
+                if isinstance(arg, list):
+                    arg_tensor = torch.tensor(arg)
+                    expanded += (zeros + arg_tensor,)
+                else:
+                    expanded += (zeros + arg,)
+            return expanded
 
         def expand_test(*args):
-            return (torch.zeros(test_size) + a for a in args)
+            expanded = tuple()
+            for arg in args:
+                zeros = torch.zeros(test_size)
+                if isinstance(arg, list):
+                    arg_tensor = torch.tensor(arg)
+                    expanded += (zeros + arg_tensor,)
+                else:
+                    expanded += (zeros + arg,)
+            return expanded
+
 
         if dist == 'bernoulli':
             Dist = torch.distributions.bernoulli.Bernoulli

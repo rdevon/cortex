@@ -72,7 +72,10 @@ def noise_discriminator_routine(data, models, losses, results, viz, noise_penalt
     penalty = apply_gradient_penalty(data, models, inputs=(Z_P, Z_Q), model='noise_discriminator',
                                      penalty_amount=noise_penalty_amount)
 
-    losses.noise_discriminator = E_neg - E_pos + penalty
+    
+    losses.noise_discriminator = E_neg - E_pos
+    if penalty:
+        losses.noise_discriminator += penalty
 
 
 def network_routine(data, models, losses, results, viz):
@@ -101,7 +104,7 @@ def network_routine(data, models, losses, results, viz):
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discriminator_type='convnet', dim_embedding=64,
-        dim_noise=64, encoder_args={}, decoder_args={}, discriminator_args={}, use_topnet=False, match_noise=False,
+          dim_noise=64, encoder_args={}, decoder_args={}, discriminator_args={}, use_topnet=False, match_noise=False, noise_type=None,
           add_supervision=False):
     global TRAIN_ROUTINES
 

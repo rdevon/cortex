@@ -96,22 +96,30 @@ def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
     elif model_type.split('.')[0] == 'tv':
         from torchvision import models
         model_attributes = model_type.split('.')
-        if len(model_attributes) == 1:
-            raise NotImplemented('No torchvision model specified')
-        if not hasattr(models, model_attributes[1]):
-            raise NotImplemented(model_attributes[1])
-        tv_model = getattr(models, model_type.split('.')[1])
+        if len(model_attributes) != 2:
+            raise ValueError('`tvr` model type should be in form `tv.<MODEL>`')
+        model_key = model_attributes[1]
+        
+        try:
+            tv_model = getattr(models, model_key)
+        except AttributeError:
+            raise NotImplementedError(model_attributes[1])
+        
         # TODO This lambda function is necessary because Encoder takes shape and dim_out.
         Encoder = lambda shape, dim_out=None, n_steps=None, **kwargs: tv_model(num_classes=dim_out, **kwargs)
         encoder_args_ = {}
     elif model_type.split('.')[0] == 'tv-wrapper':
-        model_attributes = model_type.split('.')
         from modules import tv_models_wrapper as models
-        if len(model_attributes) == 1:
-            raise NotImplemented('No torchvision model specified')
-        if not hasattr(models, model_attributes[1]):
-            raise NotImplemented(model_attributes[1])
-        Encoder = getattr(models, model_type.split('.')[1])
+        model_attributes = model_type.split('.')
+
+        if len(model_attributes) != 2:
+            raise ValueError('`tv-wrapper` model type should be in form `tv-wrapper.<MODEL>`')
+        model_key = model_attributes[1]
+        
+        try:
+            Encoder = getattr(models, model_key)
+        except AttributeError:
+            raise NotImplementedError(model_attributes[1])
         encoder_args_ = {}
     else:
         raise NotImplementedError(model_type)
