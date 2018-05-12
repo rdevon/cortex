@@ -2,6 +2,9 @@
 
 '''
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
 import logging
 import pprint
 import sys
@@ -9,29 +12,34 @@ import time
 
 import numpy as np
 import torch
-import torch.optim as optim
-import torch.backends.cudnn as cudnn
 
-from . import data, exp, viz, reg
+from . import data, exp, models, optimizer, viz, reg
 from .utils import bad_values, convert_to_numpy, Handler, update_dict_of_lists
 from .viz import VizHandler, plot
 
 
-try:
-    input = raw_input #Python2 compatibility
-except NameError:
-    pass
+logger = logging.getLogger('cortex.train')
 
-logger = logging.getLogger('cortex.util')
-
-OPTIMIZERS = {}
-UPDATES = {}
-TRAIN_FOR = None
 ROUTINE_MODELS = {}
 
-optimizer_defaults = dict(
-    SGD=dict(momentum=0.9, weight_decay=5e-4),
-    Adam=dict(betas=(0.5, 0.999))
+_args = dict(
+    epochs=500,
+    archive_every=10,
+    test_mode=False,
+    quit_on_bad_values=True,
+    save_on_best=None,
+    save_on_lowest=None,
+    save_on_highest=None
+)
+
+_args_help = dict(
+    epochs='Number of epochs',
+    archive_every='Number of epochs for writing checkpoints.',
+    test_mode='Testing mode. No training.',
+    quit_on_bad_values='Quit when nans or infs found.',
+    save_on_best='Saves when highest of this result is found.',
+    save_on_highest='Saves when highest of this result is found.',
+    save_on_lowest='Saves when lowest of this result is found.'
 )
 
 
@@ -45,112 +53,20 @@ class LossHandler(Handler):
 
     def check_key_value(self, k, v):
         super().check_key_value(k, v)
-        if k not in exp.MODEL_HANDLER:
+        if k not in models.MODEL_HANDLER:
             raise AttributeError('Keyword `{}` not in the model_handler. Found: {}.'.format(
-                k, tuple(exp.MODEL_HANDLER.keys())))
+                k, tuple(models.MODEL_HANDLER.keys())))
+        return True
 
     def __setitem__(self, k, v):
-        self.check_key_value(k, v)
+        passes = self.check_key_value(k, v)
         if len(v.size()) > 0:
             raise ValueError('Loss size must be a scalar. Got {}'.format(v.size()))
-        super().__setitem__(k, v)
+        if passes:
+            super().__setitem__(k, v)
 
 
-def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_for=None,
-          clipping=None, weight_decay=None, l1_decay=None, optimizer_options='default', model_optimizer_options=None):
-
-    global TRAIN_FOR, ROUTINE_MODELS
-
-    model_optimizer_options = model_optimizer_options or {}
-    weight_decay = weight_decay or {}
-    l1_decay = l1_decay or {}
-    clipping = clipping or {}
-
-    # Set the optimizer options
-    if optimizer_options == 'default' and optimizer in optimizer_defaults.keys():
-        optimizer_options = optimizer_defaults[optimizer]
-    elif optimizer_options == 'default':
-        raise ValueError('Default optimizer options for `{}` not available.'.format(optimizer))
-
-    # Set the number of updates per routine
-    updates_per_routine = updates_per_routine or {}
-    updates_per_routine = dict((k, (1 if k not in updates_per_routine else updates_per_routine[k]))
-                               for k in exp.TRAIN_ROUTINES)
-    for k in list(exp.TRAIN_ROUTINES.keys()) + list(exp.FINISH_TRAIN_ROUTINES.keys()):
-        if k not in updates_per_routine:
-            updates_per_routine[k] = 1
-
-    UPDATES.update(**updates_per_routine)
-    TRAIN_FOR = train_for
-
-    # Initialize regularization
-    reg.init(clipping=clipping, weight_decay=l1_decay)  # initialize regularization
-
-    # Set the optimizers
-    if callable(optimizer):
-        op = optimizer
-    elif hasattr(optim, optimizer):
-        op = getattr(optim, optimizer)
-    else:
-        raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
-
-    for model_key, model in exp.MODEL_HANDLER.items():
-        if model_key in ('extras', 'final'):
-            continue
-        logger.info('Building optimizer for {}'.format(model_key))
-
-        # Set model parameters to cpu or gpu
-        if isinstance(model, (tuple, list)):
-            model_params = []
-            for net in model:
-                if exp.USE_CUDA:
-                    net.cuda()
-                    net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
-                logger.debug('Getting parameters for {}'.format(net))
-                model_params += list(net.parameters())
-        else:
-            if exp.USE_CUDA:
-                model.cuda()
-                model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
-            model_params = list(model.parameters())
-
-        # Needed for reloading.
-        for p in model_params:
-            p.requires_grad = True
-
-        # Learning rates
-        if isinstance(learning_rate, dict):
-            eta = learning_rate[model_key]
-        else:
-            eta = learning_rate
-
-        # Weight decay
-        if isinstance(weight_decay, dict):
-            wd = weight_decay.get(model_key, 0)
-        else:
-            wd = weight_decay
-
-        # Update the optimizer options
-        optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
-        if model_key in model_optimizer_options.keys():
-            optimizer_options_.update(**model_optimizer_options)
-
-        # Creat the optimizer
-        optimizer = op(model_params, lr=eta, weight_decay=wd, **optimizer_options_)
-        OPTIMIZERS[model_key] = optimizer
-
-        logger.info('Training {} routine with {}'.format(model_key, optimizer))
-
-        # Additional regularization
-        if model_key in reg.CLIPPING.keys():
-            logger.info('Clipping {} with {}'.format(model_key, reg.CLIPPING[k]))
-
-        if model_key in reg.L1_DECAY.keys():
-            logger.info('L1 Decay {} with {}'.format(model_key, reg.L1_DECAY[k]))
-
-    if exp.USE_CUDA:
-        cudnn.benchmark = True
-
+def setup():
     # Test the routines and recover the loss keys
     with torch.no_grad():
         data.DATA_HANDLER.reset(make_pbar=False)
@@ -158,11 +74,12 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
         routine_models = {}
         args = exp.ARGS['routines']
 
-        for routine_key, routine in exp.TRAIN_ROUTINES.items():
+        for routine_key, routine in models.ARCH.train_routines.items():
             logger.info('Testing routine `{}`'.format(routine_key))
             loss_handler = LossHandler()
             perform_routine(routine_key, routine, loss_handler, {}, VizHandler(), args)
             routine_models[routine_key] = tuple(loss_handler.keys())
+
     ROUTINE_MODELS.update(**routine_models)
 
 
@@ -193,10 +110,10 @@ def summarize_results_std(results):
 
 def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, args, quit_on_bad_values=False):
     for model_key in ROUTINE_MODELS[routine_key]:
-        OPTIMIZERS[model_key].zero_grad()
+        optimizer.OPTIMIZERS[model_key].zero_grad()
 
     # Set requires grad from training models.
-    for mk, model in exp.MODEL_HANDLER.items():
+    for mk, model in models.MODEL_HANDLER.items():
         if isinstance(model, (list, tuple)):
             for net in model:
                 for p in net.parameters():
@@ -207,14 +124,13 @@ def train_on_routine(routine_key, routine, loss_handler, results, viz_handler, a
 
     # Perform routine
     start_time = time.time()
-    perform_routine(routine_key, routine, loss_handler, results, viz_handler, args,
-                    quit_on_bad_values=quit_on_bad_values)
+    perform_routine(routine_key, routine, loss_handler, results, viz_handler, args, quit_on_bad_values=quit_on_bad_values)
 
     for model_key, loss in loss_handler.items():
         # Do backward step
         if loss is not None:
             loss.backward()
-            OPTIMIZERS[model_key].step()
+            optimizer.OPTIMIZERS[model_key].step()
 
     end_time = time.time()
     results['time'][routine_key].append(end_time - start_time)
@@ -224,12 +140,15 @@ def perform_routine(routine_key, routine, loss_handler, results, viz_handler, ar
     if routine is None:
         return
 
-    if isinstance(args, dict) and routine_key in args:
-        args = args[routine_key]
+    args = args.get(routine_key, {})
 
     # Run routine
     routine_results = {}
-    routine(data.DATA_HANDLER, exp.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
+    if exp.DEVICE == torch.device('cpu'):
+        routine(data.DATA_HANDLER, models.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
+    else:
+        with torch.cuda.device(exp.DEVICE.index):
+            routine(data.DATA_HANDLER, models.MODEL_HANDLER, loss_handler, routine_results, viz_handler, **args)
 
     # Check for bad numbers
     bads = bad_values(routine_results)
@@ -243,35 +162,36 @@ def perform_routine(routine_key, routine, loss_handler, results, viz_handler, ar
 
 def set_updates_dict(epoch):
     routines = {}
-    routines.update(**exp.TRAIN_ROUTINES)
-    routines.update(**exp.FINISH_TRAIN_ROUTINES)
+    routines.update(**models.ARCH.train_routines)
+    routines.update(**models.ARCH.finish_train_routines)
 
-    if TRAIN_FOR is not None:
-        total_steps = sum(TRAIN_FOR.values())
+    if optimizer.TRAIN_FOR is not None:
+        total_steps = sum(optimizer.TRAIN_FOR.values())
         step = epoch % total_steps
         ts = 0
-        for mk, s in TRAIN_FOR.items():
+        for mk, s in optimizer.TRAIN_FOR.items():
             ts += s
             if step < ts:
                 break
         num_updates_dict = dict((k, 0) for k in routines.keys())
         num_updates_dict[mk] = 1
     else:
-        num_updates_dict = UPDATES
+        num_updates_dict = optimizer.UPDATES
 
     return num_updates_dict
 
 
 def train_epoch(epoch, viz_handler, quit_on_bad_values):
-    for k, model in exp.MODEL_HANDLER.items():
+    for k, model in models.MODEL_HANDLER.items():
         if isinstance(model, (tuple, list)):
             for net in model:
                 net.train()
         else:
             model.train()
 
-    results = {'time': dict((rk, []) for rk in exp.TRAIN_ROUTINES.keys()),
-               'losses': dict((mk, []) for mk in exp.MODEL_HANDLER.keys())}
+    active_loss_models = list(set([m for ms in ROUTINE_MODELS.values() for m in ms]))
+    results = {'time': dict((rk, []) for rk in models.ARCH.train_routines),
+               'losses': dict((mk, []) for mk in active_loss_models)}
 
     num_updates_dict = set_updates_dict(epoch)
     is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
@@ -286,7 +206,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
 
             # Loop through routines
             losses = {}
-            for routine_key, routine in exp.TRAIN_ROUTINES.items():
+            for routine_key, routine in models.ARCH.train_routines.items():
                 num_updates = num_updates_dict.get(routine_key, 0)
                 routine_losses = {}
 
@@ -307,16 +227,17 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
                         losses[k] += v
                     else:
                         losses[k] = v
+
             update_dict_of_lists(results['losses'], **losses)
 
-            for model_key in exp.MODEL_HANDLER:
+            for model_key in models.MODEL_HANDLER:
                 reg.clip(model_key)  # weight clipping
                 reg.l1_decay(model_key)  # l1 weight decay
 
     except StopIteration:
         pass
 
-    for routine_key, routine in exp.FINISH_TRAIN_ROUTINES.items():
+    for routine_key, routine in models.ARCH.finish_train_routines.items():
         for u in range(num_updates_dict[routine_key]):
             loss_handler = LossHandler()
             perform_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args,
@@ -328,7 +249,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
 
 
 def test_epoch(epoch, viz_handler, return_std=False):
-    for k, model in exp.MODEL_HANDLER.items():
+    for k, model in models.MODEL_HANDLER.items():
         if k == 'extras':
             continue
         if isinstance(model, (tuple, list)):
@@ -338,7 +259,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
             model.eval()
 
     data.DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
-    results = {'losses': dict((rk, []) for rk in exp.MODEL_HANDLER.keys())}
+    results = {'losses': dict((rk, []) for rk in models.MODEL_HANDLER.keys())}
     routine_args = exp.ARGS['test_routines']
 
     viz_handler.ignore = False
@@ -349,7 +270,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
 
             # Loop through routines
             losses = {}
-            for routine_key, routine in exp.TEST_ROUTINES.items():
+            for routine_key, routine in models.ARCH.test_routines.items():
                 if routine_key == 'final':
                     continue
                 routine_losses = {}
@@ -369,7 +290,7 @@ def test_epoch(epoch, viz_handler, return_std=False):
     except StopIteration:
         pass
 
-    for routine_key, routine in exp.FINISH_TEST_ROUTINES.items():
+    for routine_key, routine in models.ARCH.finish_test_routines.items():
         loss_handler = LossHandler()
         perform_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args)
 
@@ -445,7 +366,7 @@ def align_summaries(d_train, d_test):
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=None, archive_every=None, test_mode=False, quit_on_bad_values=False, save_on_best=None,
+def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=True, save_on_best=None,
               save_on_lowest=None, save_on_highest=None):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')

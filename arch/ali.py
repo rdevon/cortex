@@ -1,15 +1,19 @@
 '''Adversarially learned inference and Bi-GAN
+
+Currently noise encoder is not implemented.
+
 '''
 
 import torch
 import torch.nn.functional as F
 from torch import autograd
 
-from .classifier import classify
-from .gan import get_positive_expectation, get_negative_expectation
-from .modules.fully_connected import FullyConnectedNet
-from .utils import cross_correlation
-from .vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
+from classifier import classify
+from gan import get_positive_expectation, get_negative_expectation
+from modules.fully_connected import FullyConnectedNet
+from utils import cross_correlation
+from vae import build_encoder, build_decoder
+from utils import update_decoder_args, update_encoder_args
 
 
 def apply_penalty(models, losses, results, X, Z, penalty_amount, key='discriminator'):
@@ -21,8 +25,10 @@ def apply_penalty(models, losses, results, X, Z, penalty_amount, key='discrimina
         Z.requires_grad_()
 
         with torch.set_grad_enabled(True):
-            W = x_disc(X, nonlinearity=F.relu)
-            U = z_disc(Z, nonlinearity=F.relu)
+            W = x_disc(X)
+            W = F.relu(W)
+            U = z_disc(Z)
+            U = F.relu(U)
             S = topnet(torch.cat([W, U], 1))
 
         G = autograd.grad(outputs=S, inputs=[X, Z], grad_outputs=torch.ones(S.size()).cuda(),
@@ -38,10 +44,14 @@ def apply_penalty(models, losses, results, X, Z, penalty_amount, key='discrimina
 
 def score(models, X_P, X_Q, Z_P, Z_Q, measure, key='discriminator'):
     x_disc, z_disc, topnet = models[key]
-    W_Q = x_disc(X_Q, nonlinearity=F.relu)
-    W_P = x_disc(X_P, nonlinearity=F.relu)
-    U_Q = z_disc(Z_Q, nonlinearity=F.relu)
-    U_P = z_disc(Z_P, nonlinearity=F.relu)
+    W_Q = x_disc(X_Q)
+    W_Q = F.relu(W_Q)
+    W_P = x_disc(X_P)
+    W_P = F.relu(W_P)
+    U_Q = z_disc(Z_Q)
+    U_Q = F.relu(U_Q)
+    U_P = z_disc(Z_P)
+    U_P = F.relu(U_P)
 
     P_samples = topnet(torch.cat([W_P, U_P], 1))
     Q_samples = topnet(torch.cat([W_Q, U_Q], 1))
@@ -54,11 +64,12 @@ def score(models, X_P, X_Q, Z_P, Z_Q, measure, key='discriminator'):
 # ROUTINES =============================================================================================================
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
-def discriminator_routine(data, models, losses, results, viz, measure=None):
+def discriminator_routine(data, models, losses, results, viz, measure='GAN'):
     X_P, T, Z_Q = data.get_batch('images', 'targets', 'z')
     encoder, decoder = models.generator
 
-    X_Q = decoder(Z_Q, nonlinearity=F.tanh).detach()
+    X_Q = decoder(Z_Q).detach()
+    X_Q = F.tanh(X_Q)
     Z_P = encoder(X_P).detach()
 
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z_P, Z_Q, measure)
@@ -73,7 +84,7 @@ def discriminator_routine(data, models, losses, results, viz, measure=None):
     viz.add_scatter(Z_P, labels=T.data, name='latent values')
 
 
-def penalty_routine(data, models, losses, results, viz, penalty_amount=None):
+def penalty_routine(data, models, losses, results, viz, penalty_amount=0.5):
     X_P, T, Z_Q = data.get_batch('images', 'targets', 'z')
     encoder, decoder = models.generator
 
@@ -88,7 +99,8 @@ def generator_routine(data, models, losses, results, viz, measure=None):
     X_P, Z_Q = data.get_batch('images', 'z')
     encoder, decoder = models.generator
 
-    X_Q = decoder(Z_Q, nonlinearity=F.tanh)
+    X_Q = decoder(Z_Q)
+    X_Q = F.tanh(X_Q)
     Z_P = encoder(X_P)
 
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z_P, Z_Q, measure)
@@ -106,13 +118,14 @@ def network_routine(data, models, losses, results, viz, encoder_key='generator')
     Z_P = encoder(X)
 
     Z_t = Z_P.detach()
-    X_d = decoder(Z_t, nonlinearity=F.tanh)
+    X_d = decoder(Z_t)
+    X_d = F.tanh(X_d)
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
     losses.nets += dd_loss
 
-    correlations = cross_correlation(Z_P, remove_diagonal=True)
-    viz.add_heatmap(correlations.data, name='latent correlations')
+    #correlations = cross_correlation(Z_P, remove_diagonal=True)
+    #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X, name='Ground truth')
     viz.add_image(X_d, name='Reconstruction')
 
@@ -140,25 +153,22 @@ def build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, dropout=0.1,
 # CORTEX ===============================================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
-def SETUP(model=None, data=None, routines=None, **kwargs):
-    data.noise_variables.z.size = model.dim_z
-    routines.generator.measure = routines.discriminator.measure
-
-
-def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None,
-          add_supervision=False):
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discriminator_type='convnet', dim_z=64,
+        encoder_args=None, decoder_args=None, discriminator_args=None, add_supervision=False):
     global TRAIN_ROUTINES
 
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
+    Discriminator, discriminator_args = update_encoder_args(x_shape, model_type=discriminator_type,
+                                                            encoder_args=discriminator_args)
     encoder = build_encoder(None, x_shape, dim_z, Encoder, fully_connected_layers=[1028], **encoder_args)
     decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
     models.update(generator=(encoder, decoder))
 
-    build_discriminator(models, x_shape, dim_z, Encoder, **encoder_args)
+    build_discriminator(models, x_shape, dim_z, Discriminator, **discriminator_args)
 
     if add_supervision:
         build_extra_networks(models, x_shape, dim_z, dim_l, Decoder, **decoder_args)
@@ -166,6 +176,16 @@ def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args=None, decod
 
 
 TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, generator=generator_routine)
+
+INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', 'W1'],
+                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared Hellinger), '
+                              'DV (Donsker Varahdan KL), W1 (IPM)}'),
+            penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
+            model_type=dict(choices=['mnist', 'convnet', 'resnet'],
+                            help='Model type.'),
+            dim_z=dict(help='Latent dimension.'),
+            add_supervision=dict(help='Use additional networks for monitoring during training.')
+)
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
@@ -175,10 +195,5 @@ DEFAULT_CONFIG = dict(
         learning_rate=1e-4,
         updates_per_routine=dict(discriminator=1, generator=1, nets=1)
     ),
-    model=dict(model_type='convnet', dim_z=64, encoder_args=None, decoder_args=None, add_supervision=False),
-    routines=dict(discriminator=dict(measure='GAN'),
-                  penalty=dict(penalty_amount=0.5),
-                  generator=dict(),
-                  nets=dict()),
     train=dict(epochs=500, archive_every=10, save_on_lowest='losses.generator')
 )

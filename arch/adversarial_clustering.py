@@ -5,12 +5,12 @@
 from sklearn import metrics
 import torch
 
-from .ali import build_discriminator as build_mine_discriminator, build_extra_networks, score, apply_penalty
-from .featnet import (apply_gradient_penalty, build_encoder, build_discriminator as build_noise_discriminator, encode,
-                      get_results, score as featnet_score, visualize)
-from .minet import network_routine
-from .gan import generator_loss
-from .vae import update_decoder_args, update_encoder_args
+from ali import build_discriminator as build_mine_discriminator, build_extra_networks, score, apply_penalty
+from featnet import (apply_gradient_penalty, build_encoder, build_discriminator as build_noise_discriminator, encode,
+                     get_results, score as featnet_score, visualize)
+from minet import network_routine
+from gan import generator_loss
+from utils import update_decoder_args, update_encoder_args
 
 
 def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise_measure=None, noise_type='hypercubes',
@@ -47,8 +47,9 @@ def mine_discriminator_routine(data, models, losses, results, viz, measure=None,
     E_pos, E_neg, _, _ = score(models, X_P, X_Q, Z, Z, measure, key='mine_discriminator')
 
     losses.mine_discriminator = E_neg - E_pos
-    apply_penalty(models, losses, results, X_P, Z, penalty_amount, key='mine_discriminator')
+    penalty = apply_penalty(models, losses, results, X_P, Z, penalty_amount, key='mine_discriminator')
 
+    # somethign here
 
 def noise_discriminator_routine(data, models, losses, results, viz, penalty_amount=0., measure=None,
                                 noise_type='hypercubes', output_nonlin=False, **kwargs):
@@ -63,7 +64,8 @@ def noise_discriminator_routine(data, models, losses, results, viz, penalty_amou
         Z_P = torch.cat([Y_P, Z_P], 1)
 
     penalty = apply_gradient_penalty(data, models, inputs=(Z_P, Z_Q), model='noise_discriminator', penalty_amount=penalty_amount)
-    losses.noise_discriminator += penalty
+    if penalty:
+        losses.noise_discriminator += penalty
 
 
 def SETUP(model=None, data=None, routines=None, **kwargs):
@@ -75,7 +77,7 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
     routines.noise_discriminator.output_nonlin = routines.encoder.output_nonlin
 
 
-def BUILD(data, models, model_type='convnet', dim_embedding=None, dim_noise=None,
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', dim_embedding=None, dim_noise=None,
           encoder_args=None, decoder_args=None, use_topnet=None):
 
     if not use_topnet:
@@ -87,8 +89,8 @@ def BUILD(data, models, model_type='convnet', dim_embedding=None, dim_noise=None
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
     build_mine_discriminator(models, x_shape, dim_embedding, Encoder, key='mine_discriminator', **encoder_args)
     build_noise_discriminator(models, dim_d, key='noise_discriminator')
     build_encoder(models, x_shape, dim_noise, Encoder, use_topnet=use_topnet, dim_top=dim_noise, **encoder_args)
@@ -103,8 +105,7 @@ DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1028), duplicate=2),
     optimizer=dict( optimizer='Adam', learning_rate=1e-4,
                     updates_per_routine=dict(noise_discriminator=1, mine_discriminator=1, autoencoder=1, classifier=1)),
-    model=dict(model_type='convnet', dim_embedding=64, dim_noise=64, use_topnet=False,
-               encoder_args=None),
+    model=dict(dim_embedding=64, dim_noise=64, use_topnet=False, encoder_args=None),
     routines=dict(mine_discriminator=dict(measure='JSD', penalty_amount=0.5),
                   noise_discriminator=dict(measure='JSD', penalty_amount=0.2),
                   encoder=dict(generator_loss_type='non-saturating', output_nonlin=torch.nn.Softmax(dim=1)),

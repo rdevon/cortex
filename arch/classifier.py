@@ -6,14 +6,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from utils import update_encoder_args
 
 
-resnet_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4, fully_connected_layers=[1028])
-mnist_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7, nonlinearity='LeakyReLU')
-convnet_args_ = dict(dim_h=64, batch_norm=True, n_steps=3, nonlinearity='LeakyReLU')
+resnet_args_ = dict(dim_h=64, batch_norm=True, dropout=0.2, f_size=3, n_steps=4, fully_connected_layers=[1028])
+mnist_args_ = dict(dim_h=64, batch_norm=True, dropout=0.2, f_size=5, pad=2, stride=2, min_dim=7, nonlinearity='LeakyReLU')
+convnet_args_ = dict(dim_h=64, batch_norm=True, dropout=0.2, n_steps=3, nonlinearity='LeakyReLU')
 
 
-def routine(data, models, losses, results, viz, key='classifier', criterion=None):
+def routine(data, models, losses, results, viz, key='classifier', criterion=nn.CrossEntropyLoss()):
     classifier = models[key]
     inputs, targets = data.get_batch('images', 'targets')
 
@@ -50,37 +51,39 @@ def visualize(viz_inputs, targets, predicted, viz=None, key='classifier'):
 # CORTEX ===============================================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
-def BUILD(data, models, model_type='convnet', dropout=0.2, classifier_args=None):
+def BUILD(data, models, model_type='convnet', classifier_args={}):
     classifier_args = classifier_args or {}
     shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
     if model_type == 'resnet':
-        from .modules.resnets import ResEncoder as Encoder
         args = resnet_args_
     elif model_type == 'convnet':
-        from .modules.convnets import SimpleConvEncoder as Encoder
         args = convnet_args_
     elif model_type == 'mnist':
-        from .modules.convnets import SimpleConvEncoder as Encoder
         args = mnist_args_
+    elif 'tv' in model_type:
+        args = {}
     else:
         raise NotImplementedError(model_type)
 
+    Encoder, args = update_encoder_args(shape, model_type=model_type, encoder_args=args)
+
     args.update(**classifier_args)
 
-    if shape[0] == 64:
-        args['n_steps'] = 4
-
-    classifier = Encoder(shape, dim_out=dim_l, dropout=dropout, **args)
+    classifier = Encoder(shape, dim_out=dim_l, **args)
     models.update(classifier=classifier)
 
 
 TRAIN_ROUTINES = dict(classify=routine)
+
+INFO = dict(criterion=dict(help='Classifier criterion.'),
+            model_type=dict(help='Model type.'),
+            classifier_args=dict(help='Classifier arguments. Can include dropout, batch_norm, layer_norm, etc.')
+)
+
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=128),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4),
-    model=dict(dropout=0.2, model_type='convnet'),
-    routines=dict(criterion=nn.CrossEntropyLoss()),
     train=dict(epochs=200, archive_every=10, save_on_best='losses.classifier')
 )

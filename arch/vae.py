@@ -1,22 +1,17 @@
-'''Simple classifier model. Credit goes to Samuel Lavoie
+'''Simple Variational Autoencoder model.
 '''
+
+__author__ = 'R Devon Hjelm and Samuel Lavoie'
+__author_email__ = 'erroneus@gmail.com'
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from .modules.fully_connected import FullyConnectedNet
-from .classifier import classify
-from .utils import cross_correlation
-
-
-resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-resnet_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
-mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7)
-mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
-convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
-convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+from modules.fully_connected import FullyConnectedNet
+from classifier import classify
+from utils import cross_correlation, update_encoder_args, update_decoder_args
 
 
 def setup(model=None, data=None, **kwargs):
@@ -42,7 +37,8 @@ class VAE(nn.Module):
             return mu
 
     def forward(self, x, nonlinearity=None):
-        encoded = self.encoder(x, nonlinearity=F.relu)
+        encoded = self.encoder(x)
+        encoded = F.relu(encoded)
         self.mu = self.mu_net(encoded)
         self.std = self.logvar_net(encoded).exp_()
         self.latent = self.reparametrize(self.mu, self.std)
@@ -51,83 +47,42 @@ class VAE(nn.Module):
 # ROUTINES =============================================================================================================
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
-def vae_routine(data, models, losses, results, viz, criterion=None, beta_kld=1.):
+def vae_routine(data, models, losses, results, viz, vae_criterion=F.mse_loss, beta_kld=1., **kwargs):
     X, Y, Z = data.get_batch('images', 'targets', 'z')
     vae_net = models.vae
 
-    outputs = vae_net(X, nonlinearity=F.tanh)
-    gen = vae_net.decoder(Z, nonlinearity=F.tanh)
+    vae_criterion = kwargs.get('criterion', vae_criterion) # For old-style
 
-    r_loss = criterion(outputs, X, size_average=False) / X.size(0)
+    outputs = vae_net(X)
+    outputs = F.tanh(outputs)
+    gen = vae_net.decoder(Z)
+    gen = F.tanh(gen)
+
+    r_loss = vae_criterion(outputs, X, size_average=False) / X.size(0)
     kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
 
     losses.vae=(r_loss + beta_kld * kl)
-    correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
+    #correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
 
     results.update(KL_divergence=kl.item())
     viz.add_image(outputs, name='reconstruction')
     viz.add_image(gen, name='generated')
     viz.add_image(X, name='ground truth')
-    viz.add_heatmap(correlations.data, name='latent correlations')
+    #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
 
-def classifier_routine(data, models, losses, results, viz, **kwargs):
+def classifier_routine(data, models, losses, results, viz, classifier_criterion=nn.CrossEntropyLoss(), **kwargs):
     X, Y = data.get_batch('images', 'targets')
     vae_net = models.vae
     classifier = models.classifier
 
-    vae_net(X, nonlinearity=F.tanh)
-    classify(classifier, vae_net.mu, Y, losses=losses, results=results, **kwargs)
+    classifier_criterion = kwargs.get('criterion', classifier_criterion)  # For old-style
+
+    vae_net(X)
+    classify(classifier, vae_net.mu, Y, losses=losses, results=results, criterion=classifier_criterion)
 
 # Building helper functions for autoencoders ===========================================================================
-
-def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
-    encoder_args = encoder_args or {}
-
-    if model_type == 'resnet':
-        from .modules.resnets import ResEncoder as Encoder
-        encoder_args_ = resnet_encoder_args_
-    elif model_type == 'convnet':
-        from .modules.convnets import SimpleConvEncoder as Encoder
-        encoder_args_ = convnet_encoder_args_
-    elif model_type == 'mnist':
-        from .modules.convnets import SimpleConvEncoder as Encoder
-        encoder_args_ = mnist_encoder_args_
-    else:
-        raise NotImplementedError(model_type)
-
-    encoder_args_.update(**encoder_args)
-    if x_shape[0] == 64:
-        encoder_args_['n_steps'] = 4
-    elif x_shape[0] == 128:
-        encoder_args_['n_steps'] = 5
-
-    return Encoder, encoder_args_
-
-
-def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
-    decoder_args = decoder_args or {}
-
-    if model_type == 'resnet':
-        from .modules.resnets import ResDecoder as Decoder
-        decoder_args_ = resnet_decoder_args_
-    elif model_type == 'convnet':
-        from .modules.conv_decoders import SimpleConvDecoder as Decoder
-        decoder_args_ = convnet_decoder_args_
-    elif model_type == 'mnist':
-        from .modules.conv_decoders import SimpleConvDecoder as Decoder
-        decoder_args_ = mnist_decoder_args_
-    else:
-        raise NotImplementedError(model_type)
-
-    decoder_args_.update(**decoder_args)
-    if x_shape[0] >= 64:
-        decoder_args_['n_steps'] = 4
-    elif x_shape[0] == 128:
-        decoder_args_['n_steps'] = 5
-
-    return Decoder, decoder_args_
 
 
 def build_encoder(models, x_shape, dim_out, Encoder, key='encoder', **encoder_args):
@@ -152,12 +107,13 @@ def build_decoder(models, x_shape, dim_in, Decoder, key='decoder', **decoder_arg
 # CORTEX ===============================================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, `DEFAULT_CONFIG`
 
-def BUILD(data, models, model_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args=None, decoder_args=None):
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args={},
+          decoder_args={}):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
 
     encoder = build_encoder(None, x_shape, dim_encoder_out, Encoder, **encoder_args)
     decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
@@ -168,12 +124,19 @@ def BUILD(data, models, model_type='convnet', dim_z=64, dim_encoder_out=1028, en
 
 
 TRAIN_ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
+
+INFO = dict(vae_criterion=dict(help='Reconstruction criterion.'),
+            beta_kld=dict(help='Beta scaling for KL term in lower-bound.'),
+            classifier_criterion=dict(help='Classifier criterion for additional classifier.'),
+            model_type=dict(choices=['mnist', 'convnet', 'resnet'],
+                            help='Model type.'),
+            dim_z=dict(help='Latent dimension.'),
+            dim_encoder_out=dict(help='Dimension of the final layer of the decoder before decoding to mu and log sigma.'),
+)
+
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=640),
               noise_variables=dict(z=dict(dist='normal', size=64))),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4),
-    model=dict(dim_z=64, model_type='convnet', dim_encoder_out=1028, encoder_args=None, decoder_args=None),
-    routines=dict(vae=dict(criterion=F.mse_loss, beta_kld=1.),
-                  classifier=dict(criterion=nn.CrossEntropyLoss())),
     train=dict(epochs=500, archive_every=10, save_on_lowest='losses.vae')
 )
