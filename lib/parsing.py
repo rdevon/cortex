@@ -67,7 +67,6 @@ def make_argument_parser():
 class StoreDictKeyPair(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         d = {}
-        print(values)
         for kv in values.split(';'):
             k, v = kv.split('=')
             d[k] = ast.literal_eval(v)
