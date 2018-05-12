@@ -18,13 +18,17 @@ from vae import update_decoder_args, update_encoder_args
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_measure=None, noise_type=None,
-                    output_nonlin=False, generator_loss_type='non-saturating', beta=1.0, key='discriminator'):
+                    output_nonlin=False, generator_loss_type='non-saturating', beta=1.0, key='discriminator',
+                    min_entropy=False, min_information=False):
     X_P, X_Q, T, Y_P, U = data.get_batch('1.images', '2.images', '1.targets', 'y', 'u')
 
     Z_P, Z, Y_Q = encode(models, X_P, Y_P, output_nonlin=output_nonlin, noise_type=noise_type)
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure, key=key)
 
-    losses.encoder = E_neg - E_pos
+    e_loss = E_neg - E_pos
+    if min_information:
+        e_loss *= -1
+    losses.encoder = e_loss
     get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=results, name='mine')
     visualize(Z, P_samples, Q_samples, X_P, T, Y_Q=Y_Q, viz=viz)
 
@@ -32,6 +36,8 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_meas
         Y_P = shape_noise(Y_P, U, noise_type)
         E_pos_n, E_neg_n, P_samples_n, Q_samples_n = featnet_score(models, Z_P, Z, measure, Y_P=Y_P, Y_Q=Y_Q,
                                                                    key='noise_discriminator')
+        if min_entropy:
+            beta *= -1
         get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n, noise_measure, results=results, name='noise')
         losses.encoder += beta * generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
 
@@ -93,18 +99,16 @@ def network_routine(data, models, losses, results, viz):
 # CORTEX ===============================================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
-def SETUP(model=None, data=None, routines=None, **kwargs):
-    noise = routines.discriminator.noise
-    noise_type = routines.discriminator.noise_type
-    if noise_type in ('unitsphere', 'unitball'):
-        noise = 'normal'
-    data.noise_variables = dict(y=dict(dist=noise, size=model.dim_noise),
-                                u=dict(dist='uniform', size=1))
-
-
-def BUILD(data, models, model_type='convnet', dim_embedding=64, dim_noise=64,
+def BUILD(data, models, model_type='convnet', dim_embedding=64, dim_noise=64, noise_type=None,
           encoder_args={}, decoder_args={}, use_topnet=False, match_noise=False, add_supervision=False):
     global TRAIN_ROUTINES
+
+    if noise_type == 'hypercubes':
+        noise = 'uniform'
+    else:
+        noise = 'normal'
+    data.add_noise('y', dist=noise, size=dim_noise)
+    data.add_noise('u', dist='uniform', size=1)
 
     if not use_topnet:
         dim_embedding = dim_noise
@@ -146,6 +150,8 @@ INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', '
             penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
             model_type=dict(choices=['mnist', 'convnet', 'resnet'],
                             help='Model type.'),
+            min_entropy=dict(help='Minimize entropy of output implitly instead of maximize.'),
+            min_information=dict(help='Minimize mutual information instead of maximize.'),
             dim_noise=dict(help='Noise dimension.'),
             dim_embedding=dict(help='Embedding dimension (used if use_topnet is True)'),
             use_topnet=dict(help='Whether to use an additional network and perform ALI with top two variables.'),

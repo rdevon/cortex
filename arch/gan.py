@@ -117,6 +117,20 @@ def apply_gradient_penalty(data, models, inputs=None, model=None, penalty_type='
             penalties.append((gradient ** 2).sum(1).mean())
         penalty = sum(penalties)
 
+    elif penalty_type == 'dot':
+        if len(inputs) != 2:
+            raise ValueError('tuple of 2 inputs required to interpolate')
+        inp1, inp2 = inputs
+        with torch.set_grad_enabled(True):
+            output1 = model_(inp1)
+            output2 = model_(inp2)
+            dot = (output1 * output2).sum(dim=1)
+        gradient1 = get_gradient(inp1, dot)
+        gradient1 = gradient1.view(gradient1.size()[0], -1)
+        gradient2 = get_gradient(inp2, dot)
+        gradient2 = gradient2.view(gradient2.size()[0], -1)
+        penalty = ((gradient1 ** 2).sum(1) + (gradient2 ** 2).sum(1)).mean()
+
     elif penalty_type == 'interpolate':
         if len(inputs) != 2:
             raise ValueError('tuple of 2 inputs required to interpolate')

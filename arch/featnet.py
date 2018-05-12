@@ -15,8 +15,10 @@ from utils import perform_svc
 
 # Helper functions =====================================================================================================
 
-def shape_noise(Y_P, U, noise_type, epsilon=1e-6):
-    if noise_type == 'hypercubes':
+def shape_noise(Y_P, U, noise_type, epsilon=1e-6, offset=0.):
+    if noise_type == None:
+        pass
+    elif noise_type == 'hypercubes':
         pass
     elif noise_type == 'unitsphere':
         Y_P = Y_P / (torch.sqrt((Y_P ** 2).sum(1, keepdim=True)) + epsilon)
@@ -25,7 +27,7 @@ def shape_noise(Y_P, U, noise_type, epsilon=1e-6):
     else:
         raise ValueError
 
-    return Y_P
+    return Y_P + offset
 
 
 def encode(models, X, Y_P, output_nonlin=False, noise_type='hypercubes', key='encoder'):
