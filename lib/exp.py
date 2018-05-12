@@ -24,7 +24,6 @@ logger = logging.getLogger('cortex.exp')
 
 # Experiment info
 NAME = 'X'
-USE_CUDA = False
 SUMMARY = {'train': {}, 'test': {}}
 OUT_DIRS = {}
 ARGS = Handler(data=Handler(), model=Handler(), optimizer=Handler(), routines=Handler(), test_routines=Handler(),
@@ -121,6 +120,11 @@ def setup_new(arch_default_args, name, out_path, clean, config, model_file, relo
         reloads = reloads or d['models'].keys()
         for k in reloads:
             models.reload_models(**{k: d['models'][k]})
+            if isinstance(d['models'][k], list):
+                for m in d['models'][k]:
+                    m = m.to(DEVICE)
+            else:
+                d['models'][k] = d['models'][k].to(DEVICE)
             
 
 def reload(exp_file, reloads, name, out_path, clean, config):
@@ -150,6 +154,11 @@ def reload(exp_file, reloads, name, out_path, clean, config):
     reloads = reloads or d['models'].keys()
     for k in reloads:
         models.reload_models(**{k: d['models'][k]})
+        if isinstance(d['models'][k], list):
+            for m in d['models'][k]:
+                m = m.to(DEVICE)
+        else:
+            d['models'][k] = d['models'][k].to(DEVICE)
 
     if name:
         NAME = name
