@@ -10,8 +10,8 @@ from classifier import classify
 from featnet import (apply_gradient_penalty, build_encoder, build_discriminator as build_noise_discriminator, encode,
                      get_results, score as featnet_score, shape_noise, visualize)
 from gan import generator_loss
-from utils import cross_correlation, ms_ssim
-from vae import update_decoder_args, update_encoder_args
+from utils import cross_correlation, ms_ssim, update_decoder_args, update_encoder_args
+
 
 
 # ROUTINES =============================================================================================================
@@ -84,7 +84,8 @@ def network_routine(data, models, losses, results, viz):
 
     Z_P = encoder(X)
     Z_t = Z_P.detach()
-    X_d = decoder(Z_t, nonlinearity=F.tanh)
+    X_d = decoder(Z_t)
+    X_d = F.tanh(X_d)
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
 
@@ -99,8 +100,9 @@ def network_routine(data, models, losses, results, viz):
 # CORTEX ===============================================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
-def BUILD(data, models, model_type='convnet', dim_embedding=64, dim_noise=64, noise_type=None,
-          encoder_args={}, decoder_args={}, use_topnet=False, match_noise=False, add_supervision=False):
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discriminator_type='convnet', dim_embedding=64,
+        dim_noise=64, encoder_args={}, decoder_args={}, discriminator_args={}, use_topnet=False, match_noise=False,
+          add_supervision=False):
     global TRAIN_ROUTINES
 
     if noise_type == 'hypercubes':
@@ -119,9 +121,11 @@ def BUILD(data, models, model_type='convnet', dim_embedding=64, dim_noise=64, no
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
-    build_discriminator(models, x_shape, dim_embedding, Encoder, **encoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
+    Discriminator, discriminator_args = update_encoder_args(x_shape, model_type=discriminator_type,
+                                                            encoder_args=discriminator_args)
+    build_discriminator(models, x_shape, dim_embedding, Discriminator, **discriminator_args)
     build_encoder(models, x_shape, dim_noise, Encoder, fully_connected_layers=[1028], use_topnet=use_topnet,
                   dim_top=dim_noise, **encoder_args)
 

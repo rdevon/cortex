@@ -8,8 +8,8 @@ from classifier import classify
 from ali import apply_penalty, build_discriminator as build_mine_discriminator, score
 from featnet import get_results
 from modules.fully_connected import FullyConnectedNet
-from vae import update_decoder_args, update_encoder_args
-from utils import ms_ssim
+
+from utils import ms_ssim, update_decoder_args, update_encoder_args
 
 def encode(models, X):
     if 'vae' in models:

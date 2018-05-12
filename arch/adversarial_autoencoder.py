@@ -9,7 +9,8 @@ from gan import generator_loss
 from featnet import apply_gradient_penalty, build_discriminator, get_results, score, shape_noise, visualize
 from modules.fully_connected import FullyConnectedNet
 #from utils import cross_correlation
-from vae import update_decoder_args, update_encoder_args, build_encoder, build_decoder
+from vae import build_encoder, build_decoder
+from utils import update_decoder_args, update_encoder_args
 
 
 def encode(models, X, output_nonlin=False, noise_type='hypercubes', key='autoencoder'):
@@ -101,11 +102,11 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
                                 u=dict(dist='uniform', size=1))
 
 
-def BUILD(data, models, model_type='convnet', dim_z=64, encoder_args={}, decoder_args={}):
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', dim_z=64, encoder_args={}, decoder_args={}):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
     encoder = build_encoder(None, x_shape, dim_z, Encoder, fully_connected_layers=[1028], **encoder_args)
     decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
     classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, batch_norm=True, dropout=0.2)

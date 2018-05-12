@@ -8,7 +8,7 @@ import torch
 from torch import autograd
 import torch.nn.functional as F
 
-from vae import update_decoder_args, update_encoder_args
+from utils import update_decoder_args, update_encoder_args
 from utils import log_sum_exp
 
 
@@ -163,7 +163,8 @@ def discriminator_routine(data, models, losses, results, viz, measure='GAN'):
     discriminator = models.discriminator
     generator = models.generator
 
-    X_Q = generator(Z, nonlinearity=F.tanh).detach()
+    X_Q = generator(Z).detach()
+    X_Q = F.tanh(X_Q)
     P_samples = discriminator(X_P)
     Q_samples = discriminator(X_Q)
 
@@ -182,7 +183,8 @@ def penalty_routine(data, models, losses, results, viz, penalty_type='gradient_n
     Z, X_P = data.get_batch('z', 'images')
     generator = models.generator
 
-    X_Q = generator(Z, nonlinearity=F.tanh).detach()
+    X_Q = generator(Z).detach()
+    X_Q = F.tanh(X_Q)
     penalty = apply_gradient_penalty(data, models, inputs=(X_P, X_Q), model='discriminator',
                                      penalty_type=penalty_type, penalty_amount=penalty_amount)
 
@@ -195,7 +197,8 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
     discriminator = models.discriminator
     generator = models.generator
 
-    X_Q = generator(Z, nonlinearity=F.tanh)
+    X_Q = generator(Z)
+    X_Q = F.tanh(X_Q)
     samples = discriminator(X_Q)
 
     g_loss = generator_loss(samples, measure, loss_type=loss_type)
@@ -209,12 +212,12 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
 # CORTEX ===============================================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
-def BUILD(data, models, model_type='convnet', discriminator_args=dict(), generator_args=dict()):
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discriminator_args=dict(), generator_args=dict()):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_z = data.get_dims('z')
 
-    Encoder, discriminator_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=discriminator_args)
-    Decoder, generator_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=generator_args)
+    Encoder, discriminator_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=discriminator_args)
+    Decoder, generator_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=generator_args)
 
     discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
     generator = Decoder(x_shape, dim_in=dim_z, **generator_args)

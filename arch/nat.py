@@ -9,7 +9,8 @@ import torch
 from torch import nn
 
 from ali import build_extra_networks, network_routine as ali_network_routine
-from vae import update_decoder_args, update_encoder_args, build_encoder
+from utils import update_decoder_args, update_encoder_args
+from vae import build_encoder
 
 
 def make_assignment(P, I_, J_, Z_P, Z_Q, results):
@@ -155,14 +156,14 @@ def network_routine(data, models, losses, results, viz):
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 
-def BUILD(data, models, model_type='convnet', dim_embedding=64, encoder_args={}, decoder_args={},
-          add_supervision=False):
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', dim_embedding=64, encoder_args={},
+          decoder_args={}, add_supervision=False):
     global TRAIN_ROUTINES, TEST_ROUTINES
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
     build_encoder(models, x_shape, dim_embedding, Encoder, fully_connected_layers=[1028], dropout=0.5, **encoder_args)
 
     N, M = data.get_dims('n_train', 'n_test')
