@@ -9,8 +9,7 @@ import torch.nn.functional as F
 from ali import build_extra_networks, network_routine as ali_network_routine
 from gan import get_positive_expectation, get_negative_expectation, apply_gradient_penalty, generator_loss
 from modules.fully_connected import FullyConnectedNet
-from vae import update_encoder_args, update_decoder_args
-from utils import perform_svc
+from utils import perform_svc, update_encoder_args, update_decoder_args
 
 
 # Helper functions =====================================================================================================
@@ -216,7 +215,7 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
                                 u=dict(dist='uniform', size=1))
 
 
-def BUILD(data, models, model_type='convnet', use_topnet=False, dim_noise=64, dim_embedding=64, encoder_args={},
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', use_topnet=False, dim_noise=64, dim_embedding=64, encoder_args={},
           decoder_args={}, add_supervision=False):
     global TRAIN_ROUTINES, FINISH_TRAIN_ROUTINES, FINISH_TEST_ROUTINES
 
@@ -232,8 +231,8 @@ def BUILD(data, models, model_type='convnet', use_topnet=False, dim_noise=64, di
     encoder_args = encoder_args or {}
     encoder_args.update(batch_norm=True, layer_norm=False)
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
 
     build_encoder(models, x_shape, dim_embedding, Encoder, use_topnet=use_topnet, dim_top=dim_noise,
                   fully_connected_layers=[1028], **encoder_args)
@@ -259,8 +258,8 @@ INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', '
             generator_loss_type=dict(choices=['non-saturating', 'minimax', 'boundary-seek'],
                                      help='Generator loss type.'),
             penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
-            model_type=dict(choices=['mnist', 'convnet', 'resnet'],
-                            help='Model type.'),
+            encoder_type=dict(help='Model type.'),
+            decoder_type=dict(help='Model type.'),
             dim_noise=dict(help='Noise dimension.'),
             dim_embedding=dict(help='Embedding dimension (used if use_topnet is True)'),
             use_topnet=dict(help='Whether to use an additional network and perform ALI with top two variables.'),

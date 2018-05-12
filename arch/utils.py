@@ -77,6 +77,80 @@ def ms_ssim(X_a, X_b, window_size=11, size_average=True, C1=0.01**2, C2=0.03**2)
     else:
         return ssim_map.mean(1).mean(1).mean(1)
 
+resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=2, min_dim=7)
+convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+
+def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
+    encoder_args = encoder_args or {}
+
+    if model_type == 'resnet':
+        from modules.resnets import ResEncoder as Encoder
+        encoder_args_ = resnet_encoder_args_
+    elif model_type == 'convnet':
+        from modules.convnets import SimpleConvEncoder as Encoder
+        encoder_args_ = convnet_encoder_args_
+    elif model_type == 'mnist':
+        from modules.convnets import SimpleConvEncoder as Encoder
+        encoder_args_ = mnist_encoder_args_
+    elif model_type.split('.')[0] == 'tv':
+        from torchvision import models
+        model_attributes = model_type.split('.')
+        if len(model_attributes) == 1:
+            raise NotImplemented('No torchvision model specified')
+        if not hasattr(models, model_attributes[1]):
+            raise NotImplemented(model_attributes[1])
+        tv_model = getattr(models, model_type.split('.')[1])
+        # TODO This lambda function is necessary because Encoder takes shape and dim_out.
+        Encoder = lambda shape, dim_out=None, n_steps=None, **kwargs: tv_model(num_classes=dim_out, **kwargs)
+        encoder_args_ = {}
+    elif model_type.split('.')[0] == 'tv-wrapper':
+        model_attributes = model_type.split('.')
+        from modules import tv_models_wrapper as models
+        if len(model_attributes) == 1:
+            raise NotImplemented('No torchvision model specified')
+        if not hasattr(models, model_attributes[1]):
+            raise NotImplemented(model_attributes[1])
+        Encoder = getattr(models, model_type.split('.')[1])
+        encoder_args_ = {}
+    else:
+        raise NotImplementedError(model_type)
+
+    encoder_args_.update(**encoder_args)
+    if x_shape[0] == 64:
+        encoder_args_['n_steps'] = 4
+    elif x_shape[0] == 128:
+        encoder_args_['n_steps'] = 5
+
+    return Encoder, encoder_args_
+
+
+resnet_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
+mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=1, stride=2, n_steps=2)
+convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+
+def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
+    decoder_args = decoder_args or {}
+
+    if model_type == 'resnet':
+        from modules.resnets import ResDecoder as Decoder
+        decoder_args_ = resnet_decoder_args_
+    elif model_type == 'convnet':
+        from modules.conv_decoders import SimpleConvDecoder as Decoder
+        decoder_args_ = convnet_decoder_args_
+    elif model_type == 'mnist':
+        from modules.conv_decoders import SimpleConvDecoder as Decoder
+        decoder_args_ = mnist_decoder_args_
+    else:
+        raise NotImplementedError(model_type)
+
+    decoder_args_.update(**decoder_args)
+    if x_shape[0] >= 64:
+        decoder_args_['n_steps'] = 4
+    elif x_shape[0] == 128:
+        decoder_args_['n_steps'] = 5
+
+    return Decoder, decoder_args_
 
 def to_one_hot(y, K):
     y_ = torch.unsqueeze(y, 1).long()

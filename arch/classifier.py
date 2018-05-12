@@ -6,6 +6,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from utils import update_encoder_args
 
 
 resnet_args_ = dict(dim_h=64, batch_norm=True, dropout=0.2, f_size=3, n_steps=4, fully_connected_layers=[1028])
@@ -56,21 +57,19 @@ def BUILD(data, models, model_type='convnet', classifier_args={}):
     dim_l = data.get_dims('labels')
 
     if model_type == 'resnet':
-        from modules.resnets import ResEncoder as Encoder
         args = resnet_args_
     elif model_type == 'convnet':
-        from modules.convnets import SimpleConvEncoder as Encoder
         args = convnet_args_
     elif model_type == 'mnist':
-        from modules.convnets import SimpleConvEncoder as Encoder
         args = mnist_args_
+    elif 'tv' in model_type:
+        args = {}
     else:
         raise NotImplementedError(model_type)
 
-    args.update(**classifier_args)
+    Encoder, args = update_encoder_args(shape, model_type=model_type, encoder_args=args)
 
-    if shape[0] == 64:
-        args['n_steps'] = 4
+    args.update(**classifier_args)
 
     classifier = Encoder(shape, dim_out=dim_l, **args)
     models.update(classifier=classifier)
@@ -79,7 +78,7 @@ def BUILD(data, models, model_type='convnet', classifier_args={}):
 TRAIN_ROUTINES = dict(classify=routine)
 
 INFO = dict(criterion=dict(help='Classifier criterion.'),
-            model_type=dict(choices=['mnist', 'convnet', 'resnet'], help='Model type.'),
+            model_type=dict(help='Model type.'),
             classifier_args=dict(help='Classifier arguments. Can include dropout, batch_norm, layer_norm, etc.')
 )
 
