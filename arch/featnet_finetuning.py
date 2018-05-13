@@ -61,7 +61,7 @@ def mine_routine(data, models, losses, results, viz, measure='KL', penalty_amoun
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
 def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args={},
-          classifier_args=dict(batch_norm=True, dropout=0.2), **kwargs):
+          classifier_args=dict(batch_norm=True, dropout=0.2)):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
