@@ -253,8 +253,8 @@ class DataHandler(object):
             Dataset = getattr(toysets, source)
 
             if copy_to_local:
-                copy_to_local_path(path.join(config.toy_data_path, source))
-                base_path = CONFIG.local_path
+                copy_to_local_path(path.join(CONFIG.toy_data_path, source))
+                base_path = CONFIG.local_data_path
             else:
                 base_path = CONFIG.toy_data_path
 
@@ -269,8 +269,8 @@ class DataHandler(object):
             Dataset = getattr(torchvision.datasets, source)
 
             if copy_to_local:
-                copy_to_local_path(path.join(config.torchvision_data_path, source))
-                base_path = CONFIG.local_path
+                copy_to_local_path(path.join(CONFIG.torchvision_data_path, source))
+                base_path = CONFIG.local_data_path
             else:
                 base_path = CONFIG.torchvision_data_path
 
