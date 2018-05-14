@@ -3,11 +3,13 @@
 '''
 
 import numpy as np
+import torch
 import torch.nn.functional as F
 
 from classifier import classify
+from gan import apply_gradient_penalty
 from ali import apply_penalty, build_discriminator as build_mine_discriminator, score
-from featnet import get_results
+from featnet import get_results, build_discriminator as build_ind_discriminator, score as ind_score, get_results as get_ind_results
 from modules.fully_connected import FullyConnectedNet
 
 from utils import ms_ssim, update_decoder_args, update_encoder_args, perform_svc
@@ -43,8 +45,8 @@ def network_routine(data, models, losses, results, viz):
     viz.add_image(X, name='Ground truth')
 
 
-def mine_routine(data, models, losses, results, viz, measure='KL', penalty_amount=0.5):
-    X_P, X_Q, T = data.get_batch('1.images', '2.images', '1.targets')
+def mine_routine(data, models, losses, results, viz, measure='DV', penalty_amount=0.5):
+    X_P, X_Q = data.get_batch('1.images', '2.images')
 
     Z = encode(models, X_P)
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure, key='mine')
@@ -56,6 +58,31 @@ def mine_routine(data, models, losses, results, viz, measure='KL', penalty_amoun
 
     if penalty:
         losses.mine += penalty
+
+
+def random_permute(X):
+    b = torch.rand(X.size()).cuda()
+    idx = b.sort(0)[1]
+    adx = torch.range(0, X.size(1) - 1).long()
+    return X[idx, adx[None, :]]
+
+
+def ind_routine(data, models, losses, results, viz, ind_measure='DV', ind_penalty_amount=0.5):
+    X_P, X_Q = data.get_batch('1.images', '2.images')
+    Z_P = encode(models, X_P).detach()
+    Z_Q = encode(models, X_Q)
+    Z_Q = random_permute(Z_Q).detach()
+    E_pos, E_neg, P_samples, Q_samples = ind_score(models, Z_P, Z_Q, ind_measure, key='ind')
+    get_ind_results(P_samples, Q_samples, E_pos, E_neg, ind_measure, results=results, name='ind')
+
+    penalty = apply_gradient_penalty(data, models, inputs=(Z_P, Z_Q), model='ind',
+                                     penalty_amount=ind_penalty_amount)
+
+    losses.ind = E_neg - E_pos
+
+    if penalty:
+        losses.ind += penalty
+
 
 
 # CORTEX ===============================================================================================================
@@ -89,6 +116,7 @@ def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args=
     decoder = Decoder(x_shape, dim_in=dim_z, **reconstruction_args)
     classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, **classifier_args)
     build_mine_discriminator(models, x_shape, dim_z, Encoder, key='mine', **mine_args)
+    build_ind_discriminator(models, dim_z, key='ind')
 
     models.update(classifier=classifier, decoder=decoder)
     data.reset()
@@ -129,7 +157,7 @@ def EVAL(data, models, results, viz):
 
 
 # Dictionary reference to train routines. Keys are up to you
-TRAIN_ROUTINES = dict(mine=mine_routine, networks=network_routine)
+TRAIN_ROUTINES = dict(mine=mine_routine, learn_independence=ind_routine, networks=network_routine)
 
 # Dictionary reference to test routines. If not set, will be copied from train. If value is None, will not be used in test.
 TEST_ROUTINES = dict()
