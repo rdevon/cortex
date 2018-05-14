@@ -63,17 +63,19 @@ MODEL_HANDLER = ModelHandler()
 class ArchHandler(object):
     def __init__(self, defaults=None, setup=None, build=None, Dataset=None, DataLoader=None, transform=None,
                  train_routines=None, test_routines=None, finish_train_routines=None, finish_test_routines=None,
-                 doc=None, kwargs=dict(), signatures=[], info=dict()):
+                 doc=None, kwargs=dict(), signatures=[], info=dict(), eval_routine=None):
         self.defaults = defaults
         self.setup = setup
         self.build = build
         self.Dataset = Dataset
         self.DataLoader = DataLoader
         self.transform = transform
+
         self.train_routines = train_routines
         self.test_routines = test_routines or {}
         self.finish_train_routines = finish_train_routines or {}
         self.finish_test_routines = finish_test_routines or {}
+        self.eval_routine = eval_routine
 
         self.doc = doc
         self.kwargs = kwargs
@@ -199,6 +201,10 @@ def add_directory(p, name):
                         arch_dict[v] = getattr(m, k)
                     else:
                         arch_dict[v] = None
+
+                if hasattr(m, 'EVAL'):
+                    eval = getattr(m, 'EVAL')
+                    arch_dict['eval_routine'] = eval
 
                 if hasattr(m, 'INFO'):
                     info = getattr(m, 'INFO')
