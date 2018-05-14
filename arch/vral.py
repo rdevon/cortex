@@ -131,8 +131,8 @@ def BUILD(data, models, encoder_type='convnet', generator_type='convnet', dim_em
     encoder = Encoder(x_shape, dim_out=dim_embedding, **encoder_args)
     generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
-    build_discriminator(models, dim_embedding, key='real_discriminator')
-    build_discriminator(models, dim_embedding, key='fake_discriminator')
+    build_discriminator(models, dim_embedding, dim_h=[64], key='real_discriminator')
+    build_discriminator(models, dim_embedding, dim_h=[64], key='fake_discriminator')
 
     models.update(generator=generator, encoder=encoder)
 

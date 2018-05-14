@@ -199,8 +199,9 @@ def build_encoder(models, x_shape, dim_z, Encoder, use_topnet=False, dim_top=Non
     models.update(encoder=encoder)
 
 
-def build_discriminator(models, dim_in, key='discriminator'):
-    discriminator = FullyConnectedNet(dim_in, dim_h=[2048, 1028, 512], dim_out=1, layer_norm=False, batch_norm=False)
+def build_discriminator(models, dim_in, dim_h=None, key='discriminator'):
+    dim_h = dim_h or [2048, 1028, 512]
+    discriminator = FullyConnectedNet(dim_in, dim_h=dim_h, dim_out=1, layer_norm=False, batch_norm=False)
     models[key] = discriminator
 
 # CORTEX ===============================================================================================================
