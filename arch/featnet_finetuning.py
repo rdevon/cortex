@@ -2,6 +2,7 @@
 
 '''
 
+import numpy as np
 import torch.nn.functional as F
 
 from classifier import classify
@@ -9,7 +10,7 @@ from ali import apply_penalty, build_discriminator as build_mine_discriminator, 
 from featnet import get_results
 from modules.fully_connected import FullyConnectedNet
 
-from utils import ms_ssim, update_decoder_args, update_encoder_args
+from utils import ms_ssim, update_decoder_args, update_encoder_args, perform_svc
 
 def encode(models, X):
     if 'vae' in models:
@@ -61,7 +62,8 @@ def mine_routine(data, models, losses, results, viz, measure='KL', penalty_amoun
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
 def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args={},
-          classifier_args=dict(batch_norm=True, dropout=0.2)):
+          classifier_args=dict(batch_norm=True, dropout=0.2), **kwargs):
+
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
@@ -90,6 +92,32 @@ def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args=
 
     models.update(classifier=classifier, decoder=decoder)
     data.reset()
+
+
+def EVAL(data, models, results, viz):
+    data.reset(string='Performing SVM...', test=True)
+
+    Zs = []
+    Ys = []
+
+    while True:
+        try:
+            data.next()
+            X, X_Q, Y = data.get_batch('1.images', '2.images', '1.targets')
+
+            Z = encode(models, X)
+
+            Ys.append(Y.data.cpu().numpy())
+            Zs.append(Z.data.cpu().numpy())
+        except StopIteration:
+            break
+
+    Y = np.concatenate(Ys, axis=0)
+    Z = np.concatenate(Zs, axis=0)
+
+    _, predicted = perform_svc(Z, Y)
+    correct = 100. * (predicted == Y).sum() / Y.shape[0]
+    results['SVC_accuracy'] = correct
 
 
 # Dictionary reference to train routines. Keys are up to you

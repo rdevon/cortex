@@ -83,11 +83,11 @@ def get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=None, name=
 
 def visualize(Z_Q, P_samples, Q_samples, X, T, Y_Q=None, viz=None):
     if viz is not None:
-        if Y_Q is not None:
-            viz.add_scatter(Z_Q, labels=T.data, name='intermediate values')
-            viz.add_scatter(Y_Q, labels=T.data, name='latent values')
-        else:
-            viz.add_scatter(Z_Q, labels=T.data, name='latent values')
+        #if Y_Q is not None:
+        #    viz.add_scatter(Z_Q, labels=T.data, name='intermediate values')
+        #    viz.add_scatter(Y_Q, labels=T.data, name='latent values')
+        #else:
+        #    viz.add_scatter(Z_Q, labels=T.data, name='latent values')
         viz.add_histogram(dict(real=P_samples.view(-1).data, fake=Q_samples.view(-1).data), name='discriminator output')
 
 # ROUTINES =============================================================================================================

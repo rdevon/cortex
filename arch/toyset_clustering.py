@@ -2,9 +2,9 @@
 
 '''
 
-import math
+import itertools
 import numpy as np
-from scipy.special import digamma
+from scipy.special import digamma, gamma
 from sklearn import metrics
 import torch
 
@@ -35,6 +35,18 @@ def noise_discriminator_routine(data, models, losses, results, viz, noise_measur
     X, Y_P = data.get_batch('1.images', 'y')
     encoder = models.encoder
     Y_Q = encoder(X, nonlinearity=torch.nn.Softmax(dim=1))
+
+    log_p_hat = torch.log(Y_Q).mean(0)
+    alpha = data.noise['y'][0].concentration[0]
+    alpha_permutations = np.array(list(itertools.permutations(alpha)))
+    #assert False, np.array(alpha_permutations).shape
+
+    log_likelihoods = np.log(gamma(alpha_permutations.sum(1))) - np.log(gamma(alpha_permutations)).sum(1) + ((alpha_permutations - 1.) * log_p_hat.data.cpu().numpy()[None, :]).sum(1)
+    idx = log_likelihoods.argmax()
+    new_alpha = alpha_permutations[idx]
+    data.noise['y'][0].concentration = data.noise['y'][0].concentration * 0 + torch.tensor(new_alpha)
+    data.noise['y'][1].concentration = data.noise['y'][1].concentration * 0 + torch.tensor(new_alpha)
+    results.update(Switched_alpha=sum(alpha.data.data.cpu().numpy() != new_alpha))
 
     if learn_alpha:
         alpha = data.noise['y'][0].concentration[1]
@@ -67,7 +79,7 @@ def mine_discriminator_routine(data, models, losses, results, viz, mine_measure=
 
 
 def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise_measure=None,
-                    generator_loss_type='non-saturating'):
+                    generator_loss_type='non-saturating', beta=-1.0):
     X_P, X_Q, T, Y_P = data.get_batch('1.images', '2.images', '1.targets', 'y')
     dim_l = data.get_dims('labels')
     encoder = models.encoder
@@ -97,20 +109,18 @@ def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise
     get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n, noise_measure, results=results, name='noise')
     losses.encoder = generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
 
-    '''
     # MINE
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Y_Q, Y_Q, mine_measure, key='mine')
 
-    losses.encoder += E_neg - E_pos
+    losses.encoder += beta * (E_neg - E_pos)
     get_results(P_samples, Q_samples, E_pos, E_neg, mine_measure, results=results, name='mine')
-    '''
 
     viz.add_scatter(X_P, labels=D, name='Clusters')
     viz.add_histogram(dict(real=P_samples_n.view(-1).data, fake=Q_samples_n.view(-1).data), name='discriminator output')
 
 
-def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=1.0, penalty_amount=0.1,
-                    encoder_penalty_amount=5.):
+def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=1.0, penalty_amount=0.5,
+                    encoder_penalty_amount=0.1):
     X_P, X_Q, Y_P = data.get_batch('1.images', '2.images', 'y')
     encoder = models.encoder
     Y_Q = encoder(X_P, nonlinearity=torch.nn.Softmax(dim=1))
@@ -133,14 +143,19 @@ def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=1.0,
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
 def BUILD(data, models, noise_type='dirichlet', noise_parameters=dict(concentration=0.1),
-          encoder_args=dict(dim_h=[100, 100], batch_norm=True),
-          noise_discriminator_args=dict(dim_h=[100, 100], batch_norm=False),
-          mine_discriminator_args=dict(dim_h=[20, 20, 20], batch_norm=False)):
+          encoder_args=dict(dim_h=[10, 100], batch_norm=True),
+          noise_discriminator_args=dict(dim_h=[200, 10], batch_norm=False),
+          mine_discriminator_args=dict(dim_h=[200, 10], batch_norm=False)):
     dim_in, dim_l = data.get_dims('x', 'labels')
-    '''
     data.reset(make_pbar=False, test=True)
     data.next()
     T = data.get_batch('1.targets')
+
+    target_numbers = to_one_hot(T, dim_l).sum(0)
+    N = sum(target_numbers)
+    target_freqencies = [float(n) / float(N) for n in target_numbers]
+
+    '''
     target_numbers = to_one_hot(T, dim_l).sum(0)
     N = sum(target_numbers)
     target_freqencies = [float(n) / float(N) for n in target_numbers]
@@ -151,9 +166,21 @@ def BUILD(data, models, noise_type='dirichlet', noise_parameters=dict(concentrat
     beta = (1 - m) * ((m * (1 - m) / v) - 1)
     '''
 
-    #assert False, [(m * (1 - m) / v), (v < m * (1 - m)), m, v, p1, p2, float(alpha), float(beta)]
-    #target_freqencies = [alpha, beta]
-    #noise_parameters = dict(concentration=target_freqencies)
+    alpha = np.array([1. for _ in range(dim_l)])
+
+    b = 0.0001
+    log_p_hat = torch.log((1. - b) * to_one_hot(T, dim_l) + b).mean(0)
+
+    for _ in range(10):
+        print(alpha)
+        alpha = torch.tensor(fixed_point_alpha(alpha, log_p_hat.data.cpu().numpy())).data.numpy()
+    logger.info('Found starting alphas: {}'.format(alpha))
+    print(target_freqencies)
+    #assert False, alpha
+
+    noise_parameters.update(concentration=alpha.tolist())
+    #noise_parameters.update(concentration=target_freqencies)
+    #assert False, noise_parameters
     data.add_noise('y', dist=noise_type, size=dim_l, **noise_parameters)
 
     encoder = FullyConnectedNet(dim_in, dim_out=dim_l, **encoder_args)
