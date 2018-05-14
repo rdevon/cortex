@@ -95,27 +95,35 @@ def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args=
 
 
 def EVAL(data, models, results, viz):
-    data.reset(string='Performing SVM...', test=True)
+    
+    def eval_pipe(data, models):
+        Zs = []
+        Ys = []
 
-    Zs = []
-    Ys = []
+        while True:
+            try:
+                data.next()
+                X, X_Q, Y = data.get_batch('1.images', '2.images', '1.targets')
 
-    while True:
-        try:
-            data.next()
-            X, X_Q, Y = data.get_batch('1.images', '2.images', '1.targets')
+                Z = encode(models, X)
 
-            Z = encode(models, X)
+                Ys.append(Y.data.cpu().numpy())
+                Zs.append(Z.data.cpu().numpy())
+            except StopIteration:
+                break
 
-            Ys.append(Y.data.cpu().numpy())
-            Zs.append(Z.data.cpu().numpy())
-        except StopIteration:
-            break
+        Y = np.concatenate(Ys, axis=0)
+        Z = np.concatenate(Zs, axis=0)
+        return Y, Z
 
-    Y = np.concatenate(Ys, axis=0)
-    Z = np.concatenate(Zs, axis=0)
+    data.reset(string='Training SVM...')
+    Y, Z = eval_pipe(data, models)
+    clf, predicted = perform_svc(Z, Y)
 
-    _, predicted = perform_svc(Z, Y)
+    data.reset(string='Evaluating SVM...', test=True)
+    Y, Z = eval_pipe(data, models)
+    _, predicted = perform_svc(Z, Y, clf=clf)
+
     correct = 100. * (predicted == Y).sum() / Y.shape[0]
     results['SVC_accuracy'] = correct
 
