@@ -1,4 +1,4 @@
-from . import exp
+from . import models
 
 __author__ = 'Bradley Baker'
 __author_email__ = 'bbaker@mrn.org'
@@ -30,8 +30,8 @@ def clip(key):
     if key not in CLIPPING:
         return
     bound = CLIPPING[key]
-    if key in exp.MODELS:
-        model = exp.MODELS[key]
+    if key in models.MODEL_HANDLER:
+        model = models.MODEL_HANDLER[key]
         if isinstance(model, (list, tuple)):
             for net in model:
                 for p in net.parameters():
@@ -48,8 +48,8 @@ def l1_decay(key):
     if key not in L1_DECAY:
         return
     factor = L1_DECAY[key]
-    if key in exp.MODELS:
-        model = exp.MODELS[key]
+    if key in models.MODEL_HANDLER:
+        model = models.MODEL_HANDLER[key]
         if isinstance(model, (list, tuple)):
             for net in model:
                 for p in net.parameters():
