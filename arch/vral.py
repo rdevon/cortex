@@ -61,7 +61,7 @@ def discriminator_routine(data, models, losses, results, viz, measure='JSD', noi
     losses.fake_discriminator = -Q_difference
 
 
-def penalty_routine(data, models, losses, results, viz, penalty_amount=0., offset=None,
+def penalty_routine(data, models, losses, results, viz, penalty_amount=0.5, offset=None,
                     encoder_penalty_amount=1.0, output_nonlin=None, noise_type=None):
     Z, Y_P, Y_Q, U, X_P = data.get_batch('z', 'y_p', 'y_q', 'u', 'images')
     Y_P = shape_noise(Y_P, U, noise_type)
