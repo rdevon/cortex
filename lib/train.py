@@ -248,7 +248,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
     return results
 
 
-def test_epoch(epoch, viz_handler, return_std=False):
+def test_epoch(epoch, viz_handler, eval_mode=False):
     for k, model in models.MODEL_HANDLER.items():
         if k == 'extras':
             continue
@@ -296,7 +296,9 @@ def test_epoch(epoch, viz_handler, return_std=False):
 
     means = summarize_results(results)
 
-    if return_std:
+    if eval_mode:
+        if models.ARCH.eval_routine is not None:
+            models.ARCH.eval_routine(data.DATA_HANDLER, models.MODEL_HANDLER, means, viz_handler)
         stds = summarize_results_std(results)
         return means, stds
 
@@ -304,11 +306,16 @@ def test_epoch(epoch, viz_handler, return_std=False):
 
 
 def display_results(train_results, test_results, epoch, epochs, epoch_time, total_time):
-    print('\n\tEpoch {}/{} took {:.3f}s. Total time: {:.2f}'.format(epoch + 1, epochs, epoch_time, total_time))
-    times = train_results.pop('time')
-    print('\tAvg update times: ' + ' | '.join(['{}: {:.2f}'.format(k, v) for k, v in times.items()]))
+    if epochs and epoch:
+        print('\n\tEpoch {}/{} took {:.3f}s. Total time: {:.2f}'.format(epoch + 1, epochs, epoch_time, total_time))
+
+    times = train_results.pop('time', None)
+    if times:
+        print('\tAvg update times: ' + ' | '.join(['{}: {:.2f}'.format(k, v) for k, v in times.items()]))
+
     train_losses = train_results.pop('losses')
     test_losses = test_results.pop('losses')
+
     print('\tAvg loss: ' + ' | '.join(['{}: {:.2f} / {:.2f}'.format(k, train_losses[k], test_losses[k])
                                        for k in train_losses.keys()]))
 
@@ -373,9 +380,11 @@ def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=
     vh = VizHandler()
     total_time = 0.
     if test_mode:
-        test_results, test_std = test_epoch('Testing', vh, return_std=True)
-        logger.info(' | '.join(
-            ['{}: {:.5f}({:.5f})'.format(k, test_results[k], test_std[k]) for k in test_results.keys()]))
+        test_results, test_std = test_epoch('Testing', vh, eval_mode=True)
+        convert_to_numpy(test_results)
+        convert_to_numpy(test_std)
+        
+        display_results(test_results, test_std, 'Evaluation', None, None, None)
         exit(0)
     best = None
 

@@ -47,8 +47,6 @@ def make_argument_parser():
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
     parser.add_argument('-M', '--load_models', type=str, default=None,
                         help=('Path to model to reload. Does not load args, info, etc'))
-    parser.add_argument('-a', '--args', default=None, type=str,
-                        help=('Arguments for the main file'))
     parser.add_argument('-C', '--copy_to_local', action='store_true', default=False)
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
@@ -59,7 +57,6 @@ def make_argument_parser():
                               'This cannot be undone!'))
     parser.add_argument('-v', '--verbosity', type=int, default=1,
                         help='Verbosity of the logging. (0, 1, 2)')
-    parser.add_argument('-t', '--test', action='store_true', default=False)
     parser.add_argument('-d', '--device', type=int, default=0)
     return parser
 
@@ -122,11 +119,9 @@ def parse_args(archs):
                     subparser.add_argument(arg_str, dest=dest, default=None, action=StoreDictKeyPair,
                                            help=help, metavar=metavar)
                 elif isinstance(v, bool) and not v:
-                    if v:
-                        action = 'store_false'
-                    else:
-                        action = 'store_true'
-                    subparser.add_argument(arg_str, dest=k, action=action, default=v, help=help)
+                    action = 'store_true'
+                    dest = arg_k + '.' + k
+                    subparser.add_argument(arg_str, dest=dest, action=action, default=v, help=help)
                 else:
                     type_ = type(v) if v is not None else str
                     metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
