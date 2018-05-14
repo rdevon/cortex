@@ -15,8 +15,8 @@ def sn_weight(weight, u, height, n_power_iterations):
         v = l2normalize(torch.mv(weight.view(height, -1).t(), u))
         u = l2normalize(torch.mv(weight.view(height, -1), v))
 
-    sigma = u.dot(weight.view(height, -1).mv(v))
     weight.requires_grad_(True)
+    sigma = u.dot(weight.view(height, -1).mv(v))
     return torch.div(weight, sigma), u
 
 
