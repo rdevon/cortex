@@ -95,6 +95,7 @@ class SimpleConvEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None, nonlinearity='ReLU', f_size=4,
                  stride=2, pad=1, min_dim=4, n_steps=None, spectral_norm=False, **layer_args):
         super(SimpleConvEncoder, self).__init__()
+
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
         Linear = SNLinear if spectral_norm else nn.Linear
         models = nn.Sequential()

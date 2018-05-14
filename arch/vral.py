@@ -4,13 +4,34 @@
 
 import torch.nn.functional as F
 
-from gan import apply_gradient_penalty
+from gan import apply_gradient_penalty, generator_loss
 from featnet import build_discriminator, encode, score, shape_noise
 from vae import update_encoder_args, update_decoder_args
 
 
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_type=None, output_nonlin=False,
-                    offset=None):
+                    offset=None, encoder_loss_type='non-saturating'):
+    Z, Y_P, Y_Q, U, X_P = data.get_batch('z', 'y_p', 'y_q', 'u', 'images')
+    Y_P = shape_noise(Y_P, U, noise_type)
+    Y_Q = shape_noise(Y_Q, U, noise_type, offset=offset)
+
+    generator = models.generator
+
+    X_Q = generator(Z, nonlinearity=F.tanh).detach()
+    _, W_P, _ = encode(models, X_P, None, output_nonlin=output_nonlin, noise_type=noise_type)
+    _, W_Q, _ = encode(models, X_Q, None, output_nonlin=output_nonlin, noise_type=noise_type)
+
+    # Real discriminator
+    g_loss_P = generator_loss(W_P, measure, loss_type=encoder_loss_type)
+
+    # Fake discriminator
+    g_loss_Q = generator_loss(W_Q, measure, loss_type=encoder_loss_type)
+
+    losses.encoder = g_loss_P + g_loss_Q
+
+
+def discriminator_routine(data, models, losses, results, viz, measure='JSD', noise_type=None,
+                          output_nonlin=None, offset=1.0):
     Z, Y_P, Y_Q, U, X_P = data.get_batch('z', 'y_p', 'y_q', 'u', 'images')
     Y_P = shape_noise(Y_P, U, noise_type)
     Y_Q = shape_noise(Y_Q, U, noise_type, offset=offset)
@@ -29,7 +50,6 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_type
     E_Q_pos, E_Q_neg, S_QP, S_QQ = score(models, Y_Q, W_Q, measure, key='fake_discriminator')
     Q_difference = E_Q_pos - E_Q_neg
 
-    losses.encoder = P_difference + Q_difference
     results.update(Scores=dict(Epp=S_PP.mean().item(), Epq=S_PQ.mean().item(),
                                Eqp=S_QP.mean().item(), Eqq=S_QQ.mean().item()))
     results['{} distances'.format(measure)] = dict(P=P_difference.item(), Q=Q_difference.item())
@@ -37,33 +57,12 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_type
     viz.add_histogram(dict(fake=S_PQ.view(-1).data, real=S_PP.view(-1).data), name='real discriminator output')
     viz.add_histogram(dict(fake=S_QQ.view(-1).data, real=S_QP.view(-1).data), name='fake discriminator output')
 
-
-def discriminator_routine(data, models, losses, results, viz, measure='JSD', noise_type=None,
-                          output_nonlin=None, offset=1.0):
-    Z, Y_P, Y_Q, U, X_P = data.get_batch('z', 'y_p', 'y_q', 'u', 'images')
-    Y_P = shape_noise(Y_P, U, noise_type)
-    Y_Q = shape_noise(Y_Q, U, noise_type, offset=offset)
-
-    generator = models.generator
-
-    X_Q = generator(Z, nonlinearity=F.tanh).detach()
-    _, W_P, _ = encode(models, X_P, None, output_nonlin=output_nonlin, noise_type=noise_type)
-    _, W_Q, _ = encode(models, X_Q, None, output_nonlin=output_nonlin, noise_type=noise_type)
-
-    # Real discriminator
-    E_P_pos, E_P_neg, _, _ = score(models, Y_P, W_P, measure, key='real_discriminator')
-    P_difference = E_P_pos - E_P_neg
-
-    # Fake discriminator
-    E_Q_pos, E_Q_neg, _, _ = score(models, Y_Q, W_Q, measure, key='fake_discriminator')
-    Q_difference = E_Q_pos - E_Q_neg
-
     losses.real_discriminator = -P_difference
     losses.fake_discriminator = -Q_difference
 
 
-def penalty_routine(data, models, losses, results, viz, penalty_amount=0.2, offset=None,
-                    encoder_penalty_amount=0.5, output_nonlin=None, noise_type=None):
+def penalty_routine(data, models, losses, results, viz, penalty_amount=0., offset=None,
+                    encoder_penalty_amount=1.0, output_nonlin=None, noise_type=None):
     Z, Y_P, Y_Q, U, X_P = data.get_batch('z', 'y_p', 'y_q', 'u', 'images')
     Y_P = shape_noise(Y_P, U, noise_type)
     Y_Q = shape_noise(Y_Q, U, noise_type, offset=offset)

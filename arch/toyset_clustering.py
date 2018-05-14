@@ -79,7 +79,7 @@ def mine_discriminator_routine(data, models, losses, results, viz, mine_measure=
 
 
 def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise_measure=None,
-                    generator_loss_type='non-saturating', beta=-1.0):
+                    generator_loss_type='non-saturating', beta=0.1):
     X_P, X_Q, T, Y_P = data.get_batch('1.images', '2.images', '1.targets', 'y')
     dim_l = data.get_dims('labels')
     encoder = models.encoder
@@ -143,7 +143,7 @@ def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=1.0,
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
 def BUILD(data, models, noise_type='dirichlet', noise_parameters=dict(concentration=0.1),
-          encoder_args=dict(dim_h=[10, 100], batch_norm=True),
+          encoder_args=dict(dim_h=[100, 10], batch_norm=True),
           noise_discriminator_args=dict(dim_h=[200, 10], batch_norm=False),
           mine_discriminator_args=dict(dim_h=[200, 10], batch_norm=False)):
     dim_in, dim_l = data.get_dims('x', 'labels')
