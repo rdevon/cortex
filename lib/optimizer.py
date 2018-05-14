@@ -138,10 +138,10 @@ def setup(optimizer=None, learning_rate=None, updates_per_routine=None, train_fo
 
         # Additional regularization
         if model_key in reg.CLIPPING.keys():
-            logger.info('Clipping {} with {}'.format(model_key, reg.CLIPPING[k]))
+            logger.info('Clipping {} with {}'.format(model_key, reg.CLIPPING[model_key]))
 
         if model_key in reg.L1_DECAY.keys():
-            logger.info('L1 Decay {} with {}'.format(model_key, reg.L1_DECAY[k]))
+            logger.info('L1 Decay {} with {}'.format(model_key, reg.L1_DECAY[model_key]))
 
     if not exp.DEVICE == torch.device('cpu'):
         cudnn.benchmark = True
