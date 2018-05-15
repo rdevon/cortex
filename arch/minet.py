@@ -88,6 +88,7 @@ def network_routine(data, models, losses, results, viz):
     Z_P = encoder(X)
     Z_t = Z_P.detach()
     X_d = decoder(Z_t)
+
     X_d = F.tanh(X_d)
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results, key='nets')
@@ -99,6 +100,7 @@ def network_routine(data, models, losses, results, viz):
     results.update(reconstruction_loss=dd_loss.item(), ms_ssim=msssim)
     #viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X_d, name='Reconstruction')
+    viz.add_image(X, name='Ground truth')
 
 # CORTEX ===============================================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
