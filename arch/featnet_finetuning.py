@@ -151,10 +151,13 @@ def EVAL(data, models, results, viz):
 
     data.reset(string='Training SVM...')
     Y, Z = eval_pipe(data, models)
+    logger.info('Training SVC')
+
     clf, predicted = perform_svc(Z, Y)
 
     data.reset(string='Evaluating SVM...', test=True)
     Y, Z = eval_pipe(data, models)
+    logger.info('Evaluating SVC')
     _, predicted = perform_svc(Z, Y, clf=clf)
 
     correct = 100. * (predicted == Y).sum() / Y.shape[0]
