@@ -104,6 +104,8 @@ class SimpleConvEncoder(nn.Module):
 
         dim_out_ = dim_out
         fully_connected_layers = fully_connected_layers or []
+        if isinstance(fully_connected_layers, int):
+            fully_connected_layers = [fully_connected_layers]
 
         logger.debug('Input shape: {}'.format(shape))
         dim_x, dim_y, dim_in = shape

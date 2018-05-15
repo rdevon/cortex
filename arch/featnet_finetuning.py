@@ -107,7 +107,12 @@ def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args=
             models.encoder = autoencoder[0]
         elif 'generator' in models:
             generator = models.pop('generator')
-            models.encoder = generator[0]
+            if isinstance(generator, (tuple, list)):
+                models.encoder = generator[0]
+            else:
+                discriminator = models.pop('discriminator')
+                discriminator.models = discriminator.models[:-1]
+                models.encoder = discriminator
         dim_z = models.encoder(X).size()[1]
 
     Encoder, mine_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=mine_args)
