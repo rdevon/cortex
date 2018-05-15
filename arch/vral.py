@@ -58,7 +58,7 @@ def discriminator_routine(data, models, losses, results, viz, measure='GAN', off
 
 
 def penalty_routine(data, models, losses, results, viz, penalty_amount=0.5, offset=None,
-                    encoder_penalty_amount=1.0):
+                    encoder_penalty_amount=0.5):
     Z, Y_P, Y_Q, X_P = data.get_batch('z', 'y_p', 'y_q', 'images')
 
     generator = models.generator
@@ -108,7 +108,7 @@ def generator_routine(data, models, losses, results, viz, generator_loss_type='l
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
 def BUILD(data, models, encoder_type='convnet', generator_type='convnet', dim_embedding=1, dim_z=64,
-          noise_type=None, generator_noise_type='normal', discriminator_args=dict(), generator_args=dict()):
+          generator_noise_type='normal', discriminator_args=dict(), generator_args=dict()):
     x_shape = data.get_dims('x', 'y', 'c')
     data.add_noise('z', dist=generator_noise_type, size=dim_z)
     data.add_noise('y_p', dist='normal', size=dim_embedding)
