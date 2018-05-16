@@ -20,10 +20,12 @@ def encoder_routine(data, models, losses, results, viz, measure=None,  offset=No
     W_Q = encoder(X_Q)
 
     # Real discriminator
-    g_loss_P = generator_loss(W_P, measure, loss_type=encoder_loss_type)
+    E_P = models.real_discriminator(W_P)
+    g_loss_P = generator_loss(E_P, measure, loss_type=encoder_loss_type)
 
     # Fake discriminator
-    g_loss_Q = generator_loss(W_Q - offset, measure, loss_type=encoder_loss_type)
+    E_Q = models.fake_discriminator(W_Q - offset)
+    g_loss_Q = generator_loss(E_Q, measure, loss_type=encoder_loss_type)
 
     losses.encoder = g_loss_P + g_loss_Q
 
@@ -35,8 +37,8 @@ def discriminator_routine(data, models, losses, results, viz, measure='GAN', off
     encoder = models.encoder
 
     X_Q = generator(Z, nonlinearity=F.tanh).detach()
-    W_P = encoder(X_P)
-    W_Q = encoder(X_Q)
+    W_P = encoder(X_P).detach()
+    W_Q = encoder(X_Q).detach()
 
     # Real discriminator
     E_P_pos, E_P_neg, S_PP, S_PQ = score(models, Y_P, W_P, measure, key='real_discriminator')
