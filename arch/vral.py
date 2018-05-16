@@ -59,7 +59,7 @@ def discriminator_routine(data, models, losses, results, viz, measure='GAN', off
     losses.fake_discriminator = -Q_difference
 
 
-def penalty_routine(data, models, losses, results, viz, penalty_amount=0.5, offset=None,
+def penalty_routine(data, models, losses, results, viz, penalty_amount=2.0, offset=None,
                     encoder_penalty_amount=0.5):
     Z, Y_P, Y_Q, X_P = data.get_batch('z', 'y_p', 'y_q', 'images')
 
@@ -70,17 +70,17 @@ def penalty_routine(data, models, losses, results, viz, penalty_amount=0.5, offs
     W_P = encoder(X_P)
     W_Q = encoder(X_Q)
 
-    P_penalty = apply_gradient_penalty(data, models, inputs=(Y_P, W_P), model='real_discriminator',
+    P_penalty = apply_gradient_penalty(data, models, inputs=(Y_P, W_P - offset), model='real_discriminator',
                                        penalty_amount=penalty_amount)
     if P_penalty:
         losses.real_discriminator = P_penalty
 
-    Q_penalty = apply_gradient_penalty(data, models, inputs=(Y_Q, W_Q - offset), model='fake_discriminator',
+    Q_penalty = apply_gradient_penalty(data, models, inputs=(Y_Q, W_Q), model='fake_discriminator',
                                        penalty_amount=penalty_amount)
     if Q_penalty:
         losses.fake_discriminator = Q_penalty
 
-    E_penalty = apply_gradient_penalty(data, models, inputs=(X_P, X_Q), 
+    E_penalty = apply_gradient_penalty(data, models, inputs=(X_P, X_Q),
                                        model='encoder', penalty_amount=encoder_penalty_amount)
     if E_penalty:
         losses.encoder = E_penalty
@@ -119,7 +119,7 @@ def BUILD(data, models, encoder_type='convnet', generator_type='convnet', dim_em
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=discriminator_args)
     Decoder, generator_args = update_decoder_args(x_shape, model_type=generator_type, decoder_args=generator_args)
 
-    encoder = Encoder(x_shape, dim_out=dim_embedding, **encoder_args)
+    encoder = Encoder(x_shape, dim_out=dim_embedding, fully_connected_layers=[64], **encoder_args)
     generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
     build_discriminator(models, dim_embedding, dim_h=[64], nonlinearity='LeakyReLU', key='real_discriminator')
