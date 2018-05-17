@@ -23,10 +23,12 @@ def encoder_routine(data, models, losses, results, viz, measure=None,  offset=No
     viz.add_histogram(dict(fake=W_Q.view(-1).data, real=W_P.view(-1).data), name='encoder output')
 
     # Real discriminator
-    g_loss_P = generator_loss(W_P - offset, measure, loss_type=encoder_loss_type)
+    E_P = models.real_discriminator(W_P)
+    g_loss_P = generator_loss(E_P, measure, loss_type=encoder_loss_type)
 
     # Fake discriminator
-    g_loss_Q = generator_loss(W_Q, measure, loss_type=encoder_loss_type)
+    E_Q = models.fake_discriminator(W_Q - offset)
+    g_loss_Q = generator_loss(E_Q, measure, loss_type=encoder_loss_type)
 
     losses.encoder = g_loss_P + g_loss_Q
 
@@ -38,15 +40,15 @@ def discriminator_routine(data, models, losses, results, viz, measure='GAN', off
     encoder = models.encoder
 
     X_Q = generator(Z, nonlinearity=F.tanh).detach()
-    W_P = encoder(X_P)
-    W_Q = encoder(X_Q)
+    W_P = encoder(X_P).detach()
+    W_Q = encoder(X_Q).detach()
 
     # Real discriminator
-    E_P_pos, E_P_neg, S_PP, S_PQ = score(models, Y_P, W_P - offset, measure, key='real_discriminator')
+    E_P_pos, E_P_neg, S_PP, S_PQ = score(models, Y_P, W_P, measure, key='real_discriminator')
     P_difference = E_P_pos - E_P_neg
 
     # Fake discriminator
-    E_Q_pos, E_Q_neg, S_QP, S_QQ = score(models, Y_Q, W_Q, measure, key='fake_discriminator')
+    E_Q_pos, E_Q_neg, S_QP, S_QQ = score(models, Y_Q, W_Q - offset, measure, key='fake_discriminator')
     Q_difference = E_Q_pos - E_Q_neg
 
     results.update(Scores=dict(Epp=S_PP.mean().item(), Epq=S_PQ.mean().item(),
