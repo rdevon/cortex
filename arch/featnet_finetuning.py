@@ -98,7 +98,7 @@ def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args=
     data.reset(make_pbar=False)
     data.next()
     X = data.get_batch('1.images')
-    if 'classifier' in models:
+    if 'classifier' in models and 'mine' not in models:
         classifier = models.pop('classifier')
         classifier.models = classifier.models[:-1]
         models.encoder = classifier
