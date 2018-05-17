@@ -17,13 +17,21 @@ from utils import cross_correlation, ms_ssim, update_decoder_args, update_encode
 # ROUTINES =============================================================================================================
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
+Ave = 1.
+beta = 0.99
+
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_measure=None, noise_type=None,
                     output_nonlin=False, generator_loss_type='non-saturating', beta=1.0, key='discriminator',
-                    min_entropy=False, min_information=False):
+                    min_entropy=False, min_information=False, correct_bias=None):
     X_P, X_Q, T, Y_P, U = data.get_batch('1.images', '2.images', '1.targets', 'y', 'u')
 
     Z_P, Z, Y_Q = encode(models, X_P, Y_P, output_nonlin=output_nonlin, noise_type=noise_type)
     E_pos, E_neg, P_samples, Q_samples = score(models, X_P, X_Q, Z, Z, measure, key=key)
+
+    if correct_bias:
+        assert measure == 'DV'
+        global Ave
+        E_neg = (Q_samples * torch.exp(Q_samples).detach()).mean() / Ave
 
     e_loss = E_neg - E_pos
     if min_information:
@@ -43,11 +51,18 @@ def encoder_routine(data, models, losses, results, viz, measure=None, noise_meas
 
 
 def discriminator_routine(data, models, losses, results, viz, measure='JSD', penalty_amount=0.5, output_nonlin=None,
-                          noise_type='hypercubes', noise='uniform'):
+                          noise_type='hypercubes', noise='uniform', correct_bias=False):
     X_P, X_Q, T = data.get_batch('1.images', '2.images', '1.targets')
 
     _, Z, Y_Q = encode(models, X_P, None, output_nonlin=output_nonlin, noise_type=noise_type)
-    E_pos, E_neg, _, _ = score(models, X_P, X_Q, Z, Z, measure)
+    E_pos, E_neg, _, Q_samples = score(models, X_P, X_Q, Z, Z, measure)
+
+    if correct_bias:
+        assert measure == 'DV'
+        global Ave
+        E_neg = (Q_samples * torch.exp(Q_samples).detach()).mean() / Ave
+        results.update(Ave=Ave)
+        Ave = 0.99 * Ave + 0.01 * torch.exp(Q_samples).mean().item()
 
     penalty = apply_penalty(models, losses, results, X_P, Z, penalty_amount)
 

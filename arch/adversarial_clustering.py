@@ -60,6 +60,10 @@ def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise
     if penalty:
         losses.encoder = penalty
 
+    #data.noise['y'][0].concentration *= 0.9999
+    #data.noise['y'][1].concentration *= 0.9999
+    results.update(alpha=data.noise['y'][0].concentration.mean().item())
+
 
 def mine_discriminator_routine(data, models, losses, results, viz, mine_measure='JSD', mine_penalty_amount=0.5):
     X_P, X_Q, T = data.get_batch('1.images', '2.images', '1.targets')
@@ -90,7 +94,7 @@ def noise_discriminator_routine(data, models, losses, results, viz, noise_penalt
 
 
 def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', encoder_args={}, decoder_args={},
-          noise_parameters=dict(concentration=0.11), noise_type='dirichlet'):
+          noise_parameters=dict(concentration=0.1), noise_type='dirichlet'):
 
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
@@ -107,6 +111,5 @@ def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', encoder_
 
 TRAIN_ROUTINES = dict(mine_discriminator=mine_discriminator_routine, noise_discriminator=noise_discriminator_routine,
                       encoder=encoder_routine, nets=network_routine)
-
 
 DEFAULT_CONFIG = dict(data=dict(batch_size=dict(train=64, test=640), duplicate=2))

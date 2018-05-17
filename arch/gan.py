@@ -212,9 +212,11 @@ def generator_routine(data, models, losses, results, viz, measure=None, loss_typ
 # CORTEX ===============================================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
-def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discriminator_args=dict(), generator_args=dict()):
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discriminator_args=dict(), generator_args=dict(),
+          dim_z=64, generator_noise_type='normal'):
     x_shape = data.get_dims('x', 'y', 'c')
-    dim_z = data.get_dims('z')
+    data.add_noise('z', dist=generator_noise_type, size=dim_z)
+    data.add_noise('e', dist='uniform', size=1)
 
     Encoder, discriminator_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=discriminator_args)
     Decoder, generator_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=generator_args)
@@ -223,10 +225,6 @@ def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discrimi
     generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
     models.update(generator=generator, discriminator=discriminator)
-
-
-def SETUP(routines=None, **kwargs):
-    routines.generator.measure = routines.discriminator.measure
 
 
 TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, generator=generator_routine)
@@ -245,8 +243,6 @@ INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', '
 
 TEST_ROUTINES = dict(penalty=None)
 DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=1000),
-              noise_variables=dict(z=dict(dist='normal', size=64, loc=0, scale=1),
-                                   e=dict(dist='uniform', size=1, low=0, high=1))),
+    data=dict(batch_size=dict(train=64, test=1000)),
     train=dict(save_on_lowest='losses.gan')
 )

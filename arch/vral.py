@@ -19,6 +19,9 @@ def encoder_routine(data, models, losses, results, viz, measure=None,  offset=No
     W_P = encoder(X_P)
     W_Q = encoder(X_Q)
 
+
+    viz.add_histogram(dict(fake=W_Q.view(-1).data, real=W_P.view(-1).data), name='encoder output')
+
     # Real discriminator
     g_loss_P = generator_loss(W_P - offset, measure, loss_type=encoder_loss_type)
 
@@ -65,8 +68,8 @@ def penalty_routine(data, models, losses, results, viz, penalty_amount=2.0, offs
     encoder = models.encoder
 
     X_Q = generator(Z, nonlinearity=F.tanh).detach()
-    W_P = encoder(X_P)
-    W_Q = encoder(X_Q)
+    W_P = encoder(X_P).detach()
+    W_Q = encoder(X_Q).detach()
 
     P_penalty = apply_gradient_penalty(data, models, inputs=(Y_P, W_P - offset), model='real_discriminator',
                                        penalty_amount=penalty_amount)

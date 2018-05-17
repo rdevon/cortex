@@ -34,7 +34,6 @@ class FullyConnectedNet(nn.Module):
             dim_out = dim_h
             name = 'dense_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, nn.Linear(dim_in, dim_out))
-
             finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
 
         if dim_out_:

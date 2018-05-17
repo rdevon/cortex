@@ -247,6 +247,5 @@ class ResEncoder(nn.Module):
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
         x = self.models(x)
-        x = x.view(x.size()[0], x.size()[1])
 
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
