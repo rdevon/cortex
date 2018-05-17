@@ -22,6 +22,7 @@ from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
 from . import exp, toysets
+from .dShapes import dSpriteDataset
 #from .cub import CUB
 
 
@@ -118,6 +119,7 @@ def make_transform(source, normalize=True, center_crop=None, image_size=None,
 
     default_normalization = {
         'MNIST': [(0.5,), (0.5,)],
+        'dSprites': [(0.5,), (0.5,)],
         'Fashion-MNIST': [(0.5,), (0.5,)],
         'EMNIST': [(0.5,), (0.5,)],
         'PhotoTour': [(0.5,), (0.5,)],
@@ -276,6 +278,11 @@ class DataHandler(object):
 
             train_path = path.join(base_path, source)
             test_path = train_path
+        elif source in ('dSprites',):
+            source_type = 'dSprites'
+            source_ = 'dSprites.npz'
+            train_path = path.join(CONFIG.local_data_path, source_)
+            test_path = path.join(CONFIG.local_data_path, source_)
         elif source in CONFIG.data_paths:
             # Dataset is specified in CONFIG.data_paths
             source_type = 'folder'
@@ -297,6 +304,7 @@ class DataHandler(object):
                     train_path = copy_to_local_path(train_path)
                 test_path = data_path
 
+
         elif path.isdir(source):
             # Dataset is a path to a folder
             source_type = 'folder'
@@ -314,6 +322,12 @@ class DataHandler(object):
             Dataset = make_tds_random_and_split(Dataset)
             train_set = Dataset(root=train_path, download=True, split=0.8, load=True)
             test_set = Dataset(root=test_path, download=True, split=1, idx=train_set.idx, load=True)
+            output_sources = ['images', 'targets']
+        elif source == 'dSprites':
+            Dataset = Dataset or dSpriteDataset
+            Dataset = make_indexing(Dataset)
+            train_set = Dataset(train_path, transform=transform, download=True, shuffle=True)
+            test_set = train_set
             output_sources = ['images', 'targets']
         elif source == 'CelebA':
             Dataset = Dataset or CelebA
@@ -376,6 +390,10 @@ class DataHandler(object):
                     break
                 dim_c, dim_x, dim_y = sample[0].size()[1:]
                 dim_l = len(train_set.classes)
+            elif source == 'dSprites':
+                print(train_set.imgs.shape, train_set.latents_values.shape)
+                _, dim_x, dim_y = train_set.imgs.shape
+                assert False
             elif source == 'SVHN':
                 dim_c, dim_x, dim_y = train_set.data.shape[1:]
                 dim_l = len(np.unique(train_set.labels))

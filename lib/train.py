@@ -29,7 +29,8 @@ _args = dict(
     quit_on_bad_values=True,
     save_on_best=None,
     save_on_lowest=None,
-    save_on_highest=None
+    save_on_highest=None,
+    eval_during_train=True
 )
 
 _args_help = dict(
@@ -39,7 +40,8 @@ _args_help = dict(
     quit_on_bad_values='Quit when nans or infs found.',
     save_on_best='Saves when highest of this result is found.',
     save_on_highest='Saves when highest of this result is found.',
-    save_on_lowest='Saves when lowest of this result is found.'
+    save_on_lowest='Saves when lowest of this result is found.',
+    eval_during_train='Gives results over a training epoch.'
 )
 
 
@@ -181,7 +183,7 @@ def set_updates_dict(epoch):
     return num_updates_dict
 
 
-def train_epoch(epoch, viz_handler, quit_on_bad_values):
+def train_epoch(epoch, viz_handler, quit_on_bad_values, eval_during_train):
     for k, model in models.MODEL_HANDLER.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -237,6 +239,9 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
     except StopIteration:
         pass
 
+    if not eval_during_train:
+        return test_epoch(epoch, viz_handler, eval_mode=False, test=False, viz=False)
+
     for routine_key, routine in models.ARCH.finish_train_routines.items():
         for u in range(num_updates_dict[routine_key]):
             loss_handler = LossHandler()
@@ -248,7 +253,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values):
     return results
 
 
-def test_epoch(epoch, viz_handler, eval_mode=False):
+def test_epoch(epoch, viz_handler, eval_mode=False, test=True, viz=True):
     for k, model in models.MODEL_HANDLER.items():
         if k == 'extras':
             continue
@@ -258,11 +263,14 @@ def test_epoch(epoch, viz_handler, eval_mode=False):
         else:
             model.eval()
 
-    data.DATA_HANDLER.reset(test=True, string='Evaluating (epoch {}): '.format(epoch))
+    data.DATA_HANDLER.reset(test=test, string='Evaluating (epoch {}): '.format(epoch))
     results = {'losses': dict((rk, []) for rk in models.MODEL_HANDLER.keys())}
-    routine_args = exp.ARGS['test_routines']
+    if test:
+        routine_args = exp.ARGS['test_routines']
+    else:
+        routine_args = exp.ARGS['routines']
 
-    viz_handler.ignore = False
+    viz_handler.ignore = not viz
     try:
         while True:
             # Iterate data
@@ -374,7 +382,7 @@ def align_summaries(d_train, d_test):
 
 
 def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=True, save_on_best=None,
-              save_on_lowest=None, save_on_highest=None):
+              save_on_lowest=None, save_on_highest=None, eval_during_train=True):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     vh = VizHandler()
@@ -395,7 +403,7 @@ def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=
             start_time = time.time()
 
             # TRAINING
-            train_results_ = train_epoch(epoch, vh, quit_on_bad_values)
+            train_results_ = train_epoch(epoch, vh, quit_on_bad_values, eval_during_train)
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 

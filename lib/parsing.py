@@ -71,6 +71,15 @@ class StoreDictKeyPair(argparse.Action):
         setattr(namespace, self.dest, d)
 
 
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 def parse_args(archs):
     # Parse args
     parser = make_argument_parser()
@@ -97,11 +106,12 @@ def parse_args(archs):
                 subparser.add_argument(arg_str, dest=k, default=v, action=StoreDictKeyPair,
                                        help=help, metavar='<k1=v1,,k2=v2...>')
             elif isinstance(v, bool) and not v:
-                if v:
-                    action = 'store_false'
-                else:
-                    action = 'store_true'
-                subparser.add_argument(arg_str, dest=k, action=action, default=v, help=help)
+                action = 'store_true'
+                subparser.add_argument(arg_str, dest=k, action=action, default=False, help=help)
+            elif isinstance(v, bool):
+                type_ = type(v)
+                metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
+                subparser.add_argument(arg_str, dest=k, default=True, metavar=metavar, type=str2bool, help=help)
             else:
                 type_ = type(v) if v is not None else str
                 metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
@@ -121,7 +131,12 @@ def parse_args(archs):
                 elif isinstance(v, bool) and not v:
                     action = 'store_true'
                     dest = arg_k + '.' + k
-                    subparser.add_argument(arg_str, dest=dest, action=action, default=v, help=help)
+                    subparser.add_argument(arg_str, dest=dest, action=action, default=False, help=help)
+                elif isinstance(v, bool):
+                    type_ = type(v)
+                    metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
+                    dest = arg_k + '.' + k
+                    subparser.add_argument(arg_str, dest=dest, default=True, metavar=metavar, type=str2bool, help=help)
                 else:
                     type_ = type(v) if v is not None else str
                     metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
