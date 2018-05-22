@@ -2,7 +2,9 @@
 
 '''
 
-import argparse
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
 import logging
 import os
 
@@ -27,46 +29,69 @@ def print_section(s):
     print(h)
 
 
-def make_argument_parser():
-    '''Generic experiment parser.
-
-    Generic parser takes the experiment yaml as the main argument, but has some
-    options for reloading, etc. This parser can be easily extended using a
-    wrapper method.
-
-    Returns:
-        argparse.parser
-
+class Handler(dict):
     '''
-    parser = argparse.ArgumentParser()
-    parser.add_argument('arch', type=str, help='Architecture name')
-    parser.add_argument('-o', '--out_path', default=None,
-                        help=('Output path directory. All model results will go'
-                              ' here. If a new directory, a new one will be '
-                              'created, as long as parent exists.'))
-    parser.add_argument('-n', '--name', default=None,
-                        help=('Name of the experiment. If given, base name of '
-                              'output directory will be `--name`. If not given,'
-                              ' name will be the base name of the `--out_path`')
-                        )
-    parser.add_argument('-r', '--reload', type=str, default=None,
-                        help=('Path to model to reload.'))
-    parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
-    parser.add_argument('-a', '--args', default=None, type=str,
-                        help=('Arguments for the main file'))
-    parser.add_argument('-S', '--source', type=str, default=None,
-                        help='Dataset (location (full path) or name).')
-    parser.add_argument('-m', '--meta', type=str, default=None)
-    parser.add_argument('-c', '--config_file', default=None,
-                        help=('Configuration yaml file. '
-                              'See `exps/` for examples'))
-    parser.add_argument('-k', '--clean', action='store_true', default=False,
-                        help=('Cleans the output directory. '
-                              'This cannot be undone!'))
-    parser.add_argument('-v', '--verbosity', type=int, default=1,
-                        help='Verbosity of the logging. (0, 1, 2)')
-    parser.add_argument('-t', '--test', action='store_true', default=False)
-    return parser
+    Simple dict-like container with support for `.` access
+    Note: some of the functionalty might not work correctly as a dict, but so far simple tests pass.
+    '''
+
+    __delattr__ = dict.__delitem__
+    _protected = dir({})
+    _type = None
+    _get_error_string = 'Keyword `{}` not found (add as a dict entry). Found: {}'
+
+
+    def check_key_value(self, k, v):
+        if k in self._protected:
+            raise KeyError('Keyword `{}` is protected.'.format(k))
+
+        if self._type and not isinstance(v, self._type):
+            raise ValueError('Type `{}` of `{}` not allowed. Only `{}` and subclasses are supported'.format(
+                type(v), k, self._type))
+
+        return True
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            self.check_key_value(k, v)
+        super().__init__(**kwargs)
+
+    def __setitem__(self, k, v):
+        passes = self.check_key_value(k, v)
+        if passes:
+            super().__setitem__(k, v)
+
+    def unsafe_set(self, k, v):
+        super().__setitem__(k, v)
+
+    def __setattr__(self, k, v):
+        self.__setitem__(k, v)
+
+    def __getattr__(self, k):
+        if k.startswith('__'):
+            return super.get(k)
+        try:
+            v = super().__getitem__(k)
+        except KeyError:
+            raise KeyError(self._get_error_string.format(k, tuple(self.keys())))
+        return v
+
+    def update(self, **kwargs):
+        _kwargs = Handler()
+        for k, v in kwargs.items():
+            passes = self.check_key_value(k, v)
+            if passes:
+                _kwargs[k] = v
+        super().update(**_kwargs)
+
+
+def convert_nested_dict_to_handler(d, _class=Handler):
+    if not isinstance(d, dict):
+        return d
+    for k, v in d.items():
+        d[k] = convert_nested_dict_to_handler(v)
+
+    return _class(**d)
 
 
 def update_dict_of_lists(d_to_update, **d):
