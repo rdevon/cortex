@@ -16,9 +16,7 @@ import numpy as np
 from progressbar import Bar, ProgressBar, Percentage, Timer, ETA
 import torch
 import torch.utils.data as data
-from torch.autograd import Variable
 import torchvision
-from torchvision.datasets import utils
 import torchvision.transforms as transforms
 
 from . import exp, toysets

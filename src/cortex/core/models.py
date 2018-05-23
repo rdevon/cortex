@@ -10,7 +10,6 @@ import inspect
 import logging
 import sys
 import os
-import traceback
 
 import torch.nn as nn
 

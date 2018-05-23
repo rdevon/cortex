@@ -1,8 +1,11 @@
 imageio
 matplotlib
-progressbar2
+progressbar
 scipy
 sklearn
 torchvision
 visdom
 pyyaml
+versioneer
+torch
+tqdm

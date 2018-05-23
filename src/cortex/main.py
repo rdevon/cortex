@@ -12,13 +12,12 @@ if sys.version_info < (3, 0):
 
 import logging
 
-from lib import setup_cortex, exp
-from lib.data import setup as setup_data, DATA_HANDLER
-from lib.models import setup_model
-from lib.optimizer import setup as setup_optimizer
-from lib.train import setup as setup_train, main_loop
-from lib.utils import print_section
-
+from .core import setup_cortex, exp
+from .core.data import setup as setup_data, DATA_HANDLER
+from .core.models import setup_model
+from .core.optimizer import setup as setup_optimizer
+from .core.train import setup as setup_train, main_loop
+from .core.utils import print_section
 
 logger = logging.getLogger('cortex')
 
@@ -46,9 +45,9 @@ def main(eval_mode=False):
     main_loop(**exp.ARGS.train)
 
 
-def reload_model(arch, model_file):
-    setup_reload(arch, model_file)
-    main(eval_mode=True)
+def reload_model(self, arch, model_file):
+    self.setup_reload(arch, model_file)
+    self.main(eval_mode=True)
 
 
 if __name__ == '__main__':

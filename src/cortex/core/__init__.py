@@ -16,23 +16,43 @@ from .parsing import _args as default_args, parse_args
 from .utils import Handler
 from .viz import init as viz_init
 
+from ._version import get_versions
+from .utils._appdirs import AppDirs
+
+VERSIONS = get_versions()
+del get_versions
+
+__descr__ = 'Distributed Asynchronous [black-box] Optimization'
+__version__ = VERSIONS['version']
+__license__ = 'BSD-3-Clause'
+__author__ = 'Cortex Team - MILA, Université de Montréal'
+__author_short__ = 'MILA'
+__author_email__ = 'lisa_labo@iro.umontreal.ca'
+__authors__ = {
+    'rdevon': ('Devon Hjelm', 'devonhjelm@gmail.com'),
+}
+__url__ = 'https://github.com/rdevon/cortex2.0'
+
+DIRS = AppDirs(__name__, __author_short__)
+del AppDirs
+
 
 logger = logging.getLogger('cortex.init')
 
 
 CONFIG = Handler()
+
 def set_config():
     global CONFIG
-    config_file = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'config.yaml')
+    print(path.join(path.dirname(path.dirname(path.abspath(__file__))) + '/config/', 'config.yaml'))
+    config_file = path.join(path.dirname(path.dirname(path.abspath(__file__))) + '/config/', 'config.yaml')
     if not path.isfile(config_file):
         config_file = None
-
     if config_file is not None:
         logger.debug('Open config file {}'.format(config_file))
         with open(config_file, 'r') as f:
             d = yaml.load(f)
             logger.debug('User-defined configs: {}'.format(pprint.pformat(d)))
-
             viz = d.get('viz', {})
             torchvision_data_path = d.get('torchvision_data_path', None)
             toy_data_path = d.get('toy_data_path', None)
@@ -40,7 +60,6 @@ def set_config():
             arch_paths = d.get('arch_paths', {})
             out_path = d.get('out_path', None)
             local_data_path = d.get('local_data_path', None)
-
             CONFIG.update(viz=viz, torchvision_data_path=torchvision_data_path, toy_data_path=toy_data_path,
                           data_paths=data_paths, arch_paths=arch_paths, out_path=out_path,
                           local_data_path=local_data_path)
@@ -92,3 +111,4 @@ def setup_cortex():
 
     if models.ARCH.setup is not None:
         models.ARCH.setup(**exp.ARGS)
+
