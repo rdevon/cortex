@@ -185,6 +185,188 @@ def make_indexing(C):
     return IndexingDataset
 
 
+"""
+def make_indexing(C):
+    '''Makes an indexing dataset.
+
+    Index comes in as the last element of the batch.
+
+    Args:
+        C: data.Dataset class.
+
+    Returns:
+        Wrapped data.Dataset class.
+
+    '''
+    class IndexingDataset(C):
+        def __getitem__(self, index):
+            output = super().__getitem__(index)
+            return output + (index,)
+
+    return IndexingDataset
+
+
+def make_tds_random_and_split(C):
+    '''Wraps Toyset class to add random splitting.
+
+    Args:
+        C: Toyset data class to be wrapped
+
+    Returns:
+        RandomSplitting class that wraps Toyset data class
+
+    '''
+    class RandomSplitting(C):
+        def __init__(self, *args, idx=None, split=.8, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.idx = idx if idx is not None else torch.randperm(len(self))
+            tensors_ = []
+
+            for i in range(len(self.tensors)):
+                if split > 0:
+                    tensors_.append(self.tensors[i][self.idx][:int(split * len(self))])
+                else:
+                    tensors_.append(self.tensors[i][self.idx][int(split * len(self)) - 1:])
+
+            self.tensors = tuple(tensors_)
+
+    return RandomSplitting
+
+
+def copy_to_local_path(from_path: str) -> str:
+    '''Copies data to the local data path.
+
+    Args:
+        from_path: Path to data to be copied.
+
+    Returns:
+        Path to which data was copied.
+
+    '''
+    if from_path.endswith('/'):
+        from_path = from_path[:-1]
+    basename = path.basename(from_path)
+    if not CONFIG.local_data_path:
+        raise ValueError('`local_data_path` not set in `config.yaml`. Set this path if you want local copying.')
+    to_path = path.join(CONFIG.local_data_path, basename)
+    if ((not path.exists(to_path)) and path.exists(from_path)):
+        logger.info('Copying {} to {}'.format(from_path, to_path))
+        if path.isdir(from_path):
+            shutil.copytree(from_path, to_path)
+        else:
+            shutil.copy(from_path, CONFIG.local_data_path)
+
+    return to_path
+
+
+def handle_source():
+    if source in toysets.DATASETS:
+    elif hasattr(torchvision.datasets, source):
+    elif source in ('dSprites',):
+    elif source in CONFIG.data_paths:
+    elif path.isdir(source):
+    else:
+        raise ValueError('Dataset not from torchvision, or is not specified in `config.yaml` data_paths.')
+
+
+def _handle_torchvision():
+    source_type = 'torchvision'
+    if CONFIG.torchvision_data_path is None:
+        raise ValueError('torchvision dataset must have corresponding torchvision folder specified in '
+                         '`config.yaml`')
+    Dataset = getattr(torchvision.datasets, source)
+
+    if copy_to_local:
+        copy_to_local_path(path.join(CONFIG.torchvision_data_path, source))
+        base_path = CONFIG.local_data_path
+    else:
+        base_path = CONFIG.torchvision_data_path
+
+    train_path = path.join(base_path, source)
+    test_path = train_path
+
+
+def _handle_toyset():
+    if CONFIG.toy_data_path is None:
+        raise ValueError('torchvision dataset must have corresponding torchvision folder specified in '
+                         '`config.yaml`')
+    Dataset = getattr(toysets, source)
+
+    if copy_to_local:
+        copy_to_local_path(path.join(CONFIG.toy_data_path, source))
+        base_path = CONFIG.local_data_path
+    else:
+        base_path = CONFIG.toy_data_path
+
+    train_path = path.join(base_path, source)
+    test_path = train_path
+
+    Dataset = make_indexing(Dataset)
+    Dataset = make_tds_random_and_split(Dataset)
+    train_set = Dataset(root=train_path, download=True, split=0.8, load=True)
+    test_set = Dataset(root=test_path, download=True, split=1, idx=train_set.idx, load=True)
+    output_sources = ['images', 'targets']
+
+
+def _handle_dSprites():
+    source_type = 'dSprites'
+    source_ = 'dSprites.npz'
+    train_path = path.join(CONFIG.local_data_path, source_)
+    test_path = path.join(CONFIG.local_data_path, source_)
+
+    Dataset = Dataset or dSpriteDataset
+    Dataset = make_indexing(Dataset)
+    train_set = Dataset(train_path, transform=transform, download=True, shuffle=True)
+    test_set = train_set
+    output_sources = ['images', 'targets']
+
+
+def _handle_iamgefolder():
+    Dataset = Dataset or torchvision.datasets.ImageFolder
+    Dataset = make_indexing(Dataset)
+
+    data_path = CONFIG.data_paths[source]
+
+    if isinstance(data_path, dict):
+        train_path = data_path['train']
+        test_path = data_path['test']
+        if copy_to_local:
+            train_path = copy_to_local_path(train_path)
+            test_path = copy_to_local_path(test_path)
+    elif isinstance(data_path, (tuple, list)):
+        train_path, test_path = data_path
+        if copy_to_local:
+            train_path = copy_to_local_path(train_path)
+            test_path = copy_to_local_path(test_path)
+    else:
+        train_path = data_path
+        if copy_to_local:
+            train_path = copy_to_local_path(train_path)
+        test_path = data_path
+
+    train_set = Dataset(root=train_path, transform=transform)
+    test_set = Dataset(root=test_path, transform=transform)
+    output_sources = ['images', 'targets']
+
+
+def _handle_CelebA():
+    Dataset = Dataset or CelebA
+    Dataset = make_indexing(Dataset)
+    train_set = Dataset(root=train_path, transform=transform, download=True)
+    test_set = Dataset(root=test_path, transform=transform)
+    output_sources = ['images', 'targets']
+
+
+def _handle_path():
+    # Dataset is a path to a folder
+    source_type = 'folder'
+    logger.info('Using train set as testing set. For more options, use `data_paths` in `config.yaml`')
+    Dataset = Dataset or torchvision.datasets.ImageFolder
+    train_path = source
+    test_path = source
+"""
+
+
 def make_tds_random_and_split(C):
     class RandomSplitting(C):
         def __init__(self, *args, idx=None, split=.8, **kwargs):
