@@ -16,7 +16,7 @@ repo_root = os.path.dirname(os.path.abspath(__file__))
 mpath = pjoin(repo_root, 'src')
 sys.path.insert(0, mpath)
 
-import  as cortex # noqa
+import cortex.core as cortex # noqa
 
 print(sys.version)
 
@@ -46,8 +46,9 @@ packages = [
     'cortex.config',
     ]
 
+
 setup_args = dict(
-    name='cortex.core',
+    name='cortex',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description=cortex.__descr__,
