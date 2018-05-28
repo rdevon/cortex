@@ -34,8 +34,6 @@ def set_config():
             logger.debug('User-defined configs: {}'.format(pprint.pformat(d)))
 
             viz = d.get('viz', {})
-            torchvision_data_path = d.get('torchvision_data_path', None)
-            toy_data_path = d.get('toy_data_path', None)
             data_paths = d.get('data_paths', {})
             arch_paths = d.get('arch_paths', {})
             out_path = d.get('out_path', None)
