@@ -9,7 +9,7 @@ import logging
 from os import path
 import shutil
 
-from . import torchvision_datasets, toysets
+from . import torchvision_datasets
 from .data_handler import DataHandler
 from .. import CONFIG
 

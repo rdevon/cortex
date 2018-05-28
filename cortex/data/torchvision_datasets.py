@@ -7,7 +7,7 @@ import os
 import numpy as np
 import torchvision
 
-from . import DatasetPlugin
+from cortex.plugins import DatasetPlugin
 from .utils import build_transform
 
 
@@ -84,4 +84,6 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         self.add_dataset('test', test_set)
         self.set_input_names(input_names)
         self.set_dims(**dims)
+
+TorchvisionDatasetPlugin()
 
