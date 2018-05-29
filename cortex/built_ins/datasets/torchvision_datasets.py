@@ -7,7 +7,7 @@ import os
 import numpy as np
 import torchvision
 
-from cortex.data import DatasetPlugin
+from cortex.plugins import DatasetPlugin
 from .utils import build_transform
 
 
@@ -34,8 +34,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
                **transform_args):
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
-
-        torchvision_path = os.path.join(self.paths, 'torchvision')
+        torchvision_path = os.path.join(self.paths['torchvision'])
         if not os.path.isdir(torchvision_path):
             os.mkdir(torchvision_path)
 
@@ -47,8 +46,13 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         if normalize and isinstance(normalize, bool):
             if source in ['MNIST', 'dSprites', 'Fashion-MNIST', 'EMNIST', 'PhotoTour']:
                 normalize = [(0.5,), (0.5,)]
+                scale = (0, 1)
             else:
                 normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
+                scale = (-1, 1)
+
+        else:
+            scale = None
 
         transform = transform or build_transform(normalize=normalize, **transform_args)
 
@@ -84,6 +88,9 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         self.add_dataset('test', test_set)
         self.set_input_names(input_names)
         self.set_dims(**dims)
+
+        if scale is not None:
+            self.set_scale(scale)
 
 TorchvisionDatasetPlugin()
 

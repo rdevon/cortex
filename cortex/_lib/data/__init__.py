@@ -95,6 +95,7 @@ class DatasetPlugin():
         self.datasets = {}
         self.dims = {}
         self.input_names = None
+        self.scale = None
         if CONFIG.data_paths is None:
             raise ValueError('`data_paths` not set in config.')
         self.paths = CONFIG.data_paths
@@ -138,6 +139,9 @@ class DatasetPlugin():
     def set_dims(self, **kwargs):
         for k, v in kwargs.items():
             self.dims[k] = v
+
+    def set_scale(self, scale):
+        self.scale = scale
 
     def make_indexing(self, C):
         '''Makes an indexing dataset.

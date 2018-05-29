@@ -16,7 +16,7 @@ logger = logging.getLogger('cortex.config')
 CONFIG = Handler()
 def set_config():
     global CONFIG
-    config_file = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'config.yaml')
+    config_file = path.join(path.dirname(path.dirname(path.dirname(path.abspath(__file__)))), 'config.yaml')
     if not path.isfile(config_file):
         config_file = None
 

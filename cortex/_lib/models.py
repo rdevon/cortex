@@ -234,7 +234,7 @@ def add_directory(p, name):
 
 
 def find_archs(arch_paths):
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     arch_dir = os.path.abspath(os.path.join(root, 'arch'))
     arch_paths.update(core=arch_dir)
     for k, p in arch_paths.items():

@@ -71,7 +71,7 @@ class LossHandler(Handler):
 def setup():
     # Test the routines and recover the loss keys
     with torch.no_grad():
-        data.DATA_HANDLER.reset(make_pbar=False)
+        data.DATA_HANDLER.reset('train', make_pbar=False)
         data.DATA_HANDLER.next()
         routine_models = {}
         args = exp.ARGS['routines']
@@ -197,7 +197,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values, eval_during_train):
 
     num_updates_dict = set_updates_dict(epoch)
     is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
-    data.DATA_HANDLER.reset(string='Training (epoch {}) ({}): '.format(epoch, is_training))
+    data.DATA_HANDLER.reset('train', string='Training (epoch {}) ({}): '.format(epoch, is_training))
     viz_handler.ignore = True
     routine_args = exp.ARGS['routines']
 
@@ -263,7 +263,7 @@ def test_epoch(epoch, viz_handler, eval_mode=False, test=True, viz=True):
         else:
             model.eval()
 
-    data.DATA_HANDLER.reset(test=test, string='Evaluating (epoch {}): '.format(epoch))
+    data.DATA_HANDLER.reset('test', string='Evaluating (epoch {}): '.format(epoch))
     results = {'losses': dict((rk, []) for rk in models.MODEL_HANDLER.keys())}
     if test:
         routine_args = exp.ARGS['test_routines']

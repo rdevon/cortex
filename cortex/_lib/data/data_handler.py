@@ -16,8 +16,6 @@ from .. import exp
 
 class DataHandler(object):
 
-    _KBI_HACK = lambda x: signal.signal(signal.SIGINT, signal.SIG_IGN) # hack for Kyeboard interrupt
-
     def __init__(self):
         self.dims = {}
         self.input_names = {}
@@ -46,14 +44,18 @@ class DataHandler(object):
 
             if isinstance(self.batch_size, dict):
                 try:
-                    batch_size = self.batch_size[k]
+                    self.batch_size[k]
                 except KeyError:
-                    raise KeyError('`batch_size` is a dictionary, but no entry for `{}` set found.')
+                    self.batch_size[k] = self.batch_size_
+                finally:
+                    batch_size = self.batch_size[k]
             else:
-                batch_size = self.batch_size
+                self.batch_size_ = self.batch_size
+                self.batch_size = {k: self.batch_size_}
+                batch_size = self.batch_size_
 
             loaders[k] = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=n_workers,
-                                    worker_init_fn=self._KBI_HACK)
+                                    worker_init_fn=lambda x: signal.signal(signal.SIGINT, signal.SIG_IGN))
 
         self.dims[source] = dataset_entrypoint.dims
         self.input_names[source] = dataset_entrypoint.input_names
@@ -82,16 +84,17 @@ class DataHandler(object):
 
     def __next__(self):
         output = {}
+        sources = self.loaders.keys()
 
         batch_size = self.batch_size[self.mode]
-        for source in self.sources:
+        for source in sources:
             data = next(self.iterators[source])
             if data[0].size()[0] < batch_size:
                 if self.skip_last_batch:
                     raise StopIteration
                 batch_size = data[0].size()[0]
             data = dict((k, v) for k, v in zip(self.input_names[source], data))
-            if len(self.sources) > 1:
+            if len(sources) > 1:
                 output[source] = data
             else:
                 output.update(**data)
@@ -193,7 +196,8 @@ class DataHandler(object):
         else:
             self.pbar = None
 
-        self.iterators = dict((source, self.make_iterator(source)) for source in self.sources)
+        sources = self.loaders.keys()
+        self.iterators = dict((source, self.make_iterator(source)) for source in sources)
 
 
 

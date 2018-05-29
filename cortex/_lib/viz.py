@@ -69,7 +69,7 @@ class VizHandler():
         self.ignore = True
         self.image_dir = exp.OUT_DIRS.get('image_dir', None)
         self.prefix = exp._file_string('')
-        self.image_scale = data.DATA_HANDLER.image_scale
+        self.image_scale = (-1, 1)
 
     def clear(self):
         self.images = {}
