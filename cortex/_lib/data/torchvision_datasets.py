@@ -7,7 +7,7 @@ import os
 import numpy as np
 import torchvision
 
-from cortex.plugins import DatasetPlugin
+from cortex.data import DatasetPlugin
 from .utils import build_transform
 
 

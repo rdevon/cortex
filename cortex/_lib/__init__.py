@@ -7,11 +7,9 @@ __author_email__ = 'erroneus@gmail.com'
 
 import copy
 import logging
-from os import path
 import pprint
-import yaml
 
-from . import data, exp, log_utils, models
+from . import config, exp, log_utils, models
 from .parsing import _args as default_args, parse_args
 from .utils import Handler
 from .viz import init as viz_init
@@ -20,36 +18,9 @@ from .viz import init as viz_init
 logger = logging.getLogger('cortex.init')
 
 
-CONFIG = Handler()
-def set_config():
-    global CONFIG
-    config_file = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'config.yaml')
-    if not path.isfile(config_file):
-        config_file = None
-
-    if config_file is not None:
-        logger.debug('Open config file {}'.format(config_file))
-        with open(config_file, 'r') as f:
-            d = yaml.load(f)
-            logger.debug('User-defined configs: {}'.format(pprint.pformat(d)))
-
-            viz = d.get('viz', {})
-            data_paths = d.get('data_paths', {})
-            arch_paths = d.get('arch_paths', {})
-            out_path = d.get('out_path', None)
-            local_data_path = d.get('local_data_path', None)
-
-            CONFIG.update(viz=viz, torchvision_data_path=torchvision_data_path, toy_data_path=toy_data_path,
-                          data_paths=data_paths, arch_paths=arch_paths, out_path=out_path,
-                          local_data_path=local_data_path)
-    else:
-        logger.warning('config.yaml not found')
-
-
 def setup_cortex():
-    set_config()
-    data.set_config(CONFIG)
-    models.find_archs(CONFIG.arch_paths)
+    config.set_config()
+    models.find_archs(config.CONFIG.arch_paths)
 
     args = parse_args(models.ARCHS)
     experiment_args = copy.deepcopy(default_args)
@@ -59,13 +30,13 @@ def setup_cortex():
 
     exp.setup_device(args.device)
     models.setup_arch(args.arch)
-    viz_init(CONFIG.viz)
+    viz_init(config.CONFIG.viz)
 
     if args.reload and not args.load_models:
-        exp.reload(args.reload, args.reloads, args.name, args.out_path, args.clean, CONFIG)
+        exp.reload(args.reload, args.reloads, args.name, args.out_path, args.clean, config.CONFIG)
     else:
         name = args.name or args.arch
-        exp.setup_new(models.ARCH.defaults, name, args.out_path, args.clean, CONFIG,
+        exp.setup_new(models.ARCH.defaults, name, args.out_path, args.clean, config.CONFIG,
                       args.load_models, args.reloads)
 
     exp.configure_from_yaml(config_file=args.config_file)

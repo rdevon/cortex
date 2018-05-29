@@ -9,9 +9,8 @@ import logging
 from os import path
 import shutil
 
-from . import torchvision_datasets
 from .data_handler import DataHandler
-from .. import CONFIG
+from ..config import CONFIG
 
 
 logger = logging.getLogger('cortex.data')
@@ -70,7 +69,7 @@ def setup(source, batch_size=64, n_workers: int=4, skip_last_batch: bool=False,
         for source in sources:
             entrypoint = _PLUGINS.get(source, None)
             if entrypoint is None:
-                raise KeyError('Entrypoint for `{}` not found'.format(source))
+                raise KeyError('Dataset plugin for `{}` not found'.format(source))
 
             entrypoint.handle(source, copy_to_local=copy_to_local, transform=transform, **transform_args)
             DATA_HANDLER.add_dataset(source, entrypoint, n_workers=n_workers, shuffle=shuffle, DataLoader=DataLoader)

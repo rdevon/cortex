@@ -2,4 +2,4 @@
 
 '''
 
-from .data import DatasetPlugin
+from cortex.data import DatasetPlugin
