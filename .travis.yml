@@ -1,7 +1,40 @@
+sudo: false
 language: python
-python:
-  - "3.6"
+matrix:
+  fast_finish: true
+  include:
+    - env: TOXENV=flake8
+      python: 3.6
+    - env: TOXENV=pylint
+      python: 3.6
+    - env: TOXENV=doc8
+      python: 3.6
+    - env: TOXENV=packaging
+      python: 3.6
+    - env: TOXENV=docs
+      python: 3.6
+    - env: TOXENV=py34
+      python: 3.4
+    - env: TOXENV=py35
+      python: 3.5
+    - env: TOXENV=py36
+      python: 3.6
+    - env: TOXENV=demo_random
+      python: 3.6
 install:
-  - pip install pylint
+  - pip install tox
 script:
-  - pylint *
+  - tox
+after_success:
+  - tox -e final-coverage
+  - tox -e codecov
+
+# deploy:
+#   skip_cleanup: true
+#   provider: pypi
+#   user: "..."
+#   password:
+#     secure: "..."
+#   on:
+#     branch: master
+#   distributions: "sdist bdist_wheel"
