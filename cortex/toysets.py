@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 r"""
-:mod:`cortex2.lib.toysets` -- Small toy datasets for interpretable experimentation
+:mod:`cortex2.cortex.toysets` -- Small toy datasets for interpretable experimentation
 ==================================================================================
 
 .. module:: toysets

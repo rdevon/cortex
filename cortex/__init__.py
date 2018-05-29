@@ -10,15 +10,32 @@ import logging
 from os import path
 import pprint
 import yaml
-
 from . import data, exp, log_utils, models
 from .parsing import _args as default_args, parse_args
 from .utils import Handler
 from .viz import init as viz_init
+from .utils import Handler
+from ._appdirs import AppDirs
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+__descr__ = 'Distributed Asynchronous [black-box] Optimization'
+__license__ = 'BSD-3-Clause'
+__author__ = 'Cortex Team - MILA, Université de Montréal'
+__author_short__ = 'MILA'
+__author_email__ = 'lisa_labo@iro.umontreal.ca'
+__authors__ = {
+    'rdevon': ('Devon Hjelm', 'devonhjelm@gmail.com'),
+}
+__url__ = 'https://github.com/rdevon/cortex2.0'
+
+DIRS = AppDirs(__name__, __author_short__)
+LOGGER = logging.getLogger('cortex.init')
+CONFIG = Handler()
+
+del AppDirs
 
 logger = logging.getLogger('cortex.init')
-
 
 CONFIG = Handler()
 def set_config():

@@ -12,12 +12,12 @@ if sys.version_info < (3, 0):
 
 import logging
 
-from lib import setup_cortex, exp
-from lib.data import setup as setup_data, DATA_HANDLER
-from lib.models import setup_model
-from lib.optimizer import setup as setup_optimizer
-from lib.train import setup as setup_train, main_loop
-from lib.utils import print_section
+from cortex import setup_cortex, exp
+from cortex.data import setup as setup_data, DATA_HANDLER
+from cortex.models import setup_model
+from cortex.optimizer import setup as setup_optimizer
+from cortex.train import setup as setup_train, main_loop
+from cortex.utils import print_section
 
 
 logger = logging.getLogger('cortex')
