@@ -16,7 +16,7 @@ repo_root = os.path.dirname(os.path.abspath(__file__))
 mpath = pjoin(repo_root, 'src')
 sys.path.insert(0, mpath)
 
-import cortex.core as cortex # noqa
+import cortex as cortex
 
 print(sys.version)
 
@@ -69,7 +69,7 @@ setup_args = dict(
         #     'random = cortex.algo.random:Random',
         #     ],
         },
-    install_requires=['PyYAML', 'numpy', 'scipy'],
+    install_requires=['pyyaml', 'numpy', 'scipy'],
     tests_require=tests_require,
     setup_requires=['setuptools', 'pytest-runner>=2.0,<3dev'],
     extras_require=dict(test=tests_require),

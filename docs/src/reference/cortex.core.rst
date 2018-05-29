@@ -18,9 +18,12 @@ Submodules
 
 .. toctree::
 
+   cortex.core.celeba
    cortex.core.custom_transforms
    cortex.core.dShapes
    cortex.core.data
+   cortex.core.data_handler
+   cortex.core.data_setup
    cortex.core.exp
    cortex.core.log_utils
    cortex.core.main

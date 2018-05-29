@@ -7,7 +7,7 @@ from pymongo import MongoClient
 import pytest
 import yaml
 
-from cortex.arch.classifier import (BaseArchitecture, OptimizationAlgorithm)
+from cortex import (OptimizationAlgorithm)
 
 
 class DumbAlgo(BaseAlgorithm):

@@ -35,7 +35,7 @@ sys.path.insert(0, docs_src_path)
 src_path = os.path.abspath(os.path.join(docs_src_path, '..', '..', 'src'))
 sys.path.insert(0, src_path)
 
-import cortex.core as cortex  # noqa
+import cortex as cortex
 
 # -- General configuration ------------------------------------------------
 
