@@ -42,7 +42,16 @@ There are many command-line options in cortex:
 * `-v` Verbosity of logger
 * `-o` Out path (overrides `config.yaml`)
 * `-t` Test mode (for evaluation purposes)
-    
+
+## Installation as as Python library
+
+* `$ cd cortex2.0`
+* `$ python setup.py install`
+
+## Verify installation as as Python library
+* `$ python`
+* `$ import cortex`
+
 ## Working with cortex
 Cortex is meant to be an API-minimal library for runnning machine learning experiments that use gradient descent and backprop (though in principle should extend beyond this). As such, the actual models as implemented usually only require using one method from a `data_handler` object. Otherwise, as an illustration of how to get cortex working for your models, first look at:
 https://github.com/rdevon/cortex2.0/blob/master/arch/classifier.py
