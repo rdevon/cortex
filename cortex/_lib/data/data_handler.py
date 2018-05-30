@@ -76,7 +76,7 @@ class DataHandler(object):
         var = get_noise_var(dist, train_size, **kwargs)
         var_t = get_noise_var(dist, test_size, **kwargs)
 
-        self.noise[key] = (var, var_t)
+        self.noise[key] = dict(train=var, test=var_t)
         self.dims[key] = dim
 
     def __iter__(self):

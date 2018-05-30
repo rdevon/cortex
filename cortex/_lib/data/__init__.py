@@ -23,7 +23,7 @@ _args = dict(
     n_workers=4,
     skip_last_batch=False,
     copy_to_local=False,
-    transform_args={},
+    data_args={},
 )
 
 _args_help = dict(
@@ -32,14 +32,12 @@ _args_help = dict(
     n_workers='Number of workers',
     skip_last_batch='Skip the last batch of the epoch',
     copy_to_local='Copy data to local path',
-    transform_args='Transformation args for the data. Keywords: normalize (bool), center_crop (int), '
-                   'image_size (int or tuple), random_crop (int), use_sobel (bool), random_resize_crop (int), or flip (bool)',
+    data_args='Args for the data. Set by the user.'
 )
 
 
 def setup(source, batch_size=64, n_workers: int=4, skip_last_batch: bool=False,
-          DataLoader=None, transform=None, copy_to_local: bool=False,
-          transform_args={}, shuffle: bool=True):
+          DataLoader=None, copy_to_local: bool=False, data_args={}, shuffle: bool=True):
     '''Sets up the datasets.
 
     Args:
@@ -48,11 +46,9 @@ def setup(source, batch_size=64, n_workers: int=4, skip_last_batch: bool=False,
         noise_variables: Dict of noise variables.
         n_workers: Number of workers for DataLoader class.
         skip_last_batch: Whether to skip the last batch if the size is smaller than batch_size.
-        Dataset: Optional user-defined Dataset class.
         DataLoader: Optional user-defined DataLoader.
-        transform: Optional user-defined transform function.
         copy_to_local: Copy the data to a local path.
-        transform_args: Arguments for transform function
+        data_args: Arguments for dataset plugin
         shuffle:
 
     '''
@@ -67,12 +63,12 @@ def setup(source, batch_size=64, n_workers: int=4, skip_last_batch: bool=False,
 
     if sources:
         for source in sources:
-            entrypoint = _PLUGINS.get(source, None)
-            if entrypoint is None:
+            plugin = _PLUGINS.get(source, None)
+            if plugin is None:
                 raise KeyError('Dataset plugin for `{}` not found'.format(source))
 
-            entrypoint.handle(source, copy_to_local=copy_to_local, transform=transform, **transform_args)
-            DATA_HANDLER.add_dataset(source, entrypoint, n_workers=n_workers, shuffle=shuffle, DataLoader=DataLoader)
+            plugin.handle(source, copy_to_local=copy_to_local, **data_args)
+            DATA_HANDLER.add_dataset(source, plugin, n_workers=n_workers, shuffle=shuffle, DataLoader=DataLoader)
     else:
         raise ValueError('No source provided. Use `--d.source`')
 
@@ -95,10 +91,10 @@ class DatasetPlugin():
         self.datasets = {}
         self.dims = {}
         self.input_names = None
-        self.scale = None
+        self._scale = None
         if CONFIG.data_paths is None:
             raise ValueError('`data_paths` not set in config.')
-        self.paths = CONFIG.data_paths
+        self._paths = CONFIG.data_paths
 
     def copy_to_local_path(self, from_path: str) -> str:
         '''Copies data to the local data path.
@@ -132,6 +128,12 @@ class DatasetPlugin():
         if key in self.datasets:
             raise KeyError('`{}` already added to datasets in entrypoint'.format(key))
         self.datasets[key] = value
+
+    def get_path(self, source):
+        p = self._paths.get(source)
+        if p is None:
+            raise KeyError('`{}` not found in config.yaml data_paths'.format(source))
+        return p
 
     def set_input_names(self, input_names):
         self.input_names = input_names

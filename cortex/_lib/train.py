@@ -25,7 +25,9 @@ ROUTINE_MODELS = {}
 _args = dict(
     epochs=500,
     archive_every=10,
-    test_mode=False,
+    train_mode='train',
+    test_mode='test',
+    eval_only=False,
     quit_on_bad_values=True,
     save_on_best=None,
     save_on_lowest=None,
@@ -36,7 +38,9 @@ _args = dict(
 _args_help = dict(
     epochs='Number of epochs',
     archive_every='Number of epochs for writing checkpoints.',
-    test_mode='Testing mode. No training.',
+    train_mode='Training data mode.',
+    test_mode='Testing data mode.',
+    eval_only='Test on data only (no training).',
     quit_on_bad_values='Quit when nans or infs found.',
     save_on_best='Saves when highest of this result is found.',
     save_on_highest='Saves when highest of this result is found.',
@@ -183,7 +187,7 @@ def set_updates_dict(epoch):
     return num_updates_dict
 
 
-def train_epoch(epoch, viz_handler, quit_on_bad_values, eval_during_train):
+def train_epoch(epoch, viz_handler, quit_on_bad_values, eval_during_train, data_mode='train'):
     for k, model in models.MODEL_HANDLER.items():
         if isinstance(model, (tuple, list)):
             for net in model:
@@ -197,7 +201,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values, eval_during_train):
 
     num_updates_dict = set_updates_dict(epoch)
     is_training = ', '.join([k for k in num_updates_dict.keys() if num_updates_dict[k] > 0])
-    data.DATA_HANDLER.reset('train', string='Training (epoch {}) ({}): '.format(epoch, is_training))
+    data.DATA_HANDLER.reset(data_mode, string='Training (epoch {}) ({}): '.format(epoch, is_training))
     viz_handler.ignore = True
     routine_args = exp.ARGS['routines']
 
@@ -253,7 +257,7 @@ def train_epoch(epoch, viz_handler, quit_on_bad_values, eval_during_train):
     return results
 
 
-def test_epoch(epoch, viz_handler, eval_mode=False, test=True, viz=True):
+def test_epoch(epoch, viz_handler, eval_mode=False, data_mode='test', viz=True):
     for k, model in models.MODEL_HANDLER.items():
         if k == 'extras':
             continue
@@ -263,12 +267,9 @@ def test_epoch(epoch, viz_handler, eval_mode=False, test=True, viz=True):
         else:
             model.eval()
 
-    data.DATA_HANDLER.reset('test', string='Evaluating (epoch {}): '.format(epoch))
+    data.DATA_HANDLER.reset(data_mode, string='Evaluating (epoch {}): '.format(epoch))
     results = {'losses': dict((rk, []) for rk in models.MODEL_HANDLER.keys())}
-    if test:
-        routine_args = exp.ARGS['test_routines']
-    else:
-        routine_args = exp.ARGS['routines']
+    routine_args = exp.ARGS['test_routines']
 
     viz_handler.ignore = not viz
     try:
@@ -381,14 +382,15 @@ def align_summaries(d_train, d_test):
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=True, save_on_best=None,
-              save_on_lowest=None, save_on_highest=None, eval_during_train=True):
+def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True, save_on_best=None,
+              save_on_lowest=None, save_on_highest=None, eval_during_train=True,
+              train_mode='train', test_mode='test', eval_only=False):
     info = pprint.pformat(exp.ARGS)
     viz.visualizer.text(info, env=exp.NAME, win='info')
     vh = VizHandler()
     total_time = 0.
-    if test_mode:
-        test_results, test_std = test_epoch('Testing', vh, eval_mode=True)
+    if eval_only:
+        test_results, test_std = test_epoch('Testing', vh, eval_mode=True, mode=test_mode)
         convert_to_numpy(test_results)
         convert_to_numpy(test_std)
         
@@ -403,7 +405,8 @@ def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=
             start_time = time.time()
 
             # TRAINING
-            train_results_ = train_epoch(epoch, vh, quit_on_bad_values, eval_during_train)
+            train_results_ = train_epoch(epoch, vh, quit_on_bad_values, eval_during_train,
+                                         data_mode=train_mode)
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
@@ -433,7 +436,7 @@ def main_loop(epochs=500, archive_every=10, test_mode=False, quit_on_bad_values=
                         exp.save(prefix='best_' + save_on_best)
 
             # TESTING
-            test_results_ = test_epoch(epoch, vh)
+            test_results_ = test_epoch(epoch, vh, data_mode=test_mode)
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
 

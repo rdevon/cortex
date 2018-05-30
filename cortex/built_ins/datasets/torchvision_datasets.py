@@ -8,7 +8,7 @@ import numpy as np
 import torchvision
 
 from cortex.plugins import DatasetPlugin
-from .utils import build_transform
+from .utils import build_transforms
 
 
 class TorchvisionDatasetPlugin(DatasetPlugin):
@@ -30,11 +30,11 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         test_set = Dataset(data_path, train=False, transform=transform, download=True)
         return train_set, test_set
 
-    def handle(self, source, copy_to_local=False, transform=None, normalize=True,
-               **transform_args):
+    def handle(self, source, copy_to_local=False, normalize=True, **transform_args):
+
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
-        torchvision_path = os.path.join(self.paths['torchvision'])
+        torchvision_path = self.get_path('torchvision')
         if not os.path.isdir(torchvision_path):
             os.mkdir(torchvision_path)
 
@@ -54,7 +54,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         else:
             scale = None
 
-        transform = transform or build_transform(normalize=normalize, **transform_args)
+        transform = build_transforms(normalize=normalize, **transform_args)
 
         if source == 'LSUN':
             handler = self._handle_LSUN
@@ -93,4 +93,3 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             self.set_scale(scale)
 
 TorchvisionDatasetPlugin()
-

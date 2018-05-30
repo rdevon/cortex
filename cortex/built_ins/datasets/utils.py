@@ -1,18 +1,17 @@
-'''
+'''Extra functions for build-in datasets
 
 '''
 
 import torchvision.transforms as transforms
 
+def build_transforms(normalize=True, center_crop=None, image_size=None,
+                     random_crop=None, flip=None, random_resize_crop=None,
+                     random_sized_crop=None, use_sobel=False):
 
-def build_transform(normalize=True, center_crop=None, image_size=None,
-                    random_crop=None, flip=None, random_resize_crop=None,
-                    random_sized_crop=None, use_sobel=False):
-    global IMAGE_SCALE
     transform_ = []
 
     if random_resize_crop:
-        transform_.append(transforms.RandomResizedCrop(random_resize_crop, scale=(0.5, 1)))
+        transform_.append(transforms.RandomResizedCrop(random_resize_crop))
     elif random_crop:
         transform_.append(transforms.RandomSizedCrop(random_crop))
     elif center_crop:
@@ -30,12 +29,6 @@ def build_transform(normalize=True, center_crop=None, image_size=None,
 
     transform_.append(transforms.ToTensor())
 
-    if use_sobel:
-        transform_.append(Sobel())
-
     transform_.append(transforms.Normalize(*normalize))
-    if normalize[0] == (0.5, 0.5, 0.5):
-        IMAGE_SCALE = [-1, 1]
-
     transform = transforms.Compose(transform_)
     return transform
