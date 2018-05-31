@@ -111,6 +111,7 @@ def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', dim_z=64
           decoder_args={}):
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
+    data.add_noise('z', dist='normal', size=64)
 
     Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
     Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
@@ -135,7 +136,6 @@ INFO = dict(vae_criterion=dict(help='Reconstruction criterion.'),
 )
 
 DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=640),
-              noise_variables=dict(z=dict(dist='normal', size=64))),
+    data=dict(batch_size=dict(train=64, test=640)),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4),
-    train=dict(epochs=500, archive_every=10, save_on_lowest='losses.vae'))
+    train=dict(save_on_lowest='losses.vae'))

@@ -57,7 +57,5 @@ def setup_cortex():
     for k, v in exp.ARGS.items():
         logger.info('Ultimate {} arguments: \n{}'.format(k, pprint.pformat(v)))
 
-    exp.ARGS.data.copy_to_local = args.copy_to_local
-
     if models.ARCH.setup is not None:
         models.ARCH.setup(**exp.ARGS)

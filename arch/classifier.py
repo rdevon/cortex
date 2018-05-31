@@ -3,6 +3,7 @@
 '''
 
 
+from cortex.plugins import BuildPlugin, ExperimentPlugin, RoutinePlugin
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,76 +15,94 @@ mnist_args_ = dict(dim_h=64, batch_norm=True, dropout=0.2, f_size=5, pad=2, stri
 convnet_args_ = dict(dim_h=64, batch_norm=True, dropout=0.2, n_steps=3, nonlinearity='LeakyReLU')
 
 
-def routine(data, models, losses, results, viz, key='classifier', criterion=nn.CrossEntropyLoss()):
-    classifier = models[key]
-    inputs, targets = data.get_batch('images', 'targets')
+class ClassifyRoutinePlugin(RoutinePlugin):
+    name = 'classification'
 
-    predicted = classify(classifier, inputs, targets, losses=losses, results=results, criterion=criterion, key=key)
+    def run(self, key='classifier', criterion=nn.CrossEntropyLoss()):
+        '''
 
-    visualize(inputs, targets, predicted, viz=viz)
+        Args:
+            criterion: Classifier criterion.
 
+        Returns:
 
-def classify(classifier, inputs, targets, losses=None, results=None, criterion=None, backprop_input=False,
-             key='classifier'):
-    criterion = criterion or nn.CrossEntropyLoss()
+        '''
+        classifier = self.models[key]
+        inputs, targets = self.get_batch('images', 'targets')
 
-    #if not backprop_input:
-    #    inputs = inputs.detach()
+        predicted = self.classify(classifier, inputs, targets, criterion=criterion, key=key)
+        self.visualize(inputs, targets, predicted, key=key)
 
-    outputs = classifier(inputs)
-    predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
+    def classify(self, classifier, inputs, targets, criterion=None, key='classifier'):
+        criterion = criterion or nn.CrossEntropyLoss()
 
-    if losses is not None:
+        outputs = classifier(inputs)
+        predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
+
         loss = criterion(outputs, targets)
-        losses[key] = loss
+        self.losses[key] = loss
 
-    if results is not None:
         correct = 100. * predicted.eq(targets.data).cpu().sum() / targets.size(0)
-        results[key + '_accuracy'] = correct
+        self.results[key + '_accuracy'] = correct
 
-    return predicted
+        return predicted
 
-
-def visualize(viz_inputs, targets, predicted, viz=None, key='classifier'):
-    if viz:
-        viz.add_image(viz_inputs.data, labels=(targets.data, predicted.data), name=key + '_gt_pred')
-
-# CORTEX ===============================================================================================================
-# Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
-
-def BUILD(data, models, model_type='convnet', classifier_args={}):
-    classifier_args = classifier_args or {}
-    shape = data.get_dims('x', 'y', 'c')
-    dim_l = data.get_dims('labels')
-
-    if model_type == 'resnet':
-        args = resnet_args_
-    elif model_type == 'convnet':
-        args = convnet_args_
-    elif model_type == 'mnist':
-        args = mnist_args_
-    elif 'tv' in model_type:
-        args = {}
-    else:
-        raise NotImplementedError(model_type)
-
-    Encoder, args = update_encoder_args(shape, model_type=model_type, encoder_args=args)
-
-    args.update(**classifier_args)
-
-    classifier = Encoder(shape, dim_out=dim_l, **args)
-    models.update(classifier=classifier)
+    def visualize(self, inputs, targets, predicted, key='classifier'):
+        self.add_image(inputs.data, labels=(targets.data, predicted.data), name=key + '_gt_pred')
+ClassifyRoutinePlugin()
 
 
-TRAIN_ROUTINES = dict(classify=routine)
+class ImageClassifierBuildPlugin(BuildPlugin):
+    name = 'image_classifier'
+    def build(self, model_type='convnet', classifier_args={}):
+        '''Builds a simple image classifier.
 
-INFO = dict(criterion=dict(help='Classifier criterion.'),
-            model_type=dict(help='Model type.'),
-            classifier_args=dict(help='Classifier arguments. Can include dropout, batch_norm, layer_norm, etc.')
-)
+        Attributes:
+            blah: hello
+
+        Args:
+            model_type (str): Model type for the classifier.
+            classifier_args: Classifier arguments. Can include dropout, batch_norm, layer_norm, etc.
+
+        Returns:
+            whatever
+
+        '''
+        classifier_args = classifier_args or {}
+        shape = self.get_dims('x', 'y', 'c')
+        dim_l = self.get_dims('labels')
+
+        if model_type == 'resnet':
+            args = resnet_args_
+        elif model_type == 'convnet':
+            args = convnet_args_
+        elif model_type == 'mnist':
+            args = mnist_args_
+        elif 'tv' in model_type:
+            args = {}
+        else:
+            raise NotImplementedError(model_type)
+
+        Encoder, args = update_encoder_args(shape, model_type=model_type, encoder_args=args)
+
+        args.update(**classifier_args)
+
+        classifier = Encoder(shape, dim_out=dim_l, **args)
+        self.add_models(classifier=classifier)
+ImageClassifierBuildPlugin()
+
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=128),
     optimizer=dict(optimizer='Adam', learning_rate=1e-4),
     train=dict(epochs=200, archive_every=10, save_on_best='losses.classifier')
 )
+
+
+class ImageClassificationPlugin(ExperimentPlugin):
+    name = 'image_classifier'
+    build = ['image_classifier']
+    train_routines = ['classification']
+    defaults=DEFAULT_CONFIG
+ImageClassificationPlugin()
+

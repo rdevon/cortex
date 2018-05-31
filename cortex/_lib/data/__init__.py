@@ -110,7 +110,7 @@ class DatasetPlugin():
             from_path = from_path[:-1]
         basename = path.basename(from_path)
 
-        local_path = CONFIG.data_path.get('local')
+        local_path = CONFIG.data_paths.get('local')
 
         if local_path is None:
             raise ValueError()

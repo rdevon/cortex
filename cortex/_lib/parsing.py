@@ -7,7 +7,11 @@ __author_email__ = 'erroneus@gmail.com'
 
 import argparse
 import ast
+from inspect import cleandoc
 import logging
+
+from sphinxcontrib.napoleon import Config
+from sphinxcontrib.napoleon.docstring import GoogleDocstring
 
 from . import data, optimizer, train
 
@@ -47,7 +51,6 @@ def make_argument_parser():
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
     parser.add_argument('-M', '--load_models', type=str, default=None,
                         help=('Path to model to reload. Does not load args, info, etc'))
-    parser.add_argument('-C', '--copy_to_local', action='store_true', default=False)
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
                         help=('Configuration yaml file. '
@@ -145,3 +148,15 @@ def parse_args(archs):
     args = parser.parse_args()
 
     return args
+
+
+def parse_docstring(f):
+    import re
+    doc = cleandoc(f.__doc__)
+    config = Config()
+    google_doc = GoogleDocstring(doc, config)
+    rst = str(google_doc)
+    param_regex = r':param (?P<param>\w+): (?P<doc>.*)'
+    m = re.findall(param_regex, rst)
+    args_help = dict((k, v) for k, v in m)
+    return args_help

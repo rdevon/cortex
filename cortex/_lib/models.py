@@ -10,10 +10,11 @@ import inspect
 import logging
 import sys
 import os
-import traceback
 
 import torch.nn as nn
 
+from .data import DATA_HANDLER
+from .parsing import parse_docstring
 from .utils import Handler
 
 
@@ -32,7 +33,6 @@ class ModelHandler(Handler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #super().unsafe_set('special', Handler())
 
     def check_key_value(self, k, v):
         if k in self:
@@ -60,7 +60,7 @@ class ModelHandler(Handler):
 MODEL_HANDLER = ModelHandler()
 
 
-class ArchHandler(object):
+class ExperimentHandler(object):
     def __init__(self, defaults=None, setup=None, build=None, Dataset=None, DataLoader=None, transform=None,
                  train_routines=None, test_routines=None, finish_train_routines=None, finish_test_routines=None,
                  doc=None, kwargs=dict(), signatures=[], info=dict(), eval_routine=None):
@@ -99,6 +99,85 @@ class ArchHandler(object):
         return Handler(model=model, routines=routines)
 
 
+_BUILD_PLUGINS = {}
+class BuildPlugin():
+    name = None
+    def __init__(self):
+        global _BUILD_PLUGINS
+        if self.name is None:
+            raise ValueError('Set `name` static member for plugin.')
+        if self.name in _BUILD_PLUGINS:
+            raise KeyError('`name` already registered as a build plugin in cortex. Try using another one.')
+        if not hasattr(self, 'build'):
+            raise AttributeError('Build plugin must have build method implemented.')
+
+        self.help = parse_docstring(self.build)
+
+        sig = inspect.signature(self.build)
+        self.kwargs = {}
+        signatures = []
+        for i, (sk, sv) in enumerate(sig.parameters.items()):
+            if sk == 'kwargs':
+                pass
+            signatures.append(sv.name)
+            if sv.default is not None:
+                self.kwargs[sv.name] = sv.default
+
+        _BUILD_PLUGINS[self.name] = self
+
+    def add_models(self, **kwargs):
+        global MODEL_HANDLER
+        for k, v in kwargs.items():
+            MODEL_HANDLER[k] = v
+
+    def get_dims(self, *args, **kwargs):
+        return DATA_HANDLER.get_batch(*args, **kwargs)
+
+    def add_noise(self, *args, **kwargs):
+        return DATA_HANDLER.add_noise(*args, **kwargs)
+
+
+_ROUTINE_PLUGINS = {}
+class RoutinePlugin():
+    name = None
+    def __init__(self):
+        if self.name is None:
+            raise ValueError('Set `name` static member for plugin.')
+        if self.name in _BUILD_PLUGINS:
+            raise KeyError('`name` already registered as a routine plugin in cortex. Try using another one.')
+        if not hasattr(self, 'run'):
+            raise AttributeError('Routine plugin must have `run` method implemented.')
+
+
+_EXPERIMENT_PLUGINS = {}
+class ExperimentPlugin():
+    name = None
+    defaults = None
+    setup = None
+    build = None
+    train_routines = None
+    test_routines = None
+    finish_train_routines = None
+    finish_test_routines = None
+    eval_routine = None
+
+    _required_keys = ['train_routines', 'build']
+
+    def __init__(self):
+        global _EXPERIMENT_PLUGINS
+        if self.name is None:
+            raise ValueError('Set `_name` static member for plugin.')
+        if self.name in _EXPERIMENT_PLUGINS:
+            raise KeyError('`_name` already registered as an experiment plugin in cortex. Try using another one.')
+
+        for k in self._required_keys:
+            if getattr(self, k) is None:
+                raise AttributeError('Plugin must have {} attribute set.'.format(k))
+
+        _EXPERIMENT_PLUGINS[self.name] = self
+
+        #, kwargs = dict(), signatures = [], info = dict(),
+
 def setup_arch(arch):
     global ARCH
     logger.info('Using architecture `{}`'.format(arch))
@@ -109,12 +188,6 @@ def setup_arch(arch):
             arch, ARCHS.keys()))
     return ARCH
 
-
-_arch_keys_required = dict(
-    DEFAULT_CONFIG='defaults',
-    TRAIN_ROUTINES='train_routines',
-    BUILD='build'
-)
 
 _arch_keys_optional = dict(
     TEST_ROUTINES='test_routines',
@@ -145,87 +218,63 @@ def add_directory(p, name):
     for fn in os.listdir(p):
         if fn.endswith('.py') and not fn in _ignore:
             fnp = fn[:-3]
-            logger.info('Importing {}'.format(fnp))
+            print('Importing {}'.format(fnp))
+            success = True
             try:
-                success = True
                 m = importlib.import_module(fnp)
+            except:
+                pass
+            assert False, _BUILD_PLUGINS['image_classifier'].help
 
-                arch_dict = {}
-                for k, v in _arch_keys_required.items():
-                    if success:
-                        if not hasattr(m, k):
-                            raise AttributeError('Architecture (module) {} lacks `{}` skipping'.format(fnp, k))
-                        else:
-                            arch_dict[v] = getattr(m, k)
-
-                kwargs = {}
-                signatures = {}
-                for k, v in arch_dict['train_routines'].items():
-                    sig = inspect.signature(v)
-                    signatures[k] = []
-                    for i, (sk, sv) in enumerate(sig.parameters.items()):
-                        if i < 5 and (sk == 'kwargs' or sv.default != inspect._empty):
-                            raise ValueError('First 5 elements of routines ({}) must be parameters'.format(k))
-                        elif i >= 5 and (sk != 'kwargs' and sv.default == inspect._empty):
-                            raise ValueError('Only the first 5 elements of routines ({}) can be parameters'.format(k))
-                        elif i >= 5:
-                            if sk == 'kwargs':
-                                pass # For handling old-style files
-                            else:
-                                signatures[k].append(sv.name)
-                                if sv.default is not None:
-                                    if sv.name in kwargs and kwargs[sv.name] != sv.default:
-                                        logger.warning('Multiple values found for {}. This may be undesired.'.format(sv.name))
-                                    kwargs[sv.name] = sv.default
-
-                sig = inspect.signature(arch_dict['build'])
-                signatures['model'] = []
+            kwargs = {}
+            signatures = {}
+            for k, v in arch_dict['train_routines'].items():
+                sig = inspect.signature(v)
+                signatures[k] = []
                 for i, (sk, sv) in enumerate(sig.parameters.items()):
-                    if i < 2 and (sk == 'kwargs' or sv.default != inspect._empty):
-                        raise ValueError('First 2 elements of BUILD must be parameters ({})'.format(sk))
-                    elif i >= 2 and (sk != 'kwargs' and sv.default == inspect._empty):
-                        raise ValueError('Only the first 2 elements of BUILD can be parameters ({})'.format(sk))
-                    elif i >= 2:
+                    if i < 5 and (sk == 'kwargs' or sv.default != inspect._empty):
+                        raise ValueError('First 5 elements of routines ({}) must be parameters'.format(k))
+                    elif i >= 5 and (sk != 'kwargs' and sv.default == inspect._empty):
+                        raise ValueError('Only the first 5 elements of routines ({}) can be parameters'.format(k))
+                    elif i >= 5:
                         if sk == 'kwargs':
-                            pass
-                        signatures['model'].append(sv.name)
-                        if sv.default is not None:
-                            if sv.name in kwargs and kwargs[sv.name] != sv.default:
-                                logger.warning('Multiple values found for {}. This may be undesired.'.format(sv.name))
-                            kwargs[sv.name] = sv.default
-                arch_dict['kwargs'] = kwargs
-                arch_dict['signatures'] = signatures
+                            pass # For handling old-style files
+                        else:
+                            signatures[k].append(sv.name)
+                            if sv.default is not None:
+                                if sv.name in kwargs and kwargs[sv.name] != sv.default:
+                                    logger.warning('Multiple values found for {}. This may be undesired.'.format(sv.name))
+                                kwargs[sv.name] = sv.default
 
-                for k, v in _arch_keys_optional.items():
-                    if hasattr(m, k):
-                        arch_dict[v] = getattr(m, k)
-                    else:
-                        arch_dict[v] = None
+            arch_dict['kwargs'] = kwargs
+            arch_dict['signatures'] = signatures
 
-                if hasattr(m, 'EVAL'):
-                    eval = getattr(m, 'EVAL')
-                    arch_dict['eval_routine'] = eval
+            for k, v in _arch_keys_optional.items():
+                if hasattr(m, k):
+                    arch_dict[v] = getattr(m, k)
+                else:
+                    arch_dict[v] = None
 
-                if hasattr(m, 'INFO'):
-                    info = getattr(m, 'INFO')
-                    arch_dict['info'] = info
+            if hasattr(m, 'EVAL'):
+                eval = getattr(m, 'EVAL')
+                arch_dict['eval_routine'] = eval
 
-                arch_dict['doc'] = m.__doc__
+            if hasattr(m, 'INFO'):
+                info = getattr(m, 'INFO')
+                arch_dict['info'] = info
 
-                if name in ARCHS.keys():
-                    logger.warning('Architecture (module) {} has the same name '
-                                   '(and path structure) as another architecture, skipping'.format(name))
-                    success = False
+            arch_dict['doc'] = m.__doc__
 
-            except Exception as e:
-                logger.warning('Import of architecture (module) {} failed ({})'.format(fnp, e))
+            if name in ARCHS.keys():
+                logger.warning('Architecture (module) {} has the same name '
+                               '(and path structure) as another architecture, skipping'.format(name))
                 success = False
 
-            finally:
-                if success:
-                    namep = name + '.' + fn[:-3]
-                    m.logger = logging.getLogger('cortex.arch' + namep)
-                    ARCHS[namep] = ArchHandler(**arch_dict)
+
+            if success:
+                namep = name + '.' + fn[:-3]
+                m.logger = logging.getLogger('cortex.arch' + namep)
+                ARCHS[namep] = ArchHandler(**arch_dict)
         elif os.path.isdir(fn):
             if fn.endswith('/'):
                 fn = fn[:-1]

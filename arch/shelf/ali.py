@@ -157,6 +157,8 @@ def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', discrimi
         encoder_args=None, decoder_args=None, discriminator_args=None, add_supervision=False):
     global TRAIN_ROUTINES
 
+    data.add_noise('z', dist='normal', size=64)
+
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
@@ -188,8 +190,7 @@ INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', '
 )
 
 DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=640),
-              noise_variables=dict(z=dict(dist='normal', size=64))),
+    data=dict(batch_size=dict(train=64, test=640)),
     optimizer=dict(
         optimizer='Adam',
         learning_rate=1e-4,
