@@ -6,187 +6,203 @@ __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 import importlib
-import inspect
 import logging
 import sys
 import os
 
-import torch.nn as nn
-
-from .data import DATA_HANDLER
-from .parsing import parse_docstring
-from .utils import Handler
+from .parsing import parse_docstring, parse_header, parse_kwargs
+from .handlers import Handler, NetworkHandler
 
 
 logger = logging.getLogger('cortex.models')
-ARCHS = dict()
-
-
-class ModelHandler(Handler):
-    '''
-    Simple dict-like container for nn.Module's
-    '''
-
-    _type = nn.Module
-    _get_error_string = 'Model `{}` not found. You must add it in `build_models` (as a dict entry). Found: {}'
-    _special = Handler()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def check_key_value(self, k, v):
-        if k in self:
-            logger.warning('Key {} already in MODEL_HANDLER, ignoring.'.format(k))
-            return False
-
-        if k in self._protected:
-            raise KeyError('Keyword `{}` is protected.'.format(k))
-
-        if isinstance(v, (list, tuple)):
-            for v_ in v:
-                self.check_key_value(k, v_)
-        elif self._type and not isinstance(v, self._type):
-            raise ValueError('Type `{}` of `{}` not allowed. Only `{}` and subclasses (or tuples of {}) are supported'.format(
-                type(v), k, self._type, self._type))
-
-        return True
-
-    def get_special(self, key):
-        return self._special[key]
-
-    def add_special(self, **kwargs):
-        self._special.update(**kwargs)
-
-MODEL_HANDLER = ModelHandler()
-
-
-class ExperimentHandler(object):
-    def __init__(self, defaults=None, setup=None, build=None, Dataset=None, DataLoader=None, transform=None,
-                 train_routines=None, test_routines=None, finish_train_routines=None, finish_test_routines=None,
-                 doc=None, kwargs=dict(), signatures=[], info=dict(), eval_routine=None):
-        self.defaults = defaults
-        self.setup = setup
-        self.build = build
-        self.Dataset = Dataset
-        self.DataLoader = DataLoader
-        self.transform = transform
-
-        self.train_routines = train_routines
-        self.test_routines = test_routines or {}
-        self.finish_train_routines = finish_train_routines or {}
-        self.finish_test_routines = finish_test_routines or {}
-        self.eval_routine = eval_routine
-
-        self.doc = doc
-        self.kwargs = kwargs
-        self.signatures = signatures
-        self.info = info
-
-    def unpack_args(self, args):
-        model = Handler()
-        routines = Handler()
-        for k, v in vars(args).items():
-            for sig_k, sig_v in self.signatures.items():
-                if k in sig_v:
-                    if sig_k == 'model':
-                        model[k] = v
-                    else:
-                        if sig_k not in routines:
-                            routines[sig_k] = {k:v}
-                        else:
-                            routines[sig_k][k] = v
-
-        return Handler(model=model, routines=routines)
-
-
-_BUILD_PLUGINS = {}
-class BuildPlugin():
-    name = None
-    def __init__(self):
-        global _BUILD_PLUGINS
-        if self.name is None:
-            raise ValueError('Set `name` static member for plugin.')
-        if self.name in _BUILD_PLUGINS:
-            raise KeyError('`name` already registered as a build plugin in cortex. Try using another one.')
-        if not hasattr(self, 'build'):
-            raise AttributeError('Build plugin must have build method implemented.')
-
-        self.help = parse_docstring(self.build)
-
-        sig = inspect.signature(self.build)
-        self.kwargs = {}
-        signatures = []
-        for i, (sk, sv) in enumerate(sig.parameters.items()):
-            if sk == 'kwargs':
-                pass
-            signatures.append(sv.name)
-            if sv.default is not None:
-                self.kwargs[sv.name] = sv.default
-
-        _BUILD_PLUGINS[self.name] = self
-
-    def add_models(self, **kwargs):
-        global MODEL_HANDLER
-        for k, v in kwargs.items():
-            MODEL_HANDLER[k] = v
-
-    def get_dims(self, *args, **kwargs):
-        return DATA_HANDLER.get_batch(*args, **kwargs)
-
-    def add_noise(self, *args, **kwargs):
-        return DATA_HANDLER.add_noise(*args, **kwargs)
-
+MODEL = None
 
 _ROUTINE_PLUGINS = {}
-class RoutinePlugin():
-    name = None
-    def __init__(self):
-        if self.name is None:
-            raise ValueError('Set `name` static member for plugin.')
-        if self.name in _BUILD_PLUGINS:
-            raise KeyError('`name` already registered as a routine plugin in cortex. Try using another one.')
-        if not hasattr(self, 'run'):
-            raise AttributeError('Routine plugin must have `run` method implemented.')
+_BUILD_PLUGINS = {}
+MODEL_PLUGINS = {}
+NETWORK_HANDLER = NetworkHandler()
 
 
-_EXPERIMENT_PLUGINS = {}
-class ExperimentPlugin():
-    name = None
-    defaults = None
-    setup = None
-    build = None
-    train_routines = None
-    test_routines = None
-    finish_train_routines = None
-    finish_test_routines = None
-    eval_routine = None
+def check_plugin(plugin, plugin_type_str, D):
+    if plugin.plugin_name is None:
+        ValueError('Set `plugin_name` static member for plugin.')
+    if plugin.plugin_name in D:
+        raise KeyError('plugin_name `{}` already registered as a {} plugin in cortex. '
+                       'Try using another one.'.format(plugin_type_str, plugin.plugin_name))
 
-    _required_keys = ['train_routines', 'build']
+    for k in plugin._protected:
+        if hasattr(plugin, k):
+            raise AttributeError('{} is a protected attribute.'.format(k))
 
-    def __init__(self):
-        global _EXPERIMENT_PLUGINS
-        if self.name is None:
-            raise ValueError('Set `_name` static member for plugin.')
-        if self.name in _EXPERIMENT_PLUGINS:
-            raise KeyError('`_name` already registered as an experiment plugin in cortex. Try using another one.')
+    for k in plugin._required:
+        v = getattr(plugin, k, None)
+        if v is None:
+            raise AttributeError('Plugin must have {} attribute set.'.format(k))
+        else:
+            setattr(plugin, k, v)
 
-        for k in self._required_keys:
-            if getattr(self, k) is None:
-                raise AttributeError('Plugin must have {} attribute set.'.format(k))
 
-        _EXPERIMENT_PLUGINS[self.name] = self
+def register_build(plugin):
+    global _BUILD_PLUGINS
+    check_plugin(plugin, 'build', _BUILD_PLUGINS)
 
-        #, kwargs = dict(), signatures = [], info = dict(),
+    plugin.help = parse_docstring(plugin.build)
+    plugin.kwargs = parse_kwargs(plugin.build)
 
-def setup_arch(arch):
-    global ARCH
-    logger.info('Using architecture `{}`'.format(arch))
-    ARCH = ARCHS.get(arch, None)
-    if ARCH is None:
-        raise ValueError('Arch not found ({}). Did you register it? '
-                         'Available: {}'.format(
-            arch, ARCHS.keys()))
-    return ARCH
+    _BUILD_PLUGINS[plugin.plugin_name] = plugin
+
+
+def register_routine(plugin):
+    global _ROUTINE_PLUGINS
+    check_plugin(plugin, 'routine', _ROUTINE_PLUGINS)
+
+    plugin.help = parse_docstring(plugin.run)
+    plugin.kwargs = parse_kwargs(plugin.run)
+
+    _ROUTINE_PLUGINS[plugin.plugin_name] = plugin
+
+
+def register_model(plugin):
+    global MODEL_PLUGINS
+    check_plugin(plugin, 'model', MODEL_PLUGINS)
+
+    plugin.help, plugin.description = parse_header(plugin)
+
+    MODEL_PLUGINS[plugin.plugin_name] = plugin
+
+
+class BuildReference():
+    def __init__(self, key, **kwargs):
+        self.reference = key
+        self.kwargs = kwargs
+
+    def resolve(self):
+        try:
+            plugin = _BUILD_PLUGINS[self.reference]
+        except KeyError:
+            raise KeyError('Build `{}` not registered in cortex. '
+                           'Available: {}'.format(self.reference, _BUILD_PLUGINS.keys()))
+        return plugin(**self.kwargs)
+
+class RoutineReference():
+    def __init__(self, key, **kwargs):
+        self.reference = key
+        self.kwargs = kwargs
+
+    def resolve(self):
+        try:
+            plugin = _ROUTINE_PLUGINS[self.reference]
+        except KeyError:
+            raise KeyError('Routine `{}` not registered in cortex. '
+                           'Available: {}'.format(self.reference, _ROUTINE_PLUGINS.keys()))
+        return plugin(**self.kwargs)
+
+
+class BuildPluginBase():
+    pass
+
+
+class RoutinePluginBase():
+    _training_models = []
+    pass
+
+
+class ModelPluginBase():
+
+    def check(self):
+        for key in self.routines.keys():
+            routine = self.routines[key]
+            if isinstance(routine, RoutinePluginBase):
+                pass
+            elif isinstance(routine, RoutineReference):
+                self.routines[key] = routine.resolve()
+            else:
+                raise ValueError
+
+        for key in self.builds.keys():
+            build = self.builds[key]
+            if isinstance(build, BuildPluginBase):
+                pass
+            elif isinstance(build, BuildReference):
+                self.builds[key] = build.resolve()
+            else:
+                raise ValueError
+
+    def get_kwargs(self):
+        kwargs = {}
+        def add_kwargs(obj):
+            for k, v in obj.kwargs.items():
+                if k in kwargs:
+                    if v is None:
+                        pass
+                    elif kwargs[k] is None:
+                        kwargs[k] = v
+                    elif kwargs[k] != v:
+                        logger.warning('Multiple default values found for {}. This may have unintended '
+                                       'effects. Using {}'.format(k, kwargs[k]))
+                else:
+                    kwargs[k] = v
+
+        for build in self.builds.values():
+            add_kwargs(build)
+
+        for routine in self.routines.values():
+            add_kwargs(routine)
+
+        return kwargs
+
+    def get_help(self):
+        helps = {}
+        def add_help(obj):
+            for k, v in obj.help.items():
+                if k in helps:
+                    if v is None:
+                        pass
+                    elif helps[k] is None:
+                        helps[k] = v
+                    elif helps[k] != v:
+                        logger.warning('Multiple default values found for {} help. This may have unintended '
+                                       'effects. Using {}'.format(k, helps[k]))
+                else:
+                    helps[k] = v
+
+        for build in self.builds.values():
+            add_help(build)
+
+        for routine in self.routines.values():
+            add_help(routine)
+
+        return helps
+
+    def unpack_args(self):
+        builds = Handler()
+        routines = Handler()
+
+        kwargs = self.get_kwargs()
+
+        for key, build in self.builds.items():
+            for k_, v in kwargs.items():
+                if k_ in build.kwargs:
+                    if key in builds:
+                        builds[key][k_] = v
+                    else:
+                        builds[key] = {k_: v}
+
+        for key, routine in self.routines.items():
+            for k_, v in kwargs.items():
+                if k_ in routine.kwargs:
+                    if key in builds:
+                        routines[key][k_] = v
+                    else:
+                        routines[key] = {k_: v}
+        return Handler(builds=builds, routines=routines)
+
+
+def setup_model(model_key):
+    global MODEL
+    logger.info('Using model `{}`'.format(model_key))
+    MODEL = MODEL_PLUGINS[model_key]
+    return MODEL
 
 
 _arch_keys_optional = dict(
@@ -202,7 +218,7 @@ _arch_keys_optional = dict(
 _ignore = ['__init__.py', '__pycache__']
 
 
-def add_directory(p, name):
+def import_directory(p, name):
     '''
     Adds custom directories to the framwework
     '''
@@ -218,96 +234,51 @@ def add_directory(p, name):
     for fn in os.listdir(p):
         if fn.endswith('.py') and not fn in _ignore:
             fnp = fn[:-3]
-            print('Importing {}'.format(fnp))
-            success = True
+            importlib.import_module(fnp)
             try:
-                m = importlib.import_module(fnp)
-            except:
-                pass
-            assert False, _BUILD_PLUGINS['image_classifier'].help
+                importlib.import_module(fnp)
+            except Exception as e:
+                logger.warning('Import of architecture (module) {} failed ({})'.format(fnp, e))
 
-            kwargs = {}
-            signatures = {}
-            for k, v in arch_dict['train_routines'].items():
-                sig = inspect.signature(v)
-                signatures[k] = []
-                for i, (sk, sv) in enumerate(sig.parameters.items()):
-                    if i < 5 and (sk == 'kwargs' or sv.default != inspect._empty):
-                        raise ValueError('First 5 elements of routines ({}) must be parameters'.format(k))
-                    elif i >= 5 and (sk != 'kwargs' and sv.default == inspect._empty):
-                        raise ValueError('Only the first 5 elements of routines ({}) can be parameters'.format(k))
-                    elif i >= 5:
-                        if sk == 'kwargs':
-                            pass # For handling old-style files
-                        else:
-                            signatures[k].append(sv.name)
-                            if sv.default is not None:
-                                if sv.name in kwargs and kwargs[sv.name] != sv.default:
-                                    logger.warning('Multiple values found for {}. This may be undesired.'.format(sv.name))
-                                kwargs[sv.name] = sv.default
-
-            arch_dict['kwargs'] = kwargs
-            arch_dict['signatures'] = signatures
-
-            for k, v in _arch_keys_optional.items():
-                if hasattr(m, k):
-                    arch_dict[v] = getattr(m, k)
-                else:
-                    arch_dict[v] = None
-
-            if hasattr(m, 'EVAL'):
-                eval = getattr(m, 'EVAL')
-                arch_dict['eval_routine'] = eval
-
-            if hasattr(m, 'INFO'):
-                info = getattr(m, 'INFO')
-                arch_dict['info'] = info
-
-            arch_dict['doc'] = m.__doc__
-
-            if name in ARCHS.keys():
-                logger.warning('Architecture (module) {} has the same name '
-                               '(and path structure) as another architecture, skipping'.format(name))
-                success = False
-
-
-            if success:
-                namep = name + '.' + fn[:-3]
-                m.logger = logging.getLogger('cortex.arch' + namep)
-                ARCHS[namep] = ArchHandler(**arch_dict)
+        '''
         elif os.path.isdir(fn):
             if fn.endswith('/'):
                 fn = fn[:-1]
             if fn not in _ignore:
                 add_directory(fn, name + '.' + os.path.basename(fn))
+        '''
 
-
-def find_archs(arch_paths):
+def find_models(model_paths):
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     arch_dir = os.path.abspath(os.path.join(root, 'arch'))
-    arch_paths.update(core=arch_dir)
-    for k, p in arch_paths.items():
-        add_directory(p, k)
+    model_paths.update(core=arch_dir)
+    for k, p in model_paths.items():
+        import_directory(p, k)
 
+    global MODEL_PLUGINS
+    keys = list(MODEL_PLUGINS.keys())
+    for k in keys:
+        v = MODEL_PLUGINS[k]
+        v.check()
+        try:
+            v.check()
+        except Exception as e:
+            logger.warning('`{}` checks failed ({}).'.format(k, e))
+            MODEL_PLUGINS.pop(k)
 
-def setup_model(data_handler, **model_args):
+def build_networks(**build_args):
     '''Builds the generator and discriminator.
 
     If architecture module contains a `build_model` function, use that,
     otherwise, use the one found in this module.
 
     '''
-    global ARCH, MODEL_HANDLER
+    for build_key, build in MODEL.builds.items():
+        args = build_args[build_key]
+        logger.debug('{} build args: {}'.format(build_key, args))
+        build(**args)
 
-    logger.debug('Model args: {}'.format(model_args))
-    ARCH.build(data_handler, MODEL_HANDLER, **model_args)
-
-    if ARCH.test_routines is not None:
-        for k in ARCH.train_routines:
-            if not k in ARCH.test_routines:
-                ARCH.test_routines[k] = ARCH.train_routines[k]
-    else:
-        ARCH.test_routines = ARCH.train_routines
+    MODEL.setup_routine_nets()
 
 
 def reload_models(**reload_models):

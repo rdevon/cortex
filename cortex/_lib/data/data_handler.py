@@ -34,13 +34,13 @@ class DataHandler(object):
     def add_dataset(self, source, dataset_entrypoint, n_workers=4, shuffle=True, DataLoader=None):
         DataLoader = DataLoader or torch.utils.data.DataLoader
 
-        if len(dataset_entrypoint.datasets) == 0:
+        if len(dataset_entrypoint._datasets) == 0:
             raise ValueError('No datasets found in entrypoint')
 
         loaders = {}
-        for k, dataset in dataset_entrypoint.datasets.items():
+        for k, dataset in dataset_entrypoint._datasets.items():
             N = len(dataset)
-            dataset_entrypoint.dims['N_' + k] = N
+            dataset_entrypoint._dims['N_' + k] = N
 
             if isinstance(self.batch_size, dict):
                 try:
@@ -57,8 +57,8 @@ class DataHandler(object):
             loaders[k] = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=n_workers,
                                     worker_init_fn=lambda x: signal.signal(signal.SIGINT, signal.SIG_IGN))
 
-        self.dims[source] = dataset_entrypoint.dims
-        self.input_names[source] = dataset_entrypoint.input_names
+        self.dims[source] = dataset_entrypoint._dims
+        self.input_names[source] = dataset_entrypoint._input_names
         self.loaders[source] = loaders
 
     def add_noise(self, key, dist=None, size=None, **kwargs):

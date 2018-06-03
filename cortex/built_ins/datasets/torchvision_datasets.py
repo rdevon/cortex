@@ -7,13 +7,13 @@ import os
 import numpy as np
 import torchvision
 
-from cortex.plugins import DatasetPlugin
+from cortex.plugins import DatasetPlugin, register_plugin
 from .utils import build_transforms
 
 
 class TorchvisionDatasetPlugin(DatasetPlugin):
-    _sources = ['CIFAR10', 'CIFAR100', 'CocoCaptions', 'CocoDetection', 'FakeData', 'FashionMNIST',
-                'ImageFolder', 'LSUN', 'LSUNClass', 'MNIST', 'PhotoTour', 'SEMEION', 'STL10', 'SVHN']
+    sources = ['CIFAR10', 'CIFAR100', 'CocoCaptions', 'CocoDetection', 'FakeData', 'FashionMNIST',
+               'ImageFolder', 'LSUN', 'LSUNClass', 'MNIST', 'PhotoTour', 'SEMEION', 'STL10', 'SVHN']
 
     def _handle_LSUN(self, Dataset, data_path, transform=None):
         train_set = Dataset(data_path, classes=['bedroom_train'], transform=transform)
@@ -91,5 +91,4 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
 
         if scale is not None:
             self.set_scale(scale)
-
-TorchvisionDatasetPlugin()
+register_plugin(TorchvisionDatasetPlugin)

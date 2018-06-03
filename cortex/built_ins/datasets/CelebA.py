@@ -11,7 +11,7 @@ from .utils import build_transforms
 
 
 class CelebAPlugin(DatasetPlugin):
-    _sources = ['CelebA']
+    sources = ['CelebA']
 
     def handle(self, source, copy_to_local=False, normalize=True, **transform_args):
         Dataset = self.make_indexing(CelebA)

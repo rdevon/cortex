@@ -7,9 +7,9 @@ __author_email__ = 'erroneus@gmail.com'
 
 import logging
 
-from cortex._lib import setup_cortex, exp
-from cortex._lib.data import setup as setup_data, DATA_HANDLER
-from cortex._lib.models import setup_model
+from cortex._lib import exp
+from cortex._lib.data import setup as setup_data
+from cortex._lib.models import build_networks
 from cortex._lib.optimizer import setup as setup_optimizer
 from cortex._lib.train import setup as setup_train, main_loop
 from cortex._lib.utils import print_section
@@ -29,7 +29,7 @@ def main():
         setup_data(**exp.ARGS.data)
 
         print_section('MODEL') #####################################################
-        setup_model(DATA_HANDLER, **exp.ARGS.model)
+        build_networks(**exp.ARGS.builds)
 
         print_section('OPTIMIZER') #################################################
         setup_optimizer(**exp.ARGS.optimizer)

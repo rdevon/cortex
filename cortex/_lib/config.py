@@ -7,7 +7,7 @@ from os import path
 import pprint
 import yaml
 
-from .utils import Handler
+from .handlers import Handler
 
 
 logger = logging.getLogger('cortex.config')

@@ -22,8 +22,8 @@ from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
 
 logger = logging.getLogger('cortex.viz')
-visualizer = None
 config_font = None
+visualizer = None
 _options = dict(use_tanh=False, quantized=False, img=None, label_names=None,
                 is_caption=False, is_attribute=False)
 
