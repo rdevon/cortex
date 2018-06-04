@@ -81,7 +81,7 @@ class BuildReference():
             plugin = _BUILD_PLUGINS[self.reference]
         except KeyError:
             raise KeyError('Build `{}` not registered in cortex. '
-                           'Available: {}'.format(self.reference, _BUILD_PLUGINS.keys()))
+                           'Available: {}'.format(self.reference, tuple(_BUILD_PLUGINS.keys())))
         return plugin(**self.kwargs)
 
 class RoutineReference():
@@ -94,7 +94,7 @@ class RoutineReference():
             plugin = _ROUTINE_PLUGINS[self.reference]
         except KeyError:
             raise KeyError('Routine `{}` not registered in cortex. '
-                           'Available: {}'.format(self.reference, _ROUTINE_PLUGINS.keys()))
+                           'Available: {}'.format(self.reference, tuple(_ROUTINE_PLUGINS.keys())))
         return plugin(**self.kwargs)
 
 

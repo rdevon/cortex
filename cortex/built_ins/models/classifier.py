@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import update_encoder_args
+from .utils import update_encoder_args
 
 
 class ClassifyRoutine(RoutinePlugin):
@@ -51,7 +51,7 @@ class ClassifyRoutine(RoutinePlugin):
         self.add_image(inputs.data, labels=(targets.data, predicted.data), name=self.name + '_gt_pred')
 register_plugin(ClassifyRoutine)
 
-assert False 
+
 class ImageClassifierBuild(BuildPlugin):
     '''Build for a simple image classifier.
 
@@ -96,5 +96,5 @@ class ImageClassification(ModelPlugin):
         super().__init__()
         self.add_build(ImageClassifierBuild, name='my_build')
         self.add_routine(ClassifyRoutine, classifier='image_classifier', inputs='data.images', targets='data.targets')
-        self.add_train_procedure('image_classifier')
+        self.add_train_procedure('classification')
 register_plugin(ImageClassification)
