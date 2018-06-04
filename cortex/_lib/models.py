@@ -7,11 +7,17 @@ __author_email__ = 'erroneus@gmail.com'
 
 import importlib
 import logging
-import sys
 import os
+import sys
+import time
 
+import torch
+
+from . import data, exp, models, optimizer
 from .parsing import parse_docstring, parse_header, parse_kwargs
-from .handlers import Handler, NetworkHandler
+from .handlers import Handler, NetworkHandler, LossHandler, ResultsHandler
+from .utils import bad_values, update_dict_of_lists
+from .viz import VizHandler
 
 
 logger = logging.getLogger('cortex.models')
@@ -99,15 +105,98 @@ class RoutineReference():
 
 
 class BuildPluginBase():
-    pass
+    def __init__(self, **kwargs):
+        self._data = data.DATA_HANDLER
+        self._nets = models.NETWORK_HANDLER
+        self._names = {}
+
+        keys = self.plugin_nets
+        for k, v in kwargs.items():
+            if k not in keys:
+                raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
+            if k in self._names:
+                raise KeyError('`{}` is already set'.format(k))
+            self._names[k] = v
+
+    def __call__(self, **kwargs):
+        if not hasattr(self, 'build'):
+            raise ValueError('Build {} does not have `build` method set'.format(self.name))
+        self.build(**kwargs)
 
 
 class RoutinePluginBase():
     _training_models = []
-    pass
+
+    def __init__(self, name=None, **kwargs):
+        self.updates = 1
+        self._names = {}
+        self.nets = NetworkHandler()
+        self.results = ResultsHandler()
+        self.losses = LossHandler(self.nets)
+        self.inputs = Handler()
+        self.training_nets = []
+        self.name = name or self.plugin_name
+        self.viz = None
+
+        keys = self.plugin_nets + self.plugin_inputs + self.plugin_outputs
+        for k, v in kwargs.items():
+            if k not in keys:
+                raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
+            if k in self._names:
+                raise KeyError('`{}` is already set'.format(k))
+            self._names[k] = v
+
+    def __call__(self, **kwargs):
+        if not hasattr(self, 'run'):
+            raise ValueError('Routine {} does not have `run` method set'.format(self.name))
+        outputs = self.run(**kwargs)
+        if outputs is None:
+            return {}
+        if not isinstance(outputs, tuple):
+            outputs = (outputs,)
+        if len(outputs) != len(self.plugin_outputs):
+            raise ValueError('Routine has different number of outputs ({}) '
+                             'than is set from `plugin_outputs` ({}).'.format(len(outputs), len(self.plugin_outputs)))
+
+        out_dict = {}
+        for k, v in zip(self.plugin_outputs, outputs):
+            k_ = self._names.get(k, k)
+            out_dict[k_] = v
+        return out_dict
+
+    def perform_routine(self, **kwargs):
+        # Run routine
+        if exp.DEVICE == torch.device('cpu'):
+            return self(**kwargs)
+        else:
+            with torch.cuda.device(exp.DEVICE.index):
+                return self(**kwargs)
+
+    def reset(self):
+        self.results.clear()
+        self.losses.clear()
+        self.inputs.clear()
+
+    def set_viz(self, viz):
+        self._viz = viz
 
 
 class ModelPluginBase():
+    def __init__(self):
+        self.builds = {}
+        self.routines = {}
+        self.defaults = dict(data=self.data_defaults, optimizer=self.optimizer_defaults, train=self.train_defaults)
+        self.train_procedures = []
+        self.eval_procedures = []
+
+        self.setup = None
+
+        self.results = ResultsHandler(time=dict(), losses=dict())
+        self.nets = models.NETWORK_HANDLER
+        self.losses = LossHandler(self.nets)
+        self.inputs = Handler()
+        self._data = data.DATA_HANDLER
+        self.kwargs = {}
 
     def check(self):
         for key in self.routines.keys():
@@ -196,6 +285,152 @@ class ModelPluginBase():
                         routines[key] = {k_: v}
 
         return Handler(builds=builds, routines=routines)
+
+    def run_procedure(self, i, quit_on_bad_values=False):
+        self._data.next()
+        self.reset_routines()
+        mode, procedure = self.train_procedures[i]
+
+        for k, v in self._data.batch.items():
+            self.inputs['data.' + k] = v
+
+        for key in procedure:
+            routine = self.routines[key]
+            kwargs = self.kwargs[key]
+            routine.reset()
+
+            receives = routine.plugin_inputs
+            sends = [routine._names.get(k, k) for k in receives]
+            for send, receive in zip(sends, receives):
+                try:
+                    if isinstance(send, (list, tuple)):
+                        send_ = [self.inputs[s] for s in send]
+                        routine.inputs[receive] = send_
+                    else:
+                        routine.inputs[receive] = self.inputs[send]
+                except KeyError:
+                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
+
+            start_time = time.time()
+            outputs = routine.perform_routine(**kwargs)
+            end_time = time.time()
+
+            for k, v in outputs.items():
+                k_ = key + '.' + k
+                if k_ in self.inputs:
+                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
+                self.inputs[k_] = v.detach()
+
+            for loss_key in routine.losses.keys():
+                if not loss_key in routine.training_nets:
+                    routine.training_nets.append(loss_key)
+
+            routine_losses = dict((k, v.item()) for k, v in routine.losses.items())
+
+            # Check for bad numbers
+            bads = bad_values(routine.results)
+            if bads and quit_on_bad_values:
+                print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
+                exit(0)
+
+            # Update results
+            update_dict_of_lists(self.results, **routine.results)
+            update_dict_of_lists(self.results['losses'], **routine_losses)
+            update_dict_of_lists(self.results['time'], **{key: end_time - start_time})
+
+    def train(self, i, quit_on_bad_values=False):
+        self._data.next()
+        self.reset_routines()
+        mode, procedure = self.train_procedures[i]
+
+        for k, v in self._data.batch.items():
+            self.inputs['data.' + k] = v
+
+        for key in procedure:
+            routine = self.routines[key]
+            kwargs = self.kwargs[key]
+            routine.reset()
+
+            for k in routine.training_nets:
+                k_ = routine._names.get(k, k)
+                optimizer.OPTIMIZERS[k_].zero_grad()
+                net = routine.nets[k]
+                for p in net.parameters():
+                    p.requires_grad = True
+
+            receives = routine.plugin_inputs
+            sends = [routine._names.get(k, k) for k in receives]
+            for send, receive in zip(sends, receives):
+                try:
+                    if isinstance(send, (list, tuple)):
+                        send_ = [self.inputs[s] for s in send]
+                        routine.inputs[receive] = send_
+                    else:
+                        routine.inputs[receive] = self.inputs[send]
+                except KeyError:
+                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
+
+
+            start_time = time.time()
+            outputs = routine.perform_routine(**kwargs)
+
+            for k, loss in routine.losses.items():
+                if loss is not None:
+                    loss.backward()
+                    k_ = routine._names.get(k, k)
+                    optimizer.OPTIMIZERS[k_].step()
+
+            end_time = time.time()
+
+            for k, v in outputs.items():
+                k_ = key + '.' + k
+                if k_ in self.inputs:
+                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
+                self.inputs[k_] = v.detach()
+
+            for loss_key in routine.losses.keys():
+                if not loss_key in routine.training_nets:
+                    routine.training_nets.append(loss_key)
+
+            routine_losses = dict((k, v.item()) for k, v in routine.losses.items())
+
+            # Check for bad numbers
+            bads = bad_values(routine.results)
+            if bads and quit_on_bad_values:
+                print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
+                exit(0)
+
+            # Update results
+            update_dict_of_lists(self.results, **routine.results)
+            update_dict_of_lists(self.results['losses'], **routine_losses)
+            update_dict_of_lists(self.results['time'], **{key: end_time - start_time})
+
+    def setup_routine_nets(self):
+        self.viz = VizHandler()
+        for routine in self.routines.values():
+            for k in routine.plugin_nets:
+                k_ = routine._names.get(k, k)
+                routine.nets[k] = self.nets[k_]
+            routine.set_viz(self.viz)
+
+    def reset_routines(self):
+        self.losses.clear()
+        self.inputs.clear()
+        for routine in self.routines.values():
+            routine.reset()
+
+    def reset(self):
+        self.reset_routines()
+        self.results.clear()
+        self.results.update(losses=dict(), time=dict())
+
+    def set_train(self):
+        for net in self.nets.values():
+            net.train()
+
+    def set_eval(self):
+        for net in self.nets.values():
+            net.eval()
 
 
 def setup_model(model_key):

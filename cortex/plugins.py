@@ -5,22 +5,22 @@
 import inspect
 from os import path
 import shutil
-import time
 
-import torch
+from torch.utils.data import Dataset
 
-from cortex._lib import data, exp, models, optimizer
-from cortex._lib.data import DatasetPluginBase, DATA_HANDLER
-from cortex._lib.models import BuildReference, BuildPluginBase, ModelPluginBase, RoutineReference, RoutinePluginBase
-from cortex._lib.handlers import Handler, LossHandler, NetworkHandler, ResultsHandler
-from cortex._lib.viz import VizHandler
-from cortex._lib.utils import bad_values, update_dict_of_lists
+from cortex._lib.data import DatasetPluginBase, register as register_data
+from cortex._lib.models import (BuildReference, BuildPluginBase, ModelPluginBase, RoutineReference, RoutinePluginBase,
+                                register_build, register_routine, register_model)
 
 
 class DatasetPlugin(DatasetPluginBase):
     '''Basic plugin class for datasets into cortex
 
+    Attributes:
+        sources: list of dataset string names that this plugin will support.
+
     '''
+
     sources = []
 
     def copy_to_local_path(self, from_path: str) -> str:
@@ -49,25 +49,70 @@ class DatasetPlugin(DatasetPluginBase):
 
         return to_path
 
-    def add_dataset(self, key, value):
-        if key in self._datasets:
-            raise KeyError('`{}` already added to datasets in entrypoint'.format(key))
-        self._datasets[key] = value
+    def add_dataset(self, mode: str, dataset: Dataset):
+        '''Adds a dataset to the plugin.
 
-    def get_path(self, source):
+        Any dataset added in this way will be used in the training or testing loops, depending on the mode specified.
+
+        Args:
+            mode: The data mode that this dataset will be run on.
+                `train` and `test` are highly recommended.
+            dataset: The dataset object.
+
+        '''
+        if mode in self._datasets:
+            raise KeyError('`{}` already added to datasets in entrypoint'.format(key))
+        self._datasets[mode] = dataset
+
+    def get_path(self, source: str):
+        '''Get's the path to a source.
+
+        This is derived from config.yaml file.
+
+        Args:
+            source: str for the dataset source.
+
+        Returns:
+            The path to the dataset.
+
+        '''
         p = self._paths.get(source)
         if p is None:
             raise KeyError('`{}` not found in config.yaml data_paths'.format(source))
         return p
 
     def set_input_names(self, input_names):
+        '''Sets the names of the elements of the dataset.
+
+        For use downstream in models.
+
+        Args:
+            input_names (:obj:`list` of :obj:`str`): The input names.
+                Should be the same size as the output of the dataset iterator.
+
+        '''
         self._input_names = input_names
 
     def set_dims(self, **kwargs):
+        ''' Sets the dimenisions of the data
+
+        Args:
+            **kwargs: a dictionary of dimension keys and ints.
+
+        '''
         for k, v in kwargs.items():
             self._dims[k] = v
 
     def set_scale(self, scale):
+        '''Sets the min / max values for the data.
+
+        Note:
+            This will probably be removed. It doesn't even function right now.
+
+        Args:
+            scale (:obj:`tuple` of :obj:`float`): min/max pair.
+
+        '''
         self._scale = scale
 
     def make_indexing(self, C):
@@ -94,6 +139,12 @@ class DatasetPlugin(DatasetPluginBase):
 class RoutinePlugin(RoutinePluginBase):
     '''Plugin for custom routines.
 
+    Attributes:
+        plugin_name (str): Name of the plugin.
+        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this routine.
+        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for this routine.
+        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this routine.
+
     '''
     _protected = ['help', 'kwargs', 'updates']
     _required = ['run']
@@ -103,68 +154,33 @@ class RoutinePlugin(RoutinePluginBase):
     plugin_inputs = []
     plugin_outputs = []
 
-    def __init__(self, name=None, **kwargs):
-        self.updates = 1
-        self._names = {}
-        self.nets = NetworkHandler()
-        self.results = ResultsHandler()
-        self.losses = LossHandler(self.nets)
-        self.inputs = Handler()
-        self.training_nets = []
-        self.name = name or self.plugin_name
-        self.viz = None
-
-        keys = self.plugin_nets + self.plugin_inputs + self.plugin_outputs
-        for k, v in kwargs.items():
-            if k not in keys:
-                raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
-            if k in self._names:
-                raise KeyError('`{}` is already set'.format(k))
-            self._names[k] = v
-
-    def __call__(self, **kwargs):
-        if not hasattr(self, 'run'):
-            raise ValueError('Routine {} does not have `run` method set'.format(self.name))
-        outputs = self.run(**kwargs)
-        if outputs is None:
-            return {}
-        if not isinstance(outputs, tuple):
-            outputs = (outputs,)
-        if len(outputs) != len(self.plugin_outputs):
-            raise ValueError('Routine has different number of outputs ({}) '
-                             'than is set from `plugin_outputs` ({}).'.format(len(outputs), len(self.plugin_outputs)))
-
-        out_dict = {}
-        for k, v in zip(self.plugin_outputs, outputs):
-            k_ = self._names.get(k, k)
-            out_dict[k_] = v
-        return out_dict
-
-    def set_viz(self, viz):
-        self.viz = viz
-
     def add_image(self, *args, **kwargs):
-        self.viz.add_image(*args, **kwargs)
+        '''Adds image for visualization.
+
+        Args:
+            *args: TODO
+            **kwargs: TODO
+
+        '''
+        self._viz.add_image(*args, **kwargs)
 
     def add_histogram(self, *args, **kwargs):
-        self.viz.add_histogram(*args, **kwargs)
+        '''Adds histogram for visualizaiton.
 
-    def perform_routine(self, **kwargs):
-        # Run routine
-        if exp.DEVICE == torch.device('cpu'):
-            return self(**kwargs)
-        else:
-            with torch.cuda.device(exp.DEVICE.index):
-                return self(**kwargs)
+        Args:
+            *args: TODO
+            **kwargs: TODO
 
-    def reset(self):
-        self.results.clear()
-        self.losses.clear()
-        self.inputs.clear()
+        '''
+        self._viz.add_histogram(*args, **kwargs)
 
 
 class BuildPlugin(BuildPluginBase):
     '''Plugin for custom build routines.
+
+    Attributes:
+        plugin_name (str): Name of the plugin.
+        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this build.
 
     '''
     _protected = ['help', 'kwargs']
@@ -173,37 +189,51 @@ class BuildPlugin(BuildPluginBase):
     plugin_name = None
     plugin_nets = []
 
-    def __init__(self, **kwargs):
-        self._data = DATA_HANDLER
-        self._nets = models.NETWORK_HANDLER
-        self._names = {}
-
-        keys = self.plugin_nets
-        for k, v in kwargs.items():
-            if k not in keys:
-                raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
-            if k in self._names:
-                raise KeyError('`{}` is already set'.format(k))
-            self._names[k] = v
-
     def add_networks(self, **kwargs):
+        '''Adds networks to the build.
+
+        Args:
+            **kwargs: TODO
+
+        '''
         for k, v in kwargs.items():
             k_ = self._names.get(k, k)
             self._nets[k_] = v
 
     def get_dims(self, *queries):
+        '''Gets dimensions of inputs.
+
+        Args:
+            *queries: TODO
+
+        Returns:
+            TODO
+
+        '''
         return self._data.get_dims(*queries)
 
     def add_noise(self, key, dist=None, size=None, **kwargs):
-        return self._data.add_noise(key, dist=dist, size=size, **kwargs)
+        '''Adds a noise variable to the model.
 
-    def __call__(self, **kwargs):
-        if not hasattr(self, 'build'):
-            raise ValueError('Build {} does not have `build` method set'.format(self.name))
-        self.build(**kwargs)
+        Args:
+            key (str): Name of the noise variable.
+            dist (str): Noise distribution.
+            size (int): Size of the noise.
+            **kwargs: keyword arguments for noise distribution.
+        '''
+        self._data.add_noise(key, dist=dist, size=size, **kwargs)
 
 
 class ModelPlugin(ModelPluginBase):
+    '''Module plugin.
+
+    Attributes:
+        plugin_name (str): Name of the plugin.
+        data_defaults (:obj:`dict`): Data defaults.
+        train_defaults (:obj:`dict`): Train defaults.
+        optimizer_defaults (:obj:`dict`): Optimizer defaults.
+
+    '''
     _protected = ['help', 'description']
     _required = []
     _optional = ['setup']
@@ -213,23 +243,17 @@ class ModelPlugin(ModelPluginBase):
     train_defaults = {}
     optimizer_defaults = {}
 
-    def __init__(self):
-        self.builds = {}
-        self.routines = {}
-        self.defaults = dict(data=self.data_defaults, optimizer=self.optimizer_defaults, train=self.train_defaults)
-        self.train_procedures = []
-        self.eval_procedures = []
-
-        self.setup = None
-
-        self.results = ResultsHandler(time=dict(), losses=dict())
-        self.nets = models.NETWORK_HANDLER
-        self.losses = LossHandler(self.nets)
-        self.inputs = Handler()
-        self._data = DATA_HANDLER
-        self.kwargs = {}
-
     def add_build(self, build_query, name=None, **kwargs):
+        '''Adds a build plugin.
+
+        Args:
+            build_query: Build plugin.
+                Can be a string, a BuildPlugin instance, or BuildPlugin class
+            name (str, optional): Name for the build.
+                If not set, `BuildPlugin.plugin_name` will be used.
+            **kwargs: TODO
+
+        '''
         if isinstance(build_query, BuildPlugin):
             build = build_query
         elif inspect.isclass(build_query) and issubclass(build_query, BuildPlugin):
@@ -245,6 +269,16 @@ class ModelPlugin(ModelPluginBase):
             self.builds[name] = build
 
     def add_routine(self, routine_query, name=None, **kwargs):
+        '''Adds a routine
+
+        Args:
+            routine_query: Routine plugin.
+                Can be a string, a RoutinePlugin instance, or RoutinePlugin class
+            name: (str, optional): Name for the routine.
+                If not set, `RoutinePlugin.plugin_name` will be used.
+            **kwargs: TODO
+
+        '''
         if isinstance(routine_query, RoutinePlugin):
             routine = routine_query
         elif inspect.isclass(routine_query) and issubclass(routine_query, RoutinePlugin):
@@ -261,15 +295,14 @@ class ModelPlugin(ModelPluginBase):
 
         return name
 
-    def setup_routine_nets(self):
-        self.viz = VizHandler()
-        for routine in self.routines.values():
-            for k in routine.plugin_nets:
-                k_ = routine._names.get(k, k)
-                routine.nets[k] = self.nets[k_]
-            routine.set_viz(self.viz)
+    def add_train_procedure(self, *routines, mode: str='train'):
+        '''Adds a training procedure.
 
-    def add_train_procedure(self, *routines, mode='train'):
+        Args:
+            *routines: TODO
+            mode (str): Data mode on which the procedure will be run.
+
+        '''
         routine_names = []
         for routine in routines:
             routine_names.append(self.add_routine(routine))
@@ -277,169 +310,37 @@ class ModelPlugin(ModelPluginBase):
         self.train_procedures.append((mode, routine_names))
 
     def add_eval_procedure(self, *routines, mode='test'):
+        '''Adds a evaluation procedure.
+
+                Args:
+                    *routines: TODO
+                    mode (str): Data mode on which the procedure will be run.
+
+                '''
         routine_names = []
         for routine in routines:
             routine_names.append(self.add_routine(routine))
 
         self.eval_procedures.append((mode, routine_names))
 
-    def run_procedure(self, i, quit_on_bad_values=False):
-        self._data.next()
-        self.reset_routines()
-        mode, procedure = self.train_procedures[i]
-
-        for k, v in self._data.batch.items():
-            self.inputs['data.' + k] = v
-
-        for key in procedure:
-            routine = self.routines[key]
-            kwargs = self.kwargs[key]
-            routine.reset()
-
-            receives = routine.plugin_inputs
-            sends = [routine._names.get(k, k) for k in receives]
-            for send, receive in zip(sends, receives):
-                try:
-                    if isinstance(send, (list, tuple)):
-                        send_ = [self.inputs[s] for s in send]
-                        routine.inputs[receive] = send_
-                    else:
-                        routine.inputs[receive] = self.inputs[send]
-                except KeyError:
-                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
-
-            start_time = time.time()
-            outputs = routine.perform_routine(**kwargs)
-            end_time = time.time()
-
-            for k, v in outputs.items():
-                k_ = key + '.' + k
-                if k_ in self.inputs:
-                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
-                self.inputs[k_] = v.detach()
-
-            for loss_key in routine.losses.keys():
-                if not loss_key in routine.training_nets:
-                    routine.training_nets.append(loss_key)
-
-            routine_losses = dict((k, v.item()) for k, v in routine.losses.items())
-
-            # Check for bad numbers
-            bads = bad_values(routine.results)
-            if bads and quit_on_bad_values:
-                print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
-                exit(0)
-
-            # Update results
-            update_dict_of_lists(self.results, **routine.results)
-            update_dict_of_lists(self.results['losses'], **routine_losses)
-            update_dict_of_lists(self.results['time'], **{key: end_time - start_time})
-
-    def train(self, i, quit_on_bad_values=False):
-        self._data.next()
-        self.reset_routines()
-        mode, procedure = self.train_procedures[i]
-
-        for k, v in self._data.batch.items():
-            self.inputs['data.' + k] = v
-
-        for key in procedure:
-            routine = self.routines[key]
-            kwargs = self.kwargs[key]
-            routine.reset()
-
-            for k in routine.training_nets:
-                k_ = routine._names.get(k, k)
-                optimizer.OPTIMIZERS[k_].zero_grad()
-                net = routine.nets[k]
-                for p in net.parameters():
-                    p.requires_grad = True
-
-            receives = routine.plugin_inputs
-            sends = [routine._names.get(k, k) for k in receives]
-            for send, receive in zip(sends, receives):
-                try:
-                    if isinstance(send, (list, tuple)):
-                        send_ = [self.inputs[s] for s in send]
-                        routine.inputs[receive] = send_
-                    else:
-                        routine.inputs[receive] = self.inputs[send]
-                except KeyError:
-                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
-
-
-            start_time = time.time()
-            outputs = routine.perform_routine(**kwargs)
-
-            for k, loss in routine.losses.items():
-                if loss is not None:
-                    loss.backward()
-                    k_ = routine._names.get(k, k)
-                    optimizer.OPTIMIZERS[k_].step()
-
-            end_time = time.time()
-
-            for k, v in outputs.items():
-                k_ = key + '.' + k
-                if k_ in self.inputs:
-                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
-                self.inputs[k_] = v.detach()
-
-            for loss_key in routine.losses.keys():
-                if not loss_key in routine.training_nets:
-                    routine.training_nets.append(loss_key)
-
-            routine_losses = dict((k, v.item()) for k, v in routine.losses.items())
-
-            # Check for bad numbers
-            bads = bad_values(routine.results)
-            if bads and quit_on_bad_values:
-                print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
-                exit(0)
-
-            # Update results
-            update_dict_of_lists(self.results, **routine.results)
-            update_dict_of_lists(self.results['losses'], **routine_losses)
-            update_dict_of_lists(self.results['time'], **{key: end_time - start_time})
-
-
-    def reset_routines(self):
-        self.losses.clear()
-        self.inputs.clear()
-        for routine in self.routines.values():
-            routine.reset()
-
-    def reset(self):
-        self.reset_routines()
-        self.results.clear()
-        self.results.update(losses=dict(), time=dict())
-
-    def set_train(self):
-        for net in self.nets.values():
-            net.train()
-
-    def set_eval(self):
-        for net in self.nets.values():
-            net.eval()
-
 
 def register_plugin(plugin):
-    '''Registers a plugin into c
+    '''Registers a plugin into cortex
 
     Args:
-        plugin:
+        plugin: TODO
 
     Returns:
 
     '''
 
     if issubclass(plugin, BuildPlugin):
-        models.register_build(plugin)
+        register_build(plugin)
     elif issubclass(plugin, RoutinePlugin):
-        models.register_routine(plugin)
+        register_routine(plugin)
     elif issubclass(plugin, ModelPlugin):
-        models.register_model(plugin())
+        register_model(plugin())
     elif issubclass(plugin, DatasetPlugin):
-        data.register(plugin)
+        register_data(plugin)
     else:
         raise ValueError(plugin)
