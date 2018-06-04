@@ -249,9 +249,6 @@ def import_directory(p, name):
         '''
 
 def find_models(model_paths):
-    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    arch_dir = os.path.abspath(os.path.join(root, 'arch'))
-    model_paths.update(core=arch_dir)
     for k, p in model_paths.items():
         import_directory(p, k)
 
