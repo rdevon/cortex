@@ -156,7 +156,6 @@ def reload(exp_file, reloads, name, out_path, clean, config):
 
 
 def save(prefix=''):
-    return
     prefix = _file_string(prefix)
     binary_dir = OUT_DIRS.get('binary_dir', None)
     if binary_dir is None:
@@ -174,10 +173,21 @@ def save(prefix=''):
         else:
             models_[k] = model
 
+    def strip_Nones(d):
+        d_ = {}
+        for k, v in d_.items():
+            if isinstance(v, dict):
+                d_[k] = strip_Nones(v)
+            elif v is not None:
+                d_[k] = v
+        return d_
+
+    args = strip_Nones(ARGS)
+
     state = dict(
         models=models_,
         info=INFO,
-        args=ARGS,
+        args=args,
         out_dirs=OUT_DIRS,
         summary=SUMMARY
     )
