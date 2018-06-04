@@ -61,7 +61,7 @@ def register(plugin):
     for k in plugin.sources:
         if k in _PLUGINS:
             raise KeyError('`{}` already registered in a plugin. '
-                           'Try using a different name.'.format(dataset_key))
+                           'Try using a different name.'.format(k))
         _PLUGINS[k] = plugin
 
 

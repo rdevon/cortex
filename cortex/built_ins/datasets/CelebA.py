@@ -6,7 +6,7 @@ import os
 
 import torchvision
 
-from cortex.plugins import DatasetPlugin
+from cortex.plugins import DatasetPlugin, register_plugin
 from .utils import build_transforms
 
 
@@ -40,7 +40,7 @@ class CelebAPlugin(DatasetPlugin):
         self.set_dims(**dims)
 
         self.set_scale((-1, 1))
-CelebAPlugin()
+register_plugin(CelebAPlugin)
 
 
 

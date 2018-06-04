@@ -101,6 +101,7 @@ class RoutinePlugin(RoutinePluginBase):
     plugin_name = None
     plugin_nets = []
     plugin_inputs = []
+    plugin_outputs = []
 
     def __init__(self, name=None, **kwargs):
         self.updates = 1
@@ -113,7 +114,7 @@ class RoutinePlugin(RoutinePluginBase):
         self.name = name or self.plugin_name
         self.viz = None
 
-        keys = self.plugin_nets + self.plugin_inputs
+        keys = self.plugin_nets + self.plugin_inputs + self.plugin_outputs
         for k, v in kwargs.items():
             if k not in keys:
                 raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
@@ -124,7 +125,20 @@ class RoutinePlugin(RoutinePluginBase):
     def __call__(self, **kwargs):
         if not hasattr(self, 'run'):
             raise ValueError('Routine {} does not have `run` method set'.format(self.name))
-        self.run(**kwargs)
+        outputs = self.run(**kwargs)
+        if outputs is None:
+            return {}
+        if not isinstance(outputs, tuple):
+            outputs = (outputs,)
+        if len(outputs) != len(self.plugin_outputs):
+            raise ValueError('Routine has different number of outputs ({}) '
+                             'than is set from `plugin_outputs` ({}).'.format(len(outputs), len(self.plugin_outputs)))
+
+        out_dict = {}
+        for k, v in zip(self.plugin_outputs, outputs):
+            k_ = self._names.get(k, k)
+            out_dict[k_] = v
+        return out_dict
 
     def set_viz(self, viz):
         self.viz = viz
@@ -132,13 +146,16 @@ class RoutinePlugin(RoutinePluginBase):
     def add_image(self, *args, **kwargs):
         self.viz.add_image(*args, **kwargs)
 
+    def add_histogram(self, *args, **kwargs):
+        self.viz.add_histogram(*args, **kwargs)
+
     def perform_routine(self, **kwargs):
         # Run routine
         if exp.DEVICE == torch.device('cpu'):
-            self(**kwargs)
+            return self(**kwargs)
         else:
             with torch.cuda.device(exp.DEVICE.index):
-                self(**kwargs)
+                return self(**kwargs)
 
     def reset(self):
         self.results.clear()
@@ -200,7 +217,6 @@ class ModelPlugin(ModelPluginBase):
         self.builds = {}
         self.routines = {}
         self.defaults = dict(data=self.data_defaults, optimizer=self.optimizer_defaults, train=self.train_defaults)
-
         self.train_procedures = []
         self.eval_procedures = []
 
@@ -283,11 +299,24 @@ class ModelPlugin(ModelPluginBase):
             receives = routine.plugin_inputs
             sends = [routine._names.get(k, k) for k in receives]
             for send, receive in zip(sends, receives):
-                routine.inputs[receive] = self.inputs[send]
+                try:
+                    if isinstance(send, (list, tuple)):
+                        send_ = [self.inputs[s] for s in send]
+                        routine.inputs[receive] = send_
+                    else:
+                        routine.inputs[receive] = self.inputs[send]
+                except KeyError:
+                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
 
             start_time = time.time()
-            routine.perform_routine(**kwargs)
+            outputs = routine.perform_routine(**kwargs)
             end_time = time.time()
+
+            for k, v in outputs.items():
+                k_ = key + '.' + k
+                if k_ in self.inputs:
+                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
+                self.inputs[k_] = v.detach()
 
             for loss_key in routine.losses.keys():
                 if not loss_key in routine.training_nets:
@@ -329,10 +358,18 @@ class ModelPlugin(ModelPluginBase):
             receives = routine.plugin_inputs
             sends = [routine._names.get(k, k) for k in receives]
             for send, receive in zip(sends, receives):
-                routine.inputs[receive] = self.inputs[send]
+                try:
+                    if isinstance(send, (list, tuple)):
+                        send_ = [self.inputs[s] for s in send]
+                        routine.inputs[receive] = send_
+                    else:
+                        routine.inputs[receive] = self.inputs[send]
+                except KeyError:
+                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
+
 
             start_time = time.time()
-            routine.perform_routine(**kwargs)
+            outputs = routine.perform_routine(**kwargs)
 
             for k, loss in routine.losses.items():
                 if loss is not None:
@@ -341,6 +378,12 @@ class ModelPlugin(ModelPluginBase):
                     optimizer.OPTIMIZERS[k_].step()
 
             end_time = time.time()
+
+            for k, v in outputs.items():
+                k_ = key + '.' + k
+                if k_ in self.inputs:
+                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
+                self.inputs[k_] = v.detach()
 
             for loss_key in routine.losses.keys():
                 if not loss_key in routine.training_nets:

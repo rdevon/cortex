@@ -94,7 +94,7 @@ class ImageClassification(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        self.add_build(ImageClassifierBuild, name='my_build')
+        self.add_build(ImageClassifierBuild)
         self.add_routine(ClassifyRoutine, classifier='image_classifier', inputs='data.images', targets='data.targets')
         self.add_train_procedure('classification')
 register_plugin(ImageClassification)

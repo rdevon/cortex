@@ -148,7 +148,6 @@ class ModelPluginBase():
 
         for routine in self.routines.values():
             add_kwargs(routine)
-
         return kwargs
 
     def get_help(self):
@@ -191,10 +190,11 @@ class ModelPluginBase():
         for key, routine in self.routines.items():
             for k_, v in kwargs.items():
                 if k_ in routine.kwargs:
-                    if key in builds:
+                    if key in routines:
                         routines[key][k_] = v
                     else:
                         routines[key] = {k_: v}
+
         return Handler(builds=builds, routines=routines)
 
 
