@@ -90,7 +90,7 @@ class ImageClassification(ModelPlugin):
 
     data_defaults = dict(batch_size=128)
     optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
-    train_defaults = dict(epochs=200, archive_every=10, save_on_best='losses.classifier')
+    train_defaults = dict(epochs=200, save_on_best='losses.classifier')
 
     def __init__(self):
         super().__init__()

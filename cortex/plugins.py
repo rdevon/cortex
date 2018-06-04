@@ -189,14 +189,17 @@ class BuildPlugin(BuildPluginBase):
 class ModelPlugin(ModelPluginBase):
     _protected = ['help', 'description']
     _required = []
-    _optional = ['defaults', 'test_routines', 'finish_train_routines', 'finish_test_routines', 'setup', 'eval_routine']
+    _optional = ['setup']
 
     plugin_name = None
+    data_defaults = {}
+    train_defaults = {}
+    optimizer_defaults = {}
 
     def __init__(self):
         self.builds = {}
         self.routines = {}
-        self.defaults = {}
+        self.defaults = dict(data=self.data_defaults, optimizer=self.optimizer_defaults, train=self.train_defaults)
 
         self.train_procedures = []
         self.eval_procedures = []
