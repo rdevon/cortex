@@ -128,7 +128,6 @@ class RoutinePluginBase():
     _training_models = []
 
     def __init__(self, name=None, **kwargs):
-        self.updates = 1
         self._names = {}
         self.nets = NetworkHandler()
         self.results = ResultsHandler()
@@ -286,119 +285,78 @@ class ModelPluginBase():
 
         return Handler(builds=builds, routines=routines)
 
-    def run_procedure(self, i, quit_on_bad_values=False):
-        self._data.next()
-        self.reset_routines()
-        mode, procedure = self.train_procedures[i]
-
-        for k, v in self._data.batch.items():
-            self.inputs['data.' + k] = v
-
-        for key in procedure:
-            routine = self.routines[key]
-            kwargs = self.kwargs[key]
-            routine.reset()
-
-            receives = routine.plugin_inputs
-            sends = [routine._names.get(k, k) for k in receives]
-            for send, receive in zip(sends, receives):
-                try:
-                    if isinstance(send, (list, tuple)):
-                        send_ = [self.inputs[s] for s in send]
-                        routine.inputs[receive] = send_
-                    else:
-                        routine.inputs[receive] = self.inputs[send]
-                except KeyError:
-                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
-
-            start_time = time.time()
-            outputs = routine.perform_routine(**kwargs)
-            end_time = time.time()
-
-            for k, v in outputs.items():
-                k_ = key + '.' + k
-                if k_ in self.inputs:
-                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
-                self.inputs[k_] = v.detach()
-
-            for loss_key in routine.losses.keys():
-                if not loss_key in routine.training_nets:
-                    routine.training_nets.append(loss_key)
-
-            routine_losses = dict((k, v.item()) for k, v in routine.losses.items())
-
-            # Check for bad numbers
-            bads = bad_values(routine.results)
-            if bads and quit_on_bad_values:
-                print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
-                exit(0)
-
-            # Update results
-            update_dict_of_lists(self.results, **routine.results)
-            update_dict_of_lists(self.results['losses'], **routine_losses)
-            update_dict_of_lists(self.results['time'], **{key: end_time - start_time})
-
     def train(self, i, quit_on_bad_values=False):
+        return self.run_procedure(i, quit_on_bad_values=quit_on_bad_values, train=True)
+
+    def run_procedure(self, i, quit_on_bad_values=False, train=False):
         self._data.next()
         self.reset_routines()
-        mode, procedure = self.train_procedures[i]
+        mode, procedure, updates = self.train_procedures[i]
 
         for k, v in self._data.batch.items():
             self.inputs['data.' + k] = v
 
-        for key in procedure:
-            routine = self.routines[key]
-            kwargs = self.kwargs[key]
-            routine.reset()
+        for key, update in zip(procedure, updates):
+            if not train:
+                update = 1
+            for u in range(update):
+                if u > 0:
+                    self._data.next()
 
-            for k in routine.training_nets:
-                k_ = routine._names.get(k, k)
-                optimizer.OPTIMIZERS[k_].zero_grad()
-                net = routine.nets[k]
-                for p in net.parameters():
-                    p.requires_grad = True
+                routine = self.routines[key]
+                kwargs = self.kwargs[key]
+                routine.reset()
 
-            receives = routine.plugin_inputs
-            sends = [routine._names.get(k, k) for k in receives]
-            for send, receive in zip(sends, receives):
-                try:
-                    if isinstance(send, (list, tuple)):
-                        send_ = [self.inputs[s] for s in send]
-                        routine.inputs[receive] = send_
-                    else:
-                        routine.inputs[receive] = self.inputs[send]
-                except KeyError:
-                    raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
+                if train:
+                    for k in routine.training_nets:
+                        k_ = routine._names.get(k, k)
+                        optimizer.OPTIMIZERS[k_].zero_grad()
+                        net = routine.nets[k]
+                        for p in net.parameters():
+                            p.requires_grad = True
 
+                receives = routine.plugin_inputs
+                sends = [routine._names.get(k, k) for k in receives]
+                for send, receive in zip(sends, receives):
+                    try:
+                        if isinstance(send, (list, tuple)):
+                            send_ = [self.inputs[s] for s in send]
+                            routine.inputs[receive] = send_
+                        else:
+                            routine.inputs[receive] = self.inputs[send]
+                    except KeyError:
+                        raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
 
-            start_time = time.time()
-            outputs = routine.perform_routine(**kwargs)
+                start_time = time.time()
+                outputs = routine.perform_routine(**kwargs)
 
-            for k, loss in routine.losses.items():
-                if loss is not None:
-                    loss.backward()
-                    k_ = routine._names.get(k, k)
-                    optimizer.OPTIMIZERS[k_].step()
+                if train:
+                    for k, loss in routine.losses.items():
+                        if loss is not None:
+                            loss.backward()
+                            k_ = routine._names.get(k, k)
+                            optimizer.OPTIMIZERS[k_].step()
 
-            end_time = time.time()
+                end_time = time.time()
 
-            for k, v in outputs.items():
-                k_ = key + '.' + k
-                if k_ in self.inputs:
-                    raise KeyError('{} already in inputs. Use a different name.'.format(k_))
-                self.inputs[k_] = v.detach()
+                if u == update - 1:
+                    for k, v in outputs.items():
+                        k_ = key + '.' + k
+                        if k_ in self.inputs:
+                            raise KeyError('{} already in inputs. Use a different name.'.format(k_))
+                        self.inputs[k_] = v.detach()
 
-            for loss_key in routine.losses.keys():
-                if not loss_key in routine.training_nets:
-                    routine.training_nets.append(loss_key)
+                for loss_key in routine.losses.keys():
+                    if not loss_key in routine.training_nets:
+                        routine.training_nets.append(loss_key)
+
+                # Check for bad numbers
+                bads = bad_values(routine.results)
+                if bads and quit_on_bad_values:
+                    print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
+                    exit(0)
 
             routine_losses = dict((k, v.item()) for k, v in routine.losses.items())
-
-            # Check for bad numbers
-            bads = bad_values(routine.results)
-            if bads and quit_on_bad_values:
-                print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
-                exit(0)
 
             # Update results
             update_dict_of_lists(self.results, **routine.results)

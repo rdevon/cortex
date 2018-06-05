@@ -91,8 +91,8 @@ class DiscriminatorRoutine(RoutinePlugin):
 
     '''
     plugin_name = 'discriminator'
-    plugin_nets = ['discriminator']
-    plugin_inputs = ['real', 'fake']
+    plugin_nets = ['discriminator', 'generator']
+    plugin_inputs = ['real', 'noise']
 
     def run(self, measure: str='GAN'):
         '''
@@ -104,8 +104,10 @@ class DiscriminatorRoutine(RoutinePlugin):
 
         '''
         discriminator = self.nets.discriminator
-        X_Q = self.inputs.fake
+        generator = self.nets.generator
+        Z = self.inputs.noise
         X_P = self.inputs.real
+        X_Q = F.tanh(generator(Z).detach())
 
         P_samples = discriminator(X_P)
         Q_samples = discriminator(X_Q)
@@ -303,7 +305,7 @@ class GAN(ModelPlugin):
         self.add_build(DiscriminatorBuild)
         self.add_build(GeneratorBuild)
         self.add_routine(GeneratorRoutine, noise='data.z')
-        self.add_routine(DiscriminatorRoutine, real='data.images', fake='generator.generated')
+        self.add_routine(DiscriminatorRoutine, real='data.images', noise='data.z')
         self.add_routine(PenaltyRoutine, network='discriminator', inputs=('data.images', 'generator.generated'))
         self.add_train_procedure('generator', 'discriminator', 'gradient_penalty')
         self.add_eval_procedure('generator', 'discriminator')

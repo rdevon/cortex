@@ -295,19 +295,23 @@ class ModelPlugin(ModelPluginBase):
 
         return name
 
-    def add_train_procedure(self, *routines, mode: str='train'):
+    def add_train_procedure(self, *routines, mode: str='train', updates_per_routine=None):
         '''Adds a training procedure.
 
         Args:
             *routines: TODO
             mode (str): Data mode on which the procedure will be run.
+            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary of updates for each routine.
 
         '''
+        updates_per_routine = updates_per_routine or [1 for _ in routines]
+        if len(routines) != len(updates_per_routine):
+            raise ValueError('Number of routines must match number of updates.')
         routine_names = []
         for routine in routines:
             routine_names.append(self.add_routine(routine))
 
-        self.train_procedures.append((mode, routine_names))
+        self.train_procedures.append((mode, routine_names, updates_per_routine))
 
     def add_eval_procedure(self, *routines, mode='test'):
         '''Adds a evaluation procedure.

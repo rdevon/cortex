@@ -54,8 +54,11 @@ def setup(optimizer='Adam', learning_rate=1.e-4, updates_per_routine={}, clippin
 
     # Set the number of updates per routine
     updates_per_routine = updates_per_routine or {}
-    for k, v in updates_per_routine:
-        models.MODEL.routines[k].updates = v
+    for i in range(len(models.MODEL.train_procedures)):
+        _, procedure, updates = models.MODEL.train_procedures[i]
+        for i, routine in enumerate(procedure):
+            if routine in updates_per_routine:
+                updates[i] = updates_per_routine[routine]
 
     # Initialize regularization
     reg.init(clipping=clipping, weight_decay=l1_decay)  # initialize regularization

@@ -62,46 +62,16 @@ def train_epoch(epoch, quit_on_bad_values, eval_during_train, data_mode='train')
     try:
         while True:
             models.MODEL.train(0, quit_on_bad_values=quit_on_bad_values)
-            '''
-            # Iterate data
 
-
-            # Loop through routines
-            losses = {}
-            for routine_key, routine in models.ARCH.train_routines.items():
-                num_updates = num_updates_dict.get(routine_key, 0)
-                routine_losses = {}
-
-                loss_handler = LossHandler()
-                for u in range(num_updates):
-                    if u > 0:
-                        # Iterate more data if this is not the first update
-                        data.DATA_HANDLER.next()
-                        loss_handler = LossHandler()
-
-                    train_on_routine(routine_key, routine, loss_handler, results, viz_handler, routine_args,
-                                     quit_on_bad_values=quit_on_bad_values)
-
-                # Update the losses results
-                routine_losses.update(**dict((k, v.item()) for k, v in loss_handler.items()))
-                for k, v in routine_losses.items():
-                    if k in losses:
-                        losses[k] += v
-                    else:
-                        losses[k] = v
-
-            update_dict_of_lists(results['losses'], **losses)
-
-            for model_key in models.MODEL_HANDLER:
-                reg.clip(model_key)  # weight clipping
-                reg.l1_decay(model_key)  # l1 weight decay
-            '''
+            for net_key in models.NETWORK_HANDLER:
+                reg.clip(net_key)  # weight clipping
+                reg.l1_decay(net_key)  # l1 weight decay
 
     except StopIteration:
         pass
 
     if not eval_during_train:
-        return test_epoch(epoch, viz_handler, eval_mode=False, test=False, viz=False)
+        return test_epoch(epoch, data_mode=data_mode)
 
     results = summarize_results(models.MODEL.results)
     return results
@@ -251,8 +221,8 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True, save_on_bes
                     else:
                         flattened_results[k] = v
                 if save_on_best in flattened_results:
-                    # This needs to be fixed. when train_for is set, result keys vary per epoch
-                    #if save_on_best not in flattened_results:
+                    # TODO(Devon) This needs to be fixed. when train_for is set, result keys vary per epoch
+                    # if save_on_best not in flattened_results:
                     #    raise ValueError('`save_on_best` key `{}` not found. Available: {}'.format(
                     #        save_on_best, tuple(flattened_results.keys())))
                     current = flattened_results[save_on_best]
