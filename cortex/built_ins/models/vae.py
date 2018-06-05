@@ -4,23 +4,30 @@
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
 __author_email__ = 'erroneus@gmail.com'
 
+from cortex.plugins import register_plugin, BuildPlugin, ModelPlugin, RoutinePlugin
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from modules.fully_connected import FullyConnectedNet
-from classifier import classify
-from utils import cross_correlation, update_encoder_args, update_decoder_args
+from .utils import update_encoder_args, update_decoder_args
 
 
-def setup(model=None, data=None, **kwargs):
-    data['noise_variables']['z']['size'] = model['dim_z']
+class VAENetwork(nn.Module):
+    '''VAE model.
 
+    Attributes:
+        encoder: Encoder network.
+        mu_net: Single layer network for caculating mean.
+        logvar_net: Single layer network for calculating log variance.
+        decoder: Decoder network.
+        mu: The mean after encoding.
+        logvar: The log variance after encoding.
+        latent: The latent state (Z).
 
-class VAE(nn.Module):
+    '''
     def __init__(self, encoder, decoder, dim_out=None, dim_z=None):
-        super(VAE, self).__init__()
+        super(VAENetwork, self).__init__()
         self.encoder = encoder
         self.mu_net = nn.Linear(dim_out, dim_z)
         self.logvar_net = nn.Linear(dim_out, dim_z)
@@ -44,98 +51,153 @@ class VAE(nn.Module):
         self.latent = self.reparametrize(self.mu, self.std)
         return self.decoder(self.latent, nonlinearity=nonlinearity)
 
-# ROUTINES =============================================================================================================
-# Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
-def vae_routine(data, models, losses, results, viz, vae_criterion=F.mse_loss, beta_kld=1., **kwargs):
-    X, Y, Z = data.get_batch('images', 'targets', 'z')
-    vae_net = models.vae
+class VAERoutine(RoutinePlugin):
+    '''VAE for training the VAE.
 
-    vae_criterion = kwargs.get('criterion', vae_criterion) # For old-style
+    '''
+    plugin_name = 'VAE'
+    plugin_nets = ['vae']
+    plugin_inputs = ['input', 'noise', 'targets']
+    plugin_outputs = ['encoder_mean']
 
-    outputs = vae_net(X)
-    outputs = F.tanh(outputs)
-    gen = vae_net.decoder(Z)
-    gen = F.tanh(gen)
+    def run(self, vae_criterion=F.mse_loss, beta_kld=1.):
+        '''
 
-    r_loss = vae_criterion(outputs, X, size_average=False) / X.size(0)
-    kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
+        Args:
+            vae_criterion: Reconstruction criterion.
+            beta_kld: Beta scaling for KL term in lower-bound.
 
-    losses.vae=(r_loss + beta_kld * kl)
-    #correlations = cross_correlation(vae_net.mu, remove_diagonal=True)
+        '''
+        X = self.inputs.input
+        Y = self.inputs.targets
+        Z = self.inputs.noise
 
-    results.update(KL_divergence=kl.item())
-    viz.add_image(outputs, name='reconstruction')
-    viz.add_image(gen, name='generated')
-    viz.add_image(X, name='ground truth')
-    #viz.add_heatmap(correlations.data, name='latent correlations')
-    viz.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
+        vae_net = self.nets.vae
 
+        outputs = vae_net(X)
+        outputs = F.tanh(outputs)
+        gen = vae_net.decoder(Z)
+        gen = F.tanh(gen)
 
-def classifier_routine(data, models, losses, results, viz, classifier_criterion=nn.CrossEntropyLoss(), **kwargs):
-    X, Y = data.get_batch('images', 'targets')
-    vae_net = models.vae
-    classifier = models.classifier
+        r_loss = vae_criterion(outputs, X, size_average=False) / X.size(0)
+        kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
 
-    classifier_criterion = kwargs.get('criterion', classifier_criterion)  # For old-style
+        self.losses.vae = (r_loss + beta_kld * kl)
+        self.results.update(KL_divergence=kl.item())
 
-    vae_net(X)
-    classify(classifier, vae_net.mu, Y, losses=losses, results=results, criterion=classifier_criterion)
+        self.add_image(outputs, name='reconstruction')
+        self.add_image(gen, name='generated')
+        self.add_image(X, name='ground truth')
+        self.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
-# Building helper functions for autoencoders ===========================================================================
-
-
-def build_encoder(models, x_shape, dim_out, Encoder, key='encoder', **encoder_args):
-    logger.debug('Forming encoder with class {} and args: {}'.format(Encoder, encoder_args))
-    encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
-
-    if models is not None:
-        models[key] = encoder
-
-    return encoder
+        return vae_net.mu
+register_plugin(VAERoutine)
 
 
-def build_decoder(models, x_shape, dim_in, Decoder, key='decoder', **decoder_args):
-    logger.debug('Forming dencoder with class {} and args: {}'.format(Decoder, decoder_args))
-    decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
+class ImageEncoderBuild(BuildPlugin):
+    '''Builds a simple image encoder.
 
-    if models is not None:
-        models[key] = decoder
+    '''
+    plugin_name = 'image_encoder'
+    plugin_nets = ['image_encoder']
+    def build(self, encoder_type: str='convnet', dim_out: int=64, encoder_args={}):
+        '''
 
-    return decoder
+        Args:
+            encoder_type: Encoder model type.
+            dim_out: Output size.
+            encoder_args: Arguments for encoder build.
 
-# CORTEX ===============================================================================================================
-# Must include `BUILD`, `TRAIN_ROUTINES`, `DEFAULT_CONFIG`
-
-def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', dim_z=64, dim_encoder_out=1028, encoder_args={},
-          decoder_args={}):
-    x_shape = data.get_dims('x', 'y', 'c')
-    dim_l = data.get_dims('labels')
-    data.add_noise('z', dist='normal', size=64)
-
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
-
-    encoder = build_encoder(None, x_shape, dim_encoder_out, Encoder, **encoder_args)
-    decoder = build_decoder(None, x_shape, dim_z, Decoder, **decoder_args)
-    vae = VAE(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
-
-    classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, batch_norm=True, dropout=0.2)
-    models.update(vae=vae, classifier=classifier)
+        '''
+        x_shape = self.get_dims('x', 'y', 'c')
+        Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type,
+                                                    encoder_args=encoder_args)
+        encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
+        self.add_networks(image_encoder=encoder)
+register_plugin(ImageEncoderBuild)
 
 
-TRAIN_ROUTINES = dict(vae=vae_routine, classifier=classifier_routine)
+class ImageDecoderBuild(BuildPlugin):
+    '''Builds a simple image encoder.
 
-INFO = dict(vae_criterion=dict(help='Reconstruction criterion.'),
-            beta_kld=dict(help='Beta scaling for KL term in lower-bound.'),
-            classifier_criterion=dict(help='Classifier criterion for additional classifier.'),
-            model_type=dict(choices=['mnist', 'convnet', 'resnet'],
-                            help='Model type.'),
-            dim_z=dict(help='Latent dimension.'),
-            dim_encoder_out=dict(help='Dimension of the final layer of the decoder before decoding to mu and log sigma.'),
-)
+    '''
+    plugin_name = 'image_decoder'
+    plugin_nets = ['image_decoder']
 
-DEFAULT_CONFIG = dict(
-    data=dict(batch_size=dict(train=64, test=640)),
-    optimizer=dict(optimizer='Adam', learning_rate=1e-4),
-    train=dict(save_on_lowest='losses.vae'))
+    def build(self, decoder_type: str='convnet', dim_in: int=64, decoder_args={}):
+        '''
+
+        Args:
+            decoder_type: Decoder model type.
+            dim_in: Input size.
+            decoder_args: Arguments for the decoder.
+
+        '''
+        x_shape = self.get_dims('x', 'y', 'c')
+        Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type,
+                                                    decoder_args=decoder_args)
+        decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
+        self.add_networks(image_decoder=decoder)
+register_plugin(ImageDecoderBuild)
+
+
+class VAEBuild(BuildPlugin):
+    '''Builds a VAE
+
+    This model builds on encoders and decoders build before it.
+
+    '''
+    plugin_name = 'VAE'
+    plugin_nets = ['vae']
+
+    def build(self, dim_z=64, dim_encoder_out=1028):
+        '''
+
+        Args:
+            dim_z: Latent dimension.
+            dim_encoder_out: Dimension of the final layer of the decoder before decoding to mu and log sigma.
+
+        '''
+        self.add_noise('z', dist='normal', size=dim_z)
+        encoder = self._nets.encoder
+        decoder = self._nets.decoder
+        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
+        self.add_networks(vae=vae)
+register_plugin(VAEBuild)
+
+
+class VAE(ModelPlugin):
+    '''Variational autoencder.
+
+    A generative model trained using the variational lower-bound to the log-likelihood.
+    See: Kingma, Diederik P., and Max Welling. "Auto-encoding variational bayes." arXiv preprint arXiv:1312.6114 (2013).
+
+    '''
+    plugin_name = 'VAE'
+
+    data_defaults = dict(batch_size=dict(train=64, test=640))
+    optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
+    train_defaults = dict(save_on_lowest='losses.vae')
+
+    def __init__(self, add_classification=True):
+        '''
+
+        Args:
+            add_classification: Adds a classifier on top of the latents.
+
+        '''
+        super().__init__()
+        self.add_build(ImageEncoderBuild, dim_out='dim_encoder_out', image_encoder='encoder')
+        self.add_build(ImageDecoderBuild, dim_in='dim_z', image_decoder='decoder')
+        self.add_build(VAEBuild)
+
+        self.add_routine(VAERoutine, input='data.images', noise='data.z', targets='data.targets')
+        if add_classification:
+            self.add_build('simple_classifier', dim_in='dim_z')
+            self.add_routine('classification', classifier='simple_classifier', inputs='VAE.encoder_mean',
+                             targets='data.targets')
+            self.add_train_procedure('VAE', 'classification')
+        else:
+            self.add_train_procedure('VAE')
+register_plugin(VAE)

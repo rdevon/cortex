@@ -64,7 +64,7 @@ class SimpleClassifierBuild(BuildPlugin):
     plugin_name = 'simple_classifier'
     plugin_nets = ['simple_classifier']
 
-    def build(self, dim_in: int=None, dim_out: int=None, dim_h=[200, 200], classifier_args={}):
+    def build(self, dim_in: int=None, dim_h=[200, 200], classifier_args={}):
         '''
 
         Args:
@@ -74,7 +74,9 @@ class SimpleClassifierBuild(BuildPlugin):
             classifier_args: Extra arguments for building the classifier
 
         '''
-        classifier = FullyConnectedNet(dim_in, dim_h=dim_h, dim_out=dim_out, **classifier_args)
+        dim_l = self.get_dims('labels')
+
+        classifier = FullyConnectedNet(dim_in, dim_h=dim_h, dim_out=dim_l, **classifier_args)
         self.add_networks(simple_classifier=classifier)
 register_plugin(SimpleClassifierBuild)
 
