@@ -13,7 +13,7 @@ from torch.autograd import Variable
 from .utils import update_encoder_args, update_decoder_args
 
 
-class VAE(nn.Module):
+class VAENetwork(nn.Module):
     '''VAE model.
 
     Attributes:
@@ -27,7 +27,7 @@ class VAE(nn.Module):
 
     '''
     def __init__(self, encoder, decoder, dim_out=None, dim_z=None):
-        super(VAE, self).__init__()
+        super(VAENetwork, self).__init__()
         self.encoder = encoder
         self.mu_net = nn.Linear(dim_out, dim_z)
         self.logvar_net = nn.Linear(dim_out, dim_z)
@@ -162,7 +162,7 @@ class VAEBuild(BuildPlugin):
         self.add_noise('z', dist='normal', size=dim_z)
         encoder = self._nets.encoder
         decoder = self._nets.decoder
-        vae = VAE(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
+        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
         self.add_networks(vae=vae)
 register_plugin(VAEBuild)
 
@@ -180,12 +180,24 @@ class VAE(ModelPlugin):
     optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
     train_defaults = dict(save_on_lowest='losses.vae')
 
-    def __int__(self, add_classification=False):
-        super().__init__()
-        self.add_build('image_encoder', dim_out='VAE.dim_encoder_out')
-        self.add_build('image_decoder', dim_in='VAE.dim_z')
-        self.add_build('VAE')
+    def __init__(self, add_classification=True):
+        '''
 
-        self.add_routine(VAERoutine, input='data.images', noise='data.z')
+        Args:
+            add_classification: Adds a classifier on top of the latents.
+
+        '''
+        super().__init__()
+        self.add_build(ImageEncoderBuild, dim_out='dim_encoder_out', image_encoder='encoder')
+        self.add_build(ImageDecoderBuild, dim_in='dim_z', image_decoder='decoder')
+        self.add_build(VAEBuild)
+
+        self.add_routine(VAERoutine, input='data.images', noise='data.z', targets='data.targets')
         if add_classification:
-            self.add_routine('image_classification', input='VAE.encoder_mean', targets='data.targets')
+            self.add_build('simple_classifier', dim_in='dim_z')
+            self.add_routine('classification', classifier='simple_classifier', inputs='VAE.encoder_mean',
+                             targets='data.targets')
+            self.add_train_procedure('VAE', 'classification')
+        else:
+            self.add_train_procedure('VAE')
+register_plugin(VAE)

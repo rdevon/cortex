@@ -180,6 +180,16 @@ class RoutinePlugin(RoutinePluginBase):
         '''
         self._viz.add_histogram(*args, **kwargs)
 
+    def add_scatter(self, *args, **kwargs):
+        '''Adds a scatter plot to visualization.
+
+        Args:
+            *args: TODO
+            **kwargs: TODO
+
+        '''
+        self._viz.add_scatter(*args, **kwargs)
+
 
 class BuildPlugin(BuildPluginBase):
     '''Plugin for custom build routines.

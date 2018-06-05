@@ -112,16 +112,26 @@ class BuildPluginBase():
 
         keys = self.plugin_nets
         for k, v in kwargs.items():
-            if k not in keys:
-                raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
+            # TODO(Devon): might have to do checking for keys here.
             if k in self._names:
                 raise KeyError('`{}` is already set'.format(k))
             self._names[k] = v
 
+        kwargs_ = {}
+        for k, v in self.kwargs.items():
+            k_ = self._names.get(k, k)
+            kwargs_[k_] = v
+        self.kwargs = kwargs_
+
     def __call__(self, **kwargs):
         if not hasattr(self, 'build'):
             raise ValueError('Build {} does not have `build` method set'.format(self.name))
-        self.build(**kwargs)
+        kwargs_ = {}
+        names = dict((v, k) for k, v in self._names.items())
+        for k, v in kwargs.items():
+            k_ = names.get(k, k)
+            kwargs_[k_] = v
+        self.build(**kwargs_)
 
 
 class RoutinePluginBase():
@@ -220,16 +230,17 @@ class ModelPluginBase():
         kwargs = {}
         def add_kwargs(obj):
             for k, v in obj.kwargs.items():
-                if k in kwargs:
+                k_ = obj._names.get(k, k)
+                if k_ in kwargs:
                     if v is None:
                         pass
-                    elif kwargs[k] is None:
-                        kwargs[k] = v
-                    elif kwargs[k] != v:
+                    elif kwargs[k_] is None:
+                        kwargs[k_] = v
+                    elif kwargs[k_] != v:
                         logger.warning('Multiple default values found for {}. This may have unintended '
-                                       'effects. Using {}'.format(k, kwargs[k]))
+                                       'effects. Using {}'.format(k_, kwargs[k_]))
                 else:
-                    kwargs[k] = v
+                    kwargs[k_] = v
 
         for build in self.builds.values():
             add_kwargs(build)
@@ -242,16 +253,17 @@ class ModelPluginBase():
         helps = {}
         def add_help(obj):
             for k, v in obj.help.items():
-                if k in helps:
+                k_ = obj._names.get(k, k)
+                if k_ in helps:
                     if v is None:
                         pass
-                    elif helps[k] is None:
-                        helps[k] = v
-                    elif helps[k] != v:
+                    elif helps[k_] is None:
+                        helps[k_] = v
+                    elif helps[k_] != v:
                         logger.warning('Multiple default values found for {} help. This may have unintended '
-                                       'effects. Using {}'.format(k, helps[k]))
+                                       'effects. Using {}'.format(k_, helps[k_]))
                 else:
-                    helps[k] = v
+                    helps[k_] = v
 
         for build in self.builds.values():
             add_help(build)

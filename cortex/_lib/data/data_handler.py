@@ -170,6 +170,12 @@ class DataHandler(object):
         else:
             return d
 
+    def get_label_names(self, source=None):
+        # TODO(Devon): This needs to incorporate specific label names from the dataset plugin.
+        source = source or list(self.loaders.keys())[0]
+        names = ['{}'.format(i) for i in range(self.dims[source]['labels'])]
+        return names
+
     def make_iterator(self, source):
         loader = self.loaders[source][self.mode]
 
