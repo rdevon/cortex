@@ -2,6 +2,11 @@
 
 '''
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
+__all__ = ['DatasetPlugin', 'ModelPlugin', 'RoutinePlugin', 'BuildPlugin', 'register_plugin']
+
 import inspect
 from os import path
 import shutil
@@ -153,6 +158,7 @@ class RoutinePlugin(RoutinePluginBase):
     plugin_nets = []
     plugin_inputs = []
     plugin_outputs = []
+    plugin_optional_inputs = []
 
     def add_image(self, *args, **kwargs):
         '''Adds image for visualization.
