@@ -28,7 +28,7 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
         noise_variables: Dict of noise variables.
         n_workers: Number of workers for DataLoader class.
         skip_last_batch: Whether to skip the last batch if the size
-        is smaller than batch_size.
+            is smaller than batch_size.
         DataLoader: Optional user-defined DataLoader.
         copy_to_local: Copy the data to a local path.
         data_args: Arguments for dataset plugin.
