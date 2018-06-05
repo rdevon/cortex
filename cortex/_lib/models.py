@@ -137,7 +137,7 @@ class RoutinePluginBase():
         self.name = name or self.plugin_name
         self.viz = None
 
-        keys = self.plugin_nets + self.plugin_inputs + self.plugin_outputs
+        keys = self.plugin_nets + self.plugin_inputs + self.plugin_outputs + self.plugin_optional_inputs
         for k, v in kwargs.items():
             if k not in keys:
                 raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
@@ -307,6 +307,7 @@ class ModelPluginBase():
                 kwargs = self.kwargs[key]
                 routine.reset()
 
+                # Set to `requires_grad` for models that are trained with this routine.
                 if train:
                     for k in routine.training_nets:
                         k_ = routine._names.get(k, k)
@@ -315,6 +316,7 @@ class ModelPluginBase():
                         for p in net.parameters():
                             p.requires_grad = True
 
+                # Required inputs
                 receives = routine.plugin_inputs
                 sends = [routine._names.get(k, k) for k in receives]
                 for send, receive in zip(sends, receives):
@@ -327,9 +329,23 @@ class ModelPluginBase():
                     except KeyError:
                         raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
 
+                # Optional inputs
+                receives = routine.plugin_optional_inputs
+                sends = [routine._names.get(k, k) for k in receives]
+                for send, receive in zip(sends, receives):
+                    try:
+                        if isinstance(send, (list, tuple)):
+                            send_ = [self.inputs[s] for s in send]
+                            routine.inputs[receive] = send_
+                        else:
+                            routine.inputs[receive] = self.inputs[send]
+                    except:
+                        routine.inputs[receive] = None
+
                 start_time = time.time()
                 outputs = routine.perform_routine(**kwargs)
 
+                # Backprop the losses.
                 if train:
                     for k, loss in routine.losses.items():
                         if loss is not None:
@@ -339,6 +355,7 @@ class ModelPluginBase():
 
                 end_time = time.time()
 
+                # Populate the inputs with the outputs
                 if u == update - 1:
                     for k, v in outputs.items():
                         k_ = key + '.' + k
@@ -346,6 +363,7 @@ class ModelPluginBase():
                             raise KeyError('{} already in inputs. Use a different name.'.format(k_))
                         self.inputs[k_] = v.detach()
 
+                # Add losses to the results.
                 for loss_key in routine.losses.keys():
                     if not loss_key in routine.training_nets:
                         routine.training_nets.append(loss_key)

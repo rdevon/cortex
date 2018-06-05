@@ -18,7 +18,6 @@ logger = logging.getLogger('cortex.init')
 
 
 def setup_cortex():
-    config.set_config()
     models.find_models(config.CONFIG.arch_paths)
 
     args = parse_args(models.MODEL_PLUGINS)
