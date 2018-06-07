@@ -29,15 +29,13 @@ class DatasetPlugin(DatasetPluginBase):
     sources = []
 
     def copy_to_local_path(self, from_path: str) -> str:
-        '''Copies data to the local data path.
-
-        Args:
-            from_path: Path to data to be copied.
-
-        Returns:
-            Path to which data was copied.
-
-        '''
+        """
+        Copies data to the local data path.
+              Args:
+                  from_path: Path to data to be copied.
+              Returns:
+                  Path to which data was copied.
+        """
         if from_path.endswith('/'):
             from_path = from_path[:-1]
         basename = path.basename(from_path)

@@ -23,8 +23,15 @@ _optimizer_defaults = dict(
 )
 
 
-def setup(optimizer='Adam', learning_rate=1.e-4, updates_per_routine={}, clipping={},
-          weight_decay={}, l1_decay={}, optimizer_options={}, model_optimizer_options={}):
+def setup(
+        optimizer='Adam',
+        learning_rate=1.e-4,
+        updates_per_routine={},
+        clipping={},
+        weight_decay={},
+        l1_decay={},
+        optimizer_options={},
+        model_optimizer_options={}):
     '''Optimizer entrypoint.
 
     Args:
@@ -47,10 +54,13 @@ def setup(optimizer='Adam', learning_rate=1.e-4, updates_per_routine={}, clippin
     # Set the optimizer options
     if len(optimizer_options) == 0:
         optimizer_options = 'default'
-    if optimizer_options == 'default' and optimizer in _optimizer_defaults.keys():
+    if optimizer_options == 'default'\
+            and optimizer in _optimizer_defaults.keys():
         optimizer_options = _optimizer_defaults[optimizer]
     elif optimizer_options == 'default':
-        raise ValueError('Default optimizer options for `{}` not available.'.format(optimizer))
+        raise ValueError(
+            'Default optimizer options for'
+            ' `{}` not available.'.format(optimizer))
 
     # Set the number of updates per routine
     updates_per_routine = updates_per_routine or {}
@@ -61,7 +71,8 @@ def setup(optimizer='Adam', learning_rate=1.e-4, updates_per_routine={}, clippin
                 updates[i] = updates_per_routine[routine]
 
     # Initialize regularization
-    reg.init(clipping=clipping, weight_decay=l1_decay)  # initialize regularization
+    # initialize regularization
+    reg.init(clipping=clipping, weight_decay=l1_decay)
 
     # Set the optimizers
     if callable(optimizer):
@@ -69,7 +80,8 @@ def setup(optimizer='Adam', learning_rate=1.e-4, updates_per_routine={}, clippin
     elif hasattr(optim, optimizer):
         op = getattr(optim, optimizer)
     else:
-        raise NotImplementedError('Optimizer not supported `{}`'.format(optimizer))
+        raise NotImplementedError(
+            'Optimizer not supported `{}`'.format(optimizer))
 
     for network_key, network in models.NETWORK_HANDLER.items():
         logger.info('Building optimizer for {}'.format(network_key))
@@ -79,13 +91,17 @@ def setup(optimizer='Adam', learning_rate=1.e-4, updates_per_routine={}, clippin
             params = []
             for net in network:
                 net.to(exp.DEVICE)
-                net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+                net = torch.nn.DataParallel(
+                    net, device_ids=range(
+                        torch.cuda.device_count()))
                 logger.debug('Getting parameters for {}'.format(net))
                 params += list(net.parameters())
         else:
             network.to(exp.DEVICE)
             # TODO(Devon): is the next line really doing anything?
-            network = torch.nn.DataParallel(network, device_ids=range(torch.cuda.device_count()))
+            network = torch.nn.DataParallel(
+                network, device_ids=range(
+                    torch.cuda.device_count()))
             params = list(network.parameters())
 
         # Needed for reloading.
@@ -113,14 +129,22 @@ def setup(optimizer='Adam', learning_rate=1.e-4, updates_per_routine={}, clippin
         optimizer = op(params, lr=eta, weight_decay=wd, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
 
-        logger.info('Training {} routine with {}'.format(network_key, optimizer))
+        logger.info(
+            'Training {} routine with {}'.format(
+                network_key, optimizer))
 
         # Additional regularization
         if network_key in reg.CLIPPING.keys():
-            logger.info('Clipping {} with {}'.format(network_key, reg.CLIPPING[network_key]))
+            logger.info(
+                'Clipping {} with {}'.format(
+                    network_key,
+                    reg.CLIPPING[network_key]))
 
         if network_key in reg.L1_DECAY.keys():
-            logger.info('L1 Decay {} with {}'.format(network_key, reg.L1_DECAY[network_key]))
+            logger.info(
+                'L1 Decay {} with {}'.format(
+                    network_key,
+                    reg.L1_DECAY[network_key]))
 
     if not exp.DEVICE == torch.device('cpu'):
         cudnn.benchmark = True

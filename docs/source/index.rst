@@ -10,6 +10,7 @@ Welcome to Cortex's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+.. automodule:: plugins
 
 Indices and tables
 ==================

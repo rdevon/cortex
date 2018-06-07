@@ -65,3 +65,16 @@ classifier.py requires the following to be incorporated into cortex:
     * Samples: A dictionary of things that will be visualized
     * <Ignore>
 * Finally, the model needs to be registered by adding it to the `arch_names` string in `models/__init__.py`
+
+## Generating documentation
+
+
+```python
+$ cd docs/
+```
+```
+$ sphinx-apidoc -o source/ ../cortex
+```
+```
+$ make html
+```

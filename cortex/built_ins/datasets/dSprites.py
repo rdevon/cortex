@@ -4,7 +4,7 @@ Taken and adapted from https://github.com/Near32/PYTORCH_VAE
 
 '''
 
-import logging
+
 from os import path
 import urllib.request
 
@@ -24,7 +24,11 @@ def handle():
 
     Dataset = Dataset or dSpriteDataset
     Dataset = make_indexing(Dataset)
-    train_set = Dataset(data_path, transform=transform, download=True, shuffle=True)
+    train_set = Dataset(
+        data_path,
+        transform=transform,
+        download=True,
+        shuffle=True)
     test_set = train_set
     output_sources = ['images', 'targets']
 

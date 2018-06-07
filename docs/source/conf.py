@@ -14,7 +14,12 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('/home/joel/MILA/cortex2.0'))
+sys.path.insert(0, os.path.abspath('..'))
+
+docs_src_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, docs_src_path)
+src_path = os.path.abspath(os.path.join(docs_src_path, '..', '..', 'cortex'))
+sys.path.insert(0, src_path)
 
 # -- Project information -----------------------------------------------------
 
