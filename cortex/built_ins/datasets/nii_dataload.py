@@ -29,32 +29,34 @@ import numpy as np
 import nibabel as nib
 from glob import glob
 
-
 IMG_EXTENSIONS = ['.nii', '.nii.gz', '.img', '.hdr', '.img.gz', '.hdr.gz']
 
 
-def make_dataset(dir,patterns=None):
+def make_dataset(dir, patterns=None):
     images = []
 
     dir = os.path.expanduser(dir)
 
     file_list = []
 
-    all_items = [os.path.join(dir,i) for i in os.listdir(dir)]
-    directories = [os.path.join(dir,d) for d in all_items if os.path.isdir(d)]
+    all_items = [os.path.join(dir, i) for i in os.listdir(dir)]
+    directories = [os.path.join(dir, d) for d in all_items if os.path.isdir(d)]
     if patterns is not None:
         for i, pattern in enumerate(patterns):
-            files = [(f,i) for f in glob(os.path.join(dir, pattern))]
+            files = [(f, i) for f in glob(os.path.join(dir, pattern))]
             file_list.append(files)
-    else: 
-         file_list = [[(os.path.join(p,f),i) for f in os.listdir(p) if os.path.isfile(os.path.join(p,f))] for i,p in enumerate(directories)]
-
+    else:
+        file_list = [[(os.path.join(p, f), i)
+                      for f in os.listdir(p)
+                      if os.path.isfile(os.path.join(p, f))]
+                     for i, p in enumerate(directories)]
 
     for i, target in enumerate(file_list):
         for item in target:
             images.append(item)
 
     return images
+
 
 def nii_loader(path):
     img = nib.load(path)
@@ -76,11 +78,16 @@ class ImageFolder(data.Dataset):
     '''
 
     def __init__(self, root, loader=nii_loader, patterns=None, mask=None):
-        imgs = make_dataset(root,patterns)
+        imgs = make_dataset(root, patterns)
 
         if len(imgs) == 0:
-            raise(RuntimeError("Found 0 images in subfolders of: " + root + "\n"
-                               "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
+            raise (
+                RuntimeError(
+                    "Found 0 images in subfolders of: " +
+                    root +
+                    "\n"
+                    "Supported image extensions are: " +
+                    ",".join(IMG_EXTENSIONS)))
 
         self.root = root
         self.imgs = imgs
@@ -88,7 +95,7 @@ class ImageFolder(data.Dataset):
         self.loader = loader
         self.mask = mask
 
-    def maskData(self,data):
+    def maskData(self, data):
         msk = nib.load(self.mask)
         mskD = msk.get_data()
         if not np.all(np.bitwise_or(mskD == 0, mskD == 1)):
@@ -99,12 +106,12 @@ class ImageFolder(data.Dataset):
 
         msk_f = mskD.flatten()
         msk_idx = np.where(msk_f == 1)[0]
-        
+
         if len(data.shape) == 3:
             data_masked = data.flatten()[msk_idx]
 
         if len(data.shape) == 4:
-            data = np.transpose(data,(3,0,1,2))
+            data = np.transpose(data, (3, 0, 1, 2))
             data_masked = np.zeros((data.shape[0], int(mskD.sum())))
             for i, x in enumerate(data):
                 data_masked[i] = x.flatten()[msk_idx]
@@ -112,9 +119,11 @@ class ImageFolder(data.Dataset):
         img = data_masked
 
         return np.array(img)
+
     '''
         Gives us a tuple from the array at (index) of: (image, label)
     '''
+
     def __getitem__(self, index):
         """
         Args:
@@ -125,13 +134,10 @@ class ImageFolder(data.Dataset):
         """
         path, label = self.imgs[index]
         img = self.loader(path)
-	if self.mask:
+        if self.mask:
             img = self.maskData(img)
 
         return np.array(img), label
 
     def __len__(self):
         return len(self.imgs)
- 
-
-
