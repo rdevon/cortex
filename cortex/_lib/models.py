@@ -33,8 +33,10 @@ def check_plugin(plugin, plugin_type_str, D):
     if plugin.plugin_name is None:
         ValueError('Set `plugin_name` static member for plugin.')
     if plugin.plugin_name in D:
-        raise KeyError('plugin_name `{}` already registered as a {} plugin in cortex. '
-                       'Try using another one.'.format(plugin_type_str, plugin.plugin_name))
+        raise KeyError(
+            'plugin_name `{}` already registered as a {} plugin in cortex. '
+            'Try using another one.'.format(
+                plugin_type_str, plugin.plugin_name))
 
     for k in plugin._protected:
         if hasattr(plugin, k):
@@ -43,7 +45,8 @@ def check_plugin(plugin, plugin_type_str, D):
     for k in plugin._required:
         v = getattr(plugin, k, None)
         if v is None:
-            raise AttributeError('Plugin must have {} attribute set.'.format(k))
+            raise AttributeError(
+                'Plugin must have {} attribute set.'.format(k))
         else:
             setattr(plugin, k, v)
 
@@ -86,9 +89,13 @@ class BuildReference():
         try:
             plugin = _BUILD_PLUGINS[self.reference]
         except KeyError:
-            raise KeyError('Build `{}` not registered in cortex. '
-                           'Available: {}'.format(self.reference, tuple(_BUILD_PLUGINS.keys())))
+            raise KeyError(
+                'Build `{}` not registered in cortex. '
+                'Available: {}'.format(
+                    self.reference, tuple(
+                        _BUILD_PLUGINS.keys())))
         return plugin(**self.kwargs)
+
 
 class RoutineReference():
     def __init__(self, key, **kwargs):
@@ -99,8 +106,11 @@ class RoutineReference():
         try:
             plugin = _ROUTINE_PLUGINS[self.reference]
         except KeyError:
-            raise KeyError('Routine `{}` not registered in cortex. '
-                           'Available: {}'.format(self.reference, tuple(_ROUTINE_PLUGINS.keys())))
+            raise KeyError(
+                'Routine `{}` not registered in cortex. '
+                'Available: {}'.format(
+                    self.reference, tuple(
+                        _ROUTINE_PLUGINS.keys())))
         return plugin(**self.kwargs)
 
 
@@ -125,7 +135,9 @@ class BuildPluginBase():
 
     def __call__(self, **kwargs):
         if not hasattr(self, 'build'):
-            raise ValueError('Build {} does not have `build` method set'.format(self.name))
+            raise ValueError(
+                'Build {} does not have `build` method set'.format(
+                    self.name))
         kwargs_ = {}
         names = dict((v, k) for k, v in self._names.items())
         for k, v in kwargs.items():
@@ -147,25 +159,33 @@ class RoutinePluginBase():
         self.name = name or self.plugin_name
         self.viz = None
 
-        keys = self.plugin_nets + self.plugin_inputs + self.plugin_outputs + self.plugin_optional_inputs
+        keys = self.plugin_nets + self.plugin_inputs + \
+            self.plugin_outputs + self.plugin_optional_inputs
         for k, v in kwargs.items():
             if k not in keys:
-                raise KeyError('`{}` not supported for this plugin. Available: {}'.format(k, keys))
+                raise KeyError(
+                    '`{}` not supported for this plugin. Available: {}'.format(
+                        k, keys))
             if k in self._names:
                 raise KeyError('`{}` is already set'.format(k))
             self._names[k] = v
 
     def __call__(self, **kwargs):
         if not hasattr(self, 'run'):
-            raise ValueError('Routine {} does not have `run` method set'.format(self.name))
+            raise ValueError(
+                'Routine {} does not have `run` method set'.format(
+                    self.name))
         outputs = self.run(**kwargs)
         if outputs is None:
             return {}
         if not isinstance(outputs, tuple):
             outputs = (outputs,)
         if len(outputs) != len(self.plugin_outputs):
-            raise ValueError('Routine has different number of outputs ({}) '
-                             'than is set from `plugin_outputs` ({}).'.format(len(outputs), len(self.plugin_outputs)))
+            raise ValueError(
+                'Routine has different number of outputs ({}) '
+                'than is set from `plugin_outputs` ({}).'.format(
+                    len(outputs), len(
+                        self.plugin_outputs)))
 
         out_dict = {}
         for k, v in zip(self.plugin_outputs, outputs):
@@ -194,7 +214,10 @@ class ModelPluginBase():
     def __init__(self):
         self.builds = {}
         self.routines = {}
-        self.defaults = dict(data=self.data_defaults, optimizer=self.optimizer_defaults, train=self.train_defaults)
+        self.defaults = dict(
+            data=self.data_defaults,
+            optimizer=self.optimizer_defaults,
+            train=self.train_defaults)
         self.train_procedures = []
         self.eval_procedures = []
 
@@ -228,6 +251,7 @@ class ModelPluginBase():
 
     def get_kwargs(self):
         kwargs = {}
+
         def add_kwargs(obj):
             for k, v in obj.kwargs.items():
                 k_ = obj._names.get(k, k)
@@ -237,8 +261,9 @@ class ModelPluginBase():
                     elif kwargs[k_] is None:
                         kwargs[k_] = v
                     elif kwargs[k_] != v:
-                        logger.warning('Multiple default values found for {}. This may have unintended '
-                                       'effects. Using {}'.format(k_, kwargs[k_]))
+                        logger.warning('Multiple default values found for {}. '
+                                       'This may have unintended effects. '
+                                       'Using {}'.format(k_, kwargs[k_]))
                 else:
                     kwargs[k_] = v
 
@@ -251,6 +276,7 @@ class ModelPluginBase():
 
     def get_help(self):
         helps = {}
+
         def add_help(obj):
             for k, v in obj.help.items():
                 k_ = obj._names.get(k, k)
@@ -260,8 +286,13 @@ class ModelPluginBase():
                     elif helps[k_] is None:
                         helps[k_] = v
                     elif helps[k_] != v:
-                        logger.warning('Multiple default values found for {} help. This may have unintended '
-                                       'effects. Using {}'.format(k_, helps[k_]))
+                        logger.warning('Multiple '
+                                       'default values found'
+                                       'for {} help.'
+                                       'This may have'
+                                       'unintended'
+                                       'effects. Using {}'
+                                       .format(k_, helps[k_]))
                 else:
                     helps[k_] = v
 
@@ -298,7 +329,8 @@ class ModelPluginBase():
         return Handler(builds=builds, routines=routines)
 
     def train(self, i, quit_on_bad_values=False):
-        return self.run_procedure(i, quit_on_bad_values=quit_on_bad_values, train=True)
+        return self.run_procedure(
+            i, quit_on_bad_values=quit_on_bad_values, train=True)
 
     def run_procedure(self, i, quit_on_bad_values=False, train=False):
         self._data.next()
@@ -319,7 +351,8 @@ class ModelPluginBase():
                 kwargs = self.kwargs[key]
                 routine.reset()
 
-                # Set to `requires_grad` for models that are trained with this routine.
+                # Set to `requires_grad` for models that are trained with this
+                # routine.
                 if train:
                     for k in routine.training_nets:
                         k_ = routine._names.get(k, k)
@@ -339,7 +372,10 @@ class ModelPluginBase():
                         else:
                             routine.inputs[receive] = self.inputs[send]
                     except KeyError:
-                        raise KeyError('{} not found in inputs. Available: {}'.format(send, tuple(self.inputs.keys())))
+                        raise KeyError(
+                            '{} not found in inputs. Available: {}'.format(
+                                send, tuple(
+                                    self.inputs.keys())))
 
                 # Optional inputs
                 receives = routine.plugin_optional_inputs
@@ -351,7 +387,7 @@ class ModelPluginBase():
                             routine.inputs[receive] = send_
                         else:
                             routine.inputs[receive] = self.inputs[send]
-                    except:
+                    except BaseException:
                         routine.inputs[receive] = None
 
                 start_time = time.time()
@@ -372,26 +408,32 @@ class ModelPluginBase():
                     for k, v in outputs.items():
                         k_ = key + '.' + k
                         if k_ in self.inputs:
-                            raise KeyError('{} already in inputs. Use a different name.'.format(k_))
+                            raise KeyError('{} already in'
+                                           ' inputs. Use a '
+                                           'different name.'.format(k_))
                         self.inputs[k_] = v.detach()
 
                 # Add losses to the results.
                 for loss_key in routine.losses.keys():
-                    if not loss_key in routine.training_nets:
+                    if loss_key not in routine.training_nets:
                         routine.training_nets.append(loss_key)
 
                 # Check for bad numbers
                 bads = bad_values(routine.results)
                 if bads and quit_on_bad_values:
-                    print('Bad values found (quitting): {} \n All:{}'.format(bads, routine.results))
+                    print(
+                        'Bad values found (quitting): {} \n All:{}'.format(
+                            bads, routine.results))
                     exit(0)
 
-            routine_losses = dict((k, v.item()) for k, v in routine.losses.items())
+            routine_losses = dict((k, v.item())
+                                  for k, v in routine.losses.items())
 
             # Update results
             update_dict_of_lists(self.results, **routine.results)
             update_dict_of_lists(self.results['losses'], **routine_losses)
-            update_dict_of_lists(self.results['time'], **{key: end_time - start_time})
+            update_dict_of_lists(
+                self.results['time'], **{key: end_time - start_time})
 
     def setup_routine_nets(self):
         self.viz = VizHandler()
@@ -455,13 +497,15 @@ def import_directory(p, name):
     sys.path.append(p)
 
     for fn in os.listdir(p):
-        if fn.endswith('.py') and not fn in _ignore:
+        if fn.endswith('.py') and fn not in _ignore:
             fnp = fn[:-3]
             importlib.import_module(fnp)
             try:
                 importlib.import_module(fnp)
             except Exception as e:
-                logger.warning('Import of architecture (module) {} failed ({})'.format(fnp, e))
+                logger.warning(
+                    'Import of architecture (module) {} failed ({})'.format(
+                        fnp, e))
 
         '''
         elif os.path.isdir(fn):
@@ -470,6 +514,7 @@ def import_directory(p, name):
             if fn not in _ignore:
                 add_directory(fn, name + '.' + os.path.basename(fn))
         '''
+
 
 def find_models(model_paths):
     for k, p in model_paths.items():
@@ -485,6 +530,7 @@ def find_models(model_paths):
         except Exception as e:
             logger.warning('`{}` checks failed ({}).'.format(k, e))
             MODEL_PLUGINS.pop(k)
+
 
 def build_networks(**build_args):
     '''Builds the generator and discriminator.
@@ -504,8 +550,9 @@ def build_networks(**build_args):
 def reload_models(**reload_models):
     global MODEL_HANDLER
     if MODEL_HANDLER is None:
-        raise RuntimeError('MODEL_HANDLER not set. `reload_models` should only be used after '
-                           '`models.setup_models` has been called.')
+        raise RuntimeError(
+            'MODEL_HANDLER not set. `reload_models` should only be used after '
+            '`models.setup_models` has been called.')
     for k, v in reload_models.items():
         logger.info('Reloading model {}'.format(k))
         logger.debug(v)
