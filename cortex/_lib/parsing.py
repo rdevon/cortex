@@ -98,10 +98,9 @@ def make_argument_parser():
         '-n',
         '--name',
         default=None,
-        help=(
-            'Name of the experiment. If given, base name of '
-            'output directory will be `--name`. If not given,'
-            ' name will be the base name of the `--out_path`'))
+        help=('Name of the experiment. If given, base name of '
+              'output directory will be `--name`. If not given,'
+              ' name will be the base name of the `--out_path`'))
     parser.add_argument('-r', '--reload', type=str, default=None,
                         help=('Path to model to reload.'))
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
