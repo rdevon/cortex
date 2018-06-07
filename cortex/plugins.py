@@ -5,7 +5,12 @@
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
-__all__ = ['DatasetPlugin', 'ModelPlugin', 'RoutinePlugin', 'BuildPlugin', 'register_plugin']
+__all__ = [
+    'DatasetPlugin',
+    'ModelPlugin',
+    'RoutinePlugin',
+    'BuildPlugin',
+    'register_plugin']
 
 import inspect
 from os import path
@@ -14,8 +19,15 @@ import shutil
 from torch.utils.data import Dataset
 
 from cortex._lib.data import DatasetPluginBase, register as register_data
-from cortex._lib.models import (BuildReference, BuildPluginBase, ModelPluginBase, RoutineReference, RoutinePluginBase,
-                                register_build, register_routine, register_model)
+from cortex._lib.models import (
+    BuildReference,
+    BuildPluginBase,
+    ModelPluginBase,
+    RoutineReference,
+    RoutinePluginBase,
+    register_build,
+    register_routine,
+    register_model)
 
 
 class DatasetPlugin(DatasetPluginBase):
@@ -57,7 +69,8 @@ class DatasetPlugin(DatasetPluginBase):
 
         '''
         if mode in self._datasets:
-            raise KeyError('`{}` already added to datasets in entrypoint'.format(key))
+            raise KeyError(
+                '`{}` already added to datasets in entrypoint'.format(key))
         self._datasets[mode] = dataset
 
     def get_path(self, source: str):
@@ -74,7 +87,8 @@ class DatasetPlugin(DatasetPluginBase):
         '''
         p = self._paths.get(source)
         if p is None:
-            raise KeyError('`{}` not found in config.yaml data_paths'.format(source))
+            raise KeyError(
+                '`{}` not found in config.yaml data_paths'.format(source))
         return p
 
     def set_input_names(self, input_names):
@@ -272,7 +286,7 @@ class ModelPlugin(ModelPluginBase):
             raise TypeError('Unknown build type {}'.format(type(build_query)))
         name = name or build.plugin_name
 
-        if not name in self.builds:
+        if name not in self.builds:
             self.builds[name] = build
 
     def add_routine(self, routine_query, name=None, **kwargs):
@@ -294,15 +308,21 @@ class ModelPlugin(ModelPluginBase):
             routine = RoutineReference(routine_query, **kwargs)
             name = name or routine_query
         else:
-            raise TypeError('Unknown routine type {}'.format(type(routine_query)))
+            raise TypeError(
+                'Unknown routine type {}'.format(
+                    type(routine_query)))
         name = name or routine.plugin_name
 
-        if not name in self.routines:
+        if name not in self.routines:
             self.routines[name] = routine
 
         return name
 
-    def add_train_procedure(self, *routines, mode: str='train', updates_per_routine=None):
+    def add_train_procedure(
+            self,
+            *routines,
+            mode: str='train',
+            updates_per_routine=None):
         '''Adds a training procedure.
 
         Args:
@@ -313,12 +333,14 @@ class ModelPlugin(ModelPluginBase):
         '''
         updates_per_routine = updates_per_routine or [1 for _ in routines]
         if len(routines) != len(updates_per_routine):
-            raise ValueError('Number of routines must match number of updates.')
+            raise ValueError(
+                'Number of routines must match number of updates.')
         routine_names = []
         for routine in routines:
             routine_names.append(self.add_routine(routine))
 
-        self.train_procedures.append((mode, routine_names, updates_per_routine))
+        self.train_procedures.append(
+            (mode, routine_names, updates_per_routine))
 
     def add_eval_procedure(self, *routines, mode='test'):
         '''Adds a evaluation procedure.
