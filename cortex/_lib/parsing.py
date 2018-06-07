@@ -68,18 +68,9 @@ optimizer_args = parse_kwargs(optimizer.setup)
 default_args = dict(data=data_args, optimizer=optimizer_args, train=train_args)
 default_help = dict(data=data_help, optimizer=optimizer_help, train=train_help)
 
-_protected_args = [
-    'arch',
-    'out_path',
-    'name',
-    'reload',
-    'args',
-    'copy_to_local',
-    'meta',
-    'config_file',
-    'clean',
-    'verbosity',
-    'test']
+_protected_args = ['arch', 'out_path', 'name', 'reload',
+                   'args', 'copy_to_local', 'meta', 'config_file',
+                   'clean', 'verbosity', 'test']
 
 logger = logging.getLogger('cortex.parsing')
 
@@ -115,12 +106,9 @@ def make_argument_parser():
     parser.add_argument('-r', '--reload', type=str, default=None,
                         help=('Path to model to reload.'))
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
-    parser.add_argument(
-        '-M',
-        '--load_models',
-        type=str,
-        default=None,
-        help=('Path to model to reload. Does not load args, info, etc'))
+    parser.add_argument('-M', '--load_models',
+                        type=str, default=None,
+                        help=('Path to model to reload. Does not load args, info, etc'))
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
                         help=('Configuration yaml file. '
