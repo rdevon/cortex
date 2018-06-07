@@ -26,7 +26,7 @@ import os
 
 import torch
 import torch.utils.data as data
-
+from os import path
 
 DATASETS = ["G2", "S_set", "A_set", "DIM_set", "Unbalance",
             "Aggregation", "Compound", "Pathbased", "Spiral",
@@ -38,8 +38,9 @@ NUM_VARIANT_DATASETS = ["S_set", "A_set"]
 
 def HANDLE():
     if CONFIG.toy_data_path is None:
-        raise ValueError('torchvision dataset must have corresponding torchvision folder specified in '
-                         '`config.yaml`')
+        raise ValueError(
+            'torchvision dataset must have corresponding '
+            'torchvision folder specified in `config.yaml`')
     Dataset = getattr(toysets, source)
 
     if copy_to_local:
@@ -54,11 +55,17 @@ def HANDLE():
     Dataset = make_indexing(Dataset)
     Dataset = make_tds_random_and_split(Dataset)
     train_set = Dataset(root=train_path, download=True, split=0.8, load=True)
-    test_set = Dataset(root=test_path, download=True, split=1, idx=train_set.idx, load=True)
+    test_set = Dataset(
+        root=test_path,
+        download=True,
+        split=1,
+        idx=train_set.idx,
+        load=True)
     output_sources = ['images', 'targets']
 
     dim_x = train_set.tensors[0].size()[1]
-    dim_l = len(np.unique(np.concatenate([train_set.tensors[1], test_set.tensors[1]])))
+    dim_l = len(np.unique(np.concatenate(
+        [train_set.tensors[1], test_set.tensors[1]])))
     dims = dict(x=dim_x, labels=dim_l)
 
 
@@ -80,9 +87,11 @@ def make_tds_random_and_split(C):
 
             for i in range(len(self.tensors)):
                 if split > 0:
-                    tensors_.append(self.tensors[i][self.idx][:int(split * len(self))])
+                    tensors_.append(
+                        self.tensors[i][self.idx][:int(split * len(self))])
                 else:
-                    tensors_.append(self.tensors[i][self.idx][int(split * len(self)) - 1:])
+                    tensors_.append(
+                        self.tensors[i][self.idx][int(split * len(self)) - 1:])
 
             self.tensors = tuple(tensors_)
 
@@ -290,7 +299,7 @@ class S_set(_SmallDataset):
         "http://cs.joensuu.fi/sipu/datasets/s3.txt",
         "http://cs.joensuu.fi/sipu/datasets/s4.txt",
         "http://cs.joensuu.fi/sipu/datasets/s-originals.zip"
-        ]
+    ]
 
     sync_files = 5
 
@@ -328,7 +337,7 @@ class A_set(_SmallDataset):
         "http://cs.joensuu.fi/sipu/datasets/a2.txt",
         "http://cs.joensuu.fi/sipu/datasets/a3.txt",
         "http://cs.joensuu.fi/sipu/datasets/a-gt-pa.zip"
-        ]
+    ]
 
     sync_files = 4
 
@@ -368,7 +377,7 @@ class DIM_set(_SmallDataset):
         "http://cs.joensuu.fi/sipu/datasets/dim512.pa",
         "http://cs.joensuu.fi/sipu/datasets/dim1024.txt",
         "http://cs.joensuu.fi/sipu/datasets/dim1024.pa",
-        ]
+    ]
 
     sync_files = 5
 
@@ -396,7 +405,7 @@ class Unbalance(_SmallDataset):
     urls = [
         "http://cs.joensuu.fi/sipu/datasets/unbalance.txt",
         "http://cs.joensuu.fi/sipu/datasets/unbalance-gt-pa.zip",
-        ]
+    ]
 
     sync_files = 4
 
