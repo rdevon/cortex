@@ -5,21 +5,19 @@
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
+import numpy as np
 import logging
-from os import path
-
+import visdom
 import imageio
 import matplotlib
-
-matplotlib.use('Agg')
-from matplotlib import pylab as plt
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-import visdom
-
+from matplotlib import pylab as plt
 from . import data, exp
 from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
+from os import path
+
+matplotlib.use('Agg')
 
 logger = logging.getLogger('cortex.viz')
 config_font = None
@@ -38,7 +36,7 @@ CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 def init(viz_config):
     global visualizer, config_font
     if viz_config is not None and ('server' in viz_config.keys() or
-                                           'port' in viz_config.keys()):
+                                   'port' in viz_config.keys()):
         server = viz_config.get('server', None)
         port = viz_config.get('port', 8097)
         visualizer = visdom.Visdom(server=server, port=port)
@@ -52,15 +50,20 @@ def init(viz_config):
 def setup(use_tanh=None, quantized=None, img=None, label_names=None,
           is_caption=False, is_attribute=False, char_map=None, name=None):
     global _options, CHAR_MAP
-    if use_tanh is not None: _options['use_tanh'] = use_tanh
-    if quantized is not None: _options['quantized'] = quantized
-    if img is not None: _options['img'] = img
-    if label_names is not None: _options['label_names'] = label_names
+    if use_tanh is not None:
+        _options['use_tanh'] = use_tanh
+    if quantized is not None:
+        _options['quantized'] = quantized
+    if img is not None:
+        _options['img'] = img
+    if label_names is not None:
+        _options['label_names'] = label_names
     _options['is_caption'] = is_caption
     _options['is_attribute'] = is_attribute
     if is_caption and is_attribute:
         raise ValueError('Cannot be both attribute and caption')
-    if char_map is not None: CHAR_MAP = char_map
+    if char_map is not None:
+        CHAR_MAP = char_map
 
 
 class VizHandler():
@@ -86,14 +89,19 @@ class VizHandler():
         if labels is not None:
             labels = convert_to_numpy(labels)
         if name in self.images:
-            raise KeyError('{} already added to visualization. Use the name kwarg'.format(name))
+            raise KeyError('{} already added to '
+                           'visualization. Use the name kwarg'
+                           .format(name))
         self.images[name] = (im, labels)
 
     def add_histogram(self, hist, name='histogram'):
         if self.ignore:
             return
         if name in self.histograms:
-            raise KeyError('{} already added to visualization. Use the name kwarg'.format(name))
+            raise KeyError('{} already added'
+                           ' to visualization.'
+                           ' Use the name kwarg'
+                           .format(name))
         hist = convert_to_numpy(hist)
         self.histograms[name] = hist
 
@@ -101,7 +109,10 @@ class VizHandler():
         if self.ignore:
             return
         if name in self.heatmaps:
-            raise KeyError('{} already added to visualization. Use the name kwarg'.format(name))
+            raise KeyError('{} already'
+                           ' added to visualization.'
+                           ' Use the name kwarg'
+                           .format(name))
         hm = convert_to_numpy(hm)
         self.heatmaps[name] = hm
 
@@ -115,11 +126,21 @@ class VizHandler():
         for i, (k, (im, labels)) in enumerate(self.images.items()):
             if self.image_dir:
                 logger.debug('Saving images to {}'.format(self.image_dir))
-                out_path = path.join(self.image_dir, '{}_{}_image.png'.format(self.prefix, k))
+                out_path = path.join(
+                    self.image_dir, '{}_{}_image.png'.format(
+                        self.prefix, k))
             else:
                 out_path = None
 
-            save_images(im, 8, 8, out_file=out_path, labels=labels, max_samples=64, image_id=1 + i, caption=k)
+            save_images(
+                im,
+                8,
+                8,
+                out_file=out_path,
+                labels=labels,
+                max_samples=64,
+                image_id=1 + i,
+                caption=k)
 
         for i, (k, (sc, labels)) in enumerate(self.scatters.items()):
 
@@ -131,16 +152,25 @@ class VizHandler():
 
             if self.image_dir:
                 logger.debug('Saving scatter to {}'.format(self.image_dir))
-                out_path = path.join(self.image_dir, '{}_{}_scatter.png'.format(self.prefix, k))
+                out_path = path.join(
+                    self.image_dir, '{}_{}_scatter.png'.format(
+                        self.prefix, k))
             else:
                 out_path = None
 
-            save_scatter(sc, out_file=out_path, labels=labels, image_id=i, title=k)
+            save_scatter(
+                sc,
+                out_file=out_path,
+                labels=labels,
+                image_id=i,
+                title=k)
 
         for i, (k, hist) in enumerate(self.histograms.items()):
             if self.image_dir:
                 logger.debug('Saving histograms to {}'.format(self.image_dir))
-                out_path = path.join(self.image_dir, '{}_{}_histogram.png'.format(self.prefix, k))
+                out_path = path.join(
+                    self.image_dir, '{}_{}_histogram.png'.format(
+                        self.prefix, k))
             else:
                 out_path = None
             save_hist(hist, out_file=out_path, hist_id=i)
@@ -148,7 +178,9 @@ class VizHandler():
         for i, (k, hm) in enumerate(self.heatmaps.items()):
             if self.image_dir:
                 logger.debug('Saving heatmap to {}'.format(self.image_dir))
-                out_path = path.join(self.image_dir, '{}_{}_heatmap.png'.format(self.prefix, k))
+                out_path = path.join(
+                    self.image_dir, '{}_{}_heatmap.png'.format(
+                        self.prefix, k))
             else:
                 out_path = None
             save_heatmap(hm, out_file=out_path, image_id=i, title=k)
@@ -178,7 +210,11 @@ def plot():
             Y = []
             legend = []
             for k_ in v_train:
-                Y_, legend_ = get_Y_legend(k_, v_train[k_], v_test[k_] if v_test is not None else None)
+                Y_, legend_ = get_Y_legend(k_,
+                                           v_train[k_], v_test[k_]
+                                           if v_test is not None
+                                           else
+                                           None)
                 Y += Y_
                 legend += legend_
         else:
@@ -197,7 +233,12 @@ def plot():
             Y = np.column_stack(Y)
             X = np.column_stack([np.arange(Y.shape[0])] * Y.shape[1])
 
-        visualizer.line(Y=Y, X=X, env=exp.NAME, opts=opts, win='line_{}'.format(k))
+        visualizer.line(
+            Y=Y,
+            X=X,
+            env=exp.NAME,
+            opts=opts,
+            win='line_{}'.format(k))
 
 
 def dequantize(images):
@@ -280,7 +321,7 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
     if labels is not None:
         try:
             font = ImageFont.truetype(config.font, 9)
-        except:
+        except BaseException:
             if config_font is None:
                 raise ValueError('font must be added to config file in '
                                  '`viz`.')
@@ -293,7 +334,7 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
             if _options['is_caption']:
                 l_ = ''.join([CHAR_MAP[j] for j in label
                               if CHAR_MAP[j] != '\n'])
-                l__ = [CHAR_MAP[j] for j in label]
+                # l__ = [CHAR_MAP[j] for j in label]
                 l_ = l_.strip()
                 if len(l_) == 0:
                     l_ = '<EMPTY>'
@@ -322,10 +363,22 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
 
 
 def save_heatmap(X, out_file=None, caption='', title='', image_id=0):
-    visualizer.heatmap(X=X, opts=dict(title=title, caption=caption), win='heatmap_{}'.format(image_id), env=exp.NAME)
+    visualizer.heatmap(
+        X=X,
+        opts=dict(
+            title=title,
+            caption=caption),
+        win='heatmap_{}'.format(image_id),
+        env=exp.NAME)
 
 
-def save_scatter(points, out_file=None, labels=None, caption='', title='', image_id=0):
+def save_scatter(
+        points,
+        out_file=None,
+        labels=None,
+        caption='',
+        title='',
+        image_id=0):
     if labels is not None:
         Y = (labels + 1.5).astype(int)
     else:
@@ -334,10 +387,19 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='', image
     names = data.DATA_HANDLER.get_label_names()
     Y = Y - min(Y) + 1
     if len(names) != max(Y):
-        names = ['{}'.format(i+1) for i in range(max(Y))]
+        names = ['{}'.format(i + 1) for i in range(max(Y))]
 
-    visualizer.scatter(X=points, Y=Y, opts=dict(title=title, caption=caption, legend=names, markersize=5),
-                       win='scatter_{}'.format(image_id), env=exp.NAME)
+    visualizer.scatter(
+        X=points,
+        Y=Y,
+        opts=dict(
+            title=title,
+            caption=caption,
+            legend=names,
+            markersize=5),
+        win='scatter_{}'.format(image_id),
+        env=exp.NAME)
+
 
 def save_movie(images, num_x, num_y, out_file=None, movie_id=0):
     if out_file is None:
@@ -376,4 +438,3 @@ def save_hist(scores, out_file, hist_id=0):
         X=X, Y=np.array([0.5 * (bins[i] + bins[i + 1]) for i in range(99)]),
         opts=dict(legend=['Real', 'Fake']), win='hist_{}'.format(hist_id),
         env=exp.NAME)
-
