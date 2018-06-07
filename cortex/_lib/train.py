@@ -204,17 +204,10 @@ def align_summaries(d_train, d_test):
                             (max_len - len(v_test[k_]))
 
 
-def main_loop(
-        epochs=500,
-        archive_every=10,
-        quit_on_bad_values=True,
-        save_on_best=None,
-        save_on_lowest=None,
-        save_on_highest=None,
-        eval_during_train=True,
-        train_mode='train',
-        test_mode='test',
-        eval_only=False):
+def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
+               save_on_best=None, save_on_lowest=None, save_on_highest=None,
+               eval_during_train=True, train_mode='train', test_mode='test',
+               eval_only=False):
     '''
 
     Args:

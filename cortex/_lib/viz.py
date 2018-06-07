@@ -5,19 +5,21 @@
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
-import numpy as np
 import logging
-import visdom
+from os import path
+
 import imageio
 import matplotlib
-from PIL import Image, ImageDraw, ImageFont
+
+matplotlib.use('Agg')
 from matplotlib import pylab as plt
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+import visdom
+
 from . import data, exp
 from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
-from os import path
-
-matplotlib.use('Agg')
 
 logger = logging.getLogger('cortex.viz')
 config_font = None
@@ -158,12 +160,9 @@ class VizHandler():
             else:
                 out_path = None
 
-            save_scatter(
-                sc,
-                out_file=out_path,
-                labels=labels,
-                image_id=i,
-                title=k)
+            save_scatter(sc, out_file=out_path,
+                         labels=labels, image_id=i,
+                         title=k)
 
         for i, (k, hist) in enumerate(self.histograms.items()):
             if self.image_dir:
