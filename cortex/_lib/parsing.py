@@ -91,10 +91,9 @@ def make_argument_parser():
         '-o',
         '--out_path',
         default=None,
-        help=(
-            'Output path directory. All model results will go'
-            ' here. If a new directory, a new one will be '
-            'created, as long as parent exists.'))
+        help=('Output path directory. All model results will go'
+              ' here. If a new directory, a new one will be '
+              'created, as long as parent exists.'))
     parser.add_argument(
         '-n',
         '--name',
