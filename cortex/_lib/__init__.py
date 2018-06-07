@@ -31,15 +31,17 @@ def setup_cortex():
     viz_init(config.CONFIG.viz)
 
     if args.reload and not args.load_models:
-        exp.reload(args.reload, args.reloads, args.name, args.out_path, args.clean, config.CONFIG)
+        exp.reload(args.reload, args.reloads, args.name,
+                   args.out_path, args.clean, config.CONFIG)
     else:
         name = args.name or args.model
-        exp.setup_new(model.defaults, name, args.out_path, args.clean, config.CONFIG,
-                      args.load_models, args.reloads)
+        exp.setup_new(model.defaults, name, args.out_path, args.clean,
+                      config.CONFIG, args.load_models, args.reloads)
 
     exp.configure_from_yaml(config_file=args.config_file)
 
-    command_line_args = dict(data={}, builds={}, routines={}, optimizer={}, train={})
+    command_line_args = dict(data={}, builds={}, routines={},
+                             optimizer={}, train={})
     model_args = model.unpack_args()
     command_line_args.update(**model_args)
 
