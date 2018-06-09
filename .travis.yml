@@ -2,6 +2,6 @@ language: python
 python:
   - "3.6"
 install:
-  - pip install pylint
-script:
-  - pylint *
+  - "pip install flake8"
+before_script:
+  - "flake8 ."
