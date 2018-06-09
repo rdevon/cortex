@@ -25,16 +25,16 @@ def main():
     # Parse the command-line arguments
 
     try:
-        print_section('LOADING DATA') ##############################################
+        print_section('LOADING DATA')
         setup_data(**exp.ARGS.data)
 
-        print_section('MODEL') #####################################################
+        print_section('MODEL')
         build_networks(**exp.ARGS.builds)
 
-        print_section('OPTIMIZER') #################################################
+        print_section('OPTIMIZER')
         setup_optimizer(**exp.ARGS.optimizer)
 
-        print_section('TRAIN') #####################################################
+        print_section('TRAIN')
         setup_train()
 
     except KeyboardInterrupt:

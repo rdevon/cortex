@@ -9,14 +9,15 @@ import yaml
 
 from .handlers import Handler
 
-
 logger = logging.getLogger('cortex.config')
 
-
 CONFIG = Handler()
+
+
 def set_config():
     global CONFIG
-    config_file = path.join(path.dirname(path.dirname(path.dirname(path.abspath(__file__)))), 'config.yaml')
+    pathName = path.dirname(path.dirname(path.abspath(__file__)))
+    config_file = path.join(path.dirname(pathName), 'config.yaml')
     if not path.isfile(config_file):
         config_file = None
 
@@ -31,7 +32,7 @@ def set_config():
             arch_paths = d.get('arch_paths', {})
             out_path = d.get('out_path', None)
 
-            CONFIG.update(viz=viz,
-                          data_paths=data_paths, arch_paths=arch_paths, out_path=out_path)
+            CONFIG.update(viz=viz, data_paths=data_paths,
+                          arch_paths=arch_paths, out_path=out_path)
     else:
         logger.warning('config.yaml not found')

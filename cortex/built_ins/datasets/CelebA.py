@@ -13,7 +13,12 @@ from .utils import build_transforms
 class CelebAPlugin(DatasetPlugin):
     sources = ['CelebA']
 
-    def handle(self, source, copy_to_local=False, normalize=True, **transform_args):
+    def handle(
+            self,
+            source,
+            copy_to_local=False,
+            normalize=True,
+            **transform_args):
         Dataset = self.make_indexing(CelebA)
         data_path = self.get_path(source)
 
@@ -40,15 +45,21 @@ class CelebAPlugin(DatasetPlugin):
         self.set_dims(**dims)
 
         self.set_scale((-1, 1))
-register_plugin(CelebAPlugin)
 
+
+register_plugin(CelebAPlugin)
 
 
 class CelebA(torchvision.datasets.ImageFolder):
     url = "https://www.dropbox.com/sh/8oqt9vytwxb3s4r/AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1"
     filename = "img_align_celeba.zip"
 
-    def __init__(self, root, transform=None, target_transform=None, download=False):
+    def __init__(
+            self,
+            root,
+            transform=None,
+            target_transform=None,
+            download=False):
         self.root = os.path.expanduser(root)
         self.transform = transform
         self.target_transform = target_transform
@@ -90,7 +101,7 @@ class CelebA(torchvision.datasets.ImageFolder):
                 if url[:5] == 'https':
                     url = url.replace('https:', 'http:')
                     print('Failed download. Trying https -> http instead.'
-                                ' Downloading ' + url + ' to ' + fpath)
+                          ' Downloading ' + url + ' to ' + fpath)
                     urllib.request.urlretrieve(url, fpath)
                 else:
                     raise

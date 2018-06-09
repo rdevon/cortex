@@ -6,21 +6,21 @@ import logging
 
 import torch
 
-
 logger = logging.getLogger('cortex.handlers')
 
 
 class Handler(dict):
     '''
     Simple dict-like container with support for `.` access
-    Note: some of the functionalty might not work correctly as a dict, but so far simple tests pass.
+    Note: some of the functionalty might not work correctly
+    as a dict, but so far simple tests pass.
     '''
 
     __delattr__ = dict.__delitem__
     _protected = dir({})
     _type = None
-    _get_error_string = 'Keyword `{}` not found (add as a dict entry). Found: {}'
-
+    _get_error_string = 'Keyword `{}` not found ' \
+                        '(add as a dict entry). Found: {}'
 
     def check_key_value(self, k, v):
         if k.startswith('_'):
@@ -29,8 +29,9 @@ class Handler(dict):
             raise KeyError('Keyword `{}` is protected.'.format(k))
 
         if self._type and not isinstance(v, self._type):
-            raise ValueError('Type `{}` of `{}` not allowed. Only `{}` and subclasses are supported'.format(
-                type(v), k, self._type))
+            raise ValueError('Type `{}` of `{}` not allowed.'
+                             ' Only `{}` and subclasses are'
+                             ' supported'.format(type(v), k, self._type))
 
         return True
 
@@ -56,7 +57,10 @@ class Handler(dict):
         try:
             v = super().__getitem__(k)
         except KeyError:
-            raise KeyError(self._get_error_string.format(k, tuple(self.keys())))
+            raise KeyError(
+                self._get_error_string.format(
+                    k, tuple(
+                        self.keys())))
         return v
 
     def update(self, **kwargs):
@@ -83,11 +87,14 @@ class NetworkHandler(Handler):
     '''
 
     _type = torch.nn.Module
-    _get_error_string = 'Model `{}` not found. You must add it in `build_models` (as a dict entry). Found: {}'
+    _get_error_string = 'Model `{}` not found. You must add ' \
+                        'it in `build_models` (as a dict entry).' \
+                        ' Found: {}'
 
     def check_key_value(self, k, v):
         if k in self:
-            logger.warning('Key {} already in MODEL_HANDLER, ignoring.'.format(k))
+            logger.warning(
+                'Key {} already in MODEL_HANDLER, ignoring.'.format(k))
             return False
 
         if k in self._protected:
@@ -97,13 +104,16 @@ class NetworkHandler(Handler):
             for v_ in v:
                 self.check_key_value(k, v_)
         elif self._type and not isinstance(v, self._type):
-            raise ValueError('Type `{}` of `{}` not allowed. Only `{}` and subclasses (or tuples of {}) are supported'.format(
-                type(v), k, self._type, self._type))
+            raise ValueError('Type `{}` of `{}` not allowed. '
+                             'Only `{}` and subclasses (or tuples '
+                             'of {}) are supported'
+                             .format(type(v), k, self._type, self._type))
 
         return True
 
 
 ResultsHandler = Handler
+
 
 class LossHandler(Handler):
     '''Simple dict-like container for losses
@@ -121,8 +131,10 @@ class LossHandler(Handler):
             return True
         super().check_key_value(k, v)
         if k not in self._nets:
-            raise AttributeError('Keyword `{}` not in the model_handler. Found: {}.'.format(
-                k, tuple(self._nets.keys())))
+            raise AttributeError(
+                'Keyword `{}` not in the model_handler. Found: {}.'.format(
+                    k, tuple(
+                        self._nets.keys())))
 
         if len(v.size()) > 0:
             raise ValueError('Loss must be a scalar. Got {}'.format(v.size()))
