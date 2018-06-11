@@ -2,9 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import logging
 
 import torch
@@ -13,6 +10,9 @@ import torch.backends.cudnn as cudnn
 
 from . import exp, models, reg
 
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.optimizer')
 OPTIMIZERS = {}

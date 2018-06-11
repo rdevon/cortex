@@ -2,9 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import copy
 import logging
 import pprint
@@ -13,6 +10,8 @@ from . import config, exp, log_utils, models
 from .parsing import default_args, parse_args
 from .viz import init as viz_init
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.init')
 
