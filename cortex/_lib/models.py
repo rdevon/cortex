@@ -212,40 +212,63 @@ class RoutinePluginBase():
 
 class ModelPluginBase():
     def __init__(self):
-        self.builds = {}
-        self.routines = {}
-        self.defaults = dict(
+        self._builds = Handler()
+        self._routines = Handler()
+        self._defaults = dict(
             data=self.data_defaults,
             optimizer=self.optimizer_defaults,
             train=self.train_defaults)
-        self.train_procedures = []
-        self.eval_procedures = []
+        self._train_procedures = []
+        self._eval_procedures = []
 
-        self.setup = None
+        self._setup = None
 
-        self.results = ResultsHandler(time=dict(), losses=dict())
-        self.nets = models.NETWORK_HANDLER
-        self.losses = LossHandler(self.nets)
-        self.inputs = Handler()
+        self._results = ResultsHandler(time=dict(), losses=dict())
+        self._nets = models.NETWORK_HANDLER
+        self._losses = LossHandler(self._nets)
         self._data = data.DATA_HANDLER
-        self.kwargs = {}
+        self._kwargs = {}
+
+    @property
+    def defaults(self):
+        return self._defaults
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @property
+    def setup(self):
+        return self._setup
+
+    @property
+    def train_procedures(self):
+        return self._train_procedures
+
+    @property
+    def eval_procedures(self):
+        return self._eval_procedures
+
+    @property
+    def results(self):
+        return self._results
 
     def check(self):
-        for key in self.routines.keys():
-            routine = self.routines[key]
+        for key in self._routines.keys():
+            routine = self._routines[key]
             if isinstance(routine, RoutinePluginBase):
                 pass
             elif isinstance(routine, RoutineReference):
-                self.routines[key] = routine.resolve()
+                self._routines[key] = routine.resolve()
             else:
                 raise ValueError
 
-        for key in self.builds.keys():
-            build = self.builds[key]
+        for key in self._builds.keys():
+            build = self._builds[key]
             if isinstance(build, BuildPluginBase):
                 pass
             elif isinstance(build, BuildReference):
-                self.builds[key] = build.resolve()
+                self._builds[key] = build.resolve()
             else:
                 raise ValueError
 
@@ -267,10 +290,10 @@ class ModelPluginBase():
                 else:
                     kwargs[k_] = v
 
-        for build in self.builds.values():
+        for build in self._builds.values():
             add_kwargs(build)
 
-        for routine in self.routines.values():
+        for routine in self._routines.values():
             add_kwargs(routine)
         return kwargs
 
@@ -318,7 +341,7 @@ class ModelPluginBase():
                     else:
                         builds[key] = {k_: v}
 
-        for key, routine in self.routines.items():
+        for key, routine in self._routines.items():
             for k_, v in kwargs.items():
                 if k_ in routine.kwargs:
                     if key in routines:
@@ -335,10 +358,11 @@ class ModelPluginBase():
     def run_procedure(self, i, quit_on_bad_values=False, train=False):
         self._data.next()
         self.reset_routines()
-        mode, procedure, updates = self.train_procedures[i]
+        inputs = Handler()
+        mode, procedure, updates = self._train_procedures[i]
 
         for k, v in self._data.batch.items():
-            self.inputs['data.' + k] = v
+            inputs['data.' + k] = v
 
         for key, update in zip(procedure, updates):
             if not train:
@@ -347,8 +371,8 @@ class ModelPluginBase():
                 if u > 0:
                     self._data.next()
 
-                routine = self.routines[key]
-                kwargs = self.kwargs[key]
+                routine = self._routines[key]
+                kwargs = self._kwargs[key]
                 routine.reset()
 
                 # Set to `requires_grad` for models that are trained with this
@@ -367,15 +391,15 @@ class ModelPluginBase():
                 for send, receive in zip(sends, receives):
                     try:
                         if isinstance(send, (list, tuple)):
-                            send_ = [self.inputs[s] for s in send]
+                            send_ = [inputs[s] for s in send]
                             routine.inputs[receive] = send_
                         else:
-                            routine.inputs[receive] = self.inputs[send]
+                            routine.inputs[receive] = inputs[send]
                     except KeyError:
                         raise KeyError(
                             '{} not found in inputs. Available: {}'.format(
                                 send, tuple(
-                                    self.inputs.keys())))
+                                    inputs.keys())))
 
                 # Optional inputs
                 receives = routine.plugin_optional_inputs
@@ -383,10 +407,10 @@ class ModelPluginBase():
                 for send, receive in zip(sends, receives):
                     try:
                         if isinstance(send, (list, tuple)):
-                            send_ = [self.inputs[s] for s in send]
+                            send_ = [inputs[s] for s in send]
                             routine.inputs[receive] = send_
                         else:
-                            routine.inputs[receive] = self.inputs[send]
+                            routine.inputs[receive] = inputs[send]
                     except BaseException:
                         routine.inputs[receive] = None
 
@@ -407,11 +431,11 @@ class ModelPluginBase():
                 if u == update - 1:
                     for k, v in outputs.items():
                         k_ = key + '.' + k
-                        if k_ in self.inputs:
+                        if k_ in inputs:
                             raise KeyError('{} already in'
                                            ' inputs. Use a '
                                            'different name.'.format(k_))
-                        self.inputs[k_] = v.detach()
+                        inputs[k_] = v.detach()
 
                 # Add losses to the results.
                 for loss_key in routine.losses.keys():
@@ -430,36 +454,35 @@ class ModelPluginBase():
                                   for k, v in routine.losses.items())
 
             # Update results
-            update_dict_of_lists(self.results, **routine.results)
-            update_dict_of_lists(self.results['losses'], **routine_losses)
+            update_dict_of_lists(self._results, **routine.results)
+            update_dict_of_lists(self._results['losses'], **routine_losses)
             update_dict_of_lists(
-                self.results['time'], **{key: end_time - start_time})
+                self._results['time'], **{key: end_time - start_time})
 
     def setup_routine_nets(self):
         self.viz = VizHandler()
-        for routine in self.routines.values():
+        for routine in self._routines.values():
             for k in routine.plugin_nets:
                 k_ = routine._names.get(k, k)
-                routine.nets[k] = self.nets[k_]
+                routine.nets[k] = self._nets[k_]
             routine.set_viz(self.viz)
 
     def reset_routines(self):
-        self.losses.clear()
-        self.inputs.clear()
-        for routine in self.routines.values():
+        self._losses.clear()
+        for routine in self._routines.values():
             routine.reset()
 
     def reset(self):
         self.reset_routines()
-        self.results.clear()
-        self.results.update(losses=dict(), time=dict())
+        self._results.clear()
+        self._results.update(losses=dict(), time=dict())
 
     def set_train(self):
-        for net in self.nets.values():
+        for net in self._nets.values():
             net.train()
 
     def set_eval(self):
-        for net in self.nets.values():
+        for net in self._nets.values():
             net.eval()
 
 

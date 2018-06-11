@@ -341,7 +341,7 @@ class ModelPlugin(ModelPluginBase):
         for routine in routines:
             routine_names.append(self.add_routine(routine))
 
-        self.train_procedures.append(
+        self._train_procedures.append(
             (mode, routine_names, updates_per_routine))
 
     def add_eval_procedure(self, *routines, mode='test'):
@@ -356,7 +356,7 @@ class ModelPlugin(ModelPluginBase):
         for routine in routines:
             routine_names.append(self.add_routine(routine))
 
-        self.eval_procedures.append((mode, routine_names))
+        self._eval_procedures.append((mode, routine_names))
 
 
 def register_plugin(plugin):
