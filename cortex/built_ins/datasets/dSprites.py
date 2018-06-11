@@ -18,23 +18,6 @@ from . import logger
 DATASETS = ['dSprites']
 
 
-def handle():
-    source_ = 'dSprites.npz'
-    data_path = path.join(CONFIG.local_data_path, source_)
-
-    Dataset = Dataset or dSpriteDataset
-    Dataset = make_indexing(Dataset)
-    train_set = Dataset(
-        data_path,
-        transform=transform,
-        download=True,
-        shuffle=True)
-    test_set = train_set
-    output_sources = ['images', 'targets']
-
-    return train_set, train_set, output_sources
-
-
 class dSprites(Dataset):
     _url = 'https://github.com/deepmind/dsprites-dataset/blob/master/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz?raw=true'
 

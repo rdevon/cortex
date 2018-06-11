@@ -248,7 +248,7 @@ def dequantize(images):
         img2.putpalette(_options['img'].getpalette())
         img2 = img2.convert('RGB')
         images_.append(np.array(img2))
-    images = np.array(images_).transpose(0, 3, 1, 2).astype(floatX) / 255.
+    images = np.array(images_).transpose(0, 3, 1, 2) / 255.
     return images
 
 
@@ -319,7 +319,7 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,
 
     if labels is not None:
         try:
-            font = ImageFont.truetype(config.font, 9)
+            font = ImageFont.truetype(config_font, 9)
         except BaseException:
             if config_font is None:
                 raise ValueError('font must be added to config file in '
