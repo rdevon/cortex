@@ -258,31 +258,6 @@ class ModelPlugin(ModelPluginBase):
     train_defaults = {}
     optimizer_defaults = {}
 
-    def add_build(self, build_query, name=None, **kwargs):
-        '''Adds a build plugin.
-
-        Args:
-            build_query: Build plugin.
-                Can be a string, a BuildPlugin instance, or BuildPlugin class
-            name (str, optional): Name for the build.
-                If not set, `BuildPlugin.plugin_name` will be used.
-            **kwargs: TODO
-
-        '''
-        if isinstance(build_query, BuildPlugin):
-            build = build_query
-        elif inspect.isclass(build_query) and issubclass(build_query, BuildPlugin):
-            build = build_query(**kwargs)
-        elif isinstance(build_query, str):
-            build = BuildReference(build_query, **kwargs)
-            name = name or build_query
-        else:
-            raise TypeError('Unknown build type {}'.format(type(build_query)))
-        name = name or build.plugin_name
-
-        if name not in self.builds:
-            self.builds[name] = build
-
     @property
     def routines(self):
         return self._routines

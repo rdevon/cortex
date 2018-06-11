@@ -301,7 +301,7 @@ class GAN(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        self.add_build(DiscriminatorBuild)
+        self.builds.discriminator = DiscriminatorBuild
         self.add_build(GeneratorBuild)
         self.add_routine(GeneratorRoutine, noise='data.z')
         self.add_routine(DiscriminatorRoutine, real='data.images', noise='data.z')

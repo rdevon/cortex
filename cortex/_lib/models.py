@@ -15,7 +15,7 @@ import torch
 
 from . import data, exp, models, optimizer
 from .parsing import parse_docstring, parse_header, parse_kwargs
-from .handlers import Handler, NetworkHandler, LossHandler, ResultsHandler
+from .handlers import AliasHandler, Handler, NetworkHandler, LossHandler, ResultsHandler
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
@@ -115,17 +115,9 @@ class RoutineReference():
 
 
 class BuildPluginBase():
-    def __init__(self, **kwargs):
+    def __init__(self, **aliases):
         self._data = data.DATA_HANDLER
-        self._nets = models.NETWORK_HANDLER
-        self._names = {}
-
-        keys = self.plugin_nets
-        for k, v in kwargs.items():
-            # TODO(Devon): might have to do checking for keys here.
-            if k in self._names:
-                raise KeyError('`{}` is already set'.format(k))
-            self._names[k] = v
+        self._nets = AliasHandler(NETWORK_HANDLER)
 
         kwargs_ = {}
         for k, v in self.kwargs.items():
@@ -149,28 +141,45 @@ class BuildPluginBase():
 class RoutinePluginBase():
     _training_models = []
 
-    def __init__(self, name=None, **kwargs):
-        self._names = {}
-        self.nets = NetworkHandler()
-        self.results = ResultsHandler()
-        self.losses = LossHandler(self.nets)
-        self.inputs = Handler()
-        self.training_nets = []
+    plugin_name = None
+    plugin_nets = []
+    plugin_vars = []
+    plugin_optional_inputs = []
+
+    def __init__(self, name=None, **aliases):
+        self._nets = AliasHandler(NETWORK_HANDLER, locked=True)
+        self._vars = AliasHandler(VARIABLE_HANDLER, locked=True)
+
+        self._results = ResultsHandler()
+        self._losses = LossHandler(self.nets)
+        self._training_nets = []
         self.name = name or self.plugin_name
-        self.viz = None
 
-        keys = self.plugin_nets + self.plugin_inputs + \
-            self.plugin_outputs + self.plugin_optional_inputs
-        for k, v in kwargs.items():
-            if k not in keys:
-                raise KeyError(
-                    '`{}` not supported for this plugin. Available: {}'.format(
-                        k, keys))
-            if k in self._names:
-                raise KeyError('`{}` is already set'.format(k))
-            self._names[k] = v
+        for k, v in aliases.items():
+            if k in self.plugin_nets:
+                self.nets[k] = NETWORK_HANDLER[v]
+            elif k in self.plugin_vars:
+                if k in VARIABLE_HANDLER:
+                self.vars[k] = VARIABLE_HANDLER[k]
 
-    def __call__(self, **kwargs):
+
+    @property
+    def results(self):
+        return self._results
+
+    @property
+    def losses(self):
+        return self._losses
+
+    @property
+    def nets(self):
+        return self._nets
+
+    @property
+    def vars(self):
+        return self._vars
+
+    def perform(self, **kwargs):
         if not hasattr(self, 'run'):
             raise ValueError(
                 'Routine {} does not have `run` method set'.format(
@@ -193,13 +202,13 @@ class RoutinePluginBase():
             out_dict[k_] = v
         return out_dict
 
-    def perform_routine(self, **kwargs):
+    def __call__(self, **kwargs):
         # Run routine
         if exp.DEVICE == torch.device('cpu'):
-            return self(**kwargs)
+            return self.perform(**kwargs)
         else:
             with torch.cuda.device(exp.DEVICE.index):
-                return self(**kwargs)
+                return self.perform(**kwargs)
 
     def reset(self):
         self.results.clear()
@@ -415,7 +424,7 @@ class ModelPluginBase():
                         routine.inputs[receive] = None
 
                 start_time = time.time()
-                outputs = routine.perform_routine(**kwargs)
+                outputs = routine(**kwargs)
 
                 # Backprop the losses.
                 if train:
@@ -458,14 +467,6 @@ class ModelPluginBase():
             update_dict_of_lists(self._results['losses'], **routine_losses)
             update_dict_of_lists(
                 self._results['time'], **{key: end_time - start_time})
-
-    def setup_routine_nets(self):
-        self.viz = VizHandler()
-        for routine in self._routines.values():
-            for k in routine.plugin_nets:
-                k_ = routine._names.get(k, k)
-                routine.nets[k] = self._nets[k_]
-            routine.set_viz(self.viz)
 
     def reset_routines(self):
         self._losses.clear()
