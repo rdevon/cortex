@@ -12,11 +12,26 @@ from torch.utils.data import Dataset
 import numpy as np
 from PIL import Image
 
+from . import logger
 
-logger = logging.getLogger('cortex.dShapes')
+
+DATASETS = ['dSprites']
 
 
-class dSpriteDataset(Dataset):
+def handle():
+    source_ = 'dSprites.npz'
+    data_path = path.join(CONFIG.local_data_path, source_)
+
+    Dataset = Dataset or dSpriteDataset
+    Dataset = make_indexing(Dataset)
+    train_set = Dataset(data_path, transform=transform, download=True, shuffle=True)
+    test_set = train_set
+    output_sources = ['images', 'targets']
+
+    return train_set, train_set, output_sources
+
+
+class dSprites(Dataset):
     _url = 'https://github.com/deepmind/dsprites-dataset/blob/master/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz?raw=true'
 
     def __init__(self, root, download=True, transform=None, shuffle=False):
@@ -39,10 +54,11 @@ class dSpriteDataset(Dataset):
         self.latents_classes = dataset_zip['latents_classes']
         logger.info('Dataset loaded : OK.')
 
-        self.idx = np.random.permutation(len(self))
-        self.imgs = self.imgs[self.idx]
-        self.latents_classes = self.latents_classes[self.idx]
-        self.latents_values = self.latents_values[self.idx]
+        if shuffle:
+            self.idx = np.random.permutation(len(self))
+            self.imgs = self.imgs[self.idx]
+            self.latents_classes = self.latents_classes[self.idx]
+            self.latents_values = self.latents_values[self.idx]
 
     def __len__(self):
         return len(self.imgs)

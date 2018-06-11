@@ -1,3 +1,7 @@
+'''Module for Sobel transformation
+
+'''
+
 import torch
 import torch.nn.functional as F
 

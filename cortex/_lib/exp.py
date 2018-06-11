@@ -17,7 +17,7 @@ import torch
 
 from . import models
 from .log_utils import set_file_logger
-from .utils import Handler, convert_nested_dict_to_handler
+from .handlers import Handler, convert_nested_dict_to_handler
 
 
 logger = logging.getLogger('cortex.exp')
@@ -26,17 +26,10 @@ logger = logging.getLogger('cortex.exp')
 NAME = 'X'
 SUMMARY = {'train': {}, 'test': {}}
 OUT_DIRS = {}
-ARGS = Handler(data=Handler(), model=Handler(), optimizer=Handler(), routines=Handler(), test_routines=Handler(),
+ARGS = Handler(data=Handler(), builds=Handler(), optimizer=Handler(), routines=Handler(),
                train=Handler())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
-
-# Models criteria and results
-CRITERIA = {}
-TRAIN_ROUTINES = {}
-TEST_ROUTINES = {}
-FINISH_TRAIN_ROUTINES = {}
-FINISH_TEST_ROUTINES = {}
 
 
 def _file_string(prefix=''):
@@ -44,7 +37,7 @@ def _file_string(prefix=''):
     return '{}({})'.format(NAME, prefix)
 
 
-def _handle_deprecated(data=None, model=None, optimizer=None, routines=None, test_routines=None, train=None):
+def _handle_deprecated(data=None, model=None, optimizer=None, routines=None, train=None):
     if 'noise_variables' in data:
         for k, v in data['noise_variables'].items():
             if isinstance(v, tuple):
@@ -82,13 +75,6 @@ def update_args(kwargs):
             _update_args(kwargs[k], ARGS[k])
 
 
-def copy_test_routines():
-    global ARGS
-    for k, v in ARGS.routines.items():
-        if not k in ARGS.test_routines.keys():
-            ARGS.test_routines[k] = v
-
-
 def configure_from_yaml(config_file=None):
     '''Loads arguments into a yaml file.
 
@@ -99,12 +85,11 @@ def configure_from_yaml(config_file=None):
         with open(config_file, 'r') as f:
             d = yaml.load(f)
         logger.info('Loading config {}'.format(d))
-        ARGS.model.update(**d.get('model', {}))
+        ARGS.model.update(**d.get('builds', {}))
         ARGS.optimizer.update(**d.get('optimizer', {}))
         ARGS.train.update(**d.get('train', {}))
         ARGS.data.update(**d.get('data', {}))
-        ARGS.routines.update(**d.get('routine', {}))
-        ARGS.test_routines.update(**d.get('test_routines', {}))
+        ARGS.routines.update(**d.get('routines', {}))
 
 
 def setup_new(arch_default_args, name, out_path, clean, config, model_file, reloads):
@@ -117,14 +102,14 @@ def setup_new(arch_default_args, name, out_path, clean, config, model_file, relo
 
     if model_file:
         d = torch.load(model_file)
-        reloads = reloads or d['models'].keys()
+        reloads = reloads or d['builds'].keys()
         for k in reloads:
-            models.reload_models(**{k: d['models'][k]})
-            if isinstance(d['models'][k], list):
-                for m in d['models'][k]:
-                    m = m.to(DEVICE)
+            models.reload_models(**{k: d['builds'][k]})
+            if isinstance(d['builds'][k], list):
+                for m in d['builds'][k]:
+                    m.to(DEVICE)
             else:
-                d['models'][k] = d['models'][k].to(DEVICE)
+                d['builds'][k] = d['builds'][k].to(DEVICE)
             
 
 def reload(exp_file, reloads, name, out_path, clean, config):
@@ -151,14 +136,14 @@ def reload(exp_file, reloads, name, out_path, clean, config):
     _handle_deprecated(**args)
     update_args(args)
 
-    reloads = reloads or d['models'].keys()
+    reloads = reloads or d['builds'].keys()
     for k in reloads:
-        models.reload_models(**{k: d['models'][k]})
-        if isinstance(d['models'][k], list):
-            for m in d['models'][k]:
-                m = m.to(DEVICE)
+        models.reload_models(**{k: d['builds'][k]})
+        if isinstance(d['builds'][k], list):
+            for m in d['builds'][k]:
+                m.to(DEVICE)
         else:
-            d['models'][k] = d['models'][k].to(DEVICE)
+            d['builds'][k] = d['builds'][k].to(DEVICE)
 
     if name:
         NAME = name
@@ -177,7 +162,7 @@ def save(prefix=''):
         return
 
     models_= {}
-    for k, model in models.MODEL_HANDLER.items():
+    for k, model in models.NETWORK_HANDLER.items():
         if k == 'extras':
             continue
         if isinstance(model, (tuple, list)):
@@ -188,10 +173,21 @@ def save(prefix=''):
         else:
             models_[k] = model
 
+    def strip_Nones(d):
+        d_ = {}
+        for k, v in d_.items():
+            if isinstance(v, dict):
+                d_[k] = strip_Nones(v)
+            elif v is not None:
+                d_[k] = v
+        return d_
+
+    args = strip_Nones(ARGS)
+
     state = dict(
         models=models_,
         info=INFO,
-        args=ARGS,
+        args=args,
         out_dirs=OUT_DIRS,
         summary=SUMMARY
     )
@@ -253,12 +249,3 @@ def setup_device(device):
             logger.info('GPU ' + str(device) + ' doesn\'t exists. Using CPU')
     else:
         logger.info('Using CPU')
-
-
-def setup_routines(train_routines=None, test_routines=None, finish_train_routines=None, finish_test_routines=None):
-    global TRAIN_ROUTINES, TEST_ROUTINES, FINISH_TRAIN_ROUTINES, FINISH_TEST_ROUTINES
-
-    TRAIN_ROUTINES.update(**train_routines)
-    TEST_ROUTINES.update(**test_routines)
-    FINISH_TRAIN_ROUTINES.update(**finish_train_routines)
-    FINISH_TEST_ROUTINES.update(**finish_test_routines)
