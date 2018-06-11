@@ -16,9 +16,11 @@ from cortex._lib.utils import print_section
 import yaml
 from tkinter import filedialog
 from tkinter import *
+from os.path import expanduser
 
 logger = logging.getLogger('cortex')
-
+homeDirectory = expanduser("~")
+configDirectory = homeDirectory + '/config.yml'
 
 def configure():
     root = Tk()
@@ -41,7 +43,7 @@ def configure():
         viz = vizConfig,
         out_path = outPath
     )
-    with open('config.yml', 'w') as outfile:
+    with open(configDirectory, 'w') as outfile:
         yaml.dump(config, outfile)
 
 
