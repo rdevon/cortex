@@ -26,7 +26,7 @@ import os
 
 import torch
 import torch.utils.data as data
-from os import path
+
 
 DATASETS = ["G2", "S_set", "A_set", "DIM_set", "Unbalance",
             "Aggregation", "Compound", "Pathbased", "Spiral",
@@ -34,39 +34,6 @@ DATASETS = ["G2", "S_set", "A_set", "DIM_set", "Unbalance",
 DIM_VARIANT_DATASETS = ["G2", "DIM_set"]
 SD_VARIANT_DATASETS = ["G2"]
 NUM_VARIANT_DATASETS = ["S_set", "A_set"]
-
-
-def HANDLE():
-    if CONFIG.toy_data_path is None:
-        raise ValueError(
-            'torchvision dataset must have corresponding '
-            'torchvision folder specified in `config.yaml`')
-    Dataset = getattr(toysets, source)
-
-    if copy_to_local:
-        copy_to_local_path(path.join(CONFIG.toy_data_path, source))
-        base_path = CONFIG.local_data_path
-    else:
-        base_path = CONFIG.toy_data_path
-
-    train_path = path.join(base_path, source)
-    test_path = train_path
-
-    Dataset = make_indexing(Dataset)
-    Dataset = make_tds_random_and_split(Dataset)
-    train_set = Dataset(root=train_path, download=True, split=0.8, load=True)
-    test_set = Dataset(
-        root=test_path,
-        download=True,
-        split=1,
-        idx=train_set.idx,
-        load=True)
-    output_sources = ['images', 'targets']
-
-    dim_x = train_set.tensors[0].size()[1]
-    dim_l = len(np.unique(np.concatenate(
-        [train_set.tensors[1], test_set.tensors[1]])))
-    dims = dict(x=dim_x, labels=dim_l)
 
 
 def make_tds_random_and_split(C):

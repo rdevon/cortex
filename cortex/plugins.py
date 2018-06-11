@@ -70,7 +70,7 @@ class DatasetPlugin(DatasetPluginBase):
         '''
         if mode in self._datasets:
             raise KeyError(
-                '`{}` already added to datasets in entrypoint'.format(key))
+                '`{}` already added to datasets in entrypoint'.format(mode))
         self._datasets[mode] = dataset
 
     def get_path(self, source: str):

@@ -22,7 +22,7 @@ class FullyConnectedNet(nn.Module):
         if isinstance(dim_h, (list, tuple)):
             pass
         elif n_levels:
-            dim_h = [dim_h for _ in xrange(n_levels)]
+            dim_h = [dim_h for _ in range(n_levels)]
         else:
             dim_h = [dim_h]
 

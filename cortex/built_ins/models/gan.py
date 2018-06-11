@@ -180,7 +180,7 @@ class PenaltyRoutine(RoutinePlugin):
             inp1, inp2 = inputs
 
             try:
-                epsilon = data['e'].view(-1, 1, 1, 1)
+                epsilon = self.inputs.e.view(-1, 1, 1, 1)
             except:
                 raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
             mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)

@@ -109,9 +109,8 @@ def test_epoch(epoch, eval_mode=False, data_mode='test'):
             models.ARCH.eval_routine(
                 data.DATA_HANDLER,
                 models.MODEL_HANDLER,
-                means,
-                viz_handler)
-        stds = summarize_results_std(results)
+                means)
+        stds = summarize_results_std(means)
         return means, stds
 
     return means
@@ -228,7 +227,7 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
     total_time = 0.
     if eval_only:
         test_results, test_std = test_epoch(
-            'Testing', vh, eval_mode=True, mode=test_mode)
+            'Testing', eval_mode=True, mode=test_mode)
         convert_to_numpy(test_results)
         convert_to_numpy(test_std)
 
