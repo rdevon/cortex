@@ -105,7 +105,7 @@ class ImageClassifierBuild(BuildPlugin):
         args.update(**classifier_args)
 
         classifier = Encoder(shape, dim_out=dim_l, **args)
-        self.add_networks(image_classifier=classifier)
+        self.nets.image_classifier = classifier
 register_plugin(ImageClassifierBuild)
 
 
@@ -123,8 +123,8 @@ class ImageClassification(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        self.add_build(ImageClassifierBuild)
-        self.add_routine(ClassifyRoutine, classifier='image_classifier', inputs='data.images', targets='data.targets',
-                         images='data.images')
-        self.add_train_procedure('classification')
+        self.builds.classifier = ImageClassifierBuild()
+        self.routines.classify = ClassifyRoutine(classifier='image_classifier', inputs='data.images',
+                                                 targets='data.targets')
+        self.add_train_procedure(self.routines.classify)
 register_plugin(ImageClassification)

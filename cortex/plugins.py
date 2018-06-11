@@ -197,6 +197,7 @@ class BuildPlugin(BuildPluginBase):
     Attributes:
         plugin_name (str): Name of the plugin.
         plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this build.
+        nets (:obj:`Handler` of :obj:`nn.Module`):
 
     '''
     _protected = ['help', 'kwargs']
@@ -205,16 +206,9 @@ class BuildPlugin(BuildPluginBase):
     plugin_name = None
     plugin_nets = []
 
-    def add_networks(self, **kwargs):
-        '''Adds networks to the build.
-
-        Args:
-            **kwargs: TODO
-
-        '''
-        for k, v in kwargs.items():
-            k_ = self._names.get(k, k)
-            self._nets[k_] = v
+    @property
+    def nets(self):
+        return self._nets
 
     def get_dims(self, *queries):
         '''Gets dimensions of inputs.
@@ -283,6 +277,14 @@ class ModelPlugin(ModelPluginBase):
 
         if not name in self.builds:
             self.builds[name] = build
+
+    @property
+    def routines(self):
+        return self._routines
+
+    @property
+    def builds(self):
+        return self._builds
 
     def add_routine(self, routine_query, name=None, **kwargs):
         '''Adds a routine

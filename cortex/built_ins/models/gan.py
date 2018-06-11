@@ -142,17 +142,16 @@ class PenaltyRoutine(RoutinePlugin):
 
         '''
         inputs = self.inputs.inputs
-        penalty = self.apply(inputs, penalty_type=penalty_type, penalty_amount=penalty_amount)
+        penalty = self.apply(self.nets.network, inputs, penalty_type=penalty_type, penalty_amount=penalty_amount)
 
         if penalty:
             self.losses.network = penalty
 
-    def apply(self, inputs, penalty_type='contractive', penalty_amount=0.5):
+    @staticmethod
+    def apply(network, inputs, penalty_type='contractive', penalty_amount=0.5):
 
         if penalty_amount == 0.:
             return
-
-        network = self.nets.network
 
         if not isinstance(inputs, (list, tuple)):
             inputs = [inputs]
