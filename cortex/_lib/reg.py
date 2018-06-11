@@ -14,7 +14,7 @@ L1_DECAY = {}
 
 
 def init(clipping=None, weight_decay=None):
-    '''called in setup.py, initialize clipping and 
+    '''called in setup.py, initialize clipping and
        weight_decay dicts'''
     global CLIPPING, L1_DECAY
     clipping = clipping or {}
@@ -53,7 +53,7 @@ def l1_decay(key):
         if isinstance(model, (list, tuple)):
             for net in model:
                 for p in net.parameters():
-                    p.add(factor*(p/p.norm(1)))
+                    p.add(factor * (p / p.norm(1)))
         else:
             for p in model.parameters():
-                p.add(factor*(p/p.norm(1)))
+                p.add(factor * (p / p.norm(1)))

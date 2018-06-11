@@ -68,8 +68,9 @@ optimizer_args = parse_kwargs(optimizer.setup)
 default_args = dict(data=data_args, optimizer=optimizer_args, train=train_args)
 default_help = dict(data=data_help, optimizer=optimizer_help, train=train_help)
 
-_protected_args = ['arch', 'out_path', 'name', 'reload', 'args', 'copy_to_local', 'meta', 'config_file',
-                  'clean', 'verbosity', 'test']
+_protected_args = ['arch', 'out_path', 'name', 'reload',
+                   'args', 'copy_to_local', 'meta', 'config_file',
+                   'clean', 'verbosity', 'test']
 
 logger = logging.getLogger('cortex.parsing')
 
@@ -86,19 +87,25 @@ def make_argument_parser():
 
     '''
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--out_path', default=None,
-                        help=('Output path directory. All model results will go'
-                              ' here. If a new directory, a new one will be '
-                              'created, as long as parent exists.'))
-    parser.add_argument('-n', '--name', default=None,
-                        help=('Name of the experiment. If given, base name of '
-                              'output directory will be `--name`. If not given,'
-                              ' name will be the base name of the `--out_path`')
-                        )
+    parser.add_argument(
+        '-o',
+        '--out_path',
+        default=None,
+        help=('Output path directory. All model results will go'
+              ' here. If a new directory, a new one will be '
+              'created, as long as parent exists.'))
+    parser.add_argument(
+        '-n',
+        '--name',
+        default=None,
+        help=('Name of the experiment. If given, base name of '
+              'output directory will be `--name`. If not given,'
+              ' name will be the base name of the `--out_path`'))
     parser.add_argument('-r', '--reload', type=str, default=None,
                         help=('Path to model to reload.'))
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
-    parser.add_argument('-M', '--load_models', type=str, default=None,
+    parser.add_argument('-M', '--load_models',
+                        type=str, default=None,
                         help=('Path to model to reload. Does not load args, info, etc'))
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
@@ -116,7 +123,7 @@ def make_argument_parser():
 class StoreDictKeyPair(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         d = {}
-        
+
         for kv in values.split(',,'):
             k, v = kv.split('=')
             d[k] = ast.literal_eval(v)
@@ -136,14 +143,22 @@ def parse_args(models):
     # Parse args
     parser = make_argument_parser()
 
-    subparsers = parser.add_subparsers(title='Cortex', help='Select an architecture.',
-                                       description='Cortex is a wrapper around pytorch that makes training models '
-                                                   'more convenient.',
-                                       dest='model')
+    subparsers = parser.add_subparsers(
+        title='Cortex',
+        help='Select an architecture.',
+        description='Cortex is a wrapper '
+                    'around pytorch that makes training models '
+        'more convenient.',
+        dest='model')
     for k, model in models.items():
-        subparser = subparsers.add_parser(k, help=model.help, description=model.description,
-                                          formatter_class=lambda prog: argparse.HelpFormatter(
-                                              prog, max_help_position=50, width=100))
+        subparser = subparsers.add_parser(
+            k,
+            help=model.help,
+            description=model.description,
+            formatter_class=lambda prog: argparse.HelpFormatter(
+                prog,
+                max_help_position=50,
+                width=100))
         kwargs = model.get_kwargs()
         helps = model.get_help()
 
@@ -153,20 +168,38 @@ def parse_args(models):
             choices = None
 
             if isinstance(v, dict):
-                subparser.add_argument(arg_str, dest=k, default=v, action=StoreDictKeyPair,
-                                       help=help, metavar='<k1=v1,,k2=v2...>')
+                subparser.add_argument(
+                    arg_str,
+                    dest=k,
+                    default=v,
+                    action=StoreDictKeyPair,
+                    help=help,
+                    metavar='<k1=v1,,k2=v2...>')
             elif isinstance(v, bool) and not v:
                 action = 'store_true'
-                subparser.add_argument(arg_str, dest=k, action=action, default=False, help=help)
+                subparser.add_argument(
+                    arg_str, dest=k, action=action, default=False, help=help)
             elif isinstance(v, bool):
                 type_ = type(v)
                 metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
-                subparser.add_argument(arg_str, dest=k, default=True, metavar=metavar, type=str2bool, help=help)
+                subparser.add_argument(
+                    arg_str,
+                    dest=k,
+                    default=True,
+                    metavar=metavar,
+                    type=str2bool,
+                    help=help)
             else:
                 type_ = type(v) if v is not None else str
                 metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
-                subparser.add_argument(arg_str, dest=k, choices=choices, metavar=metavar, default=v, type=type_,
-                                       help=help)
+                subparser.add_argument(
+                    arg_str,
+                    dest=k,
+                    choices=choices,
+                    metavar=metavar,
+                    default=v,
+                    type=type_,
+                    help=help)
 
         for key, args in default_args.items():
             for k, v in args.items():
@@ -175,21 +208,42 @@ def parse_args(models):
                 dest = key + '.' + k
                 metavar = '<k1=v1,,k2=v2...>'
                 if isinstance(v, dict):
-                    subparser.add_argument(arg_str, dest=dest, default=None, action=StoreDictKeyPair,
-                                           help=help, metavar=metavar)
+                    subparser.add_argument(
+                        arg_str,
+                        dest=dest,
+                        default=None,
+                        action=StoreDictKeyPair,
+                        help=help,
+                        metavar=metavar)
                 elif isinstance(v, bool) and not v:
                     action = 'store_true'
                     dest = key + '.' + k
-                    subparser.add_argument(arg_str, dest=dest, action=action, default=False, help=help)
+                    subparser.add_argument(arg_str, dest=dest,
+                                           action=action, default=False,
+                                           help=help)
                 elif isinstance(v, bool):
                     type_ = type(v)
-                    metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
+                    metavar = '<' + type_.__name__ + \
+                        '> (default=' + str(v) + ')'
                     dest = key + '.' + k
-                    subparser.add_argument(arg_str, dest=dest, default=True, metavar=metavar, type=str2bool, help=help)
+                    subparser.add_argument(
+                        arg_str,
+                        dest=dest,
+                        default=True,
+                        metavar=metavar,
+                        type=str2bool,
+                        help=help)
                 else:
                     type_ = type(v) if v is not None else str
-                    metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
-                    subparser.add_argument(arg_str, dest=dest, default=None, metavar=metavar, type=type_, help=help)
+                    metavar = '<' + type_.__name__ + \
+                        '> (default=' + str(v) + ')'
+                    subparser.add_argument(
+                        arg_str,
+                        dest=dest,
+                        default=None,
+                        metavar=metavar,
+                        type=type_,
+                        help=help)
 
     args = parser.parse_args()
 
