@@ -10,6 +10,7 @@ setup(name='cortex',
         'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn', 'torchvision', 'visdom', 'pyyaml'],
       entry_points={
         'console_scripts': [
-            'cortex=cortex.main:main']
+            'cortex=cortex.main:main',
+            'configure=cortex.main:configure']
       },
       zip_safe=False)
