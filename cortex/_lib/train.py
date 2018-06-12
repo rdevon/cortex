@@ -131,7 +131,7 @@ def display_results(
     if times:
         print('\tAvg update times: ' + ' | '
               .join(['{}: {:.2f}'
-                    .format(k, v) for k, v in times.items()]))
+                     .format(k, v) for k, v in times.items()]))
 
     train_losses = train_results.pop('losses')
     test_losses = test_results.pop('losses')
@@ -146,7 +146,7 @@ def display_results(
             if isinstance(v_train, dict):
                 print('\t' + k + ': ' + ' | '
                       .join(['{}: {:.2f}'
-                            .format(k_, v_train[k_])
+                             .format(k_, v_train[k_])
                              for k_ in v_train.keys()]))
             else:
                 print('\t{}: {:.2f}'.format(k, v_train))
@@ -154,7 +154,7 @@ def display_results(
             if isinstance(v_train, dict):
                 print('\t' + k + ': ' + ' | '
                       .join(['{}: {:.2f} / {:.2f}'
-                            .format(k_, v_train[k_], v_test[k_])
+                             .format(k_, v_train[k_], v_test[k_])
                              for k_ in v_train.keys()]))
             else:
                 print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))
@@ -173,7 +173,7 @@ def align_summaries(d_train, d_test):
                 for k_, v in v_train.items():
                     if len(v) < max_len:
                         v_train[k_] = v_train[k_] + [v_train[k_][-1]]\
-                                      * (max_len - len(v_train[k_]))
+                            * (max_len - len(v_train[k_]))
                 for k_, v in v_test.items():
                     if len(v) < max_len:
                         v_test[k_] = v_test[k_] + [v_test[k_][-1]] * \
@@ -192,7 +192,7 @@ def align_summaries(d_train, d_test):
                 for k_, v in v_train.items():
                     if len(v) < max_len:
                         v_train[k_] = v_train[k_] + [v_train[k_][-1]] \
-                                      * (max_len - len(v_train[k_]))
+                            * (max_len - len(v_train[k_]))
         elif k in d_test:
             v_test = d_test[k]
             if isinstance(v_test, dict):
@@ -204,9 +204,9 @@ def align_summaries(d_train, d_test):
 
 
 def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
-               save_on_best=None, save_on_lowest=None, save_on_highest=None,
-               eval_during_train=True, train_mode='train', test_mode='test',
-               eval_only=False):
+              save_on_best=None, save_on_lowest=None, save_on_highest=None,
+              eval_during_train=True, train_mode='train', test_mode='test',
+              eval_only=False):
     '''
 
     Args:

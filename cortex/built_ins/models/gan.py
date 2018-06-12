@@ -14,20 +14,30 @@ from .utils import log_sum_exp, update_decoder_args, update_encoder_args
 
 def raise_measure_error(measure):
     supported_measures = ['GAN', 'JSD', 'X2', 'KL', 'RKL', 'DV', 'H2', 'W1']
-    raise NotImplementedError('Measure `{}` not supported. Supported: {}'.format(measure, supported_measures))
+    raise NotImplementedError(
+        'Measure `{}` not supported. Supported: {}'.format(
+            measure, supported_measures))
 
 
 def get_positive_expectation(p_samples, measure):
     log_2 = math.log(2.)
 
-    if   measure == 'GAN': Ep = -F.softplus(-p_samples)
-    elif measure == 'JSD': Ep = log_2 - F.softplus(-p_samples)
-    elif measure == 'X2':  Ep = p_samples ** 2
-    elif measure == 'KL':  Ep = p_samples + 1.
-    elif measure == 'RKL': Ep = -torch.exp(-p_samples)
-    elif measure == 'DV':  Ep = p_samples
-    elif measure == 'H2':  Ep = 1. - torch.exp(-p_samples)
-    elif measure == 'W1':  Ep = p_samples
+    if measure == 'GAN':
+        Ep = -F.softplus(-p_samples)
+    elif measure == 'JSD':
+        Ep = log_2 - F.softplus(-p_samples)
+    elif measure == 'X2':
+        Ep = p_samples ** 2
+    elif measure == 'KL':
+        Ep = p_samples + 1.
+    elif measure == 'RKL':
+        Ep = -torch.exp(-p_samples)
+    elif measure == 'DV':
+        Ep = p_samples
+    elif measure == 'H2':
+        Ep = 1. - torch.exp(-p_samples)
+    elif measure == 'W1':
+        Ep = p_samples
     else:
         raise_measure_error(measure)
 
@@ -37,14 +47,22 @@ def get_positive_expectation(p_samples, measure):
 def get_negative_expectation(q_samples, measure):
     log_2 = math.log(2.)
 
-    if   measure == 'GAN': Eq = F.softplus(-q_samples) + q_samples
-    elif measure == 'JSD': Eq = F.softplus(-q_samples) + q_samples - log_2
-    elif measure == 'X2':  Eq = -0.5 * ((torch.sqrt(q_samples ** 2) + 1.) ** 2)
-    elif measure == 'KL':  Eq = torch.exp(q_samples)
-    elif measure == 'RKL': Eq = q_samples - 1.
-    elif measure == 'DV':  Eq = log_sum_exp(q_samples, 0) - math.log(q_samples.size(0))
-    elif measure == 'H2':  Eq = torch.exp(q_samples) - 1.
-    elif measure == 'W1':  Eq = q_samples
+    if measure == 'GAN':
+        Eq = F.softplus(-q_samples) + q_samples
+    elif measure == 'JSD':
+        Eq = F.softplus(-q_samples) + q_samples - log_2
+    elif measure == 'X2':
+        Eq = -0.5 * ((torch.sqrt(q_samples ** 2) + 1.) ** 2)
+    elif measure == 'KL':
+        Eq = torch.exp(q_samples)
+    elif measure == 'RKL':
+        Eq = q_samples - 1.
+    elif measure == 'DV':
+        Eq = log_sum_exp(q_samples, 0) - math.log(q_samples.size(0))
+    elif measure == 'H2':
+        Eq = torch.exp(q_samples) - 1.
+    elif measure == 'W1':
+        Eq = q_samples
     else:
         raise_measure_error(measure)
 
@@ -53,7 +71,7 @@ def get_negative_expectation(q_samples, measure):
 
 def get_boundary(samples, measure):
     if measure in ('GAN', 'JSD', 'KL', 'RKL', 'H2', 'DV'):
-        b =samples ** 2
+        b = samples ** 2
     elif measure == 'X2':
         b = (samples / 2.) ** 2
     elif measure == 'W':
@@ -62,6 +80,7 @@ def get_boundary(samples, measure):
         raise_measure_error(measure)
 
     return b.mean()
+
 
 def get_weight(samples, measure):
     if measure in ('GAN', 'JSD', 'KL', 'RKL', 'DV', 'H2'):
@@ -116,11 +135,18 @@ class DiscriminatorRoutine(RoutinePlugin):
         E_neg = get_negative_expectation(Q_samples, measure)
         difference = E_pos - E_neg
 
-        self.results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
+        self.results.update(
+            Scores=dict(
+                Ep=P_samples.mean().item(),
+                Eq=Q_samples.mean().item()))
         self.results['{} distance'.format(measure)] = difference.item()
         self.add_image(X_P, name='ground truth')
-        self.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data), name='discriminator output')
+        self.add_histogram(dict(fake=Q_samples.view(-1).data,
+                                real=P_samples.view(-1).data),
+                           name='discriminator output')
         self.losses.discriminator = -difference
+
+
 register_plugin(DiscriminatorRoutine)
 
 
@@ -142,7 +168,10 @@ class PenaltyRoutine(RoutinePlugin):
 
         '''
         inputs = self.inputs.inputs
-        penalty = self.apply(inputs, penalty_type=penalty_type, penalty_amount=penalty_amount)
+        penalty = self.apply(
+            inputs,
+            penalty_type=penalty_type,
+            penalty_amount=penalty_amount)
 
         if penalty:
             self.losses.network = penalty
@@ -182,8 +211,9 @@ class PenaltyRoutine(RoutinePlugin):
 
             try:
                 epsilon = self.inputs.e.view(-1, 1, 1, 1)
-            except:
-                raise ValueError('You must initiate a uniform random variable `e` to use interpolation')
+            except BaseException:
+                raise ValueError(
+                    'You must initiate a uniform random variable `e` to use interpolation')
             mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)
             mid_in.requires_grad_()
 
@@ -194,9 +224,12 @@ class PenaltyRoutine(RoutinePlugin):
             penalty = ((gradient.norm(2, dim=1) - 1.) ** 2).mean()
 
         else:
-            raise NotImplementedError('Unsupported penalty {}'.format(penalty_type))
+            raise NotImplementedError(
+                'Unsupported penalty {}'.format(penalty_type))
 
         return penalty_amount * penalty
+
+
 register_plugin(PenaltyRoutine)
 
 
@@ -234,6 +267,8 @@ class GeneratorRoutine(RoutinePlugin):
         self.add_image(X_Q, name='generated')
 
         return X_Q
+
+
 register_plugin(GeneratorRoutine)
 
 
@@ -258,6 +293,8 @@ class DiscriminatorBuild(BuildPlugin):
                                                           encoder_args=discriminator_args)
         discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
         self.add_networks(discriminator=discriminator)
+
+
 register_plugin(DiscriminatorBuild)
 
 
@@ -268,7 +305,8 @@ class GeneratorBuild(BuildPlugin):
     plugin_name = 'generator'
     plugin_nets = ['generator']
 
-    def build(self, generator_noise_type='normal', dim_z=64, generator_type: str='convnet', generator_args={}):
+    def build(self, generator_noise_type='normal', dim_z=64,
+              generator_type: str='convnet', generator_args={}):
         '''
 
         Args:
@@ -282,10 +320,13 @@ class GeneratorBuild(BuildPlugin):
         self.add_noise('z', dist=generator_noise_type, size=dim_z)
         self.add_noise('e', dist='uniform', size=1)
 
-        Decoder, generator_args = update_decoder_args(x_shape, model_type=generator_type, decoder_args=generator_args)
+        Decoder, generator_args = update_decoder_args(
+            x_shape, model_type=generator_type, decoder_args=generator_args)
         generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
         self.add_networks(generator=generator)
+
+
 register_plugin(GeneratorBuild)
 
 
@@ -297,16 +338,29 @@ class GAN(ModelPlugin):
     '''
     plugin_name = 'GAN'
 
-    data_defaults=dict(batch_size=dict(train=64, test=64))
-    train_defaults=dict(save_on_lowest='losses.gan')
+    data_defaults = dict(batch_size=dict(train=64, test=64))
+    train_defaults = dict(save_on_lowest='losses.gan')
 
     def __init__(self):
         super().__init__()
         self.add_build(DiscriminatorBuild)
         self.add_build(GeneratorBuild)
         self.add_routine(GeneratorRoutine, noise='data.z')
-        self.add_routine(DiscriminatorRoutine, real='data.images', noise='data.z')
-        self.add_routine(PenaltyRoutine, network='discriminator', inputs=('data.images', 'generator.generated'))
-        self.add_train_procedure('generator', 'discriminator', 'gradient_penalty')
+        self.add_routine(
+            DiscriminatorRoutine,
+            real='data.images',
+            noise='data.z')
+        self.add_routine(
+            PenaltyRoutine,
+            network='discriminator',
+            inputs=(
+                'data.images',
+                'generator.generated'))
+        self.add_train_procedure(
+            'generator',
+            'discriminator',
+            'gradient_penalty')
         self.add_eval_procedure('generator', 'discriminator')
+
+
 register_plugin(GAN)
