@@ -51,7 +51,8 @@ register_plugin(CelebAPlugin)
 
 
 class CelebA(torchvision.datasets.ImageFolder):
-    url = "https://www.dropbox.com/sh/8oqt9vytwxb3s4r/AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1"
+    url = ('https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
+           'AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1')
     filename = "img_align_celeba.zip"
 
     def __init__(

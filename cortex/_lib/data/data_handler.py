@@ -2,9 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import signal
 
 from progressbar import Bar, ProgressBar, Percentage, Timer, ETA
@@ -12,6 +9,9 @@ import torch
 
 from .noise import get_noise_var
 from .. import exp
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 
 class DataHandler(object):
@@ -141,7 +141,7 @@ class DataHandler(object):
             if '.' in i:
                 j, i_ = i.split('.')
                 j = int(j)
-                batch.append(self.batch[list(self.batch.keys())[j-1]][i_])
+                batch.append(self.batch[list(self.batch.keys())[j - 1]][i_])
             elif i not in self.batch.keys():
                 raise KeyError('Data with label `{}` not found. Available: {}'
                                .format(i, tuple(self.batch.keys())))

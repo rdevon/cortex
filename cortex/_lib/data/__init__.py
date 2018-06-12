@@ -2,14 +2,13 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import logging
 
 from .data_handler import DataHandler
 from ..config import CONFIG
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.data')
 
@@ -20,7 +19,9 @@ _PLUGINS = {}
 def setup(source: str=None, batch_size=64, n_workers: int=4,
           skip_last_batch: bool=False, DataLoader=None,
           copy_to_local: bool=False, data_args={}, shuffle: bool=True):
-    '''Dataset entrypoint.
+
+    """
+    Dataset entrypoint.
 
     Args:
         source: Dataset source or list of sources.
@@ -34,7 +35,7 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
         data_args: Arguments for dataset plugin.
         shuffle: Shuffle the dataset.
 
-    '''
+    """
     global DATA_HANDLER
 
     if source and not isinstance(source, (list, tuple)):

@@ -5,14 +5,13 @@
 import logging
 import math
 
-import numpy as np
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 
 from .gan import apply_penalty, f_divergence
-#from conv_decoders import SimpleConvDecoder as Generator
-#from convnets import SimpleConvEncoder as Discriminator
+# from conv_decoders import SimpleConvDecoder as Generator
+# from convnets import SimpleConvEncoder as Discriminator
 
 from .modules.conv_decoders import MNISTDeConv as Generator
 from .modules.convnets import MNISTConv as Discriminator
@@ -27,9 +26,9 @@ discriminator_args_ = dict(dim_h=64, batch_norm=False, f_size=3, pad=1, stride=2
 generator_args_ = dict(dim_h=64, batch_norm=True, f_size=5, pad=2, stride=1, n_steps=3)
 '''
 
-#discriminator_args_ = dict(dim_h=64, batch_norm=False, f_size=5, pad=2, stride=2, min_dim=7,
+# discriminator_args_ = dict(dim_h=64, batch_norm=False, f_size=5, pad=2, stride=2, min_dim=7,
 #                           nonlinearity='LeakyReLU')
-#generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=2, stride=1, n_steps=2)
+# generator_args_ = dict(dim_h=64, batch_norm=True, f_size=4, pad=2, stride=1, n_steps=2)
 
 discriminator_args_ = dict(dim_h=64, batch_norm=False)
 generator_args_ = dict(dim_h=64, batch_norm=True)
@@ -59,7 +58,7 @@ DEFAULTS = dict(
 
 
 log_Z = Variable(torch.Tensor([0.]).float(), requires_grad=False).cuda()
-#log_M = Variable(torch.log(torch.Tensor([10]).float())).cuda()
+# log_M = Variable(torch.log(torch.Tensor([10]).float())).cuda()
 
 
 def log_sum_exp(x, axis=None):
@@ -220,7 +219,6 @@ def mmd(nets, inputs, sample_method='threshold'):
 
 def evaluate():
     pass
-
 
 
 def build_model(loss=None, discriminator_args=None, generator_args=None):

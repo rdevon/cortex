@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 r"""
-:mod:`cortex2.lib.toysets` -- Small toy datasets for interpretable experimentation
+:mod:`cortex2.lib.toysets` -- Small toy datasets for interpretable
+      experimentation
 ==================================================================================
 
 .. module:: toysets
@@ -17,8 +18,6 @@ TODOs
 2. Fix module title once a proper packaging scheme is introduced
 
 """
-__author__ = 'Tsirigotis Christos'
-__author_email__ = 'tsirif@gmail.com'
 
 import errno
 import itertools as it
@@ -27,6 +26,9 @@ import os
 import torch
 import torch.utils.data as data
 
+
+__author__ = 'Tsirigotis Christos'
+__author_email__ = 'tsirif@gmail.com'
 
 DATASETS = ["G2", "S_set", "A_set", "DIM_set", "Unbalance",
             "Aggregation", "Compound", "Pathbased", "Spiral",
@@ -83,8 +85,8 @@ class _SmallDataset(data.TensorDataset):
            What it can be, depends on a particular dataset, **please refer** to
            its documentation.
         stardardize : bool, optional, default=False
-           If True, perform small preprocessing of the datasets: ``(X - mean)/std``,
-           when preparing the dataset for loading
+           If True, perform small preprocessing of the datasets:
+           ``(X - mean)/std``, when preparing the dataset for loading
         load : bool, optional, default=False
            If True, load the dataset from local directory `root`
         download : bool, optional, default=False
@@ -215,8 +217,8 @@ class G2(_SmallDataset):
     -----------------------------------------------------------------------
 
     P. Fränti R. Mariescu-Istodor and C. Zhong, "XNN graph"
-    IAPR Joint Int. Workshop on Structural, Syntactic, and Statistical Pattern Recognition Merida,
-    Mexico, LNCS 10029, 207-217, November 2016.
+    IAPR Joint Int. Workshop on Structural, Syntactic, and Statistical Pattern
+    Recognition Merida, Mexico, LNCS 10029, 207-217, November 2016.
     """
 
     urls = ["http://cs.joensuu.fi/sipu/datasets/g2-txt.zip"]
@@ -327,8 +329,8 @@ class DIM_set(_SmallDataset):
 
     P. Fränti, O. Virmajoki and V. Hautamäki,
     "Fast agglomerative clustering using a k-nearest neighbor graph",
-    IEEE Trans. on Pattern Analysis and Machine Intelligence, 28 (11), 1875-1881,
-    November 2006.
+    IEEE Trans. on Pattern Analysis and Machine Intelligence, 28 (11),
+    1875-1881, November 2006.
     """
 
     urls = [
@@ -511,8 +513,8 @@ class Flame(_Shapes):
     N=240, k=2, D=2
 
     L. Fu and E. Medico,
-    FLAME, a novel fuzzy clustering method for the analysis of DNA microarray data.
-    BMC bioinformatics, 2007.
+    FLAME, a novel fuzzy clustering method for the analysis of DNA microarray
+    data. BMC bioinformatics, 2007.
     """
 
     urls = ["http://cs.joensuu.fi/sipu/datasets/flame.txt"]

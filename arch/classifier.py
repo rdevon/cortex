@@ -3,7 +3,8 @@
 '''
 
 
-from cortex.plugins import register_plugin, BuildPlugin, ModelPlugin, RoutinePlugin
+from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
+                            RoutinePlugin)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -30,7 +31,8 @@ class ClassifyRoutine(RoutinePlugin):
         inputs = self.inputs.inputs
         targets = self.inputs.targets
 
-        predicted = self.classify(classifier, inputs, targets, criterion=criterion)
+        predicted = self.classify(classifier, inputs, targets,
+                                  criterion=criterion)
         self.visualize(inputs, targets, predicted)
 
     def classify(self, classifier, inputs, targets, criterion=None):
@@ -40,7 +42,8 @@ class ClassifyRoutine(RoutinePlugin):
         predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
 
         loss = criterion(outputs, targets)
-        correct = 100. * predicted.eq(targets.data).cpu().sum() / targets.size(0)
+        correct = (100. * predicted.eq(targets.data).cpu().sum() /
+                   targets.size(0))
 
         self.losses.classifier = loss
         self.results[self.name + '_accuracy'] = correct
@@ -48,7 +51,8 @@ class ClassifyRoutine(RoutinePlugin):
         return predicted
 
     def visualize(self, inputs, targets, predicted):
-        self.add_image(inputs.data, labels=(targets.data, predicted.data), name=self.name + '_gt_pred')
+        self.add_image(inputs.data, labels=(targets.data, predicted.data),
+                       name=self.name + '_gt_pred')
 register_plugin(ClassifyRoutine)
 
 
@@ -64,14 +68,16 @@ class ImageClassifierBuild(BuildPlugin):
 
         Args:
             classifier_type (str): Network type for the classifier.
-            classifier_args: Classifier arguments. Can include dropout, batch_norm, layer_norm, etc.
+            classifier_args: Classifier arguments. Can include dropout,
+                             batch_norm, layer_norm, etc.
 
         '''
         classifier_args = classifier_args or {}
         shape = self.get_dims('x', 'y', 'c')
         dim_l = self.get_dims('labels')
 
-        Encoder, args = update_encoder_args(shape, model_type=classifier_type, encoder_args=classifier_args)
+        Encoder, args = update_encoder_args(shape, model_type=classifier_type,
+                                            encoder_args=classifier_args)
 
         args.update(**classifier_args)
 
@@ -90,11 +96,15 @@ class ImageClassification(ModelPlugin):
 
     data_defaults = dict(batch_size=128)
     optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
-    train_defaults = dict(epochs=200, archive_every=10, save_on_best='losses.classifier')
+    train_defaults = dict(epochs=200, archive_every=10,
+                          save_on_best='losses.classifier')
 
     def __init__(self):
         super().__init__()
-        self.add_build('image_classifier', image_classifier='my_classifier', name='my_build')
-        self.add_routine('classification', classifier='my_classifier', inputs='data.images', targets='data.targets', name='my_classification')
+        self.add_build('image_classifier', image_classifier='my_classifier',
+                       name='my_build')
+        self.add_routine('classification', classifier='my_classifier',
+                         inputs='data.images', targets='data.targets',
+                         name='my_classification')
         self.add_train_procedure('my_classification')
 register_plugin(ImageClassification)

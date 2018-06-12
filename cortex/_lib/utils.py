@@ -2,14 +2,14 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import logging
 import os
 
 import numpy as np
 import torch
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.util')
 

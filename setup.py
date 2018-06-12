@@ -7,10 +7,11 @@ setup(name='cortex',
       author_email='erroneus@gmail.com',
       packages=['cortex'],
       install_requires=[
-        'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn', 'torchvision', 'visdom', 'pyyaml'],
+          'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn',
+          'torchvision', 'visdom', 'pyyaml'],
       entry_points={
-        'console_scripts': [
-            'cortex=cortex.main:main',
-            'configure=cortex.main:configure']
+          'console_scripts': [
+              'cortex=cortex.main:main',
+              'configure=cortex.main:configure']
       },
       zip_safe=False)

@@ -2,9 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import importlib
 import logging
 import os
@@ -19,6 +16,9 @@ from .handlers import Handler, NetworkHandler, LossHandler, ResultsHandler
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.models')
 MODEL = None
@@ -120,7 +120,7 @@ class BuildPluginBase():
         self._nets = models.NETWORK_HANDLER
         self._names = {}
 
-        keys = self.plugin_nets
+        # keys = self.plugin_nets
         for k, v in kwargs.items():
             # TODO(Devon): might have to do checking for keys here.
             if k in self._names:

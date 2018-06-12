@@ -2,16 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
-__all__ = [
-    'DatasetPlugin',
-    'ModelPlugin',
-    'RoutinePlugin',
-    'BuildPlugin',
-    'register_plugin']
-
 import inspect
 from os import path
 import shutil
@@ -28,6 +18,16 @@ from cortex._lib.models import (
     register_build,
     register_routine,
     register_model)
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
+__all__ = [
+    'DatasetPlugin',
+    'ModelPlugin',
+    'RoutinePlugin',
+    'BuildPlugin',
+    'register_plugin']
 
 
 class DatasetPlugin(DatasetPluginBase):
@@ -60,7 +60,8 @@ class DatasetPlugin(DatasetPluginBase):
     def add_dataset(self, mode: str, dataset: Dataset):
         '''Adds a dataset to the plugin.
 
-        Any dataset added in this way will be used in the training or testing loops, depending on the mode specified.
+        Any dataset added in this way will be used in the training or testing
+        loops, depending on the mode specified.
 
         Args:
             mode: The data mode that this dataset will be run on.
@@ -151,9 +152,12 @@ class RoutinePlugin(RoutinePluginBase):
 
     Attributes:
         plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this routine.
-        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for this routine.
-        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this routine.
+        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for
+        this routine.
+        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for
+        this routine.
+        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this
+        routine.
 
     '''
     _protected = ['help', 'kwargs', 'updates']
@@ -201,7 +205,8 @@ class BuildPlugin(BuildPluginBase):
 
     Attributes:
         plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this build.
+        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be
+        used for this build.
 
     '''
     _protected = ['help', 'kwargs']
@@ -277,7 +282,8 @@ class ModelPlugin(ModelPluginBase):
         '''
         if isinstance(build_query, BuildPlugin):
             build = build_query
-        elif inspect.isclass(build_query) and issubclass(build_query, BuildPlugin):
+        elif (inspect.isclass(build_query) and
+              issubclass(build_query, BuildPlugin)):
             build = build_query(**kwargs)
         elif isinstance(build_query, str):
             build = BuildReference(build_query, **kwargs)
@@ -294,7 +300,8 @@ class ModelPlugin(ModelPluginBase):
 
         Args:
             routine_query: Routine plugin.
-                Can be a string, a RoutinePlugin instance, or RoutinePlugin class
+                Can be a string, a RoutinePlugin instance, or RoutinePlugin
+                class
             name: (str, optional): Name for the routine.
                 If not set, `RoutinePlugin.plugin_name` will be used.
             **kwargs: TODO
@@ -302,7 +309,8 @@ class ModelPlugin(ModelPluginBase):
         '''
         if isinstance(routine_query, RoutinePlugin):
             routine = routine_query
-        elif inspect.isclass(routine_query) and issubclass(routine_query, RoutinePlugin):
+        elif (inspect.isclass(routine_query) and
+              issubclass(routine_query, RoutinePlugin)):
             routine = routine_query(**kwargs)
         elif isinstance(routine_query, str):
             routine = RoutineReference(routine_query, **kwargs)
@@ -318,17 +326,15 @@ class ModelPlugin(ModelPluginBase):
 
         return name
 
-    def add_train_procedure(
-            self,
-            *routines,
-            mode: str='train',
-            updates_per_routine=None):
+    def add_train_procedure(self, *routines, mode: str='train',
+                            updates_per_routine=None):
         '''Adds a training procedure.
 
         Args:
             *routines: TODO
             mode (str): Data mode on which the procedure will be run.
-            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary of updates for each routine.
+            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary
+            of updates for each routine.
 
         '''
         updates_per_routine = updates_per_routine or [1 for _ in routines]

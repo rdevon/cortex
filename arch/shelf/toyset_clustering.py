@@ -9,7 +9,7 @@ from sklearn import metrics
 import torch
 
 from ali import apply_penalty, score
-from featnet import score as featnet_score, get_results, visualize
+from featnet import score as featnet_score, get_results
 from gan import generator_loss, apply_gradient_penalty
 from modules.fully_connected import FullyConnectedNet
 from utils import to_one_hot
@@ -20,7 +20,7 @@ def inverse_digamma(X, iterations=3):
     Y = np.exp(X)
     while L > 10e-8:
         Y = Y + L * np.sign(X - digamma(Y))
-        L /=  2
+        L /= 2
     return Y
 
 
@@ -29,8 +29,10 @@ def fixed_point_alpha(alpha, log_p_hat):
     return alpha_new
 
 
-# Must have data, models, losses, results, and viz. **kargs should match the keys in DEFAULT_CONFIG.routines below.
-def noise_discriminator_routine(data, models, losses, results, viz, noise_measure='JSD', alpha_lr=0.0005,
+# Must have data, models, losses, results, and viz. **kargs
+# should match the keys in DEFAULT_CONFIG.routines below.
+def noise_discriminator_routine(data, models, losses, results, viz, noise_measure='JSD',
+                                alpha_lr=0.0005,
                                 learn_alpha=False):
     X, Y_P = data.get_batch('1.images', 'y')
     encoder = models.encoder
@@ -39,13 +41,17 @@ def noise_discriminator_routine(data, models, losses, results, viz, noise_measur
     log_p_hat = torch.log(Y_Q).mean(0)
     alpha = data.noise['y'][0].concentration[0]
     alpha_permutations = np.array(list(itertools.permutations(alpha)))
-    #assert False, np.array(alpha_permutations).shape
+    # assert False, np.array(alpha_permutations).shape
 
-    log_likelihoods = np.log(gamma(alpha_permutations.sum(1))) - np.log(gamma(alpha_permutations)).sum(1) + ((alpha_permutations - 1.) * log_p_hat.data.cpu().numpy()[None, :]).sum(1)
+    log_likelihoods = (np.log(gamma(alpha_permutations.sum(1))) -
+                       np.log(gamma(alpha_permutations)).sum(1) +
+                       ((alpha_permutations - 1.) * log_p_hat.data.cpu().numpy()[None, :]).sum(1))
     idx = log_likelihoods.argmax()
     new_alpha = alpha_permutations[idx]
-    data.noise['y'][0].concentration = data.noise['y'][0].concentration * 0 + torch.tensor(new_alpha)
-    data.noise['y'][1].concentration = data.noise['y'][1].concentration * 0 + torch.tensor(new_alpha)
+    data.noise['y'][0].concentration = (
+        data.noise['y'][0].concentration * 0 + torch.tensor(new_alpha))
+    data.noise['y'][1].concentration = (
+        data.noise['y'][1].concentration * 0 + torch.tensor(new_alpha))
     results.update(Switched_alpha=sum(alpha.data.data.cpu().numpy() != new_alpha))
 
     if learn_alpha:
@@ -61,8 +67,12 @@ def noise_discriminator_routine(data, models, losses, results, viz, noise_measur
 
         new_alpha = torch.tensor(fixed_point_alpha(alpha.numpy(), log_p_hat.data.cpu().numpy()))
         beta = 0.0001
-        data.noise['y'][0].concentration = (1 - beta) * data.noise['y'][0].concentration + beta * new_alpha
-        data.noise['y'][1].concentration = (1 - beta) * torch.zeros_like(data.noise['y'][1].concentration) + beta * new_alpha
+        data.noise['y'][0].concentration = ((1 - beta) *
+                                            data.noise['y'][0].concentration +
+                                            beta * new_alpha)
+        data.noise['y'][1].concentration = ((1 - beta) *
+                                            torch.zeros_like(data.noise['y'][1].concentration) +
+                                            beta * new_alpha)
 
     E_pos, E_neg, _, _ = featnet_score(models, Y_P, Y_Q, noise_measure, key='noise_discriminator')
     losses.noise_discriminator = E_neg - E_pos
@@ -93,7 +103,8 @@ def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise
     completeness = metrics.completeness_score(T, C)
     v_measure = metrics.v_measure_score(T, C)
     FMI = metrics.fowlkes_mallows_score(T, C)
-    results.update(Cluster_scores=dict(ARI=ARI, AMI=AMI, homogeneity=homogeneity, completeness=completeness,
+    results.update(Cluster_scores=dict(ARI=ARI, AMI=AMI, homogeneity=homogeneity,
+                                       completeness=completeness,
                                        v_measure=v_measure, FMI=FMI))
     class_numbers = {}
     target_numbers = to_one_hot(T, dim_l).sum(0)
@@ -106,7 +117,8 @@ def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise
     # Featnet
     E_pos_n, E_neg_n, P_samples_n, Q_samples_n = featnet_score(models, Y_P, Y_Q, noise_measure,
                                                                key='noise_discriminator')
-    get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n, noise_measure, results=results, name='noise')
+    get_results(P_samples_n, Q_samples_n, E_pos_n, E_neg_n,
+                noise_measure, results=results, name='noise')
     losses.encoder = generator_loss(Q_samples_n, noise_measure, loss_type=generator_loss_type)
 
     # MINE
@@ -116,7 +128,8 @@ def encoder_routine(data, models, losses, results, viz, mine_measure=None, noise
     get_results(P_samples, Q_samples, E_pos, E_neg, mine_measure, results=results, name='mine')
 
     viz.add_scatter(X_P, labels=D, name='Clusters')
-    viz.add_histogram(dict(real=P_samples_n.view(-1).data, fake=Q_samples_n.view(-1).data), name='discriminator output')
+    viz.add_histogram(dict(real=P_samples_n.view(-1).data,
+                      fake=Q_samples_n.view(-1).data), name='discriminator output')
 
 
 def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=0.2, penalty_amount=0.2,
@@ -134,12 +147,13 @@ def penalty_routine(data, models, losses, results, viz, mine_penalty_amount=0.2,
     if penalty:
         losses.mine = penalty
 
-    penalty = apply_gradient_penalty(data, models, inputs=X_P, model='encoder', penalty_amount=encoder_penalty_amount)
+    penalty = apply_gradient_penalty(data, models, inputs=X_P, model='encoder',
+                                     penalty_amount=encoder_penalty_amount)
     if penalty:
         losses.encoder = penalty
 
 
-# CORTEX ===============================================================================================================
+# CORTEX ===================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
 
 def BUILD(data, models, noise_type='dirichlet', noise_parameters=dict(concentration=0.1),
@@ -176,11 +190,11 @@ def BUILD(data, models, noise_type='dirichlet', noise_parameters=dict(concentrat
         alpha = torch.tensor(fixed_point_alpha(alpha, log_p_hat.data.cpu().numpy())).data.numpy()
     logger.info('Found starting alphas: {}'.format(alpha))
     print(target_freqencies)
-    #assert False, alpha
+    # assert False, alpha
 
     noise_parameters.update(concentration=alpha.tolist())
-    #noise_parameters.update(concentration=target_freqencies)
-    #assert False, noise_parameters
+    # noise_parameters.update(concentration=target_freqencies)
+    # assert False, noise_parameters
     data.add_noise('y', dist=noise_type, size=dim_l, **noise_parameters)
 
     encoder = FullyConnectedNet(dim_in, dim_out=dim_l, **encoder_args)
@@ -190,14 +204,16 @@ def BUILD(data, models, noise_type='dirichlet', noise_parameters=dict(concentrat
 
     noise_discriminator = FullyConnectedNet(dim_l, dim_out=1, **noise_discriminator_args)
 
-    models.update(mine=(mine_bot, mine_top, mine_fin), noise_discriminator=noise_discriminator, encoder=encoder)
+    models.update(mine=(mine_bot, mine_top, mine_fin), noise_discriminator=noise_discriminator,
+                  encoder=encoder)
 
 
 # Dictionary reference to train routines. Keys are up to you
 TRAIN_ROUTINES = dict(mine=mine_discriminator_routine, discriminator=noise_discriminator_routine,
                       encoder=encoder_routine, penalty=penalty_routine)
 
-# Dictionary reference to test routines. If not set, will be copied from train. If value is None, will not be used in test.
+# Dictionary reference to test routines. If not set, will be copied from train. If value is None,
+# will not be used in test.
 TEST_ROUTINES = dict(penalty=None)
 
 # Default configuration for this model
