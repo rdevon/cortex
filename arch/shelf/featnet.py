@@ -7,15 +7,16 @@ import torch
 import torch.nn.functional as F
 
 from ali import build_extra_networks, network_routine as ali_network_routine
-from gan import get_positive_expectation, get_negative_expectation, apply_gradient_penalty, generator_loss
+from gan import (get_positive_expectation, get_negative_expectation,
+                 apply_gradient_penalty, generator_loss)
 from modules.fully_connected import FullyConnectedNet
 from utils import perform_svc, update_encoder_args, update_decoder_args
 
 
-# Helper functions =====================================================================================================
+# Helper functions ========================================================================
 
 def shape_noise(Y_P, U, noise_type, epsilon=1e-6, offset=0.):
-    if noise_type == None:
+    if noise_type is None:
         pass
     elif noise_type == 'hypercubes':
         pass
@@ -76,7 +77,8 @@ def score(models, Z_P, Z_Q, measure, Y_P=None, Y_Q=None, key='discriminator'):
 def get_results(P_samples, Q_samples, E_pos, E_neg, measure, results=None, name=None):
     if results is not None:
         score_name = 'Scores' if name is None else '{} Score'.format(name)
-        distance_name = '{} distance'.format(measure) if name is None else '{} {} distance'.format(name, measure)
+        distance_name = '{} distance'.format(
+            measure) if name is None else '{} {} distance'.format(name, measure)
         results[score_name] = dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item())
         results[distance_name] = (E_pos - E_neg).item()
 
@@ -90,9 +92,10 @@ def visualize(Z_Q, P_samples, Q_samples, X, T, Y_Q=None, viz=None, scatter=False
                 viz.add_scatter(Y_Q, labels=T.data, name='latent values')
             else:
                 viz.add_scatter(Z_Q, labels=T.data, name='latent values')
-        viz.add_histogram(dict(real=P_samples.view(-1).data, fake=Q_samples.view(-1).data), name='discriminator output')
+        viz.add_histogram(dict(real=P_samples.view(-1).data, fake=Q_samples.view(-1).data),
+                          name='discriminator output')
 
-# ROUTINES =============================================================================================================
+# ROUTINES ====================================================================================
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
 def encoder_routine(data, models, losses, results, viz, measure=None, noise_type=None, output_nonlin=False,
@@ -138,7 +141,7 @@ def penalty_routine(data, models, losses, results, viz, penalty_amount=0.2, outp
 def network_routine(data, models, losses, results, viz):
     ali_network_routine(data, models, losses, results, viz, encoder_key='encoder')
 
-# SVM routines =========================================================================================================
+# SVM routines =============================================================================
 
 SVM = None
 
@@ -187,7 +190,7 @@ def svm_routine_test(data, models, losses, results, viz, encoder_key='encoder'):
     correct = 100. * (predicted == Y).sum() / Y.shape[0]
     results['SVC_accuracy'] = correct
 
-# Builders =============================================================================================================
+# Builders ============================================================================
 
 def build_encoder(models, x_shape, dim_z, Encoder, use_topnet=False, dim_top=None, **encoder_args):
     logger.debug('Forming encoder with class {} and args: {}'.format(Encoder, encoder_args))
@@ -203,11 +206,12 @@ def build_encoder(models, x_shape, dim_z, Encoder, use_topnet=False, dim_top=Non
 
 def build_discriminator(models, dim_in, dim_h=None, nonlinearity='ReLU', key='discriminator'):
     dim_h = dim_h or [2048, 1028, 512]
-    discriminator = FullyConnectedNet(dim_in, dim_h=dim_h, nonlinearity=nonlinearity, dim_out=1, layer_norm=False,
+    discriminator = FullyConnectedNet(dim_in, dim_h=dim_h, nonlinearity=nonlinearity,
+                                      dim_out=1, layer_norm=False,
                                       batch_norm=False)
     models[key] = discriminator
 
-# CORTEX ===============================================================================================================
+# CORTEX ==============================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 def SETUP(model=None, data=None, routines=None, **kwargs):
@@ -219,7 +223,8 @@ def SETUP(model=None, data=None, routines=None, **kwargs):
                                 u=dict(dist='uniform', size=1))
 
 
-def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', use_topnet=False, dim_noise=64, dim_embedding=64, encoder_args={},
+def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', use_topnet=False,
+          dim_noise=64, dim_embedding=64, encoder_args={},
           decoder_args={}, add_supervision=False):
     global TRAIN_ROUTINES, FINISH_TRAIN_ROUTINES, FINISH_TEST_ROUTINES
 
@@ -235,8 +240,10 @@ def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', use_topn
     encoder_args = encoder_args or {}
     encoder_args.update(batch_norm=True, layer_norm=False)
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type,
+                                                encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type,
+                                                decoder_args=decoder_args)
 
     build_encoder(models, x_shape, dim_embedding, Encoder, use_topnet=use_topnet, dim_top=dim_noise,
                   fully_connected_layers=[1028], **encoder_args)
@@ -244,21 +251,23 @@ def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', use_topn
     if add_supervision:
         build_extra_networks(models, x_shape, dim_embedding, dim_l, Decoder, **decoder_args)
         TRAIN_ROUTINES.update(nets=network_routine)
-        #FINISH_TRAIN_ROUTINES.update(svm=svm_routine_train)
-        #FINISH_TEST_ROUTINES.update(svm=svm_routine_test)
+        # FINISH_TRAIN_ROUTINES.update(svm=svm_routine_train)
+        # FINISH_TEST_ROUTINES.update(svm=svm_routine_test)
 
 
-TRAIN_ROUTINES = dict(discriminator=discriminator_routine, penalty=penalty_routine, encoder=encoder_routine)
+TRAIN_ROUTINES = dict(
+    discriminator=discriminator_routine, penalty=penalty_routine, encoder=encoder_routine)
 FINISH_TRAIN_ROUTINES = dict()
 FINISH_TEST_ROUTINES = dict()
 
 INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', 'W1'],
-                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared Hellinger), '
-                              'DV (Donsker Varahdan KL), W1 (IPM)}'),
+                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2),'
+                              'H2 (squared Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}'),
             noise_type=dict(choices=['hypercubes', 'unitball', 'unitsphere'],
                             help='Type of noise to match encoder output to.'),
             noise=dict(help='Distribution of noise. (to be deprecacated).'),
-            output_nonlin=dict(help='Apply nonlinearity at the output of encoder. Will be chosen according to `noise_type`.'),
+            output_nonlin=dict(help='Apply nonlinearity at the output of encoder. '
+                                    'Will be chosen according to `noise_type`.'),
             generator_loss_type=dict(choices=['non-saturating', 'minimax', 'boundary-seek'],
                                      help='Generator loss type.'),
             penalty_amount=dict(help='Amount of gradient penalty for the discriminator.'),
@@ -266,9 +275,9 @@ INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', '
             decoder_type=dict(help='Model type.'),
             dim_noise=dict(help='Noise dimension.'),
             dim_embedding=dict(help='Embedding dimension (used if use_topnet is True)'),
-            use_topnet=dict(help='Whether to use an additional network and perform ALI with top two variables.'),
-            add_supervision=dict(help='Use additional networks for monitoring during training.')
-)
+            use_topnet=dict(help='Whether to use an additional network and perform ALI '
+                                 'with top two variables.'),
+            add_supervision=dict(help='Use additional networks for monitoring during training.'))
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=1028)),

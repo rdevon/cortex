@@ -130,35 +130,40 @@ def BUILD(data, models, encoder_type='convnet', generator_type='convnet', dim_em
     data.add_noise('y_p', dist='normal', size=dim_embedding)
     data.add_noise('y_q', dist='normal', size=dim_embedding)
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=discriminator_args)
-    Decoder, generator_args = update_decoder_args(x_shape, model_type=generator_type, decoder_args=generator_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type,
+                                                encoder_args=discriminator_args)
+    Decoder, generator_args = update_decoder_args(x_shape, model_type=generator_type,
+                                                  decoder_args=generator_args)
 
     encoder = Encoder(x_shape, dim_out=dim_embedding, fully_connected_layers=[64], **encoder_args)
     generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
-    build_discriminator(models, dim_embedding, dim_h=[64], nonlinearity='LeakyReLU', key='real_discriminator')
-    build_discriminator(models, dim_embedding, dim_h=[64], nonlinearity='LeakyReLU', key='fake_discriminator')
+    build_discriminator(models, dim_embedding, dim_h=[64], nonlinearity='LeakyReLU',
+                        key='real_discriminator')
+    build_discriminator(models, dim_embedding, dim_h=[64], nonlinearity='LeakyReLU',
+                        key='fake_discriminator')
 
     models.update(generator=generator, encoder=encoder)
 
 
-TRAIN_ROUTINES = dict(discriminators=discriminator_routine, encoder=encoder_routine, generator=generator_routine,
+TRAIN_ROUTINES = dict(discriminators=discriminator_routine, encoder=encoder_routine,
+                      generator=generator_routine,
                       penalty=penalty_routine)
 TEST_ROUTINES = dict(penalty=None)
 
 INFO = dict(measure=dict(choices=['GAN', 'JSD', 'KL', 'RKL', 'X2', 'H2', 'DV', 'W1'],
-                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared Hellinger), '
-                              'DV (Donsker Varahdan KL), W1 (IPM)}'),
+                         help='GAN measure. {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2),'
+                              ' H2 (squared Hellinger),  DV (Donsker Varahdan KL), W1 (IPM)}'),
             noise_type=dict(choices=['hypercubes', 'unitball', 'unitsphere'],
                             help='Type of noise to match encoder output to.'),
             dim_z=dict(help='Input dimension to the generator.'),
             dim_embedding=dict(help='Embedding dimension.'),
             offset=dict(help='Offset of Q mode from P mode in discriminator output.'),
-            generator_noise_type=dict(help='Type of noise distribution for input to the generator.'),
-            output_nonlin=dict(help='Apply nonlinearity at the output of encoder. Will be chosen according to `noise_type`.'),
+            generator_noise_type=dict(help='Type of noise distribution for input to generator.'),
+            output_nonlin=dict(help='Apply nonlinearity at the output of encoder. Will be chosen'
+                               'according to `noise_type`.'),
             generator_loss_type=dict(choices=['l2'], help='Generator loss type.'),
             penalty_amount=dict(help='Amount of gradient penalty for the discriminators.'),
-            encoder_penalty_amount=dict(help='Amount of gradient penalty for the encoder.'),
-)
+            encoder_penalty_amount=dict(help='Amount of gradient penalty for the encoder.'),)
 
 DEFAULT_CONFIG = dict(train=dict(save_on_lowest='losses.vae'))
