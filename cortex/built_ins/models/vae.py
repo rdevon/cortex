@@ -105,6 +105,7 @@ class ImageEncoderBuild(BuildPlugin):
     '''
     plugin_name = 'image_encoder'
     plugin_nets = ['image_encoder']
+
     def build(self, encoder_type: str='convnet', dim_out: int=64, encoder_args={}):
         '''
 
