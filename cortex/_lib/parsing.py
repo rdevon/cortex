@@ -16,6 +16,7 @@ from . import data, optimizer, train
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
+
 def parse_kwargs(f):
     kwargs = {}
     sig = inspect.signature(f)
