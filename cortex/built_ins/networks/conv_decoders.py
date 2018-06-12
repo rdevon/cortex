@@ -11,7 +11,6 @@ from .modules import View
 from .utils import apply_nonlinearity, get_nonlinearity, finish_layer_1d, finish_layer_2d
 
 
-
 logger = logging.getLogger('cortex.models' + __name__)
 
 
@@ -21,7 +20,8 @@ def infer_conv_size(w, k, s, p):
 
 
 class MNISTDeConv(nn.Module):
-    def __init__(self, shape, dim_in=64, dim_h=64, batch_norm=True, layer_norm=False):
+    def __init__(self, shape, dim_in=64, dim_h=64,
+                 batch_norm=True, layer_norm=False):
         super(MNISTDeConv, self).__init__()
         models = nn.Sequential()
 
@@ -40,7 +40,9 @@ class MNISTDeConv(nn.Module):
             models.add_module('dense2_bn', nn.BatchNorm1d(2 * dim_h * 7 * 7))
         models.add_module('view', View(-1, 2 * dim_h, 7, 7))
 
-        models.add_module('deconv1', nn.ConvTranspose2d(2 * dim_h, dim_h, 4, 2, 1))
+        models.add_module(
+            'deconv1', nn.ConvTranspose2d(
+                2 * dim_h, dim_h, 4, 2, 1))
         models.add_module('deconv1_relu', nn.ReLU())
         if layer_norm:
             models.add_module('deconv1_ln', nn.LayerNorm(dim_h))
@@ -86,14 +88,26 @@ class SimpleConvDecoder(nn.Module):
         if initial_layer:
             name = 'initial_({}/{})'.format(dim_in, initial_layer)
             models.add_module(name, nn.Linear(dim_in, initial_layer))
-            finish_layer_1d(models, name, initial_layer, nonlinearity=nonlinearity, **layer_args)
+            finish_layer_1d(
+                models,
+                name,
+                initial_layer,
+                nonlinearity=nonlinearity,
+                **layer_args)
             dim_in = initial_layer
 
         name = 'first_({}/{})_0'.format(dim_in, dim_out)
         models.add_module(name, nn.Linear(dim_in, dim_out))
         models.add_module(name + '_reshape', View(-1, dim_h, dim_x, dim_y))
 
-        finish_layer_2d(models, name, dim_x, dim_y, dim_h, nonlinearity=nonlinearity, **layer_args)
+        finish_layer_2d(
+            models,
+            name,
+            dim_x,
+            dim_y,
+            dim_h,
+            nonlinearity=nonlinearity,
+            **layer_args)
         dim_out = dim_h
 
         for i in range(n_steps):
@@ -105,11 +119,34 @@ class SimpleConvDecoder(nn.Module):
                 dim_out = dim_in // 2
 
             name = 'tconv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
-            models.add_module(name, nn.ConvTranspose2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+            models.add_module(
+                name,
+                nn.ConvTranspose2d(
+                    dim_in,
+                    dim_out,
+                    f_size,
+                    stride,
+                    pad,
+                    bias=False))
 
-            finish_layer_2d(models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity, **layer_args)
+            finish_layer_2d(
+                models,
+                name,
+                dim_x,
+                dim_y,
+                dim_out,
+                nonlinearity=nonlinearity,
+                **layer_args)
 
-        models.add_module(name+'f', nn.Conv2d(dim_out, dim_out_, 3, 1, 1, bias=False))
+        models.add_module(
+            name + 'f',
+            nn.Conv2d(
+                dim_out,
+                dim_out_,
+                3,
+                1,
+                1,
+                bias=False))
 
         self.models = models
 
@@ -129,7 +166,8 @@ class SimpleConvDecoder(nn.Module):
         else:
             px, py = p
 
-        return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
+        return infer_conv_size(
+            dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
         x = self.models(x)

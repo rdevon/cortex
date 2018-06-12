@@ -141,7 +141,7 @@ class DataHandler(object):
             if '.' in i:
                 j, i_ = i.split('.')
                 j = int(j)
-                batch.append(self.batch[list(self.batch.keys())[j-1]][i_])
+                batch.append(self.batch[list(self.batch.keys())[j - 1]][i_])
             elif i not in self.batch.keys():
                 raise KeyError('Data with label `{}` not found. Available: {}'
                                .format(i, tuple(self.batch.keys())))

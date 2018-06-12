@@ -43,7 +43,11 @@ def finish_layer_2d(models, name, dim_x, dim_y, dim_out,
         models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
 
     if nonlinearity:
-        models.add_module('{}_{}'.format(name, nonlinearity.__class__.__name__), nonlinearity)
+        models.add_module(
+            '{}_{}'.format(
+                name,
+                nonlinearity.__class__.__name__),
+            nonlinearity)
 
 
 def finish_layer_1d(models, name, dim_out,
@@ -60,7 +64,11 @@ def finish_layer_1d(models, name, dim_out,
         models.add_module(name + '_bn', nn.BatchNorm1d(dim_out))
 
     if nonlinearity:
-        models.add_module('{}_{}'.format(name, nonlinearity.__class__.__name__), nonlinearity)
+        models.add_module(
+            '{}_{}'.format(
+                name,
+                nonlinearity.__class__.__name__),
+            nonlinearity)
 
 
 def apply_nonlinearity(x, nonlinearity, **nonlinearity_args):

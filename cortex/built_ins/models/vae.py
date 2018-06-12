@@ -26,6 +26,7 @@ class VAENetwork(nn.Module):
         latent: The latent state (Z).
 
     '''
+
     def __init__(self, encoder, decoder, dim_out=None, dim_z=None):
         super(VAENetwork, self).__init__()
         self.encoder = encoder
@@ -38,7 +39,10 @@ class VAENetwork(nn.Module):
 
     def reparametrize(self, mu, std):
         if self.training:
-            esp = Variable(std.data.new(std.size()).normal_(), requires_grad=False).cuda()
+            esp = Variable(
+                std.data.new(
+                    std.size()).normal_(),
+                requires_grad=False).cuda()
             return mu + std * esp
         else:
             return mu
@@ -81,7 +85,8 @@ class VAERoutine(RoutinePlugin):
         gen = F.tanh(gen)
 
         r_loss = vae_criterion(outputs, X, size_average=False) / X.size(0)
-        kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
+        kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. *
+                    torch.log(vae_net.std) - 1.).sum(1).mean()
 
         self.losses.vae = (r_loss + beta_kld * kl)
         self.results.update(KL_divergence=kl.item())
@@ -92,6 +97,8 @@ class VAERoutine(RoutinePlugin):
         self.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
         return vae_net.mu
+
+
 register_plugin(VAERoutine)
 
 
@@ -101,7 +108,9 @@ class ImageEncoderBuild(BuildPlugin):
     '''
     plugin_name = 'image_encoder'
     plugin_nets = ['image_encoder']
-    def build(self, encoder_type: str='convnet', dim_out: int=64, encoder_args={}):
+
+    def build(self, encoder_type: str='convnet',
+              dim_out: int=64, encoder_args={}):
         '''
 
         Args:
@@ -115,6 +124,8 @@ class ImageEncoderBuild(BuildPlugin):
                                                     encoder_args=encoder_args)
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.add_networks(image_encoder=encoder)
+
+
 register_plugin(ImageEncoderBuild)
 
 
@@ -125,7 +136,8 @@ class ImageDecoderBuild(BuildPlugin):
     plugin_name = 'image_decoder'
     plugin_nets = ['image_decoder']
 
-    def build(self, decoder_type: str='convnet', dim_in: int=64, decoder_args={}):
+    def build(self, decoder_type: str='convnet',
+              dim_in: int=64, decoder_args={}):
         '''
 
         Args:
@@ -139,6 +151,8 @@ class ImageDecoderBuild(BuildPlugin):
                                                     decoder_args=decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.add_networks(image_decoder=decoder)
+
+
 register_plugin(ImageDecoderBuild)
 
 
@@ -162,8 +176,14 @@ class VAEBuild(BuildPlugin):
         self.add_noise('z', dist='normal', size=dim_z)
         encoder = self._nets.encoder
         decoder = self._nets.decoder
-        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
+        vae = VAENetwork(
+            encoder,
+            decoder,
+            dim_out=dim_encoder_out,
+            dim_z=dim_z)
         self.add_networks(vae=vae)
+
+
 register_plugin(VAEBuild)
 
 
@@ -188,11 +208,21 @@ class VAE(ModelPlugin):
 
         '''
         super().__init__()
-        self.add_build(ImageEncoderBuild, dim_out='dim_encoder_out', image_encoder='encoder')
-        self.add_build(ImageDecoderBuild, dim_in='dim_z', image_decoder='decoder')
+        self.add_build(
+            ImageEncoderBuild,
+            dim_out='dim_encoder_out',
+            image_encoder='encoder')
+        self.add_build(
+            ImageDecoderBuild,
+            dim_in='dim_z',
+            image_decoder='decoder')
         self.add_build(VAEBuild)
 
-        self.add_routine(VAERoutine, input='data.images', noise='data.z', targets='data.targets')
+        self.add_routine(
+            VAERoutine,
+            input='data.images',
+            noise='data.z',
+            targets='data.targets')
         if add_classification:
             self.add_build('simple_classifier', dim_in='dim_z')
             self.add_routine('classification', classifier='simple_classifier', inputs='VAE.encoder_mean',
@@ -200,4 +230,6 @@ class VAE(ModelPlugin):
             self.add_train_procedure('VAE', 'classification')
         else:
             self.add_train_procedure('VAE')
+
+
 register_plugin(VAE)
