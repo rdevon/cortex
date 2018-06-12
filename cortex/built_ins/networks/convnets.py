@@ -111,7 +111,8 @@ class SimpleConvEncoder(nn.Module):
         dim_x, dim_y, dim_in = shape
 
         i = 0
-        while (dim_x > min_dim and dim_y > min_dim) and (i < n_steps if n_steps else True):
+        while (dim_x > min_dim and dim_y > min_dim) and (
+                i < n_steps if n_steps else True):
             logger.debug('Input size: {},{}'.format(dim_x, dim_y))
             if i == 0:
                 dim_out = dim_h
@@ -119,9 +120,24 @@ class SimpleConvEncoder(nn.Module):
                 dim_in = dim_out
                 dim_out = dim_in * 2
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
-            models.add_module(name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+            models.add_module(
+                name,
+                Conv2d(
+                    dim_in,
+                    dim_out,
+                    f_size,
+                    stride,
+                    pad,
+                    bias=False))
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
-            finish_layer_2d(models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity, **layer_args)
+            finish_layer_2d(
+                models,
+                name,
+                dim_x,
+                dim_y,
+                dim_out,
+                nonlinearity=nonlinearity,
+                **layer_args)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
 
@@ -133,7 +149,12 @@ class SimpleConvEncoder(nn.Module):
             dim_out = dim_h
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
             models.add_module(name, Linear(dim_in, dim_out))
-            finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
+            finish_layer_1d(
+                models,
+                name,
+                dim_out,
+                nonlinearity=nonlinearity,
+                **layer_args)
 
         if dim_out_:
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
@@ -157,7 +178,8 @@ class SimpleConvEncoder(nn.Module):
         else:
             px, py = p
 
-        return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
+        return infer_conv_size(
+            dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
         x = self.models(x)
