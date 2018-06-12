@@ -9,10 +9,12 @@ import torch.nn.functional as F
 from classifier import classify
 from gan import apply_gradient_penalty
 from ali import apply_penalty, build_discriminator as build_mine_discriminator, score
-from featnet import get_results, build_discriminator as build_ind_discriminator, score as ind_score, get_results as get_ind_results
+from featnet import (get_results, build_discriminator as build_ind_discriminator,
+                     score as ind_score, get_results as get_ind_results)
 from modules.fully_connected import FullyConnectedNet
 
 from utils import ms_ssim, update_decoder_args, update_encoder_args, perform_svc
+
 
 def encode(models, X):
     if 'vae' in models:
@@ -23,7 +25,10 @@ def encode(models, X):
 
     return Z
 
-# Must have data, models, losses, results, and viz. **kargs should match the keys in DEFAULT_CONFIG.routines below.
+# Must have data, models, losses, results, and viz. **kargs should match the keys
+# in DEFAULT_CONFIG.routines below.
+
+
 def network_routine(data, models, losses, results, viz):
     X, Y = data.get_batch('1.images', '1.targets')
     classifier = models.classifier
@@ -35,12 +40,12 @@ def network_routine(data, models, losses, results, viz):
     dd_loss = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
     classify(classifier, Z_P, Y, losses=losses, results=results)
 
-    #correlations = cross_correlation(Z_P, remove_diagonal=True)
+    # correlations = cross_correlation(Z_P, remove_diagonal=True)
     msssim = ms_ssim(X, X_d).item()
 
     losses.decoder = dd_loss
     results.update(reconstruction_loss=dd_loss.item(), ms_ssim=msssim)
-    #viz.add_heatmap(correlations.data, name='latent correlations')
+    # viz.add_heatmap(correlations.data, name='latent correlations')
     viz.add_image(X_d, name='Reconstruction')
     viz.add_image(X, name='Ground truth')
 
@@ -83,10 +88,9 @@ def ind_routine(data, models, losses, results, viz, ind_measure='DV', ind_penalt
     if penalty:
         losses.ind += penalty
 
-
-
-# CORTEX ===============================================================================================================
+# CORTEX ===========================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
+
 
 def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args={},
           classifier_args=dict(batch_norm=True, dropout=0.2), **kwargs):
@@ -121,7 +125,8 @@ def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args=
         dim_z = models.encoder(X).size()[1]
 
     Encoder, mine_args = update_encoder_args(x_shape, model_type=model_type, encoder_args=mine_args)
-    Decoder, reconstruction_args = update_decoder_args(x_shape, model_type=model_type, decoder_args=reconstruction_args)
+    Decoder, reconstruction_args = update_decoder_args(
+        x_shape, model_type=model_type, decoder_args=reconstruction_args)
 
     decoder = Decoder(x_shape, dim_in=dim_z, **reconstruction_args)
     classifier = FullyConnectedNet(dim_z, dim_h=[200, 200], dim_out=dim_l, **classifier_args)
@@ -133,7 +138,6 @@ def BUILD(data, models, model_type='convnet', mine_args={}, reconstruction_args=
 
 
 def EVAL(data, models, results, viz):
-    
     def eval_pipe(data, models):
         Zs = []
         Ys = []
@@ -172,7 +176,8 @@ def EVAL(data, models, results, viz):
 # Dictionary reference to train routines. Keys are up to you
 TRAIN_ROUTINES = dict(mine=mine_routine, learn_independence=ind_routine, networks=network_routine)
 
-# Dictionary reference to test routines. If not set, will be copied from train. If value is None, will not be used in test.
+# Dictionary reference to test routines. If not set, will be copied from train. If value is None,
+# will not be used in test.
 TEST_ROUTINES = dict()
 
 # Default configuration for this model

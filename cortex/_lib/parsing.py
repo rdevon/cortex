@@ -2,9 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import argparse
 import ast
 import inspect
@@ -15,6 +12,9 @@ from sphinxcontrib.napoleon import Config
 from sphinxcontrib.napoleon.docstring import GoogleDocstring
 
 from . import data, optimizer, train
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 
 def parse_kwargs(f):
@@ -106,7 +106,8 @@ def make_argument_parser():
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
     parser.add_argument('-M', '--load_models',
                         type=str, default=None,
-                        help=('Path to model to reload. Does not load args, info, etc'))
+                        help=('Path to model to reload. Does not load args,'
+                              ' info, etc'))
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
                         help=('Configuration yaml file. '

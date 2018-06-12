@@ -2,9 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import importlib
 import logging
 import os
@@ -19,6 +16,9 @@ from .handlers import AliasHandler, Handler, NetworkHandler, LossHandler, Result
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.models')
 MODEL = None

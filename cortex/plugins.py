@@ -2,16 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
-__all__ = [
-    'DatasetPlugin',
-    'ModelPlugin',
-    'RoutinePlugin',
-    'BuildPlugin',
-    'register_plugin']
-
 import inspect
 from os import path
 import shutil
@@ -26,6 +16,16 @@ from cortex._lib.models import (
     register_build,
     register_routine,
     register_model)
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
+
+__all__ = [
+    'DatasetPlugin',
+    'ModelPlugin',
+    'RoutinePlugin',
+    'BuildPlugin',
+    'register_plugin']
 
 
 class DatasetPlugin(DatasetPluginBase):
@@ -58,7 +58,8 @@ class DatasetPlugin(DatasetPluginBase):
     def add_dataset(self, mode: str, dataset: Dataset):
         '''Adds a dataset to the plugin.
 
-        Any dataset added in this way will be used in the training or testing loops, depending on the mode specified.
+        Any dataset added in this way will be used in the training or testing
+        loops, depending on the mode specified.
 
         Args:
             mode: The data mode that this dataset will be run on.
@@ -149,9 +150,12 @@ class RoutinePlugin(RoutinePluginBase):
 
     Attributes:
         plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this routine.
-        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for this routine.
-        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this routine.
+        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for
+        this routine.
+        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for
+        this routine.
+        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this
+        routine.
 
     '''
     _protected = ['help', 'updates']
@@ -280,17 +284,15 @@ class ModelPlugin(ModelPluginBase):
 
         return name
 
-    def add_train_procedure(
-            self,
-            *routines,
-            mode: str='train',
-            updates_per_routine=None):
+    def add_train_procedure(self, *routines, mode: str='train',
+                            updates_per_routine=None):
         '''Adds a training procedure.
 
         Args:
             *routines: TODO
             mode (str): Data mode on which the procedure will be run.
-            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary of updates for each routine.
+            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary
+            of updates for each routine.
 
         '''
         updates_per_routine = updates_per_routine or [1 for _ in routines]

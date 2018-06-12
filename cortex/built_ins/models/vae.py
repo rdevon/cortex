@@ -1,16 +1,18 @@
 '''Simple Variational Autoencoder model.
 '''
 
-__author__ = 'R Devon Hjelm and Samuel Lavoie'
-__author_email__ = 'erroneus@gmail.com'
-
-from cortex.plugins import register_plugin, BuildPlugin, ModelPlugin, RoutinePlugin
+from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
+                            RoutinePlugin)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
 from .utils import update_encoder_args, update_decoder_args
+
+
+__author__ = 'R Devon Hjelm and Samuel Lavoie'
+__author_email__ = 'erroneus@gmail.com'
 
 
 class VAENetwork(nn.Module):
@@ -38,7 +40,8 @@ class VAENetwork(nn.Module):
 
     def reparametrize(self, mu, std):
         if self.training:
-            esp = Variable(std.data.new(std.size()).normal_(), requires_grad=False).cuda()
+            esp = Variable(std.data.new(std.size()).normal_(),
+                           requires_grad=False).cuda()
             return mu + std * esp
         else:
             return mu
@@ -81,7 +84,8 @@ class VAERoutine(RoutinePlugin):
         gen = F.tanh(gen)
 
         r_loss = vae_criterion(outputs, X, size_average=False) / X.size(0)
-        kl = 0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. * torch.log(vae_net.std) - 1.).sum(1).mean()
+        kl = (0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. *
+                     torch.log(vae_net.std) - 1.).sum(1).mean())
 
         self.losses.vae = (r_loss + beta_kld * kl)
         self.results.update(KL_divergence=kl.item())
@@ -111,7 +115,8 @@ class ImageEncoderBuild(BuildPlugin):
 
         '''
         x_shape = self.get_dims('x', 'y', 'c')
-        Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type,
+        Encoder, encoder_args = update_encoder_args(x_shape,
+                                                    model_type=encoder_type,
                                                     encoder_args=encoder_args)
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.add_networks(image_encoder=encoder)
@@ -135,7 +140,8 @@ class ImageDecoderBuild(BuildPlugin):
 
         '''
         x_shape = self.get_dims('x', 'y', 'c')
-        Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type,
+        Decoder, decoder_args = update_decoder_args(x_shape,
+                                                    model_type=decoder_type,
                                                     decoder_args=decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.add_networks(image_decoder=decoder)
@@ -156,13 +162,15 @@ class VAEBuild(BuildPlugin):
 
         Args:
             dim_z: Latent dimension.
-            dim_encoder_out: Dimension of the final layer of the decoder before decoding to mu and log sigma.
+            dim_encoder_out: Dimension of the final layer of the decoder before
+                             decoding to mu and log sigma.
 
         '''
         self.add_noise('z', dist='normal', size=dim_z)
         encoder = self._nets.encoder
         decoder = self._nets.decoder
-        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
+        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out,
+                         dim_z=dim_z)
         self.add_networks(vae=vae)
 register_plugin(VAEBuild)
 
@@ -170,8 +178,10 @@ register_plugin(VAEBuild)
 class VAE(ModelPlugin):
     '''Variational autoencder.
 
-    A generative model trained using the variational lower-bound to the log-likelihood.
-    See: Kingma, Diederik P., and Max Welling. "Auto-encoding variational bayes." arXiv preprint arXiv:1312.6114 (2013).
+    A generative model trained using the variational lower-bound to the
+    log-likelihood.
+    See: Kingma, Diederik P., and Max Welling.
+    "Auto-encoding variational bayes." arXiv preprint arXiv:1312.6114 (2013).
 
     '''
     plugin_name = 'VAE'
@@ -188,14 +198,18 @@ class VAE(ModelPlugin):
 
         '''
         super().__init__()
-        self.add_build(ImageEncoderBuild, dim_out='dim_encoder_out', image_encoder='encoder')
-        self.add_build(ImageDecoderBuild, dim_in='dim_z', image_decoder='decoder')
+        self.add_build(ImageEncoderBuild, dim_out='dim_encoder_out',
+                       image_encoder='encoder')
+        self.add_build(ImageDecoderBuild, dim_in='dim_z',
+                       image_decoder='decoder')
         self.add_build(VAEBuild)
 
-        self.add_routine(VAERoutine, input='data.images', noise='data.z', targets='data.targets')
+        self.add_routine(VAERoutine, input='data.images', noise='data.z',
+                         targets='data.targets')
         if add_classification:
             self.add_build('simple_classifier', dim_in='dim_z')
-            self.add_routine('classification', classifier='simple_classifier', inputs='VAE.encoder_mean',
+            self.add_routine('classification', classifier='simple_classifier',
+                             inputs='VAE.encoder_mean',
                              targets='data.targets')
             self.add_train_procedure('VAE', 'classification')
         else:

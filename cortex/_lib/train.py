@@ -2,9 +2,6 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import logging
 import pprint
 import sys
@@ -17,6 +14,8 @@ from . import data, exp, models, viz, reg
 from .utils import convert_to_numpy, update_dict_of_lists
 from .viz import plot
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.train')
 
@@ -56,11 +55,8 @@ def summarize_results_std(results):
     return results_
 
 
-def train_epoch(
-        epoch,
-        quit_on_bad_values,
-        eval_during_train,
-        data_mode='train'):
+def train_epoch(epoch, quit_on_bad_values, eval_during_train,
+                data_mode='train'):
     models.MODEL.reset()
     models.MODEL.set_train()
     models.MODEL.viz.ignore = True
@@ -172,27 +168,27 @@ def align_summaries(d_train, d_test):
                 max_len = max(max_train_len, max_test_len)
                 for k_, v in v_train.items():
                     if len(v) < max_len:
-                        v_train[k_] = v_train[k_] + [v_train[k_][-1]]\
-                                      * (max_len - len(v_train[k_]))
+                        v_train[k_] = (v_train[k_] + [v_train[k_][-1]] *
+                                       (max_len - len(v_train[k_])))
                 for k_, v in v_test.items():
                     if len(v) < max_len:
-                        v_test[k_] = v_test[k_] + [v_test[k_][-1]] * \
-                            (max_len - len(v_test[k_]))
+                        v_test[k_] = (v_test[k_] + [v_test[k_][-1]] *
+                                      (max_len - len(v_test[k_])))
             else:
                 if len(v_train) > len(v_test):
-                    d_test[k] = v_test + [v_test[-1]] * \
-                        (len(v_train) - len(v_test))
+                    d_test[k] = (v_test + [v_test[-1]] *
+                                 (len(v_train) - len(v_test)))
                 elif len(v_test) > len(v_train):
-                    d_train[k] = v_train + [v_train[-1]] * \
-                        (len(v_test) - len(v_train))
+                    d_train[k] = (v_train + [v_train[-1]] *
+                                  (len(v_test) - len(v_train)))
         elif k in d_train:
             v_train = d_train[k]
             if isinstance(v_train, dict):
                 max_len = max([len(v) for v in v_train.values()])
                 for k_, v in v_train.items():
                     if len(v) < max_len:
-                        v_train[k_] = v_train[k_] + [v_train[k_][-1]] \
-                                      * (max_len - len(v_train[k_]))
+                        v_train[k_] = (v_train[k_] + [v_train[k_][-1]] *
+                                       (max_len - len(v_train[k_])))
         elif k in d_test:
             v_test = d_test[k]
             if isinstance(v_test, dict):
@@ -204,9 +200,9 @@ def align_summaries(d_train, d_test):
 
 
 def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
-               save_on_best=None, save_on_lowest=None, save_on_highest=None,
-               eval_during_train=True, train_mode='train', test_mode='test',
-               eval_only=False):
+              save_on_best=None, save_on_lowest=None, save_on_highest=None,
+              eval_during_train=True, train_mode='train', test_mode='test',
+              eval_only=False):
     '''
 
     Args:
