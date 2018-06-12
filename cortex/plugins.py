@@ -20,10 +20,8 @@ from torch.utils.data import Dataset
 
 from cortex._lib.data import DatasetPluginBase, register as register_data
 from cortex._lib.models import (
-    BuildReference,
     BuildPluginBase,
     ModelPluginBase,
-    RoutineReference,
     RoutinePluginBase,
     register_build,
     register_routine,
@@ -156,7 +154,7 @@ class RoutinePlugin(RoutinePluginBase):
         plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this routine.
 
     '''
-    _protected = ['help', 'kwargs', 'updates']
+    _protected = ['help', 'updates']
     _required = ['run']
 
     plugin_name = None
@@ -205,7 +203,7 @@ class BuildPlugin(BuildPluginBase):
         nets (:obj:`Handler` of :obj:`nn.Module`):
 
     '''
-    _protected = ['help', 'kwargs']
+    _protected = ['help']
     _required = ['build']
 
     plugin_name = None
@@ -266,32 +264,19 @@ class ModelPlugin(ModelPluginBase):
     def builds(self):
         return self._builds
 
-    def add_routine(self, routine_query, name=None, **kwargs):
+    def _add_routine_name(self, routine):
         '''Adds a routine
 
         Args:
-            routine_query: Routine plugin.
-                Can be a string, a RoutinePlugin instance, or RoutinePlugin class
-            name: (str, optional): Name for the routine.
-                If not set, `RoutinePlugin.plugin_name` will be used.
-            **kwargs: TODO
+            routine: Routine plugin instance.
 
         '''
-        if isinstance(routine_query, RoutinePlugin):
-            routine = routine_query
-        elif inspect.isclass(routine_query) and issubclass(routine_query, RoutinePlugin):
-            routine = routine_query(**kwargs)
-        elif isinstance(routine_query, str):
-            routine = RoutineReference(routine_query, **kwargs)
-            name = name or routine_query
-        else:
-            raise TypeError(
-                'Unknown routine type {}'.format(
-                    type(routine_query)))
-        name = name or routine.plugin_name
 
-        if name not in self.routines:
-            self.routines[name] = routine
+        if routine in self.routines.values():
+            return routine.name
+
+        name = routine.plugin_name
+        self.routines[name] = routine
 
         return name
 
@@ -314,7 +299,7 @@ class ModelPlugin(ModelPluginBase):
                 'Number of routines must match number of updates.')
         routine_names = []
         for routine in routines:
-            routine_names.append(self.add_routine(routine))
+            routine_names.append(self._add_routine_name(routine))
 
         self._train_procedures.append(
             (mode, routine_names, updates_per_routine))
@@ -329,7 +314,7 @@ class ModelPlugin(ModelPluginBase):
                 '''
         routine_names = []
         for routine in routines:
-            routine_names.append(self.add_routine(routine))
+            routine_names.append(self._add_routine(routine))
 
         self._eval_procedures.append((mode, routine_names))
 

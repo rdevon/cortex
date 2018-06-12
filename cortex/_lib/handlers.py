@@ -48,7 +48,8 @@ class Handler(dict):
     def __setattr__(self, k, v):
         if k.startswith('_'):
             super().__setattr__(k, v)
-        self.__setitem__(k, v)
+        else:
+            self.__setitem__(k, v)
 
     def __getattr__(self, k):
         if k.startswith('_'):
@@ -79,6 +80,68 @@ def convert_nested_dict_to_handler(d, _class=Handler):
         d[k] = convert_nested_dict_to_handler(v)
 
     return _class(**d)
+
+
+class CallSetterHandler(Handler):
+    '''A handler that calls a callable when set.
+
+    '''
+    def __init__(self, fn):
+        if not callable(fn):
+            raise ValueError('{} is not callable.'.format(fn))
+        self._fn = fn
+
+    def __setitem__(self, key, value):
+        self._fn(value)
+        super().__setitem__(key, value)
+
+
+class Alias():
+    '''An alias class for referencing objects in a base container.
+
+    '''
+    def __init__(self, data, key):
+        self._data = data
+        self._key = key
+
+    @property
+    def value(self):
+        return self._data[self._key]
+
+    @value.setter
+    def value(self, value):
+        self._data[self._key] = value
+
+
+class AliasHandler(Handler):
+    '''A handler for aliasing objects.
+
+    '''
+    _type = Alias
+
+    def __init__(self, data):
+        self._data = data
+        super().__init__()
+
+    def set_alias(self, key, value):
+        alias = Alias(self._data, value)
+        super().__setitem__(key, alias)
+        return alias
+
+    def __setitem__(self, key, value):
+        if key in self:
+            alias = self.__getitem__(key)
+        else:
+            alias = self.set_alias(key, key)
+        alias.value = value
+
+    def __getitem__(self, item):
+        alias = super().__getitem__(item)
+        return alias.value
+
+    def __str__(self):
+        d = {k: v.value for k, v in self.items()}
+        return d.__str__()
 
 
 class NetworkHandler(Handler):

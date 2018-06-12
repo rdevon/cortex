@@ -56,7 +56,5 @@ def setup_cortex():
     for k, v in exp.ARGS.items():
         logger.info('Ultimate {} arguments: \n{}'.format(k, pprint.pformat(v)))
 
-    model.kwargs.update(**exp.ARGS['routines'])
-
     if model.setup is not None:
         model.setup(**exp.ARGS)

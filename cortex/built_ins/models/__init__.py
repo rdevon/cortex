@@ -1,1 +1,1 @@
-__all__ = ['classifier', 'gan', 'vae']
+__all__ = ['classifier']

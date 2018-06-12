@@ -13,9 +13,9 @@ import time
 
 import torch
 
-from . import data, exp, models, optimizer
+from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_header, parse_kwargs
-from .handlers import AliasHandler, Handler, NetworkHandler, LossHandler, ResultsHandler
+from .handlers import AliasHandler, Handler, NetworkHandler, LossHandler, ResultsHandler, CallSetterHandler
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
@@ -26,7 +26,6 @@ MODEL = None
 _ROUTINE_PLUGINS = {}
 _BUILD_PLUGINS = {}
 MODEL_PLUGINS = {}
-NETWORK_HANDLER = NetworkHandler()
 
 
 def check_plugin(plugin, plugin_type_str, D):
@@ -55,8 +54,8 @@ def register_build(plugin):
     global _BUILD_PLUGINS
     check_plugin(plugin, 'build', _BUILD_PLUGINS)
 
-    plugin.help = parse_docstring(plugin.build)
-    plugin.kwargs = parse_kwargs(plugin.build)
+    plugin.plugin_help = parse_docstring(plugin.build)
+    plugin.plugin_kwargs = parse_kwargs(plugin.build)
 
     _BUILD_PLUGINS[plugin.plugin_name] = plugin
 
@@ -65,77 +64,40 @@ def register_routine(plugin):
     global _ROUTINE_PLUGINS
     check_plugin(plugin, 'routine', _ROUTINE_PLUGINS)
 
-    plugin.help = parse_docstring(plugin.run)
-    plugin.kwargs = parse_kwargs(plugin.run)
+    plugin.plugin_help = parse_docstring(plugin.run)
+    plugin.plugin_kwargs = parse_kwargs(plugin.run)
 
     _ROUTINE_PLUGINS[plugin.plugin_name] = plugin
 
 
 def register_model(plugin):
+    plugin._set_kwargs()
     global MODEL_PLUGINS
     check_plugin(plugin, 'model', MODEL_PLUGINS)
 
-    plugin.help, plugin.description = parse_header(plugin)
+    plugin.plugin_help, plugin.plugin_description = parse_header(plugin)
 
     MODEL_PLUGINS[plugin.plugin_name] = plugin
 
 
-class BuildReference():
-    def __init__(self, key, **kwargs):
-        self.reference = key
-        self.kwargs = kwargs
-
-    def resolve(self):
-        try:
-            plugin = _BUILD_PLUGINS[self.reference]
-        except KeyError:
-            raise KeyError(
-                'Build `{}` not registered in cortex. '
-                'Available: {}'.format(
-                    self.reference, tuple(
-                        _BUILD_PLUGINS.keys())))
-        return plugin(**self.kwargs)
-
-
-class RoutineReference():
-    def __init__(self, key, **kwargs):
-        self.reference = key
-        self.kwargs = kwargs
-
-    def resolve(self):
-        try:
-            plugin = _ROUTINE_PLUGINS[self.reference]
-        except KeyError:
-            raise KeyError(
-                'Routine `{}` not registered in cortex. '
-                'Available: {}'.format(
-                    self.reference, tuple(
-                        _ROUTINE_PLUGINS.keys())))
-        return plugin(**self.kwargs)
-
-
 class BuildPluginBase():
     def __init__(self, **aliases):
+        self._aliases = aliases
         self._data = data.DATA_HANDLER
-        self._nets = AliasHandler(NETWORK_HANDLER)
+        self._kwargs = None
+        self._help = None
+        self._nets = None
 
-        kwargs_ = {}
-        for k, v in self.kwargs.items():
-            k_ = self._names.get(k, k)
-            kwargs_[k_] = v
-        self.kwargs = kwargs_
+    @property
+    def kwargs(self):
+        return self._kwargs
 
-    def __call__(self, **kwargs):
+    def __call__(self):
         if not hasattr(self, 'build'):
             raise ValueError(
                 'Build {} does not have `build` method set'.format(
                     self.name))
-        kwargs_ = {}
-        names = dict((v, k) for k, v in self._names.items())
-        for k, v in kwargs.items():
-            k_ = names.get(k, k)
-            kwargs_[k_] = v
-        self.build(**kwargs_)
+        self.build(**self.kwargs)
 
 
 class RoutinePluginBase():
@@ -147,20 +109,15 @@ class RoutinePluginBase():
     plugin_optional_inputs = []
 
     def __init__(self, name=None, **aliases):
-        self._nets = AliasHandler(NETWORK_HANDLER, locked=True)
-        self._vars = AliasHandler(VARIABLE_HANDLER, locked=True)
+        self._aliases = aliases
+        self._kwargs = None
+        self._help = None
+        self._nets = None
 
         self._results = ResultsHandler()
         self._losses = LossHandler(self.nets)
         self._training_nets = []
         self.name = name or self.plugin_name
-
-        for k, v in aliases.items():
-            if k in self.plugin_nets:
-                self.nets[k] = NETWORK_HANDLER[v]
-            elif k in self.plugin_vars:
-                if k in VARIABLE_HANDLER:
-                self.vars[k] = VARIABLE_HANDLER[k]
 
 
     @property
@@ -179,36 +136,24 @@ class RoutinePluginBase():
     def vars(self):
         return self._vars
 
-    def perform(self, **kwargs):
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    def perform(self):
         if not hasattr(self, 'run'):
             raise ValueError(
                 'Routine {} does not have `run` method set'.format(
                     self.name))
-        outputs = self.run(**kwargs)
-        if outputs is None:
-            return {}
-        if not isinstance(outputs, tuple):
-            outputs = (outputs,)
-        if len(outputs) != len(self.plugin_outputs):
-            raise ValueError(
-                'Routine has different number of outputs ({}) '
-                'than is set from `plugin_outputs` ({}).'.format(
-                    len(outputs), len(
-                        self.plugin_outputs)))
+        self.run(**self.kwargs)
 
-        out_dict = {}
-        for k, v in zip(self.plugin_outputs, outputs):
-            k_ = self._names.get(k, k)
-            out_dict[k_] = v
-        return out_dict
-
-    def __call__(self, **kwargs):
+    def __call__(self):
         # Run routine
         if exp.DEVICE == torch.device('cpu'):
-            return self.perform(**kwargs)
+            return self.perform()
         else:
             with torch.cuda.device(exp.DEVICE.index):
-                return self.perform(**kwargs)
+                return self.perform()
 
     def reset(self):
         self.results.clear()
@@ -221,8 +166,14 @@ class RoutinePluginBase():
 
 class ModelPluginBase():
     def __init__(self):
-        self._builds = Handler()
-        self._routines = Handler()
+
+        self._nets = NetworkHandler()
+        self._vars = Handler()
+        self._kwargs = Handler()
+        self._help = Handler()
+
+        self._builds = CallSetterHandler(self._add_build)
+        self._routines = CallSetterHandler(self._add_routine)
         self._defaults = dict(
             data=self.data_defaults,
             optimizer=self.optimizer_defaults,
@@ -233,10 +184,8 @@ class ModelPluginBase():
         self._setup = None
 
         self._results = ResultsHandler(time=dict(), losses=dict())
-        self._nets = models.NETWORK_HANDLER
         self._losses = LossHandler(self._nets)
         self._data = data.DATA_HANDLER
-        self._kwargs = {}
 
     @property
     def defaults(self):
@@ -245,6 +194,10 @@ class ModelPluginBase():
     @property
     def kwargs(self):
         return self._kwargs
+
+    @property
+    def help(self):
+        return self._help
 
     @property
     def setup(self):
@@ -262,71 +215,81 @@ class ModelPluginBase():
     def results(self):
         return self._results
 
+    def _add_routine(self, routine):
+        routine._kwargs = AliasHandler(self.kwargs)
+        routine._nets = AliasHandler(self._nets)
+        routine._vars = AliasHandler(self._vars)
+        routine._help = AliasHandler(self._help)
+
+        for k, v in routine._aliases.items():
+            if k in routine.plugin_nets:
+                routine.nets.set_alias(k, v)
+            elif k in routine.plugin_vars:
+                routine.vars.set_alias(k, v)
+            elif k in routine.plugin_kwargs:
+                routine.kwargs.set_alias(k, v)
+                routine.help.set_alias(k, v)
+            else:
+                raise KeyError(k, v)
+
+    def _add_build(self, build):
+        build._kwargs = AliasHandler(self.kwargs)
+        build._nets = AliasHandler(self._nets)
+        build._help = AliasHandler(self._help)
+
+        for k, v in build._aliases.items():
+            if k in build.plugin_nets:
+                build.nets.set_alias(k, v)
+            elif k in build.plugin_kwargs:
+                build.kwargs.set_alias(k, v)
+                build.help.set_alias(k, v)
+            else:
+                raise KeyError(k, v)
+
     def check(self):
-        for key in self._routines.keys():
-            routine = self._routines[key]
+        for key, routine in self._routines.items():
             if isinstance(routine, RoutinePluginBase):
                 pass
-            elif isinstance(routine, RoutineReference):
-                self._routines[key] = routine.resolve()
             else:
                 raise ValueError
 
-        for key in self._builds.keys():
-            build = self._builds[key]
+        for key, build in self._builds.items():
             if isinstance(build, BuildPluginBase):
                 pass
-            elif isinstance(build, BuildReference):
-                self._builds[key] = build.resolve()
             else:
                 raise ValueError
 
-    def get_kwargs(self):
-        kwargs = {}
+    def _set_kwargs(self):
 
         def add_kwargs(obj):
-            for k, v in obj.kwargs.items():
-                k_ = obj._names.get(k, k)
-                if k_ in kwargs:
-                    if v is None:
-                        pass
-                    elif kwargs[k_] is None:
-                        kwargs[k_] = v
-                    elif kwargs[k_] != v:
-                        logger.warning('Multiple default values found for {}. '
-                                       'This may have unintended effects. '
-                                       'Using {}'.format(k_, kwargs[k_]))
-                else:
-                    kwargs[k_] = v
+            for k, v in obj.plugin_kwargs.items():
+                try:
+                    obj.kwargs[k] = v
+                except ValueError:
+                    logger.warning('Multiple default values found for {}. '
+                                   'This may have unintended effects. '
+                                   'Using {}'.format(k, obj.kwargs[k]))
 
         for build in self._builds.values():
             add_kwargs(build)
 
         for routine in self._routines.values():
             add_kwargs(routine)
-        return kwargs
 
-    def get_help(self):
-        helps = {}
+    def _set_help(self):
 
         def add_help(obj):
-            for k, v in obj.help.items():
-                k_ = obj._names.get(k, k)
-                if k_ in helps:
-                    if v is None:
-                        pass
-                    elif helps[k_] is None:
-                        helps[k_] = v
-                    elif helps[k_] != v:
-                        logger.warning('Multiple '
-                                       'default values found'
-                                       'for {} help.'
-                                       'This may have'
-                                       'unintended'
-                                       'effects. Using {}'
-                                       .format(k_, helps[k_]))
-                else:
-                    helps[k_] = v
+            for k, v in obj.plugin_help.items():
+                try:
+                    obj.help[k] = v
+                except:
+                    logger.warning('Multiple '
+                                   'default values found'
+                                   'for {} help.'
+                                   'This may have'
+                                   'unintended'
+                                   'effects. Using {}'
+                                   .format(k, obj.help[k]))
 
         for build in self.builds.values():
             add_help(build)
@@ -334,7 +297,6 @@ class ModelPluginBase():
         for routine in self.routines.values():
             add_help(routine)
 
-        return helps
 
     def unpack_args(self):
         builds = Handler()
