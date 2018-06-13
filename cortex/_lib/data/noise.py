@@ -92,25 +92,4 @@ def get_noise_var(dist, size, **kwargs):
     else:
         raise NotImplementedError('`{}` distribution not found'.format(dist))
 
-    d_args = dict(
-        beta=['concentration1', 'concentration0'],
-        cachy=['loc', 'scale'],
-        chi2=['df'],
-        dirichlet=['concentration'],
-        exponential=['rate'],
-        fishersnedecor=['df1', 'df2'],
-        gamma=['concentration', 'rate'],
-        gumbel=['loc', 'scale'],
-        laplace=['loc', 'scale'],
-        log_normal=['loc', 'scale'],
-        multivariate_normal=['loc'],
-        normal=['loc', 'scale'],
-        pareto=['scale', 'alpha'],
-        poisson=['rate'],
-        relaxed_bernoulli=['temperature'],
-        relaxed_categorical=['temperature'],
-        studentT=['df'],
-        uniform=['high', 'low']
-    )
-
     return var
