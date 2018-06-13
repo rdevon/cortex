@@ -3,7 +3,8 @@
 '''
 
 
-from cortex.plugins import register_plugin, BuildPlugin, ModelPlugin, RoutinePlugin
+from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
+                            RoutinePlugin)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -33,7 +34,8 @@ class ClassifyRoutine(RoutinePlugin):
         targets = self.inputs.targets
         images = self.inputs.images
 
-        predicted = self.classify(classifier, inputs, targets, criterion=criterion)
+        predicted = self.classify(classifier, inputs, targets,
+                                  criterion=criterion)
 
         if images is not None:
             self.visualize(images, targets, predicted)
@@ -45,7 +47,8 @@ class ClassifyRoutine(RoutinePlugin):
         predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
 
         loss = criterion(outputs, targets)
-        correct = 100. * predicted.eq(targets.data).cpu().sum() / targets.size(0)
+        correct = 100. * predicted.eq(
+            targets.data).cpu().sum() / targets.size(0)
 
         self.losses.classifier = loss
         self.results[self.name + '_accuracy'] = correct
@@ -53,7 +56,8 @@ class ClassifyRoutine(RoutinePlugin):
         return predicted
 
     def visualize(self, inputs, targets, predicted):
-        self.add_image(inputs.data, labels=(targets.data, predicted.data), name=self.name + '_gt_pred')
+        self.add_image(inputs.data, labels=(targets.data, predicted.data),
+                       name=self.name + '_gt_pred')
 register_plugin(ClassifyRoutine)
 
 
@@ -76,7 +80,8 @@ class SimpleClassifierBuild(BuildPlugin):
         '''
         dim_l = self.get_dims('labels')
 
-        classifier = FullyConnectedNet(dim_in, dim_h=dim_h, dim_out=dim_l, **classifier_args)
+        classifier = FullyConnectedNet(dim_in, dim_h=dim_h,
+                                       dim_out=dim_l, **classifier_args)
         self.add_networks(simple_classifier=classifier)
 register_plugin(SimpleClassifierBuild)
 
@@ -93,14 +98,16 @@ class ImageClassifierBuild(BuildPlugin):
 
         Args:
             classifier_type (str): Network type for the classifier.
-            classifier_args: Classifier arguments. Can include dropout, batch_norm, layer_norm, etc.
+            classifier_args: Classifier arguments. Can include dropout,
+            batch_norm, layer_norm, etc.
 
         '''
         classifier_args = classifier_args or {}
         shape = self.get_dims('x', 'y', 'c')
         dim_l = self.get_dims('labels')
 
-        Encoder, args = update_encoder_args(shape, model_type=classifier_type, encoder_args=classifier_args)
+        Encoder, args = update_encoder_args(shape, model_type=classifier_type,
+                                            encoder_args=classifier_args)
 
         args.update(**classifier_args)
 
@@ -124,7 +131,8 @@ class ImageClassification(ModelPlugin):
     def __init__(self):
         super().__init__()
         self.add_build(ImageClassifierBuild)
-        self.add_routine(ClassifyRoutine, classifier='image_classifier', inputs='data.images', targets='data.targets',
+        self.add_routine(ClassifyRoutine, classifier='image_classifier',
+                         inputs='data.images', targets='data.targets',
                          images='data.images')
         self.add_train_procedure('classification')
 register_plugin(ImageClassification)

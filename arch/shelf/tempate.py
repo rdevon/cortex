@@ -2,7 +2,10 @@
 
 '''
 
-# Must have data, models, losses, results, and viz. **kargs should match the keys in DEFAULT_CONFIG.routines below.
+# Must have data, models, losses, results, and viz. **kargs should match the keys in
+# DEFAULT_CONFIG.routines below.
+
+
 def routine(data, models, losses, results, viz, **kwargs):
     # Get data
     X = data['images']
@@ -22,8 +25,9 @@ def routine(data, models, losses, results, viz, **kwargs):
     # Images
     viz.add_image(X, name='An image')
 
-# CORTEX ===============================================================================================================
+# CORTEX =====================================================================================
 # Must include `BUILD` and `TRAIN_ROUTINES`
+
 
 def BUILD(data, models, **kwargs):
     # Create your models here.
@@ -32,15 +36,16 @@ def BUILD(data, models, **kwargs):
     # models.update(mymodel=mymodel) # Uncomment this and add your model
 
 
-# This performs additional setup before training, if necessary.
 def SETUP(**kwargs):
+    # This performs additional setup before training, if necessary.
     pass
 
 
 # Dictionary reference to train routines. Keys are up to you
 TRAIN_ROUTINES = dict(main_routine=routine)
 
-# Dictionary reference to test routines. If not set, will be copied from train. If value is None, will not be used in test.
+# Dictionary reference to test routines. If not set, will be copied from train. If value is None,
+# will not be used in test.
 TEST_ROUTINES = dict()
 
 # Default configuration for this model
@@ -48,6 +53,7 @@ DEFAULT_CONFIG = dict(
     data=dict(),
     optimizer=dict(),
     model=dict(),
-    routines=dict(), # this can be a dict or a dict of dicts, where the keys are the routine keys above.
+    routines=dict(),  # this can be a dict or a dict of dicts, where the keys are the
+    # routine keys above.
     train=dict()
 )

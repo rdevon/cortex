@@ -8,7 +8,8 @@ import functools
 
 def get_neighbors(samples, dataset, n_neighbors):
     size = functools.reduce(mul, dataset[0].shape, 1)
-    nbrs = NearestNeighbors(n_neighbors=n_neighbors, metric='l2', algorithm='brute').fit(dataset.reshape(-1, size))
+    nbrs = NearestNeighbors(
+        n_neighbors=n_neighbors, metric='l2', algorithm='brute').fit(dataset.reshape(-1, size))
     _, samples_idxs = nbrs.kneighbors(samples.reshape(-1, size))
     return np.array([[dataset[idx] for idx in idxs] for idxs in samples_idxs])
 

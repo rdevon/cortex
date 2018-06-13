@@ -9,7 +9,8 @@ import torch.nn.functional as F
 from .SpectralNormLayer import SNConv2d, SNLinear
 
 from .modules import View
-from .utils import apply_nonlinearity, finish_layer_1d, finish_layer_2d, get_nonlinearity
+from .utils import (apply_nonlinearity, finish_layer_1d, finish_layer_2d,
+                    get_nonlinearity)
 
 
 logger = logging.getLogger('cortex.arch' + __name__)
@@ -40,7 +41,8 @@ class SimpleNet(nn.Module):
 
 
 class MNISTConv(nn.Module):
-    def __init__(self, shape, dim_out=1, dim_h=64, batch_norm=True, layer_norm=False, nonlinearity='ReLU',
+    def __init__(self, shape, dim_out=1, dim_h=64, batch_norm=True,
+                 layer_norm=False, nonlinearity='ReLU',
                  spectral_norm=False):
         super(MNISTConv, self).__init__()
         models = nn.Sequential()
@@ -92,8 +94,10 @@ class MNISTConv(nn.Module):
 
 
 class SimpleConvEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64, fully_connected_layers=None, nonlinearity='ReLU', f_size=4,
-                 stride=2, pad=1, min_dim=4, n_steps=None, spectral_norm=False, **layer_args):
+    def __init__(self, shape, dim_out=None, dim_h=64,
+                 fully_connected_layers=None, nonlinearity='ReLU', f_size=4,
+                 stride=2, pad=1, min_dim=4, n_steps=None,
+                 spectral_norm=False, **layer_args):
         super(SimpleConvEncoder, self).__init__()
 
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
@@ -111,7 +115,8 @@ class SimpleConvEncoder(nn.Module):
         dim_x, dim_y, dim_in = shape
 
         i = 0
-        while (dim_x > min_dim and dim_y > min_dim) and (i < n_steps if n_steps else True):
+        while ((dim_x > min_dim and dim_y > min_dim) and
+               (i < n_steps if n_steps else True)):
             logger.debug('Input size: {},{}'.format(dim_x, dim_y))
             if i == 0:
                 dim_out = dim_h
@@ -119,9 +124,12 @@ class SimpleConvEncoder(nn.Module):
                 dim_in = dim_out
                 dim_out = dim_in * 2
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
-            models.add_module(name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
+            models.add_module(
+                name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
-            finish_layer_2d(models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity, **layer_args)
+            finish_layer_2d(
+                models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity,
+                **layer_args)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
 
@@ -133,7 +141,8 @@ class SimpleConvEncoder(nn.Module):
             dim_out = dim_h
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
             models.add_module(name, Linear(dim_in, dim_out))
-            finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
+            finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity,
+                            **layer_args)
 
         if dim_out_:
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
@@ -157,7 +166,8 @@ class SimpleConvEncoder(nn.Module):
         else:
             px, py = p
 
-        return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
+        return infer_conv_size(
+            dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
         x = self.models(x)

@@ -9,7 +9,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from .modules.densenet import FullyConnectedNet
-from .classifier import classify, visualize
+from .classifier import classify
 
 
 resnet_discriminator_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=4)
@@ -64,11 +64,12 @@ def discriminator_routine(data, models, losses, results, viz, penalty_amount=0.)
     losses.update(discriminator=d_loss)
     results.update(Scores=dict(PP=S_P.mean().data[0], Q=S_Q.mean().data[0]))
     viz.add_image(X_P, name='ground truth')
-    viz.add_histogram(dict(fake=S_Q.view(-1).data, real=S_P.view(-1).data), name='discriminator output')
+    viz.add_histogram(dict(fake=S_Q.view(-1).data, real=S_P.view(-1).data),
+                      name='discriminator output')
 
 
 def generator_routine(data, models, losses, results, viz):
-    Z, A, T, X = data.get_batch('z','attributes', 'targets', 'images')
+    Z, A, T, X = data.get_batch('z', 'attributes', 'targets', 'images')
     discriminator = models['discriminator']
     generator = models['generator']
     classifier = models['classifier'][0]
@@ -98,19 +99,22 @@ def classifier_routine(data, models, losses, results, viz, **kwargs):
     results_ = dict()
     classify(classifier_r, W_P, T, losses=losses_, results=results_, key='real_class', **kwargs)
     classify(classifier_f, W_Q, T, losses=losses_, results=results_, key='fake_class', **kwargs)
-    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(real)', **kwargs)
-    classify(classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(fake)', **kwargs)
+    classify(
+        classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(real)', **kwargs)
+    classify(
+        classifier_r, W_P, T, losses=losses_, results=results_, key='full_class(fake)', **kwargs)
     losses['classifier'] = sum(losses_.values())
     results['Accuracies'] = dict((k[:-9], v) for k, v in results_.items())
 
 
-def build_model(data, models, dim_embedding=312, model_type='convnet', discriminator_args=None, generator_args=None):
+def build_model(data, models, dim_embedding=312, model_type='convnet',
+                discriminator_args=None, generator_args=None):
     discriminator_args = discriminator_args or {}
     generator_args = generator_args or {}
     shape = data.get_dims('x', 'y', 'c')
     dim_a, dim_l = data.get_dims('a', 'labels')
     dim_z = data.get_dims('z')
-    
+
     if model_type == 'resnet':
         from .modules.resnets import ResEncoder as Discriminator
         from .modules.resnets import ResDecoder as Generator
@@ -137,12 +141,17 @@ def build_model(data, models, dim_embedding=312, model_type='convnet', discrimin
         generator_args_['n_steps'] = 4
 
     discriminator = Discriminator(shape, dim_out=dim_embedding, **discriminator_args_)
-    generator = Generator(shape, dim_in=dim_z+dim_a, **generator_args_)
-    classifier_f = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
-    classifier_r = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
-    classifier = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l, batch_norm=True, dropout=0.2)
+    generator = Generator(shape, dim_in=dim_z + dim_a, **generator_args_)
+    classifier_f = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l,
+                                     batch_norm=True, dropout=0.2)
+    classifier_r = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l,
+                                     batch_norm=True, dropout=0.2)
+    classifier = FullyConnectedNet(dim_embedding, dim_h=[64, 64], dim_out=dim_l,
+                                   batch_norm=True, dropout=0.2)
 
-    models.update(generator=generator, discriminator=discriminator, classifier=(classifier_f, classifier_r, classifier))
+    models.update(
+        generator=generator, discriminator=discriminator,
+        classifier=(classifier_f, classifier_r, classifier))
 
 
 DEFAULT_CONFIG = dict(
@@ -164,4 +173,5 @@ DEFAULT_CONFIG = dict(
 )
 
 
-ROUTINES = dict(discriminator=discriminator_routine, generator=generator_routine, classifier=classifier_routine)
+ROUTINES = dict(discriminator=discriminator_routine,
+                generator=generator_routine, classifier=classifier_routine)

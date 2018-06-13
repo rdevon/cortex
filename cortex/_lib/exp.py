@@ -4,9 +4,6 @@ Used for saving, loading, summarizing, etc
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import logging
 import os
 from os import path
@@ -19,6 +16,8 @@ from . import models
 from .log_utils import set_file_logger
 from .handlers import Handler, convert_nested_dict_to_handler
 
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.exp')
 

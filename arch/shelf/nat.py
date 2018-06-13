@@ -3,7 +3,7 @@
 '''
 
 import numpy as np
-from progressbar import Bar, ProgressBar, Percentage, Timer
+from progressbar import Bar, ProgressBar, Timer
 from scipy.optimize import linear_sum_assignment
 import torch
 from torch import nn
@@ -118,7 +118,7 @@ def assign(data, models, losses, results, viz, batch_size=64):
         pbar.update(b)
     results['n_updates_per_batch'] = np.mean(results['n_updates_per_batch'])
 
-# ROUTINES =============================================================================================================
+# ROUTINES ================================================================================
 # Each of these methods needs to take `data`, `models`, `losses`, `results`, and `viz`
 
 def encoder_train_routine(data, models, losses, results, viz):
@@ -152,7 +152,7 @@ def encoder_test_routine(data, models, losses, results, viz):
 def network_routine(data, models, losses, results, viz):
     ali_network_routine(data, models, losses, results, viz, encoder_key='encoder')
 
-# CORTEX ===============================================================================================================
+# CORTEX ================================================================================
 # Must include `BUILD`, `TRAIN_ROUTINES`, and `DEFAULT_CONFIG`
 
 
@@ -162,9 +162,12 @@ def BUILD(data, models, encoder_type='convnet', decoder_type='convnet', dim_embe
     x_shape = data.get_dims('x', 'y', 'c')
     dim_l = data.get_dims('labels')
 
-    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type, encoder_args=encoder_args)
-    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type, decoder_args=decoder_args)
-    build_encoder(models, x_shape, dim_embedding, Encoder, fully_connected_layers=[1028], dropout=0.5, **encoder_args)
+    Encoder, encoder_args = update_encoder_args(x_shape, model_type=encoder_type,
+                                                encoder_args=encoder_args)
+    Decoder, decoder_args = update_decoder_args(x_shape, model_type=decoder_type,
+                                                decoder_args=decoder_args)
+    build_encoder(models, x_shape, dim_embedding, Encoder, fully_connected_layers=[1028],
+                  dropout=0.5, **encoder_args)
 
     N, M = data.get_dims('n_train', 'n_test')
     C = np.random.normal(size=(N + M, dim_embedding))
@@ -184,8 +187,7 @@ TEST_ROUTINES = dict(encoder=encoder_test_routine, assign=None)
 INFO = dict(model_type=dict(choices=['mnist', 'convnet', 'resnet'],
                             help='Model type.'),
             dim_embedding=dict(help='Latent dimension.'),
-            add_supervision=dict(help='Use additional networks for monitoring during training.')
-)
+            add_supervision=dict(help='Use additional networks for monitoring during training.'))
 
 DEFAULT_CONFIG = dict(
     data=dict(batch_size=dict(train=64, test=64)),

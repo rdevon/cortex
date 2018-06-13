@@ -2,17 +2,10 @@
 
 '''
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
-
 import logging
 from os import path
 
 import imageio
-import matplotlib
-
-matplotlib.use('Agg')
-from matplotlib import pylab as plt
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import visdom
@@ -20,6 +13,13 @@ import visdom
 from . import data, exp
 from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
+import matplotlib
+
+matplotlib.use('Agg')
+from matplotlib import pylab as plt
+
+__author__ = 'R Devon Hjelm'
+__author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.viz')
 config_font = None
@@ -134,15 +134,8 @@ class VizHandler():
             else:
                 out_path = None
 
-            save_images(
-                im,
-                8,
-                8,
-                out_file=out_path,
-                labels=labels,
-                max_samples=64,
-                image_id=1 + i,
-                caption=k)
+            save_images(im, 8, 8, out_file=out_path, labels=labels,
+                        max_samples=64, image_id=1 + i, caption=k)
 
         for i, (k, (sc, labels)) in enumerate(self.scatters.items()):
 
