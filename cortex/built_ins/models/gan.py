@@ -82,6 +82,7 @@ def get_boundary(samples, measure):
 
     return b.mean()
 
+
 def get_weight(samples, measure):
     if measure in ('GAN', 'JSD', 'KL', 'RKL', 'DV', 'H2'):
         return samples ** 2
@@ -144,6 +145,8 @@ class DiscriminatorRoutine(RoutinePlugin):
                                 real=P_samples.view(-1).data),
                            name='discriminator output')
         self.losses.discriminator = -difference
+
+
 register_plugin(DiscriminatorRoutine)
 
 
@@ -208,7 +211,7 @@ class PenaltyRoutine(RoutinePlugin):
 
             try:
                 epsilon = self.inputs.e.view(-1, 1, 1, 1)
-            except:
+            except BaseException:
                 raise ValueError('You must initiate a uniform random variable'
                                  '`e` to use interpolation')
             mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)
@@ -225,6 +228,8 @@ class PenaltyRoutine(RoutinePlugin):
                 'Unsupported penalty {}'.format(penalty_type))
 
         return penalty_amount * penalty
+
+
 register_plugin(PenaltyRoutine)
 
 
@@ -262,6 +267,8 @@ class GeneratorRoutine(RoutinePlugin):
         self.add_image(X_Q, name='generated')
 
         return X_Q
+
+
 register_plugin(GeneratorRoutine)
 
 
@@ -287,6 +294,8 @@ class DiscriminatorBuild(BuildPlugin):
             encoder_args=discriminator_args)
         discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
         self.add_networks(discriminator=discriminator)
+
+
 register_plugin(DiscriminatorBuild)
 
 
@@ -297,7 +306,8 @@ class GeneratorBuild(BuildPlugin):
     plugin_name = 'generator'
     plugin_nets = ['generator']
 
-    def build(self, generator_noise_type='normal', dim_z=64, generator_type: str='convnet', generator_args={}):
+    def build(self, generator_noise_type='normal', dim_z=64,
+              generator_type: str='convnet', generator_args={}):
         '''
 
         Args:
@@ -316,6 +326,8 @@ class GeneratorBuild(BuildPlugin):
         generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
         self.add_networks(generator=generator)
+
+
 register_plugin(GeneratorBuild)
 
 
@@ -343,4 +355,6 @@ class GAN(ModelPlugin):
         self.add_train_procedure(
             'generator', 'discriminator', 'gradient_penalty')
         self.add_eval_procedure('generator', 'discriminator')
+
+
 register_plugin(GAN)

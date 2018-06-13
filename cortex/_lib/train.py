@@ -127,7 +127,7 @@ def display_results(
     if times:
         print('\tAvg update times: ' + ' | '
               .join(['{}: {:.2f}'
-                    .format(k, v) for k, v in times.items()]))
+                     .format(k, v) for k, v in times.items()]))
 
     train_losses = train_results.pop('losses')
     test_losses = test_results.pop('losses')
@@ -142,7 +142,7 @@ def display_results(
             if isinstance(v_train, dict):
                 print('\t' + k + ': ' + ' | '
                       .join(['{}: {:.2f}'
-                            .format(k_, v_train[k_])
+                             .format(k_, v_train[k_])
                              for k_ in v_train.keys()]))
             else:
                 print('\t{}: {:.2f}'.format(k, v_train))
@@ -150,7 +150,7 @@ def display_results(
             if isinstance(v_train, dict):
                 print('\t' + k + ': ' + ' | '
                       .join(['{}: {:.2f} / {:.2f}'
-                            .format(k_, v_train[k_], v_test[k_])
+                             .format(k_, v_train[k_], v_test[k_])
                              for k_ in v_train.keys()]))
             else:
                 print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))

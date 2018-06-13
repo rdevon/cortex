@@ -52,7 +52,7 @@ def ms_ssim(X_a, X_b, window_size=11, size_average=True, C1=0.01**2, C2=0.03**2)
     def gaussian(sigma=1.5):
         gauss = torch.Tensor(
             [math.exp(-(x - window_size // 2) **
-             2 / float(2 * sigma ** 2)) for x in range(window_size)])
+                      2 / float(2 * sigma ** 2)) for x in range(window_size)])
         return gauss / gauss.sum()
 
     def create_window():
@@ -90,10 +90,12 @@ def ms_ssim(X_a, X_b, window_size=11, size_average=True, C1=0.01**2, C2=0.03**2)
     else:
         return ssim_map.mean(1).mean(1).mean(1)
 
+
 resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5,
                            pad=2, stride=2, min_dim=7)
 convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+
 
 def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
     encoder_args = encoder_args or {}
@@ -156,6 +158,7 @@ mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4,
                            pad=1, stride=2, n_steps=2)
 convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
+
 def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
     decoder_args = decoder_args or {}
 
@@ -180,6 +183,7 @@ def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
         decoder_args_['n_steps'] = 5
 
     return Decoder, decoder_args_
+
 
 def to_one_hot(y, K):
     y_ = torch.unsqueeze(y, 1).long()
