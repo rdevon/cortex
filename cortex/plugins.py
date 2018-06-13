@@ -13,8 +13,6 @@ from cortex._lib.models import (
     BuildPluginBase,
     ModelPluginBase,
     RoutinePluginBase,
-    register_build,
-    register_routine,
     register_model)
 
 __author__ = 'R Devon Hjelm'
@@ -158,7 +156,7 @@ class RoutinePlugin(RoutinePluginBase):
         routine.
 
     '''
-    _protected = ['help', 'updates']
+    _protected = ['updates']
     _required = ['run']
 
     plugin_name = None
@@ -207,7 +205,7 @@ class BuildPlugin(BuildPluginBase):
         nets (:obj:`Handler` of :obj:`nn.Module`):
 
     '''
-    _protected = ['help']
+    _protected = []
     _required = ['build']
 
     plugin_name = None
@@ -251,7 +249,7 @@ class ModelPlugin(ModelPluginBase):
         optimizer_defaults (:obj:`dict`): Optimizer defaults.
 
     '''
-    _protected = ['help', 'description']
+    _protected = ['description']
     _required = []
     _optional = ['setup']
 
@@ -309,14 +307,14 @@ class ModelPlugin(ModelPluginBase):
     def add_eval_procedure(self, *routines, mode='test'):
         '''Adds a evaluation procedure.
 
-                Args:
-                    *routines: TODO
-                    mode (str): Data mode on which the procedure will be run.
+        Args:
+            *routines: TODO
+            mode (str): Data mode on which the procedure will be run.
 
-                '''
+        '''
         routine_names = []
         for routine in routines:
-            routine_names.append(self._add_routine(routine))
+            routine_names.append(self._add_routine_name(routine))
 
         self._eval_procedures.append((mode, routine_names))
 
@@ -331,11 +329,7 @@ def register_plugin(plugin):
 
     '''
 
-    if issubclass(plugin, BuildPlugin):
-        register_build(plugin)
-    elif issubclass(plugin, RoutinePlugin):
-        register_routine(plugin)
-    elif issubclass(plugin, ModelPlugin):
+    if issubclass(plugin, ModelPlugin):
         register_model(plugin())
     elif issubclass(plugin, DatasetPlugin):
         register_data(plugin)

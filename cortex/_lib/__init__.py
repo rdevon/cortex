@@ -39,10 +39,8 @@ def setup_cortex():
 
     exp.configure_from_yaml(config_file=args.config_file)
 
-    command_line_args = dict(data={}, builds={}, routines={},
-                             optimizer={}, train={})
-    model_args = model.unpack_args()
-    command_line_args.update(**model_args)
+    command_line_args = dict(data={}, model={}, optimizer={}, train={})
+    command_line_args.update(model=model.kwargs)
 
     for k, v in vars(args).items():
         if v is not None:

@@ -83,7 +83,7 @@ def setup(
         raise NotImplementedError(
             'Optimizer not supported `{}`'.format(optimizer))
 
-    for network_key, network in models.NETWORK_HANDLER.items():
+    for network_key, network in models.MODEL.nets.items():
         logger.info('Building optimizer for {}'.format(network_key))
 
         # Set model parameters to cpu or gpu

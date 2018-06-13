@@ -92,7 +92,7 @@ class CallSetterHandler(Handler):
         self._fn = fn
 
     def __setitem__(self, key, value):
-        self._fn(value)
+        self._fn(key, value)
         super().__setitem__(key, value)
 
 
@@ -103,14 +103,28 @@ class Alias():
     def __init__(self, data, key):
         self._data = data
         self._key = key
+        self._isset = False
 
     @property
     def value(self):
-        return self._data[self._key]
+        if self._key in self._data:
+            self._isset = True
+            return self._data[self._key]
+        else:
+            self._isset = False
+            return None
 
     @value.setter
     def value(self, value):
+        self._isset = True
+        if self._key in self._data and self._data[self._key] is not None:
+            raise RuntimeError('Alias cannot overwrite data.')
         self._data[self._key] = value
+        self._isset = True
+
+    @property
+    def isset(self):
+        return self._isset
 
 
 class AliasHandler(Handler):
@@ -130,18 +144,35 @@ class AliasHandler(Handler):
 
     def __setitem__(self, key, value):
         if key in self:
-            alias = self.__getitem__(key)
+            alias = self._get_alias(key)
         else:
             alias = self.set_alias(key, key)
         alias.value = value
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            super().__setattr__(key, value)
+        else:
+            self.__setitem__(key, value)
 
     def __getitem__(self, item):
         alias = super().__getitem__(item)
         return alias.value
 
+    def __getattr__(self, item):
+        alias = super().__getattr__(item)
+        return alias.value
+
+    def _get_alias(self, item):
+        alias = super().__getattr__(item)
+        return alias
+
     def __str__(self):
         d = {k: v.value for k, v in self.items()}
         return d.__str__()
+
+    def get_key(self, k):
+        return self._get_alias(k)._key
 
 
 class NetworkHandler(Handler):

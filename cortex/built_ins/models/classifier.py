@@ -19,8 +19,7 @@ class ClassifyRoutine(RoutinePlugin):
     '''
     plugin_name = 'classification'
     plugin_nets = ['classifier']
-    plugin_vars = ['inputs', 'targets']
-    plugin_optional_inputs = ['images']
+    plugin_vars = ['inputs', 'targets', 'images']
 
     def run(self, criterion=nn.CrossEntropyLoss()):
         '''
@@ -30,13 +29,12 @@ class ClassifyRoutine(RoutinePlugin):
 
         '''
         classifier = self.nets.classifier
-        inputs = self.inputs.inputs
-        targets = self.inputs.targets
-        images = self.inputs.images
+        inputs = self.vars.inputs
+        targets = self.vars.targets
+        images = self.vars.images
 
         predicted = self.classify(classifier, inputs, targets,
                                   criterion=criterion)
-
         if images is not None:
             self.visualize(images, targets, predicted)
 
@@ -58,7 +56,6 @@ class ClassifyRoutine(RoutinePlugin):
     def visualize(self, inputs, targets, predicted):
         self.add_image(inputs.data, labels=(targets.data, predicted.data),
                        name=self.name + '_gt_pred')
-register_plugin(ClassifyRoutine)
 
 
 class SimpleClassifierBuild(BuildPlugin):
@@ -83,8 +80,6 @@ class SimpleClassifierBuild(BuildPlugin):
                                        dim_out=dim_l, **classifier_args)
         self.nets.simple_classifier = classifier
 
-register_plugin(SimpleClassifierBuild)
-
 
 class ImageClassifierBuild(BuildPlugin):
     '''Build for a simple image classifier.
@@ -93,7 +88,8 @@ class ImageClassifierBuild(BuildPlugin):
     plugin_name = 'image_classifier'
     plugin_nets = ['image_classifier']
 
-    def build(self, classifier_type='convnet', classifier_args={}):
+    def build(self, classifier_type='convnet',
+              classifier_args=dict(dropout=0.2)):
         '''Builds a simple image classifier.
 
         Args:
@@ -113,7 +109,6 @@ class ImageClassifierBuild(BuildPlugin):
 
         classifier = Encoder(shape, dim_out=dim_l, **args)
         self.nets.image_classifier = classifier
-register_plugin(ImageClassifierBuild)
 
 
 class ImageClassification(ModelPlugin):
@@ -130,9 +125,11 @@ class ImageClassification(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        self.builds.classifier = ImageClassifierBuild(image_classifier='my_classifier')
+        self.builds.classifier = ImageClassifierBuild(
+            image_classifier='my_classifier')
         self.routines.classify = ClassifyRoutine(classifier='my_classifier',
                                                  inputs='data.images',
-                                                 targets='data.targets')
+                                                 targets='data.targets',
+                                                 images='data.images')
         self.add_train_procedure(self.routines.classify)
 register_plugin(ImageClassification)
