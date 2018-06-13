@@ -52,7 +52,7 @@ def ms_ssim(X_a, X_b, window_size=11, size_average=True, C1=0.01**2, C2=0.03**2)
     def gaussian(sigma=1.5):
         gauss = torch.Tensor(
             [math.exp(-(x - window_size // 2) **
-             2 / float(2 * sigma ** 2)) for x in range(window_size)])
+                      2 / float(2 * sigma ** 2)) for x in range(window_size)])
         return gauss / gauss.sum()
 
     def create_window():

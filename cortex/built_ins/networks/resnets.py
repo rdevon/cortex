@@ -28,7 +28,7 @@ class ConvMeanPool(nn.Module):
         models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1,
                                        bias=False))
         models.add_module(name + '_pool', nn.AvgPool2d(2,
-                          count_include_pad=False))
+                                                       count_include_pad=False))
         if nonlinearity:
             models.add_module('{}_{}'.format(
                 name, nonlinearity.__class__.__name__), nonlinearity)
@@ -80,7 +80,7 @@ class UpsampleConv(nn.Module):
 
         models.add_module(name + '_up', nn.Upsample(scale_factor=2))
         models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1,
-                          bias=False))
+                                       bias=False))
 
         if nonlinearity:
             models.add_module(
@@ -243,7 +243,7 @@ class ResEncoder(nn.Module):
 
         name = 'conv_({}/{})_0'.format(dim_in, dim_out)
         models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1,
-                          bias=False))
+                                       bias=False))
 
         dim_out = dim_h
         for i in range(n_steps):

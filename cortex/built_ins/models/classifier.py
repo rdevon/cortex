@@ -58,6 +58,8 @@ class ClassifyRoutine(RoutinePlugin):
     def visualize(self, inputs, targets, predicted):
         self.add_image(inputs.data, labels=(targets.data, predicted.data),
                        name=self.name + '_gt_pred')
+
+
 register_plugin(ClassifyRoutine)
 
 
@@ -83,6 +85,8 @@ class SimpleClassifierBuild(BuildPlugin):
         classifier = FullyConnectedNet(dim_in, dim_h=dim_h,
                                        dim_out=dim_l, **classifier_args)
         self.add_networks(simple_classifier=classifier)
+
+
 register_plugin(SimpleClassifierBuild)
 
 
@@ -113,6 +117,8 @@ class ImageClassifierBuild(BuildPlugin):
 
         classifier = Encoder(shape, dim_out=dim_l, **args)
         self.add_networks(image_classifier=classifier)
+
+
 register_plugin(ImageClassifierBuild)
 
 
@@ -135,4 +141,6 @@ class ImageClassification(ModelPlugin):
                          inputs='data.images', targets='data.targets',
                          images='data.images')
         self.add_train_procedure('classification')
+
+
 register_plugin(ImageClassification)

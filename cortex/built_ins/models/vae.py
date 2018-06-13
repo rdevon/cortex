@@ -28,6 +28,7 @@ class VAENetwork(nn.Module):
         latent: The latent state (Z).
 
     '''
+
     def __init__(self, encoder, decoder, dim_out=None, dim_z=None):
         super(VAENetwork, self).__init__()
         self.encoder = encoder
@@ -96,6 +97,8 @@ class VAERoutine(RoutinePlugin):
         self.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
 
         return vae_net.mu
+
+
 register_plugin(VAERoutine)
 
 
@@ -121,6 +124,8 @@ class ImageEncoderBuild(BuildPlugin):
                                                     encoder_args=encoder_args)
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.add_networks(image_encoder=encoder)
+
+
 register_plugin(ImageEncoderBuild)
 
 
@@ -146,6 +151,8 @@ class ImageDecoderBuild(BuildPlugin):
                                                     decoder_args=decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.add_networks(image_decoder=decoder)
+
+
 register_plugin(ImageDecoderBuild)
 
 
@@ -173,6 +180,8 @@ class VAEBuild(BuildPlugin):
         vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out,
                          dim_z=dim_z)
         self.add_networks(vae=vae)
+
+
 register_plugin(VAEBuild)
 
 
@@ -215,4 +224,6 @@ class VAE(ModelPlugin):
             self.add_train_procedure('VAE', 'classification')
         else:
             self.add_train_procedure('VAE')
+
+
 register_plugin(VAE)
