@@ -12,6 +12,6 @@ setup(name='cortex',
       entry_points={
           'console_scripts': [
               'cortex=cortex.main:main',
-              'configure=cortex.main:configure']
+              'cortex-configure=cortex.main:configure']
       },
       zip_safe=False)

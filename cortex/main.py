@@ -14,7 +14,6 @@ from cortex._lib.utils import print_section
 
 import yaml
 from tkinter import filedialog
-from tkinter import *
 from os.path import expanduser
 
 
