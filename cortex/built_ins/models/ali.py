@@ -21,7 +21,6 @@ import torch.nn.functional as F
 
 class ALIDiscriminator(nn.Module):
     '''ALI discriminator model.
-
     '''
     def __init__(self, x_encoder, z_encoder, topnet):
         super(ALIDiscriminator, self).__init__()
@@ -31,8 +30,12 @@ class ALIDiscriminator(nn.Module):
 
     def forward(self, x, z, nonlinearity=None):
         w = F.relu(self.x_encoder(x))
-        u = F.relu(self.z_encoder(z))
-        y = self.topnet(torch.cat([w, u], 1), nonlinearity=nonlinearity)
+        if self.z_encoder is None:
+            v = torch.cat([w, z], 1)
+        else:
+            u = F.relu(self.z_encoder(z))
+            v = torch.cat([w, u], 1)
+        y = self.topnet(v, nonlinearity=nonlinearity)
         return y
 
 
@@ -60,25 +63,27 @@ class ALIDiscriminatorRoutine(RoutinePlugin):
         encoder = self.nets.encoder
         discriminator = self.nets.discriminator
 
-        X_Q = generator(Z_Q).detach()
-        X_Q = F.tanh(X_Q)
+        X_Q = F.tanh(generator(Z_Q).detach())
         Z_P = encoder(X_P).detach()
 
-        E_pos, E_neg, P_samples, Q_samples = self.score(discriminator, X_P, X_Q, Z_P, Z_Q, measure)
+        E_pos, E_neg, P_samples, Q_samples = self.score(
+            discriminator, X_P, X_Q, Z_P, Z_Q, measure)
         difference = E_pos - E_neg
 
         self.losses.discriminator = -difference
 
-        self.results.update(Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
+        self.results.update(Scores=dict(Ep=P_samples.mean().item(),
+                                        Eq=Q_samples.mean().item()))
         self.results['{} distance'.format(measure)] = difference.item()
         self.add_image(X_Q, name='generated')
-        self.add_histogram(dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data),
+        self.add_image(X_P, name='ground truth')
+        self.add_histogram(dict(fake=Q_samples.view(-1).data,
+                                real=P_samples.view(-1).data),
                            name='discriminator output')
         self.add_scatter(Z_P, labels=T.data, name='latent values')
 
     @staticmethod
     def score(discriminator, X_P, X_Q, Z_P, Z_Q, measure):
-
         P_samples = discriminator(X_P, Z_P)
         Q_samples = discriminator(X_Q, Z_Q)
 
@@ -103,21 +108,19 @@ class ALIGeneratorRoutine(RoutinePlugin):
         encoder = self.nets.encoder
         discriminator = self.nets.discriminator
 
-        X_Q = generator(Z_Q)
-        X_Q = F.tanh(X_Q)
+        X_Q = F.tanh(generator(Z_Q))
         Z_P = encoder(X_P)
 
-        E_pos, E_neg, P_samples, Q_samples = ALIDiscriminatorRoutine.score(
+        E_pos, E_neg, _, _ = ALIDiscriminatorRoutine.score(
             discriminator, X_P, X_Q, Z_P, Z_Q, measure)
-        difference = E_pos - E_neg
 
-        self.losses.generator = difference
-        self.losses.encoder = difference
+        self.losses.generator = -E_neg
+        self.losses.encoder = E_pos
 
-        self.vars.generated = X_Q
-        self.vars.inferred = Z_P
+        self.vars.generated = X_Q.detach()
+        self.vars.inferred = Z_P.detach()
 
-
+"""
 class DecoderRoutine(RoutinePlugin):
     '''Routine for a simple decoder for images.
 
@@ -138,24 +141,21 @@ class DecoderRoutine(RoutinePlugin):
 
         self.add_image(X, name='Ground truth')
         self.add_image(X_d, name='Reconstruction')
-
+"""
 
 class NoiseEncoderBuild(BuildPlugin):
     '''Builder for encoding the noise for discrimination.
-
     '''
     plugin_name = 'Noise_encoder'
     plugin_nets = ['encoder']
 
     def build(self, dim_in=None, dim_out=None,
-              encoder_args=dict(dim_h=[1024], batch_norm=False)):
+              encoder_args=dict(dim_h=[64], batch_norm=False)):
         '''
-
         Args:
             dim_in: Input dimension.
             dim_out: Output dimension.
             encoder_args: Arguments for the encoder.
-
         '''
 
         encoder = FullyConnectedNet(dim_in, dim_out, **encoder_args)
@@ -164,24 +164,26 @@ class NoiseEncoderBuild(BuildPlugin):
 
 class ALIDiscriminatorBuild(BuildPlugin):
     '''Builder for ALI discriminator.
-
     '''
     plugin_name = 'ALI_discriminator'
     plugin_nets = ['x_encoder', 'z_encoder', 'discriminator']
 
-    def build(self, topnet_args=dict(dim_h=[512, 256], batch_norm=False),
-              dim_z=None):
+    def build(self, topnet_args=dict(dim_h=[512, 128], batch_norm=False),
+              dim_int=256, dim_z=None):
         '''
-
         Args:
             topnet_args: Keyword arguments for the top network.
-
         '''
 
         x_encoder = self.nets.x_encoder
         z_encoder = self.nets.z_encoder
 
-        topnet = FullyConnectedNet(2 * dim_z, **topnet_args)
+        if z_encoder is not None:
+            dim_in = 2 * dim_int
+        else:
+            dim_in = dim_int + dim_z
+
+        topnet = FullyConnectedNet(dim_in, 1, **topnet_args)
 
         discriminator = ALIDiscriminator(x_encoder, z_encoder, topnet)
 
@@ -201,16 +203,17 @@ class ALI(ModelPlugin):
     optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
     train_defaults=dict(epochs=500, save_on_lowest='losses.generator')
 
-    def __init__(self):
+    def __init__(self, use_z_encoder=False):
         super().__init__()
         self.builds.x_encoder = ImageEncoderBuild(image_encoder='x_encoder',
-                                                  dim_out='dim_z')
+                                                  dim_out='dim_int',
+                                                  encoder_args='x_encoder_args')
+        if use_z_encoder:
+            self.builds.z_encoder = NoiseEncoderBuild(
+                encoder='z_encoder', dim_in='dim_z', dim_out='dim_int',
+                encoder_args='z_encoder_args')
         self.builds.encoder = ImageEncoderBuild(image_encoder='encoder',
                                                 dim_out='dim_z')
-        self.builds.z_encoder = NoiseEncoderBuild(encoder='z_encoder',
-                                                  dim_in='dim_z',
-                                                  dim_out='dim_z',
-                                                  encoder_args='z_encoder_args')
         self.builds.discriminator = ALIDiscriminatorBuild()
         self.builds.generator = GeneratorBuild()
 

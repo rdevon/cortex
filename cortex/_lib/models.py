@@ -358,11 +358,11 @@ class ModelPluginBase():
                 # Set to `requires_grad` for models that are trained with this
                 # routine.
                 if train:
-                    for k in routine._training_nets:
-                        optimizer.OPTIMIZERS[k].zero_grad()
+                    for k in optimizer.OPTIMIZERS.keys():
                         net = self.nets[k]
+                        optimizer.OPTIMIZERS[k].zero_grad()
                         for p in net.parameters():
-                            p.requires_grad = True
+                            p.requires_grad = k in routine._training_nets
 
                 start_time = time.time()
                 losses_before = {k: v for k, v in self._losses.items()}
@@ -379,7 +379,7 @@ class ModelPluginBase():
 
                 # Backprop the losses.
                 keys = list(self._losses.keys())
-                for k in keys:
+                for i, k in enumerate(keys):
                     loss = self._losses.pop(k)
                     if k in losses:
                         losses[k] += loss.item()

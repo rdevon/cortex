@@ -20,13 +20,6 @@ __author_email__ = 'erroneus@gmail.com'
 logger = logging.getLogger('cortex.train')
 
 
-def setup():
-    # Test the routines and recover the loss keys
-    with torch.no_grad():
-        data.DATA_HANDLER.reset('train', make_pbar=False)
-        models.MODEL.run_procedure(0)
-
-
 def summarize_results(results):
     results_ = {}
     for k, v in results.items():
@@ -128,7 +121,7 @@ def display_results(
     if times:
         print('\tAvg update times: ' + ' | '
               .join(['{}: {:.2f}'
-                    .format(k, v) for k, v in times.items()]))
+                     .format(k, v) for k, v in times.items()]))
 
     train_losses = train_results.pop('losses')
     test_losses = test_results.pop('losses')
@@ -143,7 +136,7 @@ def display_results(
             if isinstance(v_train, dict):
                 print('\t' + k + ': ' + ' | '
                       .join(['{}: {:.2f}'
-                            .format(k_, v_train[k_])
+                             .format(k_, v_train[k_])
                              for k_ in v_train.keys()]))
             else:
                 print('\t{}: {:.2f}'.format(k, v_train))
@@ -151,7 +144,7 @@ def display_results(
             if isinstance(v_train, dict):
                 print('\t' + k + ': ' + ' | '
                       .join(['{}: {:.2f} / {:.2f}'
-                            .format(k_, v_train[k_], v_test[k_])
+                             .format(k_, v_train[k_], v_test[k_])
                              for k_ in v_train.keys()]))
             else:
                 print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))

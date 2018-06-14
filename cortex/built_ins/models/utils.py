@@ -52,7 +52,7 @@ def ms_ssim(X_a, X_b, window_size=11, size_average=True, C1=0.01**2, C2=0.03**2)
     def gaussian(sigma=1.5):
         gauss = torch.Tensor(
             [math.exp(-(x - window_size // 2) **
-             2 / float(2 * sigma ** 2)) for x in range(window_size)])
+                      2 / float(2 * sigma ** 2)) for x in range(window_size)])
         return gauss / gauss.sum()
 
     def create_window():
@@ -90,23 +90,25 @@ def ms_ssim(X_a, X_b, window_size=11, size_average=True, C1=0.01**2, C2=0.03**2)
     else:
         return ssim_map.mean(1).mean(1).mean(1)
 
+
 resnet_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=3, n_steps=3)
 mnist_encoder_args_ = dict(dim_h=64, batch_norm=True, f_size=5,
                            pad=2, stride=2, min_dim=7)
 convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
+
 
 def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
     encoder_args = encoder_args or {}
 
     if model_type == 'resnet':
         from cortex.built_ins.networks.resnets import ResEncoder as Encoder
-        encoder_args_ = resnet_encoder_args_
+        encoder_args_ = {k: v for k, v in resnet_encoder_args_.items()}
     elif model_type == 'convnet':
         from cortex.built_ins.networks.convnets import SimpleConvEncoder as Encoder
-        encoder_args_ = convnet_encoder_args_
+        encoder_args_ = {k: v for k, v in convnet_encoder_args_.items()}
     elif model_type == 'mnist':
         from cortex.built_ins.networks.convnets import SimpleConvEncoder as Encoder
-        encoder_args_ = mnist_encoder_args_
+        encoder_args_ = {k: v for k, v in mnist_encoder_args_.items()}
     elif model_type.split('.')[0] == 'tv':
         from cortex.built_ins.networks.torchvision import models
         model_attributes = model_type.split('.')
@@ -147,7 +149,7 @@ def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
         encoder_args_['n_steps'] = 4
     elif x_shape[0] == 128:
         encoder_args_['n_steps'] = 5
-
+        
     return Encoder, encoder_args_
 
 
@@ -156,20 +158,21 @@ mnist_decoder_args_ = dict(dim_h=64, batch_norm=True, f_size=4,
                            pad=1, stride=2, n_steps=2)
 convnet_decoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
+
 def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
     decoder_args = decoder_args or {}
 
     if model_type == 'resnet':
         from cortex.built_ins.networks.resnets import ResDecoder as Decoder
-        decoder_args_ = resnet_decoder_args_
+        decoder_args_ = {k: v for k, v in resnet_decoder_args_.items()}
     elif model_type == 'convnet':
         from cortex.built_ins.networks.conv_decoders import (
             SimpleConvDecoder as Decoder)
-        decoder_args_ = convnet_decoder_args_
+        decoder_args_ = {k: v for k, v in convnet_decoder_args_.items()}
     elif model_type == 'mnist':
         from cortex.built_ins.networks.conv_decoders import (
             SimpleConvDecoder as Decoder)
-        decoder_args_ = mnist_decoder_args_
+        decoder_args_ = {k: v for k, v in mnist_decoder_args_.items()}
     else:
         raise NotImplementedError(model_type)
 
@@ -180,6 +183,7 @@ def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
         decoder_args_['n_steps'] = 5
 
     return Decoder, decoder_args_
+
 
 def to_one_hot(y, K):
     y_ = torch.unsqueeze(y, 1).long()

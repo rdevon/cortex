@@ -40,14 +40,28 @@ def setup_cortex():
     exp.configure_from_yaml(config_file=args.config_file)
 
     command_line_args = dict(data={}, model={}, optimizer={}, train={})
-    command_line_args.update(model=model.kwargs)
-
     for k, v in vars(args).items():
         if v is not None:
             if '.' in k:
                 head, tail = k.split('.')
-                command_line_args[head][tail] = v
+            elif k in model.kwargs:
+                head = 'model'
+                tail = k
+            else:
+                continue
+            command_line_args[head][tail] = v
 
+    def update_nested_dicts(from_d, to_d):
+        for k, v in from_d.items():
+            if (k in to_d) and isinstance(to_d[k], dict):
+                if not isinstance(v, dict):
+                    raise ValueError('Updating dict entry with non-dict.')
+                update_nested_dicts(v, to_d[k])
+            else:
+                to_d[k] = v
+
+    update_nested_dicts(command_line_args['model'], model.kwargs)
+    command_line_args['model'].update(**model.kwargs)
     exp.update_args(command_line_args)
 
     for k, v in exp.ARGS.items():

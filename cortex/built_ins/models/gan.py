@@ -82,6 +82,7 @@ def get_boundary(samples, measure):
 
     return b.mean()
 
+
 def get_weight(samples, measure):
     if measure in ('GAN', 'JSD', 'KL', 'RKL', 'DV', 'H2'):
         return samples ** 2
@@ -172,6 +173,8 @@ class PenaltyRoutine(RoutinePlugin):
 
         if penalty:
             self.losses.network = penalty
+            key = self.name + '_' + penalty_type + '_' + 'penalty'
+            self.results[key] = penalty.item()
 
     @staticmethod
     def _get_gradient(inp, output):
@@ -292,7 +295,9 @@ class GeneratorBuild(BuildPlugin):
     plugin_name = 'generator'
     plugin_nets = ['generator']
 
-    def build(self, generator_noise_type='normal', dim_z=64, generator_type: str='convnet', generator_args={}):
+
+    def build(self, generator_noise_type='normal', dim_z=64,
+              generator_type: str='convnet', generator_args={}):
         '''
 
         Args:

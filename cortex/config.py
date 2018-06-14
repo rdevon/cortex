@@ -1,7 +1,6 @@
 
 import yaml
 from tkinter import filedialog
-from tkinter import *
 from os.path import expanduser
 
 homeDirectory = expanduser("~")

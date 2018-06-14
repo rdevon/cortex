@@ -9,7 +9,7 @@ from cortex._lib import exp
 from cortex._lib.data import setup as setup_data
 from cortex._lib.models import build_networks
 from cortex._lib.optimizer import setup as setup_optimizer
-from cortex._lib.train import setup as setup_train, main_loop
+from cortex._lib.train import main_loop
 from cortex._lib.utils import print_section
 
 
@@ -37,7 +37,6 @@ def main():
         setup_optimizer(**exp.ARGS.optimizer)
 
         print_section('TRAIN')
-        setup_train()
 
     except KeyboardInterrupt:
         print('Cancelled')

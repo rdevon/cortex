@@ -107,6 +107,9 @@ class Alias():
 
     @property
     def value(self):
+        if isinstance(self._key, (tuple, list)):
+            return tuple(self._data[k] for k in self._key)
+
         if self._key in self._data:
             self._isset = True
             return self._data[self._key]

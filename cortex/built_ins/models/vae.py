@@ -31,6 +31,7 @@ class VAENetwork(nn.Module):
         latent: The latent state (Z).
 
     '''
+
     def __init__(self, encoder, decoder, dim_out=None, dim_z=None):
         super(VAENetwork, self).__init__()
         self.encoder = encoder
@@ -96,7 +97,6 @@ class VAERoutine(RoutinePlugin):
         self.add_image(gen, name='generated')
         self.add_image(X, name='ground truth')
         self.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
-
         self.vars.encoder_mean = vae_net.mu.detach()
 
 
