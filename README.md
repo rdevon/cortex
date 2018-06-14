@@ -1,3 +1,5 @@
+## WARNING cortex is under heavy development, and should not be used (and issues should not be raised) unless you know what you are doing (i.e., you are a developer for this project).
+
 # cortex2.0
 [![Build Status](https://travis-ci.com/joeljpoulin/cortex2.0.svg?token=ezyDh2SipopgCKvFzE6w&branch=travis-pylint)](https://travis-ci.com/joeljpoulin/cortex2.0)
 
