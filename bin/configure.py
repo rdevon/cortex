@@ -4,7 +4,7 @@ from os.path import expanduser
 
 def configure():
     homeDirectory = expanduser("~")
-    configDirectory = homeDirectory + '/config.yml'
+    configDirectory = homeDirectory + '/.config.yml'
 
     torchvisionDataPath = filedialog.askdirectory(title="Select torchvision data path.")
     dataPathsLoopSize = input("Please enter the number of data paths you want to add: ")
