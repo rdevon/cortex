@@ -1,3 +1,5 @@
+## WARNING cortex is under heavy development, and should not be used (and issues should not be raised) unless you know what you are doing (i.e., you are a developer for this project).
+
 # cortex2.0
 [![Build Status](https://travis-ci.com/joeljpoulin/cortex2.0.svg?token=ezyDh2SipopgCKvFzE6w&branch=travis-pylint)](https://travis-ci.com/joeljpoulin/cortex2.0)
 
@@ -65,3 +67,16 @@ classifier.py requires the following to be incorporated into cortex:
     * Samples: A dictionary of things that will be visualized
     * <Ignore>
 * Finally, the model needs to be registered by adding it to the `arch_names` string in `models/__init__.py`
+
+## Generating documentation
+
+
+```python
+$ cd docs/
+```
+```
+$ sphinx-apidoc -o source/ ../cortex
+```
+```
+$ make html
+```
