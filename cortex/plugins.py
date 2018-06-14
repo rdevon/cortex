@@ -2,7 +2,6 @@
 
 '''
 
-import inspect
 from os import path
 import shutil
 

@@ -52,8 +52,8 @@ class ALIDiscriminatorRoutine(RoutinePlugin):
 
         Args:
             measure: GAN measure.
-                {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared Hellinger),
-                DV (Donsker Varahdan KL), W1 (IPM)}
+                {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2
+                (squared Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}
 
         '''
         X_P = self.vars.real
@@ -120,7 +120,7 @@ class ALIGeneratorRoutine(RoutinePlugin):
         self.vars.generated = X_Q.detach()
         self.vars.inferred = Z_P.detach()
 
-"""
+
 class DecoderRoutine(RoutinePlugin):
     '''Routine for a simple decoder for images.
 
@@ -141,7 +141,7 @@ class DecoderRoutine(RoutinePlugin):
 
         self.add_image(X, name='Ground truth')
         self.add_image(X_d, name='Reconstruction')
-"""
+
 
 class NoiseEncoderBuild(BuildPlugin):
     '''Builder for encoding the noise for discrimination.
@@ -201,7 +201,7 @@ class ALI(ModelPlugin):
 
     data_defaults = dict(batch_size=dict(train=64, test=640))
     optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
-    train_defaults=dict(epochs=500, save_on_lowest='losses.generator')
+    train_defaults = dict(epochs=500, save_on_lowest='losses.generator')
 
     def __init__(self, use_z_encoder=False):
         super().__init__()

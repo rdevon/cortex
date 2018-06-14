@@ -12,7 +12,8 @@ import torch
 
 from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_header, parse_kwargs
-from .handlers import AliasHandler, Handler, NetworkHandler, LossHandler, ResultsHandler, CallSetterHandler
+from .handlers import (AliasHandler, Handler, NetworkHandler, LossHandler,
+                       ResultsHandler, CallSetterHandler)
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
@@ -228,10 +229,13 @@ class ModelPluginBase():
         return self._viz
 
     def _add_routine(self, key, routine):
-        keys = routine.plugin_nets + routine.plugin_vars + list(routine.plugin_kwargs.keys())
+        keys = routine.plugin_nets + routine.plugin_vars +\
+            list(routine.plugin_kwargs.keys())
         if len(keys) != len(set(keys)):
-            raise ValueError('Routine `plugin_nets` ({}), `plugin_vars` ({}), and `kwargs`({}) must have empty union.'
-                             .format(routine.plugin_nets, routine.plugin_vars, list(routine.plugin_kwargs.keys())))
+            raise ValueError('Routine `plugin_nets` ({}), `plugin_vars` ({}), '
+                             'and `kwargs`({}) must have empty union.'
+                             .format(routine.plugin_nets, routine.plugin_vars,
+                                     list(routine.plugin_kwargs.keys())))
 
         routine.name = key
         routine._kwargs = AliasHandler(self.kwargs)
@@ -258,8 +262,10 @@ class ModelPluginBase():
     def _add_build(self, key, build):
         keys = build.plugin_nets + list(build.plugin_kwargs.keys())
         if len(keys) != len(set(keys)):
-            raise ValueError('Build `plugin_nets` ({}) and `kwargs`({}) must have empty union.'
-                             .format(build.plugin_nets, list(build.plugin_kwargs.keys())))
+            raise ValueError('Build `plugin_nets` ({}) and `kwargs`({}) '
+                             'must have empty union.'
+                             .format(build.plugin_nets,
+                                     list(build.plugin_kwargs.keys())))
 
         build.name = key
         build._kwargs = AliasHandler(self.kwargs)
@@ -317,7 +323,7 @@ class ModelPluginBase():
             for k, v in obj.plugin_help.items():
                 try:
                     obj.help[k] = v
-                except:
+                except RuntimeError:
                     logger.warning('Multiple default values found for {} help. '
                                    'This may have unintended effects. Using '
                                    '`{}` instead of `{}`'

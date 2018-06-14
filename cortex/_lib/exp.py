@@ -130,7 +130,6 @@ def reload(exp_file, reloads, name, out_path, clean, config):
     NAME = name
     SUMMARY.update(**summary)
 
-    _handle_deprecated(**args)
     update_args(args)
 
     reloads = reloads or d['builds'].keys()

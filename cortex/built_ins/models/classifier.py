@@ -133,4 +133,5 @@ class ImageClassification(ModelPlugin):
                                                  images='data.images')
         self.add_train_procedure(self.routines.classify)
 
+
 register_plugin(ImageClassification)

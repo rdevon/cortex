@@ -149,7 +149,7 @@ def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
         encoder_args_['n_steps'] = 4
     elif x_shape[0] == 128:
         encoder_args_['n_steps'] = 5
-        
+
     return Encoder, encoder_args_
 
 

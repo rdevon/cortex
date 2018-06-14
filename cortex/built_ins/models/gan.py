@@ -214,7 +214,7 @@ class PenaltyRoutine(RoutinePlugin):
 
         try:
             epsilon = network.inputs.e.view(-1, 1, 1, 1)
-        except:
+        except AttributeError:
             raise ValueError('You must initiate a uniform random variable'
                              '`e` to use interpolation')
         mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)
@@ -295,7 +295,6 @@ class GeneratorBuild(BuildPlugin):
     plugin_name = 'generator'
     plugin_nets = ['generator']
 
-
     def build(self, generator_noise_type='normal', dim_z=64,
               generator_type: str='convnet', generator_args={}):
         '''
@@ -334,8 +333,8 @@ class GAN(ModelPlugin):
         self.builds.discriminator = DiscriminatorBuild()
         self.builds.generator = GeneratorBuild()
         self.routines.generator = GeneratorRoutine(noise='data.z')
-        self.routines.discriminator =  DiscriminatorRoutine(real='data.images',
-                                                            noise='data.z')
+        self.routines.discriminator = DiscriminatorRoutine(real='data.images',
+                                                           noise='data.z')
         self.routines.penalty = PenaltyRoutine(network='discriminator',
                                                inputs='data.images')
         self.add_train_procedure(self.routines.generator,

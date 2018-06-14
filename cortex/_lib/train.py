@@ -8,7 +8,6 @@ import sys
 import time
 
 import numpy as np
-import torch
 
 from . import data, exp, models, viz, reg
 from .utils import convert_to_numpy, update_dict_of_lists

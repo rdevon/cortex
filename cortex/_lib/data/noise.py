@@ -3,6 +3,35 @@
 '''
 
 import torch
+import torch.distributions as tdist
+
+
+_dist_dict = dict(
+    bernoulli=tdist.bernoulli.Bernoulli,
+    beta=tdist.beta.Beta,
+    binomial=tdist.binomial.Binomial,
+    categorical=tdist.categorical.Categorical,
+    cauchy=tdist.cauchy.Cauchy,
+    chi2=tdist.chi2.Chi2,
+    dirichlet=tdist.dirichlet.Dirichlet,
+    exponential=tdist.exponential.Exponential,
+    fishersnedecor=tdist.fishersnedecor.FisherSnedecor,
+    gamma=tdist.gamma.Gamma,
+    geometric=tdist.geometric.Geometric,
+    gumbel=tdist.gumbel.Gumbel,
+    laplace=tdist.laplace.Laplace,
+    log_normal=tdist.log_normal.LogNormal,
+    multinomial=tdist.multinomial.Multinomial,
+    multivariate_normal=tdist.multivariate_normal.MultivariateNormal,
+    normal=tdist.normal.Normal,
+    one_hot_categorical=tdist.one_hot_categorical.OneHotCategorical,
+    pareto=tdist.pareto.Pareto,
+    poisson=tdist.poisson.Poisson,
+    relaxed_bernoulli=tdist.relaxed_bernoulli.RelaxedBernoulli,
+    relaxed_categorical=tdist.relaxed_categorical.RelaxedOneHotCategorical,
+    studentT=tdist.studentT.StudentT,
+    uniform=tdist.uniform.Uniform
+)
 
 
 def get_noise_var(dist, size, **kwargs):
@@ -18,73 +47,20 @@ def get_noise_var(dist, size, **kwargs):
                 expanded += (zeros + arg,)
         return expanded
 
-    if dist == 'bernoulli':
-        Dist = torch.distributions.bernoulli.Bernoulli
+    Dist = _dist_dict.get(dist)
+    if Dist is None:
         raise NotImplementedError(dist)
-    elif dist == 'beta':
-        Dist = torch.distributions.beta.Beta
-        raise NotImplementedError(dist)
-    elif dist == 'binomial':
-        Dist = torch.distributions.binomial.Binomial
-        raise NotImplementedError(dist)
-    elif dist == 'categorical':
-        Dist = torch.distributions.categorical.Categorical
-        raise NotImplementedError(dist)
-    elif dist == 'cauchy':
-        Dist = torch.distributions.cauchy.Cauchy
-        raise NotImplementedError(dist)
-    elif dist == 'chi2':
-        Dist = torch.distributions.chi2.Chi2
-        raise NotImplementedError(dist)
-    elif dist == 'dirichlet':
-        Dist = torch.distributions.dirichlet.Dirichlet
+
+    if dist == 'dirichlet':
         conc = kwargs.pop('concentration', 1.)
         conc = expand(conc)
         var = Dist(conc, **kwargs)
-    elif dist == 'exponential':
-        Dist = torch.distributions.exponential.Exponential
-        raise NotImplementedError(dist)
-    elif dist == 'fishersnedecor':
-        Dist = torch.distributions.fishersnedecor.FisherSnedecor
-        raise NotImplementedError(dist)
-    elif dist == 'gamma':
-        Dist = torch.distributions.gamma.Gamma
-        raise NotImplementedError(dist)
-    elif dist == 'geometric':
-        Dist = torch.distributions.geometric.Geometric
-        raise NotImplementedError(dist)
-    elif dist == 'multinomial':
-        Dist = torch.distributions.multinomial.Multinomial
-        raise NotImplementedError(dist)
-    elif dist == 'multivariate_normal':
-        Dist = torch.distributions.multivariate_normal.MultivariateNormal
-        raise NotImplementedError(dist)
     elif dist in ('cachy', 'gumbel', 'laplace', 'log_normal', 'normal'):
-        Dist = torch.distributions.normal.Normal
         loc = kwargs.pop('loc', 0.)
         scale = kwargs.pop('scale', 1.)
         loc, scale = expand(loc, scale)
         var = Dist(loc, scale, **kwargs)
-    elif dist == 'one_hot_categorical':
-        Dist = torch.distributions.one_hot_categorical.OneHotCategorical
-        raise NotImplementedError(dist)
-    elif dist == 'pareto':
-        Dist = torch.distributions.pareto.Pareto
-        raise NotImplementedError(dist)
-    elif dist == 'poisson':
-        Dist = torch.distributions.poisson.Poisson
-        raise NotImplementedError(dist)
-    elif dist == 'relaxed_bernoulli':
-        Dist = torch.distributions.relaxed_bernoulli.RelaxedBernoulli
-        raise NotImplementedError(dist)
-    elif dist == 'relaxed_categorical':
-        Dist = torch.distributions.relaxed_categorical.RelaxedOneHotCategorical
-        raise NotImplementedError(dist)
-    elif dist == 'studentT':
-        Dist = torch.distributions.studentT.StudentT
-        raise NotImplementedError(dist)
     elif dist == 'uniform':
-        Dist = torch.distributions.uniform.Uniform
         low = kwargs.pop('low', 0.)
         high = kwargs.pop('high', 1.)
         low, high = expand(low, high)

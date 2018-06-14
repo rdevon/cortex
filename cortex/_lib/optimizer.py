@@ -23,7 +23,7 @@ _optimizer_defaults = dict(
 )
 
 
-def setup(
+def setup( # noqa C901
         optimizer='Adam',
         learning_rate=1.e-4,
         updates_per_routine={},
