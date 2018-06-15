@@ -150,7 +150,7 @@ def parse_args(models):
         description='Cortex is a wrapper '
                     'around pytorch that makes training models '
         'more convenient.',
-        dest='model')
+        dest='command')
 
     subparsers.add_parser(
         'setup', help='Setup cortex configuration.',

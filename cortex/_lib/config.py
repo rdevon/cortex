@@ -15,7 +15,7 @@ from .handlers import Handler
 
 logger = logging.getLogger('cortex.config')
 
-CONFIG = Handler()
+CONFIG = Handler(viz={}, data_paths={}, arch_paths={}, out_path=None)
 
 _config_name = '.cortex.yml'
 _welcome_message = 'Welcome to cortex! Cortex is a library meant to inject ' \
@@ -31,12 +31,15 @@ _local_path_message = 'For many large datasets, you may want to copy ' \
                       'here: [{}] '
 _tv_path_message = 'Some built-in datasets rely on torchvision. ' \
                    'If you would like this functionality, enter the path ' \
-                   'here: [{}] '
+                   'here (this can be an empty folder, as torchvision will ' \
+                   'download the appropriate dataset): [{}] '
 _data_message = 'Cortex can manage any of your datasets, so they can be ' \
                 'simply referenced by name. If you have any datasets to add, ' \
-                'you can enter them here. Otherwise, add them manually to ' \
+                'you can enter them here (the reference name will be managed ' \
+                'next). Otherwise, add them manually to ' \
                 'the config file or run `cortex setup`.'
-_data_path_message = 'Path to dataset (directory or file): '
+_data_path_message = 'Path to dataset (directory or file): (press Enter to ' \
+                     'skip) '
 _data_name_message = 'Name of dataset: [{}] '
 _visdom_message = 'Cortex uses Visdom to do visualization. ' \
                   'This requires running a Visdom server separately ' \
@@ -53,6 +56,12 @@ _out_path_message = 'Enter the path to the output directory: [{}] '
 
 
 def set_config():
+    ''' Setups up cortex config.
+
+    Reads from a configuration file. If file doesn't exist, this starts the
+    config file setup.
+
+    '''
     global CONFIG
     pathName = path.expanduser('~')
     config_file = path.join(pathName, _config_name)
@@ -84,7 +93,6 @@ def setup():
 
 
 def setup_config_file(config_file): # noqa C901
-    print(config_file)
     isfile = path.isfile(config_file)
 
     if isfile:
@@ -98,6 +106,26 @@ def setup_config_file(config_file): # noqa C901
 
         '''
         return (glob.glob(text + '*') + [None])[state]
+
+    def check_dir(query, default, required=False):
+        while True:
+            p = (input(query.format(default)) or default)
+
+            if p is None:
+                if required:
+                    print('Required path must be specified')
+                else:
+                    return
+            else:
+                isdir = path.isdir(p)
+                if isdir:
+                    return p
+                else:
+                    create_path = yes_no('Path not found at {}. Create?'
+                                         .format(p))
+                    if create_path:
+                        pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+                        return p
 
     def yes_no(query, default='no'):
         yes = ['yes', 'y', 'Yes', 'Y', 'YES']
@@ -116,24 +144,28 @@ def setup_config_file(config_file): # noqa C901
     readline.parse_and_bind('tab: complete')
     readline.set_completer(complete_path)
 
+    # Welcome
+    print()
     print(_welcome_message)
-    print
+    print()
     print(_info_message.format(config_file))
-    print
+    print()
 
+    # Local path
     local_default = d['data_paths'].get('local')
-    print
-    local_path = (input(_local_path_message.format(local_default)) or
-                  local_default)
+    local_path = check_dir(_local_path_message, local_default)
     if local_path is not None:
         d['data_paths']['local'] = local_path
-    print
+    print()
 
+    # Torchvision path
     tv_default = d['data_paths'].get('torchvision')
-    tv_path = input(_tv_path_message.format(tv_default)) or tv_default
+    tv_path = check_dir(_tv_path_message, tv_default)
     if tv_path is not None:
-        d['data_paths']['torchvision'] = tv_path
+        d['data_paths']['torchvision'] = local_path
+    print()
 
+    # Extra data paths
     print(_data_message)
     while True:
         data_path = input(_data_path_message) or None
@@ -164,7 +196,7 @@ def setup_config_file(config_file): # noqa C901
             else:
                 d['data_paths'][data_name] = data_path
                 break
-    print
+    print()
     print(_visdom_message)
 
     default_host = 'http://' + str(socket.gethostbyname(socket.gethostname()))
@@ -175,28 +207,11 @@ def setup_config_file(config_file): # noqa C901
     viz_port = input(_viz_port_message.format(default_port)) or default_port
     d['viz']['server'] = viz_ip
     d['viz']['port'] = viz_port
-    print
+    print()
 
     print(_out_message)
-    print
     output_default = d.get('out_path')
-
-    while True:
-        out_path = (input(_out_path_message.format(output_default)) or
-                    output_default)
-        if out_path == '':
-            print('Output path must be specified.')
-            continue
-
-        is_dir = path.isdir(out_path)
-        if not is_dir:
-            create_path = yes_no('Path not found at {}. Create?'
-                                 .format(out_path))
-            if create_path:
-                pathlib.Path(out_path).mkdir(parents=True, exist_ok=True)
-                break
-        else:
-            break
+    out_path = check_dir(_out_path_message, output_default, required=True)
     d['out_path'] = out_path
 
     with open(config_file, 'w') as f:

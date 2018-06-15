@@ -5,4 +5,5 @@ scipy
 sklearn
 torchvision
 visdom
+pathlib
 pyyaml
