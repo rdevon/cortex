@@ -5,11 +5,8 @@
 
 import logging
 
-from cortex._lib import exp
-from cortex._lib.data import setup as setup_data
-from cortex._lib.models import build_networks
-from cortex._lib.optimizer import setup as setup_optimizer
-from cortex._lib.train import main_loop
+from cortex._lib import (config, data, exp, models, optimizer, setup_cortex,
+                         setup_experiment, train)
 from cortex._lib.utils import print_section
 
 
@@ -27,19 +24,29 @@ def main():
     # Parse the command-line arguments
 
     try:
-        print_section('LOADING DATA')
-        setup_data(**exp.ARGS.data)
+        args = setup_cortex()
 
-        print_section('MODEL')
-        build_networks()
+        if args.command == 'setup':
+            # Performs setup only.
+            config.setup()
+            exit(0)
+        else:
+            config.set_config()
 
-        print_section('OPTIMIZER')
-        setup_optimizer(**exp.ARGS.optimizer)
+            print_section('EXPERIMENT')
+            setup_experiment(args)
 
-        print_section('TRAIN')
+            print_section('DATA')
+            data.setup(**exp.ARGS.data)
+
+            print_section('NETWORKS')
+            models.build_networks()
+
+            print_section('OPTIMIZER')
+            optimizer.setup(**exp.ARGS.optimizer)
 
     except KeyboardInterrupt:
         print('Cancelled')
         exit(0)
 
-    main_loop(**exp.ARGS.train)
+    train.main_loop(**exp.ARGS.train)

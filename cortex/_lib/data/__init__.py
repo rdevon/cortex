@@ -5,7 +5,6 @@
 import logging
 
 from .data_handler import DataHandler
-from ..config import CONFIG
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -79,6 +78,3 @@ class DatasetPluginBase():
         self._dims = {}
         self._input_names = None
         self._scale = None
-        if CONFIG.data_paths is None:
-            raise ValueError('`data_paths` not set in config.')
-        self._paths = CONFIG.data_paths
