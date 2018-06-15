@@ -8,6 +8,7 @@ import shutil
 
 from torch.utils.data import Dataset
 
+from cortex._lib.config import CONFIG, _config_name
 from cortex._lib.data import DatasetPluginBase, register as register_data
 from cortex._lib.models import (
     BuildReference,
@@ -44,10 +45,12 @@ class DatasetPlugin(DatasetPluginBase):
         if from_path.endswith('/'):
             from_path = from_path[:-1]
         basename = path.basename(from_path)
-        local_path = self._paths.get('local')
+        local_path = CONFIG.data_paths.get('local')
 
         if local_path is None:
-            raise ValueError()
+            raise KeyError(
+                '`{}` not found in {} data_paths'
+                    .format(local_path, _config_name))
         to_path = path.join(local_path, basename)
         if ((not path.exists(to_path)) and path.exists(from_path)):
             if path.isdir(from_path):
@@ -86,10 +89,10 @@ class DatasetPlugin(DatasetPluginBase):
             The path to the dataset.
 
         '''
-        p = self._paths.get(source)
+        p = CONFIG.data_paths.get(source)
         if p is None:
             raise KeyError(
-                '`{}` not found in config.yaml data_paths'.format(source))
+                '`{}` not found in {} data_paths'.format(source, _config_name))
         return p
 
     def set_input_names(self, input_names):
