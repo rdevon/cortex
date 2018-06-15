@@ -1,7 +1,6 @@
 from setuptools import setup
 
 packages = [
-            'bin',
             'cortex',
             'cortex._lib',
             'cortex.built_ins',
@@ -23,7 +22,6 @@ setup(name='cortex',
           'torchvision', 'visdom', 'pyyaml'],
       entry_points={
           'console_scripts': [
-              'cortex=cortex.main:main',
-              'cortex-configure=bin.configure:configure']
+              'cortex=cortex.main:main']
       },
       zip_safe=False)

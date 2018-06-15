@@ -2,9 +2,13 @@
 
 '''
 
+import glob
 import logging
 from os import path
+import pathlib
 import pprint
+import readline
+import socket
 import yaml
 
 from .handlers import Handler
@@ -13,15 +17,48 @@ logger = logging.getLogger('cortex.config')
 
 CONFIG = Handler()
 
+_config_name = '.cortex.yml'
+_welcome_message = 'Welcome to cortex! Cortex is a library meant to inject ' \
+                   'your PyTorch code into the training loop, automating ' \
+                   'common tasks such as optimization, visualization, and ' \
+                   'checkpoint management.'
+_info_message = 'Cortex requires a configuration file to run properly. \n' \
+                'This will be stored in your home directory ({}).' \
+                'If this is cancelled (using ^C), config file generation ' \
+                'will be cancelled.'
+_local_path_message = 'For many large datasets, you may want to copy ' \
+                      'datasets to a local directory. If so, enter the path ' \
+                      'here: [{}] '
+_tv_path_message = 'Some built-in datasets rely on torchvision. ' \
+                   'If you would like this functionality, enter the path ' \
+                   'here: [{}] '
+_data_message = 'Cortex can manage any of your datasets, so they can be ' \
+                'simply referenced by name. If you have any datasets to add, ' \
+                'you can enter them here. Otherwise, add them manually to ' \
+                'the config file or run `cortex setup`.'
+_data_path_message = 'Path to dataset (directory or file): '
+_data_name_message = 'Name of dataset: [{}] '
+_visdom_message = 'Cortex uses Visdom to do visualization. ' \
+                  'This requires running a Visdom server separately ' \
+                  '(see https://github.com/facebookresearch/visdom for ' \
+                  'details).\n' \
+                  'Note that running cortex is still possible without ' \
+                  'visualization.'
+_viz_ip_message = 'IP for the Visdom server: [{}] '
+_viz_port_message = 'Visdom port: [{}] '
+_out_message = 'Cortex requires an out path to store experiment files. ' \
+               'This will be the location of binaries, as well as other ' \
+               'results from experiments.'
+_out_path_message = 'Enter the path to the output directory: [{}] '
+
 
 def set_config():
     global CONFIG
-    pathName = path.dirname(path.dirname(path.abspath(__file__)))
-    config_file = path.join(path.dirname(pathName), 'config.yaml')
-    if not path.isfile(config_file):
-        config_file = None
+    pathName = path.expanduser('~')
+    config_file = path.join(pathName, _config_name)
+    isfile = path.isfile(config_file)
 
-    if config_file is not None:
+    if isfile:
         logger.debug('Open config file {}'.format(config_file))
         with open(config_file, 'r') as f:
             d = yaml.load(f)
@@ -35,4 +72,132 @@ def set_config():
             CONFIG.update(viz=viz, data_paths=data_paths,
                           arch_paths=arch_paths, out_path=out_path)
     else:
-        logger.warning('config.yaml not found')
+        logger.warning('{} not found'.format(_config_name))
+        setup_config_file(config_file)
+        set_config()
+
+
+def setup():
+    pathName = path.expanduser('~')
+    config_file = path.join(pathName, _config_name)
+    setup_config_file(config_file)
+
+
+def setup_config_file(config_file): # noqa C901
+    print(config_file)
+    isfile = path.isfile(config_file)
+
+    if isfile:
+        with open(config_file, 'r') as f:
+            d = yaml.load(f)
+    else:
+        d = dict(data_paths={}, viz={}, out_path=None)
+
+    def complete_path(text, state):
+        '''Completes a path for readline.
+
+        '''
+        return (glob.glob(text + '*') + [None])[state]
+
+    def yes_no(query, default='no'):
+        yes = ['yes', 'y', 'Yes', 'Y', 'YES']
+        no = ['no', 'n', 'No', 'N', 'NO']
+        query_ = query + ' (yes/no) [{}] '.format(default)
+        while True:
+            response = input(query_) or default
+            if response in yes:
+                return True
+            elif response in no:
+                return False
+            else:
+                print('Please enter `yes` or `no`')
+
+    readline.set_completer_delims(' \t\n;')
+    readline.parse_and_bind('tab: complete')
+    readline.set_completer(complete_path)
+
+    print(_welcome_message)
+    print
+    print(_info_message.format(config_file))
+    print
+
+    local_default = d['data_paths'].get('local')
+    print
+    local_path = (input(_local_path_message.format(local_default)) or
+                  local_default)
+    if local_path is not None:
+        d['data_paths']['local'] = local_path
+    print
+
+    tv_default = d['data_paths'].get('torchvision')
+    tv_path = input(_tv_path_message.format(tv_default)) or tv_default
+    if tv_path is not None:
+        d['data_paths']['torchvision'] = tv_path
+
+    print(_data_message)
+    while True:
+        data_path = input(_data_path_message) or None
+        if data_path is None:
+            break
+
+        is_file = path.isfile(data_path)
+        is_dir = path.isdir(data_path)
+        if is_file:
+            default_name = path.basename(data_path).split('.')[-1]
+        elif is_dir:
+            if data_path.endswith('/'):
+                data_path = data_path[:-1]
+            default_name = path.basename(data_path)
+        else:
+            print('Data not found at {}'.format(data_path))
+            continue
+
+        while True:
+            data_name = (input(_data_name_message.format(default_name)) or
+                         default_name)
+            if data_name in d['data_paths']:
+                replace = yes_no('{} already taken. Replace?'.format(data_name),
+                                 default='no')
+                if replace:
+                    d['data_paths'][data_name] = data_path
+                    break
+            else:
+                d['data_paths'][data_name] = data_path
+                break
+    print
+    print(_visdom_message)
+
+    default_host = 'http://' + str(socket.gethostbyname(socket.gethostname()))
+    default_host = d['viz'].get('server', default_host)
+    default_port = 8097
+    default_port = d['viz'].get('port', default_port)
+    viz_ip = input(_viz_ip_message.format(default_host)) or default_host
+    viz_port = input(_viz_port_message.format(default_port)) or default_port
+    d['viz']['server'] = viz_ip
+    d['viz']['port'] = viz_port
+    print
+
+    print(_out_message)
+    print
+    output_default = d.get('out_path')
+
+    while True:
+        out_path = (input(_out_path_message.format(output_default)) or
+                    output_default)
+        if out_path == '':
+            print('Output path must be specified.')
+            continue
+
+        is_dir = path.isdir(out_path)
+        if not is_dir:
+            create_path = yes_no('Path not found at {}. Create?'
+                                 .format(out_path))
+            if create_path:
+                pathlib.Path(out_path).mkdir(parents=True, exist_ok=True)
+                break
+        else:
+            break
+    d['out_path'] = out_path
+
+    with open(config_file, 'w') as f:
+        yaml.dump(d, f)

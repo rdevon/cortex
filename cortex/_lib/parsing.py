@@ -151,6 +151,11 @@ def parse_args(models):
                     'around pytorch that makes training models '
         'more convenient.',
         dest='model')
+
+    subparsers.add_parser(
+        'setup', help='Setup cortex configuration.',
+        description='Initializes or updates the `.cortex.yml` file.')
+
     for k, model in models.items():
         subparser = subparsers.add_parser(
             k,

@@ -20,6 +20,11 @@ def setup_cortex():
     models.find_models(config.CONFIG.arch_paths)
 
     args = parse_args(models.MODEL_PLUGINS)
+
+    if args.model == 'setup':
+        config.setup()
+        exit(0)
+
     experiment_args = copy.deepcopy(default_args)
     exp.update_args(experiment_args)
 
