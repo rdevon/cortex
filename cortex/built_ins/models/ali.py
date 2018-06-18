@@ -57,14 +57,20 @@ class ALIDiscriminatorRoutine(RoutinePlugin):
 
         '''
         X_P = self.vars.real
-        T = self.vars.targets
         Z_Q = self.vars.noise
+
         generator = self.nets.generator
         encoder = self.nets.encoder
+
+        X_Q = F.tanh(generator(Z_Q))
+        Z_P = encoder(X_P)
+
+        self.get_results(X_P, X_Q, Z_P, Z_Q, measure)
+
+    def get_results(self, X_P, X_Q, Z_P, Z_Q, measure):
         discriminator = self.nets.discriminator
 
-        X_Q = F.tanh(generator(Z_Q).detach())
-        Z_P = encoder(X_P).detach()
+        T = self.vars.targets
 
         E_pos, E_neg, P_samples, Q_samples = self.score(
             discriminator, X_P, X_Q, Z_P, Z_Q, measure)

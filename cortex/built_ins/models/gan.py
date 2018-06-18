@@ -249,8 +249,7 @@ class GeneratorRoutine(RoutinePlugin):
         discriminator = self.nets.discriminator
         generator = self.nets.generator
 
-        X_Q = generator(Z)
-        X_Q = F.tanh(X_Q)
+        X_Q = self.generate(generator, Z)
         samples = discriminator(X_Q)
 
         g_loss = generator_loss(samples, measure, loss_type=loss_type)
@@ -262,6 +261,10 @@ class GeneratorRoutine(RoutinePlugin):
         self.add_image(X_Q, name='generated')
 
         self.vars.generated = X_Q
+
+    @staticmethod
+    def generate(generator, Z):
+        return F.tanh(generator(Z))
 
 
 class DiscriminatorBuild(BuildPlugin):
