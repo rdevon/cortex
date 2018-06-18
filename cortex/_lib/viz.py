@@ -16,7 +16,7 @@ from .viz_utils import tile_raster_images
 import matplotlib
 
 matplotlib.use('Agg')
-from matplotlib import pylab as plt # noqa E402
+from matplotlib import pylab as plt  # noqa E402
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -261,7 +261,7 @@ def save_text(labels, max_samples=64, out_file=None, text_id=0,
                 f.write(l__)
 
 
-def save_images(images, num_x, num_y, out_file=None, labels=None, # noqa C901
+def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
                 max_samples=None, margin_x=5, margin_y=5, image_id=0,
                 caption='', title=''):
     if labels is not None:

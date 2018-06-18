@@ -86,6 +86,7 @@ class CallSetterHandler(Handler):
     '''A handler that calls a callable when set.
 
     '''
+
     def __init__(self, fn):
         if not callable(fn):
             raise ValueError('{} is not callable.'.format(fn))
@@ -100,6 +101,7 @@ class Alias():
     '''An alias class for referencing objects in a base container.
 
     '''
+
     def __init__(self, data, key):
         self._data = data
         self._key = key

@@ -16,8 +16,8 @@ from .utils import log_sum_exp, update_decoder_args, update_encoder_args
 def raise_measure_error(measure):
     supported_measures = ['GAN', 'JSD', 'X2', 'KL', 'RKL', 'DV', 'H2', 'W1']
     raise NotImplementedError(
-        'Measure `{}` not supported. Supported: {}'.format(measure,
-                                                           supported_measures))
+        'Measure `{}` not supported. Supported: {}'
+        .format(measure, supported_measures))
 
 
 def get_positive_expectation(p_samples, measure):

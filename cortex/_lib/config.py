@@ -92,7 +92,7 @@ def setup():
     setup_config_file(config_file)
 
 
-def setup_config_file(config_file): # noqa C901
+def setup_config_file(config_file):  # noqa C901
     isfile = path.isfile(config_file)
 
     if isfile:
