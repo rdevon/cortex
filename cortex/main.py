@@ -9,6 +9,7 @@ from cortex._lib import (config, data, exp, models, optimizer, setup_cortex,
                          setup_experiment, train)
 from cortex._lib.utils import print_section
 
+
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
@@ -29,7 +30,6 @@ def main():
             # Performs setup only.
             config.setup()
             exit(0)
-
         else:
             config.set_config()
 
@@ -40,13 +40,10 @@ def main():
             data.setup(**exp.ARGS.data)
 
             print_section('NETWORKS')
-            models.build_networks(**exp.ARGS.builds)
+            models.build_networks()
 
             print_section('OPTIMIZER')
             optimizer.setup(**exp.ARGS.optimizer)
-
-            print_section('TRAIN')
-            train.setup()
 
     except KeyboardInterrupt:
         print('Cancelled')

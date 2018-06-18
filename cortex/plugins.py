@@ -2,7 +2,6 @@
 
 '''
 
-import inspect
 from os import path
 import shutil
 
@@ -11,13 +10,9 @@ from torch.utils.data import Dataset
 from cortex._lib.config import CONFIG, _config_name
 from cortex._lib.data import DatasetPluginBase, register as register_data
 from cortex._lib.models import (
-    BuildReference,
     BuildPluginBase,
     ModelPluginBase,
-    RoutineReference,
     RoutinePluginBase,
-    register_build,
-    register_routine,
     register_model)
 
 __author__ = 'R Devon Hjelm'
@@ -50,7 +45,7 @@ class DatasetPlugin(DatasetPluginBase):
         if local_path is None:
             raise KeyError(
                 '`{}` not found in {} data_paths'
-                    .format(local_path, _config_name))
+                .format(local_path, _config_name))
         to_path = path.join(local_path, basename)
         if ((not path.exists(to_path)) and path.exists(from_path)):
             if path.isdir(from_path):
@@ -163,7 +158,7 @@ class RoutinePlugin(RoutinePluginBase):
         routine.
 
     '''
-    _protected = ['help', 'kwargs', 'updates']
+    _protected = ['updates']
     _required = ['run']
 
     plugin_name = None
@@ -208,26 +203,19 @@ class BuildPlugin(BuildPluginBase):
 
     Attributes:
         plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be
-        used for this build.
+        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this build.
+        nets (:obj:`Handler` of :obj:`nn.Module`):
 
     '''
-    _protected = ['help', 'kwargs']
+    _protected = []
     _required = ['build']
 
     plugin_name = None
     plugin_nets = []
 
-    def add_networks(self, **kwargs):
-        '''Adds networks to the build.
-
-        Args:
-            **kwargs: TODO
-
-        '''
-        for k, v in kwargs.items():
-            k_ = self._names.get(k, k)
-            self._nets[k_] = v
+    @property
+    def nets(self):
+        return self._nets
 
     def get_dims(self, *queries):
         '''Gets dimensions of inputs.
@@ -263,7 +251,7 @@ class ModelPlugin(ModelPluginBase):
         optimizer_defaults (:obj:`dict`): Optimizer defaults.
 
     '''
-    _protected = ['help', 'description']
+    _protected = ['description']
     _required = []
     _optional = ['setup']
 
@@ -272,60 +260,27 @@ class ModelPlugin(ModelPluginBase):
     train_defaults = {}
     optimizer_defaults = {}
 
-    def add_build(self, build_query, name=None, **kwargs):
-        '''Adds a build plugin.
+    @property
+    def routines(self):
+        return self._routines
 
-        Args:
-            build_query: Build plugin.
-                Can be a string, a BuildPlugin instance, or BuildPlugin class
-            name (str, optional): Name for the build.
-                If not set, `BuildPlugin.plugin_name` will be used.
-            **kwargs: TODO
+    @property
+    def builds(self):
+        return self._builds
 
-        '''
-        if isinstance(build_query, BuildPlugin):
-            build = build_query
-        elif (inspect.isclass(build_query) and
-              issubclass(build_query, BuildPlugin)):
-            build = build_query(**kwargs)
-        elif isinstance(build_query, str):
-            build = BuildReference(build_query, **kwargs)
-            name = name or build_query
-        else:
-            raise TypeError('Unknown build type {}'.format(type(build_query)))
-        name = name or build.plugin_name
-
-        if name not in self.builds:
-            self.builds[name] = build
-
-    def add_routine(self, routine_query, name=None, **kwargs):
+    def _add_routine_name(self, routine):
         '''Adds a routine
 
         Args:
-            routine_query: Routine plugin.
-                Can be a string, a RoutinePlugin instance, or RoutinePlugin
-                class
-            name: (str, optional): Name for the routine.
-                If not set, `RoutinePlugin.plugin_name` will be used.
-            **kwargs: TODO
+            routine: Routine plugin instance.
 
         '''
-        if isinstance(routine_query, RoutinePlugin):
-            routine = routine_query
-        elif (inspect.isclass(routine_query) and
-              issubclass(routine_query, RoutinePlugin)):
-            routine = routine_query(**kwargs)
-        elif isinstance(routine_query, str):
-            routine = RoutineReference(routine_query, **kwargs)
-            name = name or routine_query
-        else:
-            raise TypeError(
-                'Unknown routine type {}'.format(
-                    type(routine_query)))
-        name = name or routine.plugin_name
 
-        if name not in self.routines:
-            self.routines[name] = routine
+        if routine in self.routines.values():
+            return routine.name
+
+        name = routine.plugin_name
+        self.routines[name] = routine
 
         return name
 
@@ -346,24 +301,24 @@ class ModelPlugin(ModelPluginBase):
                 'Number of routines must match number of updates.')
         routine_names = []
         for routine in routines:
-            routine_names.append(self.add_routine(routine))
+            routine_names.append(self._add_routine_name(routine))
 
-        self.train_procedures.append(
+        self._train_procedures.append(
             (mode, routine_names, updates_per_routine))
 
     def add_eval_procedure(self, *routines, mode='test'):
         '''Adds a evaluation procedure.
 
-                Args:
-                    *routines: TODO
-                    mode (str): Data mode on which the procedure will be run.
+        Args:
+            *routines: TODO
+            mode (str): Data mode on which the procedure will be run.
 
-                '''
+        '''
         routine_names = []
         for routine in routines:
-            routine_names.append(self.add_routine(routine))
+            routine_names.append(self._add_routine_name(routine))
 
-        self.eval_procedures.append((mode, routine_names))
+        self._eval_procedures.append((mode, routine_names))
 
 
 def register_plugin(plugin):
@@ -376,11 +331,7 @@ def register_plugin(plugin):
 
     '''
 
-    if issubclass(plugin, BuildPlugin):
-        register_build(plugin)
-    elif issubclass(plugin, RoutinePlugin):
-        register_routine(plugin)
-    elif issubclass(plugin, ModelPlugin):
+    if issubclass(plugin, ModelPlugin):
         register_model(plugin())
     elif issubclass(plugin, DatasetPlugin):
         register_data(plugin)

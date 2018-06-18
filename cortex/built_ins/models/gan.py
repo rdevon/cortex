@@ -16,8 +16,8 @@ from .utils import log_sum_exp, update_decoder_args, update_encoder_args
 def raise_measure_error(measure):
     supported_measures = ['GAN', 'JSD', 'X2', 'KL', 'RKL', 'DV', 'H2', 'W1']
     raise NotImplementedError(
-        'Measure `{}` not supported. Supported: {}'.format(measure,
-                                                           supported_measures))
+        'Measure `{}` not supported. Supported: {}'
+        .format(measure, supported_measures))
 
 
 def get_positive_expectation(p_samples, measure):
@@ -113,7 +113,7 @@ class DiscriminatorRoutine(RoutinePlugin):
     '''
     plugin_name = 'discriminator'
     plugin_nets = ['discriminator', 'generator']
-    plugin_inputs = ['real', 'noise']
+    plugin_vars = ['real', 'noise']
 
     def run(self, measure: str='GAN'):
         '''
@@ -126,8 +126,8 @@ class DiscriminatorRoutine(RoutinePlugin):
         '''
         discriminator = self.nets.discriminator
         generator = self.nets.generator
-        Z = self.inputs.noise
-        X_P = self.inputs.real
+        Z = self.vars.noise
+        X_P = self.vars.real
         X_Q = F.tanh(generator(Z).detach())
 
         P_samples = discriminator(X_P)
@@ -147,92 +147,86 @@ class DiscriminatorRoutine(RoutinePlugin):
         self.losses.discriminator = -difference
 
 
-register_plugin(DiscriminatorRoutine)
-
-
 class PenaltyRoutine(RoutinePlugin):
     '''Routine for applying gradient penalty.
 
     '''
     plugin_name = 'gradient_penalty'
     plugin_nets = ['network']
-    plugin_inputs = ['inputs']
+    plugin_vars = ['inputs']
 
     def run(self, penalty_type: str='contractive', penalty_amount: float=0.5):
         '''
 
         Args:
             penalty_type: Gradient penalty type for the discriminator.
-                {contractive, interpolate}
+                {contractive}
             penalty_amount: Amount of gradient penalty for the discriminator.
 
         '''
-        inputs = self.inputs.inputs
-        penalty = self.apply(inputs, penalty_type=penalty_type,
-                             penalty_amount=penalty_amount)
+        if penalty_type == 'contractive':
+            inputs = self.vars.inputs
+            penalty = self.contractive_penalty(
+                self.nets.network, inputs, penalty_amount=penalty_amount)
+        else:
+            raise NotImplementedError(penalty_type)
 
         if penalty:
             self.losses.network = penalty
+            key = self.name + '_' + penalty_type + '_' + 'penalty'
+            self.results[key] = penalty.item()
 
-    def apply(self, inputs, penalty_type='contractive', penalty_amount=0.5):
+    @staticmethod
+    def _get_gradient(inp, output):
+        gradient = autograd.grad(outputs=output, inputs=inp,
+                                 grad_outputs=torch.ones_like(output),
+                                 create_graph=True, retain_graph=True,
+                                 only_inputs=True)[0]
+        return gradient
+
+    def contractive_penalty(self, network, input, penalty_amount=0.5):
 
         if penalty_amount == 0.:
             return
 
-        network = self.nets.network
+        if not isinstance(input, (list, tuple)):
+            input = [input]
 
-        if not isinstance(inputs, (list, tuple)):
-            inputs = [inputs]
+        input = [inp.detach() for inp in input]
+        input = [inp.requires_grad_() for inp in input]
 
-        inputs = [inp.detach() for inp in inputs]
-        inputs = [inp.requires_grad_() for inp in inputs]
-
-        def get_gradient(inp, output):
-            gradient = autograd.grad(outputs=output, inputs=inp,
-                                     grad_outputs=torch.ones_like(output),
-                                     create_graph=True, retain_graph=True,
-                                     only_inputs=True)[0]
-            return gradient
-
-        if penalty_type == 'contractive':
-            penalties = []
-            for inp in inputs:
-                with torch.set_grad_enabled(True):
-                    output = network(inp)
-                gradient = get_gradient(inp, output)
-                gradient = gradient.view(gradient.size()[0], -1)
-                penalties.append((gradient ** 2).sum(1).mean())
-            penalty = sum(penalties)
-
-        elif penalty_type == 'interpolate':
-            if len(inputs) != 2:
-                raise ValueError('tuple of 2 inputs required to interpolate')
-            inp1, inp2 = inputs
-
-            try:
-                epsilon = self.inputs.e.view(-1, 1, 1, 1)
-
-            except AttributeError:
-
-                raise ValueError('You must initiate a uniform random variable'
-                                 '`e` to use interpolation')
-            mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)
-            mid_in.requires_grad_()
-
-            with torch.set_grad_enabled(True):
-                mid_out = network(mid_in)
-            gradient = get_gradient(mid_in, mid_out)
-            gradient = gradient.view(gradient.size()[0], -1)
-            penalty = ((gradient.norm(2, dim=1) - 1.) ** 2).mean()
-
-        else:
-            raise NotImplementedError(
-                'Unsupported penalty {}'.format(penalty_type))
+        with torch.set_grad_enabled(True):
+            output = network(*input)
+        gradient = self._get_gradient(input, output)
+        gradient = gradient.view(gradient.size()[0], -1)
+        penalty = (gradient ** 2).sum(1).mean()
 
         return penalty_amount * penalty
 
+    def interpolate_penalty(self, network, input, penalty_amount=0.5):
 
-register_plugin(PenaltyRoutine)
+        input = input.detach()
+        input = input.requires_grad_()
+
+        if len(input) != 2:
+            raise ValueError('tuple of 2 inputs required to interpolate')
+        inp1, inp2 = input
+
+        try:
+            epsilon = network.inputs.e.view(-1, 1, 1, 1)
+        except AttributeError:
+            raise ValueError('You must initiate a uniform random variable'
+                             '`e` to use interpolation')
+        mid_in = ((1. - epsilon) * inp1 + epsilon * inp2)
+        mid_in.requires_grad_()
+
+        with torch.set_grad_enabled(True):
+            mid_out = network(mid_in)
+        gradient = self._get_gradient(mid_in, mid_out)
+        gradient = gradient.view(gradient.size()[0], -1)
+        penalty = ((gradient.norm(2, dim=1) - 1.) ** 2).mean()
+
+        return penalty_amount * penalty
 
 
 class GeneratorRoutine(RoutinePlugin):
@@ -241,8 +235,7 @@ class GeneratorRoutine(RoutinePlugin):
     '''
     plugin_name = 'generator'
     plugin_nets = ['generator', 'discriminator']
-    plugin_inputs = ['noise']
-    plugin_outputs = ['generated']
+    plugin_vars = ['noise', 'generated']
 
     def run(self, measure: str=None, loss_type: str='non-saturating'):
         '''
@@ -252,7 +245,7 @@ class GeneratorRoutine(RoutinePlugin):
                 {non-saturating, minimax, boundary-seek}
 
         '''
-        Z = self.inputs.noise
+        Z = self.vars.noise
         discriminator = self.nets.discriminator
         generator = self.nets.generator
 
@@ -268,10 +261,7 @@ class GeneratorRoutine(RoutinePlugin):
             self.results.update(Weights=weights.mean().item())
         self.add_image(X_Q, name='generated')
 
-        return X_Q
-
-
-register_plugin(GeneratorRoutine)
+        self.vars.generated = X_Q
 
 
 class DiscriminatorBuild(BuildPlugin):
@@ -295,10 +285,7 @@ class DiscriminatorBuild(BuildPlugin):
             x_shape, model_type=discriminator_type,
             encoder_args=discriminator_args)
         discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
-        self.add_networks(discriminator=discriminator)
-
-
-register_plugin(DiscriminatorBuild)
+        self.nets.discriminator = discriminator
 
 
 class GeneratorBuild(BuildPlugin):
@@ -308,9 +295,8 @@ class GeneratorBuild(BuildPlugin):
     plugin_name = 'generator'
     plugin_nets = ['generator']
 
-
-    def build(self, generator_noise_type='normal', dim_z=64, generator_type: str='convnet',
-              generator_args={}):
+    def build(self, generator_noise_type='normal', dim_z=64,
+              generator_type: str='convnet', generator_args={}):
         '''
 
         Args:
@@ -328,10 +314,7 @@ class GeneratorBuild(BuildPlugin):
             x_shape, model_type=generator_type, decoder_args=generator_args)
         generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
 
-        self.add_networks(generator=generator)
-
-
-register_plugin(GeneratorBuild)
+        self.nets.generator = generator
 
 
 class GAN(ModelPlugin):
@@ -347,17 +330,18 @@ class GAN(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        self.add_build(DiscriminatorBuild)
-        self.add_build(GeneratorBuild)
-        self.add_routine(GeneratorRoutine, noise='data.z')
-        self.add_routine(
-            DiscriminatorRoutine, real='data.images', noise='data.z')
-        self.add_routine(
-            PenaltyRoutine, network='discriminator',
-            inputs=('data.images', 'generator.generated'))
-        self.add_train_procedure(
-            'generator', 'discriminator', 'gradient_penalty')
-        self.add_eval_procedure('generator', 'discriminator')
+        self.builds.discriminator = DiscriminatorBuild()
+        self.builds.generator = GeneratorBuild()
+        self.routines.generator = GeneratorRoutine(noise='data.z')
+        self.routines.discriminator = DiscriminatorRoutine(real='data.images',
+                                                           noise='data.z')
+        self.routines.penalty = PenaltyRoutine(network='discriminator',
+                                               inputs='data.images')
+        self.add_train_procedure(self.routines.generator,
+                                 self.routines.discriminator,
+                                 self.routines.penalty)
+        self.add_eval_procedure(self.routines.generator,
+                                self.routines.discriminator)
 
 
 register_plugin(GAN)

@@ -94,7 +94,7 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
 
     try:
         R = R.view(M, -1, DIM_C * DIM_X * DIM_Y)
-    except:
+    except BaseException:
         R = R.view(M, -1, DIM_C * DIM_X * DIM_Y)
     U.requires_grad = False
 
@@ -172,8 +172,8 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
                    real_out=real_out.mean().data[0], fake_out=fake_out.mean().data[0])
 
     if measure != 'w' and not use_sm:
-        results.update(alpha=alpha.mean().data[0], log_alpha = log_alpha.mean().data[0],
-                       beta=beta.mean().data[0], log_beta = log_beta.mean().data[0])
+        results.update(alpha=alpha.mean().data[0], log_alpha=log_alpha.mean().data[0],
+                       beta=beta.mean().data[0], log_beta=log_beta.mean().data[0])
         results.update(ess=(1. / (w_tilde ** 2).sum(0)).mean().data[0])
 
     if test_mode or measure == 'w' or use_sm:
@@ -192,7 +192,8 @@ def discrete_gan(nets, inputs, measure=None, penalty=None, n_samples=10, reinfor
                                real=X.data))
 
     if penalty:
-        p_term = apply_penalty(inputs, discriminator, X, g_output, measure, penalty_type=penalty_type)
+        p_term = apply_penalty(inputs, discriminator, X, g_output,
+                               measure, penalty_type=penalty_type)
         d_loss += penalty * p_term
         results['gradient penalty'] = p_term.data[0]
 

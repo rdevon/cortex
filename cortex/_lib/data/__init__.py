@@ -5,7 +5,6 @@
 import logging
 
 from .data_handler import DataHandler
-from ..config import CONFIG
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'

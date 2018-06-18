@@ -4,7 +4,6 @@ python:
 install:
   - "pip install flake8"
   - "pip install pytest"
-
-before_script:
+script:
   - "flake8 ."
   - "pytest"
