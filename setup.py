@@ -1,15 +1,9 @@
 from setuptools import setup
 
 packages = [
-            'cortex',
-            'cortex._lib',
-            'cortex.built_ins',
-            'cortex._lib.data',
-            'cortex.built_ins.datasets',
-            'cortex.built_ins.models',
-            'cortex.built_ins.networks',
-            'cortex.built_ins.transforms'
-            ]
+    'cortex', 'cortex._lib', 'cortex.built_ins', 'cortex._lib.data',
+    'cortex.built_ins.datasets', 'cortex.built_ins.models',
+    'cortex.built_ins.networks', 'cortex.built_ins.transforms']
 
 setup(name='cortex',
       version='0.1',
