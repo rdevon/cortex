@@ -1,8 +1,9 @@
-'''Adversarially learned inference and Bi-GAN
+"""
+Adversarially learned inference and Bi-GAN
 
 Currently noise encoder is not implemented.
 
-'''
+"""
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
 __author_email__ = 'erroneus@gmail.com'
