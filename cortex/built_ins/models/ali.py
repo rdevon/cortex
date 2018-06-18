@@ -22,6 +22,7 @@ import torch.nn.functional as F
 class ALIDiscriminator(nn.Module):
     '''ALI discriminator model.
     '''
+
     def __init__(self, x_encoder, z_encoder, topnet):
         super(ALIDiscriminator, self).__init__()
         self.x_encoder = x_encoder
