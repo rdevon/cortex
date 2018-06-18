@@ -8,6 +8,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from cortex.built_ins.models.classifier import (SimpleClassifierBuild,
+                                                ClassifyRoutine)
+
 from .utils import update_encoder_args, update_decoder_args
 
 
@@ -62,8 +65,7 @@ class VAERoutine(RoutinePlugin):
     '''
     plugin_name = 'VAE'
     plugin_nets = ['vae']
-    plugin_inputs = ['input', 'noise', 'targets']
-    plugin_outputs = ['encoder_mean']
+    plugin_vars = ['input', 'noise', 'targets', 'encoder_mean']
 
     def run(self, vae_criterion=F.mse_loss, beta_kld=1.):
         '''
@@ -73,9 +75,9 @@ class VAERoutine(RoutinePlugin):
             beta_kld: Beta scaling for KL term in lower-bound.
 
         '''
-        X = self.inputs.input
-        Y = self.inputs.targets
-        Z = self.inputs.noise
+        X = self.vars.input
+        Y = self.vars.targets
+        Z = self.vars.noise
 
         vae_net = self.nets.vae
 
@@ -95,11 +97,7 @@ class VAERoutine(RoutinePlugin):
         self.add_image(gen, name='generated')
         self.add_image(X, name='ground truth')
         self.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
-
-        return vae_net.mu
-
-
-register_plugin(VAERoutine)
+        self.vars.encoder_mean = vae_net.mu.detach()
 
 
 class ImageEncoderBuild(BuildPlugin):
@@ -109,7 +107,8 @@ class ImageEncoderBuild(BuildPlugin):
     plugin_name = 'image_encoder'
     plugin_nets = ['image_encoder']
 
-    def build(self, encoder_type: str='convnet', dim_out: int=64, encoder_args={}):
+    def build(self, encoder_type: str='convnet', dim_out: int=None,
+              encoder_args={}):
         '''
 
         Args:
@@ -123,10 +122,7 @@ class ImageEncoderBuild(BuildPlugin):
                                                     model_type=encoder_type,
                                                     encoder_args=encoder_args)
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
-        self.add_networks(image_encoder=encoder)
-
-
-register_plugin(ImageEncoderBuild)
+        self.nets.image_encoder = encoder
 
 
 class ImageDecoderBuild(BuildPlugin):
@@ -136,7 +132,8 @@ class ImageDecoderBuild(BuildPlugin):
     plugin_name = 'image_decoder'
     plugin_nets = ['image_decoder']
 
-    def build(self, decoder_type: str='convnet', dim_in: int=64, decoder_args={}):
+    def build(self, decoder_type: str='convnet', dim_in: int=64,
+              decoder_args={}):
         '''
 
         Args:
@@ -150,10 +147,7 @@ class ImageDecoderBuild(BuildPlugin):
                                                     model_type=decoder_type,
                                                     decoder_args=decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
-        self.add_networks(image_decoder=decoder)
-
-
-register_plugin(ImageDecoderBuild)
+        self.nets.image_decoder = decoder
 
 
 class VAEBuild(BuildPlugin):
@@ -163,7 +157,7 @@ class VAEBuild(BuildPlugin):
 
     '''
     plugin_name = 'VAE'
-    plugin_nets = ['vae']
+    plugin_nets = ['encoder', 'decoder', 'vae']
 
     def build(self, dim_z=64, dim_encoder_out=1028):
         '''
@@ -175,14 +169,11 @@ class VAEBuild(BuildPlugin):
 
         '''
         self.add_noise('z', dist='normal', size=dim_z)
-        encoder = self._nets.encoder
-        decoder = self._nets.decoder
+        encoder = self.nets.encoder
+        decoder = self.nets.decoder
         vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out,
                          dim_z=dim_z)
-        self.add_networks(vae=vae)
-
-
-register_plugin(VAEBuild)
+        self.nets.vae = vae
 
 
 class VAE(ModelPlugin):
@@ -208,22 +199,22 @@ class VAE(ModelPlugin):
 
         '''
         super().__init__()
-        self.add_build(ImageEncoderBuild, dim_out='dim_encoder_out',
-                       image_encoder='encoder')
-        self.add_build(ImageDecoderBuild, dim_in='dim_z',
-                       image_decoder='decoder')
-        self.add_build(VAEBuild)
+        self.builds.encoder = ImageEncoderBuild(dim_out='dim_encoder_out',
+                                                image_encoder='encoder')
+        self.builds.decoder = ImageDecoderBuild(dim_in='dim_z',
+                                                image_decoder='decoder')
+        self.builds.vae = VAEBuild()
+        self.routines.vae = VAERoutine(input='data.images', noise='data.z',
+                                       targets='data.targets')
 
-        self.add_routine(VAERoutine, input='data.images', noise='data.z',
-                         targets='data.targets')
         if add_classification:
-            self.add_build('simple_classifier', dim_in='dim_z')
-            self.add_routine('classification', classifier='simple_classifier',
-                             inputs='VAE.encoder_mean',
-                             targets='data.targets')
-            self.add_train_procedure('VAE', 'classification')
+            self.builds.classifier = SimpleClassifierBuild(dim_in='dim_z')
+            self.routines.classify = ClassifyRoutine(
+                classifier='simple_classifier', inputs='encoder_mean',
+                targets='data.targets', images='data.images')
+            self.add_train_procedure(self.routines.vae, self.routines.classify)
         else:
-            self.add_train_procedure('VAE')
+            self.add_train_procedure(self.routines.vae)
 
 
 register_plugin(VAE)

@@ -27,9 +27,8 @@ SUMMARY = {'train': {}, 'test': {}}
 OUT_DIRS = {}
 ARGS = Handler(
     data=Handler(),
-    builds=Handler(),
+    model=Handler(),
     optimizer=Handler(),
-    routines=Handler(),
     train=Handler())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
@@ -39,29 +38,6 @@ def _file_string(prefix=''):
     if prefix == '':
         return NAME
     return '{}({})'.format(NAME, prefix)
-
-
-def _handle_deprecated(
-        data=None,
-        model=None,
-        optimizer=None,
-        routines=None,
-        train=None):
-    if 'noise_variables' in data:
-        for k, v in data['noise_variables'].items():
-            if isinstance(v, tuple):
-                logger.warning(
-                    'Old-stype tuple found in noise argument. Converting.')
-                data['noise_variables'][k] = dict(dist=v[0], size=v[1])
-
-    if 'updates_per_model' in optimizer:
-        logger.warning(
-            'Old-stype `updates_per_model` found. Use `updates_per_routine`')
-        optimizer['updates_per_routine'] = optimizer.pop('updates_per_model')
-
-    if 'setup_fn' in data:
-        logger.warning('Unused `setup_fn` found in `data` args. Ignoring')
-        data.pop('setup_fn')
 
 
 def update_args(kwargs):
@@ -104,7 +80,6 @@ def configure_from_yaml(config_file=None):
         ARGS.optimizer.update(**d.get('optimizer', {}))
         ARGS.train.update(**d.get('train', {}))
         ARGS.data.update(**d.get('data', {}))
-        ARGS.routines.update(**d.get('routines', {}))
 
 
 def setup_new(
@@ -155,7 +130,6 @@ def reload(exp_file, reloads, name, out_path, clean, config):
     NAME = name
     SUMMARY.update(**summary)
 
-    _handle_deprecated(**args)
     update_args(args)
 
     reloads = reloads or d['builds'].keys()
@@ -185,7 +159,7 @@ def save(prefix=''):
         return
 
     models_ = {}
-    for k, model in models.NETWORK_HANDLER.items():
+    for k, model in models.MODEL.nets.items():
         if k == 'extras':
             continue
         if isinstance(model, (tuple, list)):
@@ -198,7 +172,7 @@ def save(prefix=''):
 
     def strip_Nones(d):
         d_ = {}
-        for k, v in d_.items():
+        for k, v in d.items():
             if isinstance(v, dict):
                 d_[k] = strip_Nones(v)
             elif v is not None:

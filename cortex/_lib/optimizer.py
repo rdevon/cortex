@@ -8,7 +8,7 @@ import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from . import exp, models, reg
+from . import data, exp, models, reg
 
 
 __author__ = 'R Devon Hjelm'
@@ -23,7 +23,7 @@ _optimizer_defaults = dict(
 )
 
 
-def setup(
+def setup(  # noqa C901
         optimizer='Adam',
         learning_rate=1.e-4,
         updates_per_routine={},
@@ -83,25 +83,38 @@ def setup(
         raise NotImplementedError(
             'Optimizer not supported `{}`'.format(optimizer))
 
-    for network_key, network in models.NETWORK_HANDLER.items():
-        logger.info('Building optimizer for {}'.format(network_key))
-
+    for network_key, network in models.MODEL.nets.items():
         # Set model parameters to cpu or gpu
         if isinstance(network, (tuple, list)):
-            params = []
             for net in network:
                 net.to(exp.DEVICE)
-                net = torch.nn.DataParallel(
+                torch.nn.DataParallel(
                     net, device_ids=range(
                         torch.cuda.device_count()))
-                logger.debug('Getting parameters for {}'.format(net))
-                params += list(net.parameters())
         else:
             network.to(exp.DEVICE)
             # TODO(Devon): is the next line really doing anything?
-            network = torch.nn.DataParallel(
+            torch.nn.DataParallel(
                 network, device_ids=range(
                     torch.cuda.device_count()))
+
+    with torch.no_grad():
+        data.DATA_HANDLER.reset('train', make_pbar=False)
+        models.MODEL.run_procedure(0)
+
+    training_nets = []
+    for routine in models.MODEL.routines.values():
+        training_nets += routine._training_nets
+
+    for network_key in training_nets:
+        logger.info('Building optimizer for {}'.format(network_key))
+        network = models.MODEL.nets[network_key]
+
+        if isinstance(network, (tuple, list)):
+            params = []
+            for net in network:
+                params += list(net.parameters())
+        else:
             params = list(network.parameters())
 
         # Needed for reloading.

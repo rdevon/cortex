@@ -19,8 +19,7 @@ class ClassifyRoutine(RoutinePlugin):
     '''
     plugin_name = 'classification'
     plugin_nets = ['classifier']
-    plugin_inputs = ['inputs', 'targets']
-    plugin_optional_inputs = ['images']
+    plugin_vars = ['inputs', 'targets', 'images']
 
     def run(self, criterion=nn.CrossEntropyLoss()):
         '''
@@ -30,13 +29,12 @@ class ClassifyRoutine(RoutinePlugin):
 
         '''
         classifier = self.nets.classifier
-        inputs = self.inputs.inputs
-        targets = self.inputs.targets
-        images = self.inputs.images
+        inputs = self.vars.inputs
+        targets = self.vars.targets
+        images = self.vars.images
 
         predicted = self.classify(classifier, inputs, targets,
                                   criterion=criterion)
-
         if images is not None:
             self.visualize(images, targets, predicted)
 
@@ -60,9 +58,6 @@ class ClassifyRoutine(RoutinePlugin):
                        name=self.name + '_gt_pred')
 
 
-register_plugin(ClassifyRoutine)
-
-
 class SimpleClassifierBuild(BuildPlugin):
     '''Build a simple feed-forward classifier.
 
@@ -81,13 +76,9 @@ class SimpleClassifierBuild(BuildPlugin):
 
         '''
         dim_l = self.get_dims('labels')
-
         classifier = FullyConnectedNet(dim_in, dim_h=dim_h,
                                        dim_out=dim_l, **classifier_args)
-        self.add_networks(simple_classifier=classifier)
-
-
-register_plugin(SimpleClassifierBuild)
+        self.nets.simple_classifier = classifier
 
 
 class ImageClassifierBuild(BuildPlugin):
@@ -97,7 +88,8 @@ class ImageClassifierBuild(BuildPlugin):
     plugin_name = 'image_classifier'
     plugin_nets = ['image_classifier']
 
-    def build(self, classifier_type='convnet', classifier_args={}):
+    def build(self, classifier_type='convnet',
+              classifier_args=dict(dropout=0.2)):
         '''Builds a simple image classifier.
 
         Args:
@@ -116,10 +108,7 @@ class ImageClassifierBuild(BuildPlugin):
         args.update(**classifier_args)
 
         classifier = Encoder(shape, dim_out=dim_l, **args)
-        self.add_networks(image_classifier=classifier)
-
-
-register_plugin(ImageClassifierBuild)
+        self.nets.image_classifier = classifier
 
 
 class ImageClassification(ModelPlugin):
@@ -136,11 +125,13 @@ class ImageClassification(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        self.add_build(ImageClassifierBuild)
-        self.add_routine(ClassifyRoutine, classifier='image_classifier',
-                         inputs='data.images', targets='data.targets',
-                         images='data.images')
-        self.add_train_procedure('classification')
+        self.builds.classifier = ImageClassifierBuild(
+            image_classifier='my_classifier')
+        self.routines.classify = ClassifyRoutine(classifier='my_classifier',
+                                                 inputs='data.images',
+                                                 targets='data.targets',
+                                                 images='data.images')
+        self.add_train_procedure(self.routines.classify)
 
 
 register_plugin(ImageClassification)

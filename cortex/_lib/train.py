@@ -8,7 +8,6 @@ import sys
 import time
 
 import numpy as np
-import torch
 
 from . import data, exp, models, viz, reg
 from .utils import convert_to_numpy, update_dict_of_lists
@@ -18,13 +17,6 @@ __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.train')
-
-
-def setup():
-    # Test the routines and recover the loss keys
-    with torch.no_grad():
-        data.DATA_HANDLER.reset('train', make_pbar=False)
-        models.MODEL.run_procedure(0)
 
 
 def summarize_results(results):
@@ -68,7 +60,7 @@ def train_epoch(epoch, quit_on_bad_values, eval_during_train,
         while True:
             models.MODEL.train(0, quit_on_bad_values=quit_on_bad_values)
 
-            for net_key in models.NETWORK_HANDLER:
+            for net_key in models.MODEL.nets:
                 reg.clip(net_key)  # weight clipping
                 reg.l1_decay(net_key)  # l1 weight decay
 
@@ -101,10 +93,11 @@ def test_epoch(epoch, eval_mode=False, data_mode='test'):
     means = summarize_results(models.MODEL.results)
 
     if eval_mode:
+        raise NotImplementedError()
         if models.ARCH.eval_routine is not None:
             models.ARCH.eval_routine(
                 data.DATA_HANDLER,
-                models.MODEL_HANDLER,
+                models.MODEL.nets,
                 means)
         stds = summarize_results_std(means)
         return means, stds

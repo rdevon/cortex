@@ -10,9 +10,10 @@ import time
 
 import torch
 
-from . import data, exp, models, optimizer
+from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_header, parse_kwargs
-from .handlers import Handler, NetworkHandler, LossHandler, ResultsHandler
+from .handlers import (AliasHandler, Handler, NetworkHandler, LossHandler,
+                       ResultsHandler, CallSetterHandler)
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
@@ -26,7 +27,6 @@ MODEL = None
 _ROUTINE_PLUGINS = {}
 _BUILD_PLUGINS = {}
 MODEL_PLUGINS = {}
-NETWORK_HANDLER = NetworkHandler()
 
 
 def check_plugin(plugin, plugin_type_str, D):
@@ -51,160 +51,116 @@ def check_plugin(plugin, plugin_type_str, D):
             setattr(plugin, k, v)
 
 
-def register_build(plugin):
-    global _BUILD_PLUGINS
-    check_plugin(plugin, 'build', _BUILD_PLUGINS)
-
-    plugin.help = parse_docstring(plugin.build)
-    plugin.kwargs = parse_kwargs(plugin.build)
-
-    _BUILD_PLUGINS[plugin.plugin_name] = plugin
-
-
-def register_routine(plugin):
-    global _ROUTINE_PLUGINS
-    check_plugin(plugin, 'routine', _ROUTINE_PLUGINS)
-
-    plugin.help = parse_docstring(plugin.run)
-    plugin.kwargs = parse_kwargs(plugin.run)
-
-    _ROUTINE_PLUGINS[plugin.plugin_name] = plugin
-
-
 def register_model(plugin):
+    plugin._set_kwargs()
+    plugin._set_help()
     global MODEL_PLUGINS
     check_plugin(plugin, 'model', MODEL_PLUGINS)
 
-    plugin.help, plugin.description = parse_header(plugin)
+    plugin.plugin_help, plugin.plugin_description = parse_header(plugin)
 
     MODEL_PLUGINS[plugin.plugin_name] = plugin
 
 
-class BuildReference():
-    def __init__(self, key, **kwargs):
-        self.reference = key
-        self.kwargs = kwargs
-
-    def resolve(self):
-        try:
-            plugin = _BUILD_PLUGINS[self.reference]
-        except KeyError:
-            raise KeyError(
-                'Build `{}` not registered in cortex. '
-                'Available: {}'.format(
-                    self.reference, tuple(
-                        _BUILD_PLUGINS.keys())))
-        return plugin(**self.kwargs)
-
-
-class RoutineReference():
-    def __init__(self, key, **kwargs):
-        self.reference = key
-        self.kwargs = kwargs
-
-    def resolve(self):
-        try:
-            plugin = _ROUTINE_PLUGINS[self.reference]
-        except KeyError:
-            raise KeyError(
-                'Routine `{}` not registered in cortex. '
-                'Available: {}'.format(
-                    self.reference, tuple(
-                        _ROUTINE_PLUGINS.keys())))
-        return plugin(**self.kwargs)
-
-
 class BuildPluginBase():
-    def __init__(self, **kwargs):
+    def __init__(self, **aliases):
+        self._aliases = aliases
         self._data = data.DATA_HANDLER
-        self._nets = models.NETWORK_HANDLER
-        self._names = {}
+        self._kwargs = None
+        self._help = None
+        self._nets = None
 
-        # keys = self.plugin_nets
-        for k, v in kwargs.items():
-            # TODO(Devon): might have to do checking for keys here.
-            if k in self._names:
-                raise KeyError('`{}` is already set'.format(k))
-            self._names[k] = v
+        self.plugin_help = parse_docstring(self.build)
+        self.plugin_kwargs = parse_kwargs(self.build)
 
-        kwargs_ = {}
-        for k, v in self.kwargs.items():
-            k_ = self._names.get(k, k)
-            kwargs_[k_] = v
-        self.kwargs = kwargs_
+    @property
+    def kwargs(self):
+        return self._kwargs
 
-    def __call__(self, **kwargs):
+    @property
+    def help(self):
+        return self._help
+
+    def __call__(self):
         if not hasattr(self, 'build'):
             raise ValueError(
                 'Build {} does not have `build` method set'.format(
                     self.name))
         kwargs_ = {}
-        names = dict((v, k) for k, v in self._names.items())
-        for k, v in kwargs.items():
-            k_ = names.get(k, k)
-            kwargs_[k_] = v
+        for k in self.kwargs.keys():
+            kwargs_[k] = self.kwargs[k]
+
         self.build(**kwargs_)
 
 
 class RoutinePluginBase():
     _training_models = []
 
-    def __init__(self, name=None, **kwargs):
-        self._names = {}
-        self.nets = NetworkHandler()
-        self.results = ResultsHandler()
-        self.losses = LossHandler(self.nets)
-        self.inputs = Handler()
-        self.training_nets = []
+    plugin_name = None
+    plugin_nets = []
+    plugin_vars = []
+    plugin_optional_inputs = []
+
+    def __init__(self, name=None, **aliases):
+        self._aliases = aliases
+        self._kwargs = None
+        self._help = None
+        self._nets = None
+        self._vars = None
+
+        self._results = ResultsHandler()
+        self._losses = None
+        self._training_nets = []
         self.name = name or self.plugin_name
-        self.viz = None
 
-        keys = self.plugin_nets + self.plugin_inputs + \
-            self.plugin_outputs + self.plugin_optional_inputs
-        for k, v in kwargs.items():
-            if k not in keys:
-                raise KeyError(
-                    '`{}` not supported for this plugin. Available: {}'.format(
-                        k, keys))
-            if k in self._names:
-                raise KeyError('`{}` is already set'.format(k))
-            self._names[k] = v
+        self.plugin_help = parse_docstring(self.run)
+        self.plugin_kwargs = parse_kwargs(self.run)
 
-    def __call__(self, **kwargs):
+    @property
+    def results(self):
+        return self._results
+
+    @property
+    def losses(self):
+        return self._losses
+
+    @property
+    def nets(self):
+        return self._nets
+
+    @property
+    def vars(self):
+        return self._vars
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @property
+    def help(self):
+        return self._help
+
+    def perform(self):
         if not hasattr(self, 'run'):
             raise ValueError(
                 'Routine {} does not have `run` method set'.format(
                     self.name))
-        outputs = self.run(**kwargs)
-        if outputs is None:
-            return {}
-        if not isinstance(outputs, tuple):
-            outputs = (outputs,)
-        if len(outputs) != len(self.plugin_outputs):
-            raise ValueError(
-                'Routine has different number of outputs ({}) '
-                'than is set from `plugin_outputs` ({}).'.format(
-                    len(outputs), len(
-                        self.plugin_outputs)))
+        kwargs_ = {}
+        for k, v in self.kwargs.items():
+            kwargs_[k] = v.value
 
-        out_dict = {}
-        for k, v in zip(self.plugin_outputs, outputs):
-            k_ = self._names.get(k, k)
-            out_dict[k_] = v
-        return out_dict
+        self.run(**kwargs_)
 
-    def perform_routine(self, **kwargs):
+    def __call__(self):
         # Run routine
         if exp.DEVICE == torch.device('cpu'):
-            return self(**kwargs)
+            return self.perform()
         else:
             with torch.cuda.device(exp.DEVICE.index):
-                return self(**kwargs)
+                return self.perform()
 
     def reset(self):
         self.results.clear()
-        self.losses.clear()
-        self.inputs.clear()
 
     def set_viz(self, viz):
         self._viz = viz
@@ -212,121 +168,173 @@ class RoutinePluginBase():
 
 class ModelPluginBase():
     def __init__(self):
-        self.builds = {}
-        self.routines = {}
-        self.defaults = dict(
+
+        self._nets = NetworkHandler()
+        self._vars = Handler()
+        self._kwargs = Handler()
+        self._help = Handler()
+        self._training_nets = []
+        self._viz = VizHandler()
+        self._losses = LossHandler(self._nets)
+
+        self._builds = CallSetterHandler(self._add_build)
+        self._routines = CallSetterHandler(self._add_routine)
+        self._defaults = dict(
             data=self.data_defaults,
             optimizer=self.optimizer_defaults,
             train=self.train_defaults)
-        self.train_procedures = []
-        self.eval_procedures = []
+        self._train_procedures = []
+        self._eval_procedures = []
 
-        self.setup = None
+        self._setup = None
 
-        self.results = ResultsHandler(time=dict(), losses=dict())
-        self.nets = models.NETWORK_HANDLER
-        self.losses = LossHandler(self.nets)
-        self.inputs = Handler()
+        self._results = ResultsHandler(time=dict(), losses=dict())
+        self._losses = LossHandler(self._nets)
         self._data = data.DATA_HANDLER
-        self.kwargs = {}
+
+    @property
+    def defaults(self):
+        return self._defaults
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @property
+    def help(self):
+        return self._help
+
+    @property
+    def setup(self):
+        return self._setup
+
+    @property
+    def train_procedures(self):
+        return self._train_procedures
+
+    @property
+    def eval_procedures(self):
+        return self._eval_procedures
+
+    @property
+    def results(self):
+        return self._results
+
+    @property
+    def nets(self):
+        return self._nets
+
+    @property
+    def viz(self):
+        return self._viz
+
+    def _add_routine(self, key, routine):
+        keys = routine.plugin_nets + routine.plugin_vars +\
+            list(routine.plugin_kwargs.keys())
+        if len(keys) != len(set(keys)):
+            raise ValueError('Routine `plugin_nets` ({}), `plugin_vars` ({}), '
+                             'and `kwargs`({}) must have empty union.'
+                             .format(routine.plugin_nets, routine.plugin_vars,
+                                     list(routine.plugin_kwargs.keys())))
+
+        routine.name = key
+        routine._kwargs = AliasHandler(self.kwargs)
+        routine._nets = AliasHandler(self._nets)
+        routine._vars = AliasHandler(self._vars)
+        routine._help = AliasHandler(self._help)
+        routine._losses = AliasHandler(self._losses)
+        routine._viz = self.viz
+
+        for k in routine.plugin_nets:
+            v = routine._aliases.pop(k, k)
+            routine.nets.set_alias(k, v)
+            routine.losses.set_alias(k, v)
+        for k in routine.plugin_vars:
+            v = routine._aliases.pop(k, k)
+            routine.vars.set_alias(k, v)
+        for k in routine.plugin_kwargs:
+            v = routine._aliases.pop(k, k)
+            routine.kwargs.set_alias(k, v)
+            routine.help.set_alias(k, v)
+        if len(routine._aliases) != 0:
+            raise ValueError('Unknown aliases found: {}'.format(routine._aliases))
+
+    def _add_build(self, key, build):
+        keys = build.plugin_nets + list(build.plugin_kwargs.keys())
+        if len(keys) != len(set(keys)):
+            raise ValueError('Build `plugin_nets` ({}) and `kwargs`({}) '
+                             'must have empty union.'
+                             .format(build.plugin_nets,
+                                     list(build.plugin_kwargs.keys())))
+
+        build.name = key
+        build._kwargs = AliasHandler(self.kwargs)
+        build._nets = AliasHandler(self._nets)
+        build._help = AliasHandler(self._help)
+
+        for k in build.plugin_nets:
+            v = build._aliases.pop(k, k)
+            build.nets.set_alias(k, v)
+        for k in build.plugin_kwargs:
+            v = build._aliases.pop(k, k)
+            build.kwargs.set_alias(k, v)
+            build.help.set_alias(k, v)
+        if len(build._aliases) != 0:
+            raise ValueError('Unknown aliases found: {}'.format(build._aliases))
 
     def check(self):
-        for key in self.routines.keys():
-            routine = self.routines[key]
+        for key, routine in self._routines.items():
             if isinstance(routine, RoutinePluginBase):
                 pass
-            elif isinstance(routine, RoutineReference):
-                self.routines[key] = routine.resolve()
             else:
                 raise ValueError
 
-        for key in self.builds.keys():
-            build = self.builds[key]
+        for key, build in self._builds.items():
             if isinstance(build, BuildPluginBase):
                 pass
-            elif isinstance(build, BuildReference):
-                self.builds[key] = build.resolve()
             else:
                 raise ValueError
 
-    def get_kwargs(self):
-        kwargs = {}
+    def _set_kwargs(self):
 
         def add_kwargs(obj):
-            for k, v in obj.kwargs.items():
-                k_ = obj._names.get(k, k)
-                if k_ in kwargs:
-                    if v is None:
-                        pass
-                    elif kwargs[k_] is None:
-                        kwargs[k_] = v
-                    elif kwargs[k_] != v:
+            for k, v in obj.plugin_kwargs.items():
+                if v is None:
+                    continue
+                try:
+                    obj.kwargs[k] = v
+                except RuntimeError:
+                    if obj.kwargs[k] != v:
                         logger.warning('Multiple default values found for {}. '
                                        'This may have unintended effects. '
-                                       'Using {}'.format(k_, kwargs[k_]))
-                else:
-                    kwargs[k_] = v
+                                       'Using {} instead of {}'
+                                       .format(obj.kwargs.get_key(k),
+                                               obj.kwargs[k], v))
 
-        for build in self.builds.values():
+        for build in self._builds.values():
             add_kwargs(build)
 
-        for routine in self.routines.values():
+        for routine in self._routines.values():
             add_kwargs(routine)
-        return kwargs
 
-    def get_help(self):
-        helps = {}
+    def _set_help(self):
 
         def add_help(obj):
-            for k, v in obj.help.items():
-                k_ = obj._names.get(k, k)
-                if k_ in helps:
-                    if v is None:
-                        pass
-                    elif helps[k_] is None:
-                        helps[k_] = v
-                    elif helps[k_] != v:
-                        logger.warning('Multiple '
-                                       'default values found'
-                                       'for {} help.'
-                                       'This may have'
-                                       'unintended'
-                                       'effects. Using {}'
-                                       .format(k_, helps[k_]))
-                else:
-                    helps[k_] = v
+            for k, v in obj.plugin_help.items():
+                try:
+                    obj.help[k] = v
+                except RuntimeError:
+                    logger.warning('Multiple default values found for {} help. '
+                                   'This may have unintended effects. Using '
+                                   '`{}` instead of `{}`'
+                                   .format(obj.kwargs.get_key(k), obj.help[k],
+                                           v))
 
         for build in self.builds.values():
             add_help(build)
 
         for routine in self.routines.values():
             add_help(routine)
-
-        return helps
-
-    def unpack_args(self):
-        builds = Handler()
-        routines = Handler()
-
-        kwargs = self.get_kwargs()
-
-        for key, build in self.builds.items():
-            for k_, v in kwargs.items():
-                if k_ in build.kwargs:
-                    if key in builds:
-                        builds[key][k_] = v
-                    else:
-                        builds[key] = {k_: v}
-
-        for key, routine in self.routines.items():
-            for k_, v in kwargs.items():
-                if k_ in routine.kwargs:
-                    if key in routines:
-                        routines[key][k_] = v
-                    else:
-                        routines[key] = {k_: v}
-
-        return Handler(builds=builds, routines=routines)
 
     def train(self, i, quit_on_bad_values=False):
         return self.run_procedure(
@@ -335,10 +343,13 @@ class ModelPluginBase():
     def run_procedure(self, i, quit_on_bad_values=False, train=False):
         self._data.next()
         self.reset_routines()
-        mode, procedure, updates = self.train_procedures[i]
+        self._vars.clear()
+        mode, procedure, updates = self._train_procedures[i]
 
         for k, v in self._data.batch.items():
-            self.inputs['data.' + k] = v
+            self._vars['data.' + k] = v
+
+        losses = {}
 
         for key, update in zip(procedure, updates):
             if not train:
@@ -347,76 +358,44 @@ class ModelPluginBase():
                 if u > 0:
                     self._data.next()
 
-                routine = self.routines[key]
-                kwargs = self.kwargs[key]
+                routine = self._routines[key]
                 routine.reset()
 
                 # Set to `requires_grad` for models that are trained with this
                 # routine.
                 if train:
-                    for k in routine.training_nets:
-                        k_ = routine._names.get(k, k)
-                        optimizer.OPTIMIZERS[k_].zero_grad()
-                        net = routine.nets[k]
+                    for k in optimizer.OPTIMIZERS.keys():
+                        net = self.nets[k]
+                        optimizer.OPTIMIZERS[k].zero_grad()
                         for p in net.parameters():
-                            p.requires_grad = True
-
-                # Required inputs
-                receives = routine.plugin_inputs
-                sends = [routine._names.get(k, k) for k in receives]
-                for send, receive in zip(sends, receives):
-                    try:
-                        if isinstance(send, (list, tuple)):
-                            send_ = [self.inputs[s] for s in send]
-                            routine.inputs[receive] = send_
-                        else:
-                            routine.inputs[receive] = self.inputs[send]
-                    except KeyError:
-                        raise KeyError(
-                            '{} not found in inputs. Available: {}'.format(
-                                send, tuple(
-                                    self.inputs.keys())))
-
-                # Optional inputs
-                receives = routine.plugin_optional_inputs
-                sends = [routine._names.get(k, k) for k in receives]
-                for send, receive in zip(sends, receives):
-                    try:
-                        if isinstance(send, (list, tuple)):
-                            send_ = [self.inputs[s] for s in send]
-                            routine.inputs[receive] = send_
-                        else:
-                            routine.inputs[receive] = self.inputs[send]
-                    except BaseException:
-                        routine.inputs[receive] = None
+                            p.requires_grad = k in routine._training_nets
 
                 start_time = time.time()
-                outputs = routine.perform_routine(**kwargs)
+                losses_before = {k: v for k, v in self._losses.items()}
+                routine()
+                losses_after = {k: v for k, v in self._losses.items()}
+
+                # Check which networks the routine changed losses to.
+                for k, v in losses_after.items():
+                    if k not in routine._training_nets:
+                        if k not in losses_before:
+                            routine._training_nets.append(k)
+                        elif v != losses_before[k]:
+                            routine._training_nets.append(k)
 
                 # Backprop the losses.
-                if train:
-                    for k, loss in routine.losses.items():
-                        if loss is not None:
-                            loss.backward()
-                            k_ = routine._names.get(k, k)
-                            optimizer.OPTIMIZERS[k_].step()
+                keys = list(self._losses.keys())
+                for i, k in enumerate(keys):
+                    loss = self._losses.pop(k)
+                    if k in losses:
+                        losses[k] += loss.item()
+                    else:
+                        losses[k] = loss.item()
+                    if train and loss is not None:
+                        loss.backward()
+                        optimizer.OPTIMIZERS[k].step()
 
                 end_time = time.time()
-
-                # Populate the inputs with the outputs
-                if u == update - 1:
-                    for k, v in outputs.items():
-                        k_ = key + '.' + k
-                        if k_ in self.inputs:
-                            raise KeyError('{} already in'
-                                           ' inputs. Use a '
-                                           'different name.'.format(k_))
-                        self.inputs[k_] = v.detach()
-
-                # Add losses to the results.
-                for loss_key in routine.losses.keys():
-                    if loss_key not in routine.training_nets:
-                        routine.training_nets.append(loss_key)
 
                 # Check for bad numbers
                 bads = bad_values(routine.results)
@@ -426,40 +405,31 @@ class ModelPluginBase():
                             bads, routine.results))
                     exit(0)
 
-            routine_losses = dict((k, v.item())
-                                  for k, v in routine.losses.items())
-
             # Update results
-            update_dict_of_lists(self.results, **routine.results)
-            update_dict_of_lists(self.results['losses'], **routine_losses)
+            update_dict_of_lists(self._results, **routine.results)
             update_dict_of_lists(
-                self.results['time'], **{key: end_time - start_time})
+                self._results['time'], **{key: end_time - start_time})
 
-    def setup_routine_nets(self):
-        self.viz = VizHandler()
-        for routine in self.routines.values():
-            for k in routine.plugin_nets:
-                k_ = routine._names.get(k, k)
-                routine.nets[k] = self.nets[k_]
-            routine.set_viz(self.viz)
+        update_dict_of_lists(self._results['losses'], **losses)
 
     def reset_routines(self):
-        self.losses.clear()
-        self.inputs.clear()
-        for routine in self.routines.values():
+        self._losses.clear()
+        for routine in self._routines.values():
             routine.reset()
 
     def reset(self):
         self.reset_routines()
-        self.results.clear()
-        self.results.update(losses=dict(), time=dict())
+        self._results.clear()
+        self._results.update(losses=dict(), time=dict())
+        self._vars.clear()
+        self._losses.clear()
 
     def set_train(self):
-        for net in self.nets.values():
+        for net in self._nets.values():
             net.train()
 
     def set_eval(self):
-        for net in self.nets.values():
+        for net in self._nets.values():
             net.eval()
 
 
@@ -532,7 +502,7 @@ def find_models(model_paths):
             MODEL_PLUGINS.pop(k)
 
 
-def build_networks(**build_args):
+def build_networks():
     '''Builds the generator and discriminator.
 
     If architecture module contains a `build_model` function, use that,
@@ -540,11 +510,8 @@ def build_networks(**build_args):
 
     '''
     for build_key, build in MODEL.builds.items():
-        args = build_args[build_key]
-        logger.debug('{} build args: {}'.format(build_key, args))
-        build(**args)
-
-    MODEL.setup_routine_nets()
+        logger.debug('{} build args: {}'.format(build_key, build.kwargs))
+        build()
 
 
 def reload_models(**reload_models):

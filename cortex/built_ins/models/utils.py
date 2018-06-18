@@ -102,13 +102,13 @@ def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
 
     if model_type == 'resnet':
         from cortex.built_ins.networks.resnets import ResEncoder as Encoder
-        encoder_args_ = resnet_encoder_args_
+        encoder_args_ = {k: v for k, v in resnet_encoder_args_.items()}
     elif model_type == 'convnet':
         from cortex.built_ins.networks.convnets import SimpleConvEncoder as Encoder
-        encoder_args_ = convnet_encoder_args_
+        encoder_args_ = {k: v for k, v in convnet_encoder_args_.items()}
     elif model_type == 'mnist':
         from cortex.built_ins.networks.convnets import SimpleConvEncoder as Encoder
-        encoder_args_ = mnist_encoder_args_
+        encoder_args_ = {k: v for k, v in mnist_encoder_args_.items()}
     elif model_type.split('.')[0] == 'tv':
         from cortex.built_ins.networks.torchvision import models
         model_attributes = model_type.split('.')
@@ -164,15 +164,15 @@ def update_decoder_args(x_shape, model_type='convnet', decoder_args=None):
 
     if model_type == 'resnet':
         from cortex.built_ins.networks.resnets import ResDecoder as Decoder
-        decoder_args_ = resnet_decoder_args_
+        decoder_args_ = {k: v for k, v in resnet_decoder_args_.items()}
     elif model_type == 'convnet':
         from cortex.built_ins.networks.conv_decoders import (
             SimpleConvDecoder as Decoder)
-        decoder_args_ = convnet_decoder_args_
+        decoder_args_ = {k: v for k, v in convnet_decoder_args_.items()}
     elif model_type == 'mnist':
         from cortex.built_ins.networks.conv_decoders import (
             SimpleConvDecoder as Decoder)
-        decoder_args_ = mnist_decoder_args_
+        decoder_args_ = {k: v for k, v in mnist_decoder_args_.items()}
     else:
         raise NotImplementedError(model_type)
 

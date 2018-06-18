@@ -34,6 +34,8 @@ def parse_kwargs(f):
 
 
 def parse_docstring(f):
+    if f.__doc__ is None:
+        return {}
     doc = inspect.cleandoc(f.__doc__)
     config = Config()
     google_doc = GoogleDocstring(doc, config)
@@ -159,14 +161,14 @@ def parse_args(models):
     for k, model in models.items():
         subparser = subparsers.add_parser(
             k,
-            help=model.help,
-            description=model.description,
+            help=model.plugin_help,
+            description=model.plugin_description,
             formatter_class=lambda prog: argparse.HelpFormatter(
                 prog,
                 max_help_position=50,
                 width=100))
-        kwargs = model.get_kwargs()
-        helps = model.get_help()
+        kwargs = model.kwargs
+        helps = model.help
 
         for k, v in kwargs.items():
             arg_str = '--' + k
