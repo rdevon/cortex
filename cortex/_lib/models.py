@@ -69,6 +69,7 @@ class BuildPluginBase():
         self._kwargs = None
         self._help = None
         self._nets = None
+        self.name = None
 
         self.plugin_help = parse_docstring(self.build)
         self.plugin_kwargs = parse_kwargs(self.build)
@@ -101,17 +102,17 @@ class RoutinePluginBase():
     plugin_vars = []
     plugin_optional_inputs = []
 
-    def __init__(self, name=None, **aliases):
+    def __init__(self, **aliases):
         self._aliases = aliases
         self._kwargs = None
         self._help = None
         self._nets = None
         self._vars = None
+        self.name = None
 
         self._results = ResultsHandler()
         self._losses = None
         self._training_nets = []
-        self.name = name or self.plugin_name
 
         self.plugin_help = parse_docstring(self.run)
         self.plugin_kwargs = parse_kwargs(self.run)
@@ -257,7 +258,9 @@ class ModelPluginBase():
             routine.kwargs.set_alias(k, v)
             routine.help.set_alias(k, v)
         if len(routine._aliases) != 0:
-            raise ValueError('Unknown aliases found: {}'.format(routine._aliases))
+            raise ValueError('Unknown aliases found for routine {}: {}'
+                             .format(routine.name,
+                                     tuple(routine._aliases.keys())))
 
     def _add_build(self, key, build):
         keys = build.plugin_nets + list(build.plugin_kwargs.keys())

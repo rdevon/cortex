@@ -106,7 +106,7 @@ def setup( # noqa C901
     for routine in models.MODEL.routines.values():
         training_nets += routine._training_nets
 
-    for network_key in training_nets:
+    for network_key in set(training_nets):
         logger.info('Building optimizer for {}'.format(network_key))
         network = models.MODEL.nets[network_key]
 

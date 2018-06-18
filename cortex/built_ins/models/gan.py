@@ -115,6 +115,9 @@ class DiscriminatorRoutine(RoutinePlugin):
     plugin_nets = ['discriminator', 'generator']
     plugin_vars = ['real', 'noise']
 
+    def __init__(self, **aliases):
+        super().__init__(**aliases)
+
     def run(self, measure: str='GAN'):
         '''
 
@@ -126,17 +129,16 @@ class DiscriminatorRoutine(RoutinePlugin):
         '''
         discriminator = self.nets.discriminator
         generator = self.nets.generator
-        Z = self.vars.noise
+
         X_P = self.vars.real
-        X_Q = F.tanh(generator(Z).detach())
+        Z = self.vars.noise
 
-        P_samples = discriminator(X_P)
-        Q_samples = discriminator(X_Q)
+        X_Q = generator(Z)
 
-        E_pos = get_positive_expectation(P_samples, measure)
-        E_neg = get_negative_expectation(Q_samples, measure)
+        E_pos, E_neg, P_samples, Q_samples = self.score(
+            discriminator, X_P, X_Q, measure)
+
         difference = E_pos - E_neg
-
         self.results.update(Scores=dict(Ep=P_samples.mean().item(),
                                         Eq=Q_samples.mean().item()))
         self.results['{} distance'.format(measure)] = difference.item()
@@ -145,6 +147,16 @@ class DiscriminatorRoutine(RoutinePlugin):
                                 real=P_samples.view(-1).data),
                            name='discriminator output')
         self.losses.discriminator = -difference
+
+    @staticmethod
+    def score(discriminator, X_P, X_Q, measure):
+        P_samples = discriminator(X_P)
+        Q_samples = discriminator(X_Q)
+
+        E_pos = get_positive_expectation(P_samples, measure)
+        E_neg = get_negative_expectation(Q_samples, measure)
+
+        return E_pos, E_neg, P_samples, Q_samples
 
 
 class PenaltyRoutine(RoutinePlugin):
@@ -249,7 +261,7 @@ class GeneratorRoutine(RoutinePlugin):
         discriminator = self.nets.discriminator
         generator = self.nets.generator
 
-        X_Q = self.generate(generator, Z)
+        X_Q = generator(Z)
         samples = discriminator(X_Q)
 
         g_loss = generator_loss(samples, measure, loss_type=loss_type)
@@ -257,14 +269,10 @@ class GeneratorRoutine(RoutinePlugin):
 
         self.losses.generator = g_loss
         if weights is not None:
-            self.results.update(Weights=weights.mean().item())
+            self.results.Weights = weights.mean().item()
         self.add_image(X_Q, name='generated')
 
         self.vars.generated = X_Q
-
-    @staticmethod
-    def generate(generator, Z):
-        return F.tanh(generator(Z))
 
 
 class DiscriminatorBuild(BuildPlugin):
@@ -298,8 +306,9 @@ class GeneratorBuild(BuildPlugin):
     plugin_name = 'generator'
     plugin_nets = ['generator']
 
-    def build(self, generator_noise_type='normal', dim_z=64,
-              generator_type: str='convnet', generator_args={}):
+    def build(self, dim_z=64, generator_noise_type='normal',
+              generator_type: str='convnet', output_nonlinearity='tanh',
+              generator_args={}):
         '''
 
         Args:
@@ -310,12 +319,16 @@ class GeneratorBuild(BuildPlugin):
 
         '''
         x_shape = self.get_dims('x', 'y', 'c')
+
         self.add_noise('z', dist=generator_noise_type, size=dim_z)
+        self.add_noise('u', dist=generator_noise_type, size=dim_z)
         self.add_noise('e', dist='uniform', size=1)
 
         Decoder, generator_args = update_decoder_args(
             x_shape, model_type=generator_type, decoder_args=generator_args)
-        generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
+        generator = Decoder(x_shape, dim_in=dim_z,
+                            output_nonlinearity=output_nonlinearity,
+                            **generator_args)
 
         self.nets.generator = generator
 
@@ -335,16 +348,18 @@ class GAN(ModelPlugin):
         super().__init__()
         self.builds.discriminator = DiscriminatorBuild()
         self.builds.generator = GeneratorBuild()
+
         self.routines.generator = GeneratorRoutine(noise='data.z')
-        self.routines.discriminator = DiscriminatorRoutine(real='data.images',
-                                                           noise='data.z')
-        self.routines.penalty = PenaltyRoutine(network='discriminator',
-                                               inputs='data.images')
-        self.add_train_procedure(self.routines.generator,
-                                 self.routines.discriminator,
-                                 self.routines.penalty)
-        self.add_eval_procedure(self.routines.generator,
-                                self.routines.discriminator)
+        self.routines.discriminator = DiscriminatorRoutine(
+            real='data.images', noise='data.z')
+        self.routines.penalty = PenaltyRoutine(
+            network='discriminator', inputs='data.images')
+
+        self.add_train_procedure(
+            self.routines.generator, self.routines.discriminator,
+            self.routines.penalty)
+        self.add_eval_procedure(
+            self.routines.generator, self.routines.discriminator)
 
 
 register_plugin(GAN)

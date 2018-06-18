@@ -168,7 +168,7 @@ class View(nn.Module):
 
 class ResDecoder(nn.Module):
     def __init__(self, shape, dim_in=None, f_size=3, dim_h=64, n_steps=3,
-                 nonlinearity='ReLU', **layer_args):
+                 nonlinearity='ReLU', output_nonlinearity=None, **layer_args):
         super(ResDecoder, self).__init__()
         models = nn.Sequential()
         dim_h_ = dim_h
@@ -180,6 +180,7 @@ class ResDecoder(nn.Module):
         dim_y = dim_y_
         dim_h = dim_h_
         nonlinearity = get_nonlinearity(nonlinearity)
+        self.output_nonlinearity = output_nonlinearity
 
         for n in range(n_steps):
             dim_x //= 2
@@ -215,7 +216,7 @@ class ResDecoder(nn.Module):
         self.models = models
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
-        nonlinearity_args = nonlinearity_args or {}
+        nonlinearity = nonlinearity or self.output_nonlinearity
         x = self.models(x)
 
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
@@ -225,11 +226,12 @@ class ResEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64,
                  fully_connected_layers=None,
                  f_size=3, n_steps=3, nonlinearity='ReLU',
-                 spectral_norm=False, **layer_args):
+                 output_nonlinearity=None, spectral_norm=False, **layer_args):
         super(ResEncoder, self).__init__()
 
         models = nn.Sequential()
         nonlinearity = get_nonlinearity(nonlinearity)
+        self.output_nonlinearity = output_nonlinearity
 
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
         Linear = SNLinear if spectral_norm else nn.Linear
@@ -277,6 +279,7 @@ class ResEncoder(nn.Module):
         self.models = models
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
+        nonlinearity = nonlinearity or self.output_nonlinearity
         x = self.models(x)
 
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)

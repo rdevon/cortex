@@ -91,7 +91,7 @@ class VizHandler():
         if labels is not None:
             labels = convert_to_numpy(labels)
         if name in self.images:
-            raise KeyError('{} already added to '
+            logger.warning('{} already added to '
                            'visualization. Use the name kwarg'
                            .format(name))
         self.images[name] = (im, labels)
@@ -100,7 +100,7 @@ class VizHandler():
         if self.ignore:
             return
         if name in self.histograms:
-            raise KeyError('{} already added'
+            logger.warning('{} already added'
                            ' to visualization.'
                            ' Use the name kwarg'
                            .format(name))
@@ -111,7 +111,7 @@ class VizHandler():
         if self.ignore:
             return
         if name in self.heatmaps:
-            raise KeyError('{} already'
+            logger.warning('{} already'
                            ' added to visualization.'
                            ' Use the name kwarg'
                            .format(name))

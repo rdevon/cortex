@@ -62,7 +62,7 @@ class ALIDiscriminatorRoutine(RoutinePlugin):
         generator = self.nets.generator
         encoder = self.nets.encoder
 
-        X_Q = F.tanh(generator(Z_Q))
+        X_Q = generator(Z_Q)
         Z_P = encoder(X_P)
 
         self.get_results(X_P, X_Q, Z_P, Z_Q, measure)
@@ -81,7 +81,6 @@ class ALIDiscriminatorRoutine(RoutinePlugin):
         self.results.update(Scores=dict(Ep=P_samples.mean().item(),
                                         Eq=Q_samples.mean().item()))
         self.results['{} distance'.format(measure)] = difference.item()
-        self.add_image(X_Q, name='generated')
         self.add_image(X_P, name='ground truth')
         self.add_histogram(dict(fake=Q_samples.view(-1).data,
                                 real=P_samples.view(-1).data),
@@ -114,7 +113,7 @@ class ALIGeneratorRoutine(RoutinePlugin):
         encoder = self.nets.encoder
         discriminator = self.nets.discriminator
 
-        X_Q = F.tanh(generator(Z_Q))
+        X_Q = generator(Z_Q)
         Z_P = encoder(X_P)
 
         E_pos, E_neg, _, _ = ALIDiscriminatorRoutine.score(
@@ -122,6 +121,8 @@ class ALIGeneratorRoutine(RoutinePlugin):
 
         self.losses.generator = -E_neg
         self.losses.encoder = E_pos
+        
+        self.add_image(X_Q, name='generated')
 
         self.vars.generated = X_Q.detach()
         self.vars.inferred = Z_P.detach()
