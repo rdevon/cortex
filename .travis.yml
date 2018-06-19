@@ -2,6 +2,7 @@ language: python
 python:
   - "3.6"
 install:
+  - "pip install ."
   - "pip install flake8"
 script:
   - "flake8 ."
