@@ -4,7 +4,6 @@ python:
 before_install:
   - "bash travis-output.sh"
 install:
-  - "pip install ."
   - "pip install flake8"
 script:
   - "flake8 ."
