@@ -2,6 +2,7 @@ language: python
 python:
   - "3.6"
 before_install:
+  - "pip install -U sphinx"
   - "bash travis-output.sh"
 install:
   - "pip install flake8"
