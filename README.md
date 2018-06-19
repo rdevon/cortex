@@ -1,6 +1,5 @@
 # Warning
 Cortex is under heavy development, and should not be used (and issues should not be raised) unless you know what you are doing (i.e., you are a developer for this project).  
-  
 # Cortex2.0  
 [![Build Status](https://travis-ci.com/joeljpoulin/cortex2.0.svg?branch=setup-pytest)](https://travis-ci.com/joeljpoulin/cortex2.0)  
   
@@ -8,20 +7,40 @@ A machine learning library for PyTorch.
     
 ## Installation
 
+### Prerequisites 
+##### Visdom 
+
+    $pip install visdom
+
 ### From Source
 
     $git clone https://github.com/rdevon/cortex2.0.git
     $cd cortex2.0
     $pip install .
+    
 ### Configuration
+
+#### Visdom Server
+Start a Visdom server and look for server address in the output. By default, the server's address is `http://localhost:8097`.
+
+
+    $python -m visdom.server
+
+#### Experiment Configuration
+
 The first thing to do is to set up the config.yaml. This file is user-specific (it got tracked at some point, so I need to fix this), and will tell cortex everything user-specific regarding data locations, visualation, and outputs. 
   
 ```
-rm -rf ~/.cortex.yml
-cortex setup
+$rm -rf ~/.cortex.yml
+$cortex setup
 ```
+
+
+
+
+
 ##### Configuration File Example
-Located at ~/.cortex.yml
+Located at `~/.cortex.yml`
 ```python  
 torchvision_data_path: /data/milatmp1/hjelmdev/data/  
 data_paths: {  
@@ -83,3 +102,5 @@ classifier.py requires the following to be incorporated into cortex:
   * <Ignore>  
 * Finally, the model needs to be registered by adding it to the `arch_names` string in `models/__init__.py`  
   
+
+
