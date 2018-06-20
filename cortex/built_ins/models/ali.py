@@ -1,13 +1,12 @@
-"""
-Adversarially learned inference and Bi-GAN
+'''Adversarially learned inference and Bi-GAN
 
 Currently noise encoder is not implemented.
 
-"""
+'''
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+__author__ = 'R Devon Hjelm and Samuel Lavoie'
+__author_email__ = 'erroneus@gmail.com'
+
 from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
                             RoutinePlugin)
 from cortex.built_ins.models.gan import (get_positive_expectation,
@@ -15,15 +14,14 @@ from cortex.built_ins.models.gan import (get_positive_expectation,
                                          GeneratorBuild, PenaltyRoutine)
 from cortex.built_ins.models.vae import ImageEncoderBuild
 from cortex.built_ins.networks.fully_connected import FullyConnectedNet
-
-__author__ = 'R Devon Hjelm and Samuel Lavoie'
-__author_email__ = 'erroneus@gmail.com'
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ALIDiscriminator(nn.Module):
     '''ALI discriminator model.
     '''
-
     def __init__(self, x_encoder, z_encoder, topnet):
         super(ALIDiscriminator, self).__init__()
         self.x_encoder = x_encoder
@@ -123,7 +121,7 @@ class ALIGeneratorRoutine(RoutinePlugin):
 
         self.losses.generator = -E_neg
         self.losses.encoder = E_pos
-        
+
         self.add_image(X_Q, name='generated')
 
         self.vars.generated = X_Q.detach()
