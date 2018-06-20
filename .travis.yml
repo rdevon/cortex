@@ -1,7 +1,11 @@
 language: python
 python:
   - "3.6"
+before_install:
+  - "pip install sphinxcontrib-napoleon"
 install:
+  - "bash travis-output.sh"
   - "pip install flake8"
 script:
   - "flake8 ."
+  - "pytest"
