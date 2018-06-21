@@ -2,6 +2,7 @@
 
 '''
 
+from collections.abc import MutableMapping
 import logging
 
 import torch
@@ -9,68 +10,66 @@ import torch
 logger = logging.getLogger('cortex.handlers')
 
 
-class Handler(dict):
-    '''
-    Simple dict-like container with support for `.` access
-    Note: some of the functionalty might not work correctly
-    as a dict, but so far simple tests pass.
-    '''
-
-    __delattr__ = dict.__delitem__
-    _protected = dir({})
+class Handler(MutableMapping):
     _type = None
-    _get_error_string = 'Keyword `{}` not found ' \
-                        '(add as a dict entry). Found: {}'
+    _get_error_string = 'Attribute `{}` not found. Available: {}'
 
-    def check_key_value(self, k, v):
-        if k.startswith('_'):
-            return True
-        if k in self._protected:
-            raise KeyError('Keyword `{}` is protected.'.format(k))
+    def __init__(self, allow_overwrite=True, **kwargs):
+        self._allow_overwrite = allow_overwrite
+        self._locked = False
+        self._storage = dict(**kwargs)
 
-        if self._type and not isinstance(v, self._type):
-            raise ValueError('Type `{}` of `{}` not allowed.'
-                             ' Only `{}` and subclasses are'
-                             ' supported'.format(type(v), k, self._type))
+    def _check_type(self, value):
+        if self._type and not isinstance(value, self._type):
+            raise TypeError('Invalid type ({}), expected {}.'
+                            .format(type(value), self._type))
 
-        return True
-
-    def __init__(self, **kwargs):
-        for k, v in kwargs.items():
-            self.check_key_value(k, v)
-        super().__init__(**kwargs)
-
-    def __setitem__(self, k, v):
-        passes = self.check_key_value(k, v)
-        if passes:
-            super().__setitem__(k, v)
-
-    def __setattr__(self, k, v):
-        if k.startswith('_'):
-            super().__setattr__(k, v)
-        else:
-            self.__setitem__(k, v)
-
-    def __getattr__(self, k):
-        if k.startswith('_'):
-            v = super().get(k)
-            return v
+    def __getitem__(self, key):
         try:
-            v = super().__getitem__(k)
-        except KeyError:
-            raise KeyError(
-                self._get_error_string.format(
-                    k, tuple(
-                        self.keys())))
-        return v
+            return self.__dict__[key]
+        except:
+            raise AttributeError(self._get_error_string
+                                 .format(key, tuple(self.__dict__.keys())))
 
-    def update(self, **kwargs):
-        _kwargs = Handler()
-        for k, v in kwargs.items():
-            passes = self.check_key_value(k, v)
-            if passes:
-                _kwargs[k] = v
-        super().update(**_kwargs)
+    def __delitem__(self, key):
+        del self.__dict__[key]
+
+    def __setitem__(self, key, value):
+        self._check_type(value)
+
+        if self._locked:
+            raise KeyError('Handler is locked.')
+
+        if not self._allow_overwrite and hasattr(self, key):
+            raise KeyError('Overwriting keys not allowed.')
+        self.__dict__[key] = value
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            return super().__setattr__(key, value)
+
+        self._check_type(value)
+
+        if self._locked:
+            raise KeyError('Handler is locked.')
+
+        if not self._allow_overwrite and hasattr(self, key):
+            raise KeyError('Overwriting keys not allowed.')
+
+        super().__setattr__(key, value)
+
+    def __iter__(self):
+        d = dict((k, v) for k, v in self.__dict__.items()
+                 if not k.startswith('_'))
+        return iter(d)
+
+    def __len__(self):
+        d = dict((k, v) for k, v in self.__dict__.items()
+                 if not k.startswith('_'))
+        return len(d)
+
+    def lock(self):
+        self._locked = True
 
 
 def convert_nested_dict_to_handler(d, _class=Handler):
@@ -181,35 +180,10 @@ class AliasHandler(Handler):
 
 
 class NetworkHandler(Handler):
-    '''
-    Simple dict-like container for nn.Module's
-    '''
-
     _type = torch.nn.Module
     _get_error_string = 'Model `{}` not found. You must add ' \
                         'it in `build_models` (as a dict entry).' \
                         ' Found: {}'
-
-    def check_key_value(self, k, v):
-        if k in self:
-            logger.warning(
-                'Key {} already in MODEL_HANDLER, ignoring.'.format(k))
-            return False
-
-        if k in self._protected:
-            raise KeyError('Keyword `{}` is protected.'.format(k))
-
-        if isinstance(v, (list, tuple)):
-            for v_ in v:
-                self.check_key_value(k, v_)
-        elif self._type and not isinstance(v, self._type):
-            raise ValueError('Type `{}` of `{}` not allowed. '
-                             'Only `{}` and subclasses (or tuples '
-                             'of {}) are supported'
-                             .format(type(v), k, self._type, self._type))
-
-        return True
-
 
 ResultsHandler = Handler
 

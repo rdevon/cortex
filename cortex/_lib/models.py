@@ -52,12 +52,15 @@ def check_plugin(plugin, plugin_type_str, D):
 
 
 def register_model(plugin):
+    global MODEL_PLUGINS
+
+    '''
     plugin._set_kwargs()
     plugin._set_help()
-    global MODEL_PLUGINS
     check_plugin(plugin, 'model', MODEL_PLUGINS)
 
     plugin.plugin_help, plugin.plugin_description = parse_header(plugin)
+    '''
 
     MODEL_PLUGINS[plugin.plugin_name] = plugin
 
@@ -167,35 +170,102 @@ class RoutinePluginBase():
         self._viz = viz
 
 
-class ModelPluginBase():
-    def __init__(self):
+class PluginType(type):
+    def __new__(cls, name, bases, attrs):
+        help = {}
+        kwargs = {}
 
-        self._nets = NetworkHandler()
-        self._vars = Handler()
-        self._kwargs = Handler()
-        self._help = Handler()
+        for key in ['build', 'routine', 'visualize']:
+            if key in attrs:
+                help_ = parse_docstring(attrs[key])
+                kwargs_ = parse_kwargs(attrs[key])
+
+                for k, v in help_.items():
+                    if k in help and v != help[k]:
+                        cls._warn_inconsitent_help(key, k, v, kwargs[k])
+
+                for k, v in kwargs_.items():
+                    if k in kwargs and v != kwargs[k]:
+                        cls._warn_inconsitent_kwargs(key, k, v, kwargs[k])
+
+                help.update(**help_)
+                kwargs.update(**kwargs_)
+
+        if 'subplugins' in attrs:
+            for subplugin in attrs['subplugins']:
+                print(subplugin.__dict__['_help'])
+                help_ = subplugin._help
+                kwargs_ = subplugin._kwargs
+                
+                for k, v in help_.items():
+                    if k in help and v != help[k]:
+                        cls._warn_inconsitent_help(key, k, v, kwargs[k])
+
+                for k, v in kwargs_.items():
+                    if k in kwargs and v != kwargs[k]:
+                        cls._warn_inconsitent_kwargs(key, k, v, kwargs[k])
+
+                help.update(**help_)
+                kwargs.update(**kwargs_)
+
+        attrs['_help'] = help
+        attrs['_kwargs'] = kwargs
+
+        return super(PluginType, cls).__new__(cls, name, bases, attrs)
+
+    def _warn_inconsitent_help(cls, k, v, v_):
+        logger.warning('Inconsistent docstring found with argument {k}. '
+                       'Using {v} instead of {v_}'.format(k=k, v=v, v_=v_))
+
+    def _warn_inconsitent_kwargs(cls, k, v, v_):
+        logger.warning('Inconsistent keyword defaults found with argument {k}. '
+                       'Using {v} instead of {v_}'.format(k=k, v=v, v_=v_))
+
+
+class ModelPluginBase(metaclass=PluginType):
+    def __init__(self, aliases=None, owner=None):
+        self._aliases = aliases
+
+        self._nets = NetworkHandler(allow_overwrite=False)
         self._training_nets = []
-        self._viz = VizHandler()
-        self._losses = LossHandler(self._nets)
 
-        self._builds = CallSetterHandler(self._add_build)
-        self._routines = CallSetterHandler(self._add_routine)
-        self._defaults = dict(
-            data=self.data_defaults,
-            optimizer=self.optimizer_defaults,
-            train=self.train_defaults)
+        self._builds = []
+        self._routines = []
+
+        if hasattr(self, 'build'):
+            self._builds.append(getattr(self, 'build'))
+        if hasattr(self, 'routine'):
+            self._routines.append(getattr(self, 'routine'))
+
+        if owner is None:
+            self._viz = VizHandler()
+            self._data = data.DATA_HANDLER
+        else:
+            self._viz = owner.viz
+            self._data = owner.data
+            owner.builds += self.builds
+            owner.routines += self.routines
+
         self._train_procedures = []
         self._eval_procedures = []
 
-        self._setup = None
-
         self._results = ResultsHandler(time=dict(), losses=dict())
         self._losses = LossHandler(self._nets)
-        self._data = data.DATA_HANDLER
 
-    @property
-    def defaults(self):
-        return self._defaults
+    def __setattr__(self, key, value):
+        if isinstance(value, ModelPluginBase):
+            self._import_model(value)
+        super().__setattr__(key, value)
+
+    def _import_model(self, model):
+        pass
+
+    def get_kwargs(self, fn):
+        print(fn)
+        print(self.kwargs)
+        kwargs = parse_kwargs(fn)
+        print(kwargs)
+        assert False
 
     @property
     def kwargs(self):
@@ -332,6 +402,9 @@ class ModelPluginBase():
                                    '`{}` instead of `{}`'
                                    .format(obj.kwargs.get_key(k), obj.help[k],
                                            v))
+
+        if hasattr(self, 'build'):
+            add_help(self)
 
         for build in self.builds.values():
             add_help(build)

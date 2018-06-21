@@ -107,13 +107,7 @@ def generator_loss(q_samples, measure, loss_type=None):
             'Supported: [None, non-saturating, boundary-seek]')
 
 
-class PenaltyRoutine(RoutinePlugin):
-    '''Routine for applying gradient penalty.
-
-    '''
-    plugin_name = 'gradient_penalty'
-    plugin_nets = ['network']
-    plugin_vars = ['inputs']
+class GradientPenalty(ModelPlugin):
 
     def run(self, penalty_type: str='contractive', penalty_amount: float=0.5):
         '''
@@ -271,7 +265,7 @@ class Generator(ModelPlugin):
 
         self.nets.generator = generator
 
-    def run(self, measure: str=None, loss_type: str='non-saturating'):
+    def routine(self, measure: str=None, loss_type: str='non-saturating'):
         '''
 
         Args:
@@ -293,6 +287,9 @@ class Generator(ModelPlugin):
         if weights is not None:
             self.results.Weights = weights.mean().item()
 
+    def generate(self, Z):
+        return self.nets.generator(Z)
+
     def visualize(self):
         self.add_image(X_Q, name='generated')
 
@@ -308,13 +305,29 @@ class GAN(ModelPlugin):
     data_defaults = dict(batch_size=dict(train=64, test=64))
     train_defaults = dict(save_on_lowest='losses.gan')
 
-    def build(self):
-        self.add_noise('z', dist=generator_noise_type, size=dim_z)
-        self.add_noise('u', dist=generator_noise_type, size=dim_z)
+    def __init__(self):
+        super().__init__()
+        self.penalty.nets.network = self.nets.discriminator
+        self.generator.nets.discriminator = self.nets.discriminator
+
+    def build(self, noise_type='normal', dim_z=64):
+        self.add_noise('z', dist=noise_type, size=dim_z)
         self.add_noise('e', dist='uniform', size=1)
 
         self.generator.build()
         self.discriminator.build()
+        self.generator.nets.discriminator = self.discriminator.nets.discriminator
 
+    def routine(self, noise, generator_updates=1, discriminator_updates=1):
+
+        for _ in discriminator_updates:
+            generated = self.generator.nets.generator(noise)
+            self.discriminator.vars.fake = generated
+
+            self.discriminator.routine()
+            self.penalty.routine()
+
+        for _ in generator_updates():
+            self.generator.run()
 
 register_plugin(GAN)

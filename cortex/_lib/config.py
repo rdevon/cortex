@@ -15,7 +15,15 @@ from .handlers import Handler
 
 logger = logging.getLogger('cortex.config')
 
-CONFIG = Handler(viz={}, data_paths={}, arch_paths={}, out_path=None)
+class ConfigHandler:
+    def __init__(self):
+        self.viz = {}
+        self.data_paths = {}
+        self.arch_paths = {}
+        self.out_path = None
+
+
+CONFIG = ConfigHandler()
 
 _config_name = '.cortex.yml'
 _welcome_message = 'Welcome to cortex! Cortex is a library meant to inject ' \

@@ -9,11 +9,7 @@ from torch.utils.data import Dataset
 
 from cortex._lib.config import CONFIG, _config_name
 from cortex._lib.data import DatasetPluginBase, register as register_data
-from cortex._lib.models import (
-    BuildPluginBase,
-    ModelPluginBase,
-    RoutinePluginBase,
-    register_model)
+from cortex._lib.models import ModelPluginBase, register_model
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -145,27 +141,60 @@ class DatasetPlugin(DatasetPluginBase):
         return IndexingDataset
 
 
-class RoutinePlugin(RoutinePluginBase):
-    '''Plugin for custom routines.
+class ModelPlugin(ModelPluginBase):
+    '''Module plugin.
 
     Attributes:
         plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for
-        this routine.
-        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for
-        this routine.
-        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this
-        routine.
+        data_defaults (:obj:`dict`): Data defaults.
+        train_defaults (:obj:`dict`): Train defaults.
+        optimizer_defaults (:obj:`dict`): Optimizer defaults.
 
     '''
-    _protected = ['updates']
-    _required = ['run']
+    _protected = ['description']
+    _required = []
+    _optional = ['setup']
 
     plugin_name = None
-    plugin_nets = []
-    plugin_inputs = []
-    plugin_outputs = []
-    plugin_optional_inputs = []
+    data_defaults = {}
+    train_defaults = {}
+    optimizer_defaults = {}
+
+    @property
+    def routines(self):
+        return self._routines
+
+    @property
+    def builds(self):
+        return self._builds
+
+    def get_dims(self, *queries):
+        '''Gets dimensions of inputs.
+
+        Args:
+            *queries: TODO
+
+        Returns:
+            TODO
+
+        '''
+        return self._data.get_dims(*queries)
+
+    def build_networks(self):
+        for k, build in self.builds.items():
+            kwargs = self.get_kwargs(build)
+            build(**kwargs)
+
+    def add_noise(self, key, dist=None, size=None, **kwargs):
+        '''Adds a noise variable to the model.
+
+        Args:
+            key (str): Name of the noise variable.
+            dist (str): Noise distribution.
+            size (int): Size of the noise.
+            **kwargs: keyword arguments for noise distribution.
+        '''
+        self._data.add_noise(key, dist=dist, size=size, **kwargs)
 
     def add_image(self, *args, **kwargs):
         '''Adds image for visualization.
@@ -196,77 +225,6 @@ class RoutinePlugin(RoutinePluginBase):
 
         '''
         self._viz.add_scatter(*args, **kwargs)
-
-
-class BuildPlugin(BuildPluginBase):
-    '''Plugin for custom build routines.
-
-    Attributes:
-        plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this build.
-        nets (:obj:`Handler` of :obj:`nn.Module`):
-
-    '''
-    _protected = []
-    _required = ['build']
-
-    plugin_name = None
-    plugin_nets = []
-
-    @property
-    def nets(self):
-        return self._nets
-
-    def get_dims(self, *queries):
-        '''Gets dimensions of inputs.
-
-        Args:
-            *queries: TODO
-
-        Returns:
-            TODO
-
-        '''
-        return self._data.get_dims(*queries)
-
-    def add_noise(self, key, dist=None, size=None, **kwargs):
-        '''Adds a noise variable to the model.
-
-        Args:
-            key (str): Name of the noise variable.
-            dist (str): Noise distribution.
-            size (int): Size of the noise.
-            **kwargs: keyword arguments for noise distribution.
-        '''
-        self._data.add_noise(key, dist=dist, size=size, **kwargs)
-
-
-class ModelPlugin(ModelPluginBase):
-    '''Module plugin.
-
-    Attributes:
-        plugin_name (str): Name of the plugin.
-        data_defaults (:obj:`dict`): Data defaults.
-        train_defaults (:obj:`dict`): Train defaults.
-        optimizer_defaults (:obj:`dict`): Optimizer defaults.
-
-    '''
-    _protected = ['description']
-    _required = []
-    _optional = ['setup']
-
-    plugin_name = None
-    data_defaults = {}
-    train_defaults = {}
-    optimizer_defaults = {}
-
-    @property
-    def routines(self):
-        return self._routines
-
-    @property
-    def builds(self):
-        return self._builds
 
     def _add_routine_name(self, routine):
         '''Adds a routine
