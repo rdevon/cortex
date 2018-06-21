@@ -25,10 +25,12 @@ def cls():
     '''.format(arg1=arg1, arg1_help=arg1_help, arg2=arg2, arg2_help=arg2_help)
 
     class TestModel(ModelPlugin):
+        @ModelPlugin.build_method
         def build(self, a=17, b=19):
             self.nets.net = FullyConnectedNet(a, b)
         build.__doc__ = _build_doc
 
+        @ModelPlugin.routine_method
         def routine(self, inputs):
             net = self.nets.net
             output = net(inputs)
@@ -46,6 +48,7 @@ def test_class(cls):
     assert cls._help[arg2] == arg2_help, cls.help[arg2]
     assert cls._kwargs[arg1] == 17, cls.kwargs[arg1]
     assert cls._kwargs[arg2] == 19, cls.kwargs[arg2]
+    assert hasattr(cls.build, '_is_build')
 
 
 def test_subplugin(cls):
