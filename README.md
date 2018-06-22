@@ -37,9 +37,6 @@ $cortex setup
 ```
 
 
-
-
-
 ##### Configuration File Example
 Located at `~/.cortex.yml`
 ```python  
@@ -79,6 +76,33 @@ To run an experiment.
 ```
 cortex GAN --d.source CIFAR10 --d.copy_to_local
 ```
+
+Develop
+=======
+
+Documentation
+-------------
+
+### Generate API documentation
+
+    $ cd docs
+    $ sphinx-apidoc -f -o source ../cortex
+
+### Verify Documentation Formatting
+
+    $ cd docs/source
+    $ doc8 -v
+
+### Building Documentation
+
+    $ cd docs
+    $ make html
+
+### Serving Documentation Locally
+
+    $ cd docs/build/html
+    $ python -m http.server 8000 --bind 127.0.0.1
+
 
 # Customize Cortex2.0 
 Cortex is meant to be an API-minimal library for runnning machine learning experiments that use gradient descent and backprop (though in principle should extend beyond this). As such, the actual models as implemented usually only require using one method from a `data_handler` object. Otherwise, as an illustration of how to get cortex working for your models, first look at:  
