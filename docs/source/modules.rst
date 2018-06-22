@@ -1,4 +1,4 @@
-API
+cortex
 ======
 
 .. toctree::

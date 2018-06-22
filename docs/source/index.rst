@@ -10,3 +10,7 @@ Welcome to Cortex2.0
    install
    getting_started
    modules
+   develop
+
+
+
