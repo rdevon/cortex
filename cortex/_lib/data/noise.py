@@ -5,7 +5,6 @@
 import torch
 import torch.distributions as tdist
 
-
 _dist_dict = dict(
     bernoulli=tdist.bernoulli.Bernoulli,
     beta=tdist.beta.Beta,
@@ -30,8 +29,7 @@ _dist_dict = dict(
     relaxed_bernoulli=tdist.relaxed_bernoulli.RelaxedBernoulli,
     relaxed_categorical=tdist.relaxed_categorical.RelaxedOneHotCategorical,
     studentT=tdist.studentT.StudentT,
-    uniform=tdist.uniform.Uniform
-)
+    uniform=tdist.uniform.Uniform)
 
 
 def get_noise_var(dist, size, **kwargs):

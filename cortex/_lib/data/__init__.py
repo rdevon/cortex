@@ -15,9 +15,14 @@ DATA_HANDLER = DataHandler()
 _PLUGINS = {}
 
 
-def setup(source: str=None, batch_size=64, n_workers: int=4,
-          skip_last_batch: bool=False, DataLoader=None,
-          copy_to_local: bool=False, data_args={}, shuffle: bool=True):
+def setup(source: str = None,
+          batch_size=64,
+          n_workers: int = 4,
+          skip_last_batch: bool = False,
+          DataLoader=None,
+          copy_to_local: bool = False,
+          data_args={},
+          shuffle: bool = True):
     """
     Dataset entrypoint.
 
@@ -51,8 +56,12 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
                                .format(source))
 
             plugin.handle(source, copy_to_local=copy_to_local, **data_args)
-            DATA_HANDLER.add_dataset(source, plugin, n_workers=n_workers,
-                                     shuffle=shuffle, DataLoader=DataLoader)
+            DATA_HANDLER.add_dataset(
+                source,
+                plugin,
+                n_workers=n_workers,
+                shuffle=shuffle,
+                DataLoader=DataLoader)
     else:
         raise ValueError('No source provided. Use `--d.source`')
 
@@ -69,6 +78,7 @@ def register(plugin):
 
 
 class DatasetPluginBase():
+
     def __init__(self):
 
         if len(self.sources) == 0:
