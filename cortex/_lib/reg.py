@@ -2,11 +2,9 @@ from . import models
 
 __author__ = 'Bradley Baker'
 __author_email__ = 'bbaker@mrn.org'
-
 ''' CLIPPING is a global dictionary of clipping boundaries,
     keyed by model name'''
 CLIPPING = {}
-
 ''' REGULARIZER is a global dictionary of floats, the
     lambda scaling factor for L1 regularization
     keyed by model name'''

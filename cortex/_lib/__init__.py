@@ -53,8 +53,8 @@ def setup_experiment(args):
     viz_init(config.CONFIG.viz)
 
     if args.reload and not args.load_models:
-        exp.reload(args.reload, args.reloads, args.name,
-                   args.out_path, args.clean, config.CONFIG)
+        exp.reload(args.reload, args.reloads, args.name, args.out_path,
+                   args.clean, config.CONFIG)
     else:
         name = args.name or model_name
         exp.setup_new(model.defaults, name, args.out_path, args.clean,
@@ -88,8 +88,7 @@ def setup_experiment(args):
     exp.update_args(command_line_args)
 
     for k, v in exp.ARGS.items():
-        logger.info('Ultimate {} arguments: \n{}'
-                    .format(k, pprint.pformat(v)))
+        logger.info('Ultimate {} arguments: \n{}'.format(k, pprint.pformat(v)))
 
     if model.setup is not None:
         model.setup(**exp.ARGS)

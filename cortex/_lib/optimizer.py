@@ -10,7 +10,6 @@ import torch.backends.cudnn as cudnn
 
 from . import data, exp, models, reg
 
-
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
@@ -18,9 +17,7 @@ logger = logging.getLogger('cortex.optimizer')
 OPTIMIZERS = {}
 
 _optimizer_defaults = dict(
-    SGD=dict(momentum=0.9),
-    Adam=dict(betas=(0.5, 0.999))
-)
+    SGD=dict(momentum=0.9), Adam=dict(betas=(0.5, 0.999)))
 
 
 def setup(  # noqa C901
@@ -58,9 +55,8 @@ def setup(  # noqa C901
             and optimizer in _optimizer_defaults.keys():
         optimizer_options = _optimizer_defaults[optimizer]
     elif optimizer_options == 'default':
-        raise ValueError(
-            'Default optimizer options for'
-            ' `{}` not available.'.format(optimizer))
+        raise ValueError('Default optimizer options for'
+                         ' `{}` not available.'.format(optimizer))
 
     # Set the number of updates per routine
     updates_per_routine = updates_per_routine or {}
@@ -89,14 +85,12 @@ def setup(  # noqa C901
             for net in network:
                 net.to(exp.DEVICE)
                 torch.nn.DataParallel(
-                    net, device_ids=range(
-                        torch.cuda.device_count()))
+                    net, device_ids=range(torch.cuda.device_count()))
         else:
             network.to(exp.DEVICE)
             # TODO(Devon): is the next line really doing anything?
             torch.nn.DataParallel(
-                network, device_ids=range(
-                    torch.cuda.device_count()))
+                network, device_ids=range(torch.cuda.device_count()))
 
     with torch.no_grad():
         data.DATA_HANDLER.reset('train', make_pbar=False)
@@ -142,22 +136,17 @@ def setup(  # noqa C901
         optimizer = op(params, lr=eta, weight_decay=wd, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
 
-        logger.info(
-            'Training {} routine with {}'.format(
-                network_key, optimizer))
+        logger.info('Training {} routine with {}'.format(
+            network_key, optimizer))
 
         # Additional regularization
         if network_key in reg.CLIPPING.keys():
-            logger.info(
-                'Clipping {} with {}'.format(
-                    network_key,
-                    reg.CLIPPING[network_key]))
+            logger.info('Clipping {} with {}'.format(network_key,
+                                                     reg.CLIPPING[network_key]))
 
         if network_key in reg.L1_DECAY.keys():
-            logger.info(
-                'L1 Decay {} with {}'.format(
-                    network_key,
-                    reg.L1_DECAY[network_key]))
+            logger.info('L1 Decay {} with {}'.format(network_key,
+                                                     reg.L1_DECAY[network_key]))
 
     if not exp.DEVICE == torch.device('cpu'):
         cudnn.benchmark = True

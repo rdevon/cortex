@@ -26,10 +26,7 @@ NAME = 'X'
 SUMMARY = {'train': {}, 'test': {}}
 OUT_DIRS = {}
 ARGS = Handler(
-    data=Handler(),
-    model=Handler(),
-    optimizer=Handler(),
-    train=Handler())
+    data=Handler(), model=Handler(), optimizer=Handler(), train=Handler())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
 
@@ -58,8 +55,7 @@ def update_args(kwargs):
         if k not in ARGS:
             raise KeyError(
                 'Argument key {} not supported. Available: {}'.format(
-                    k, tuple(
-                        ARGS.keys())))
+                    k, tuple(ARGS.keys())))
         elif not isinstance(kwargs[k], dict):
             raise ValueError('Only dictionaries supported for base values.')
         else:
@@ -82,14 +78,8 @@ def configure_from_yaml(config_file=None):
         ARGS.data.update(**d.get('data', {}))
 
 
-def setup_new(
-        arch_default_args,
-        name,
-        out_path,
-        clean,
-        config,
-        model_file,
-        reloads):
+def setup_new(arch_default_args, name, out_path, clean, config, model_file,
+              reloads):
     global NAME, INFO
     update_args(arch_default_args)
 
@@ -147,8 +137,8 @@ def reload(exp_file, reloads, name, out_path, clean, config):
         setup_out_dir(out_path, config.out_path, name, clean=clean)
 
     out_path = path.dirname(path.dirname(exp_file))
-    out_dirs = dict((k, path.join(out_path, path.basename(v)))
-                    for k, v in out_dirs.items())
+    out_dirs = dict(
+        (k, path.join(out_path, path.basename(v))) for k, v in out_dirs.items())
     OUT_DIRS.update(**out_dirs)
 
 
@@ -186,8 +176,7 @@ def save(prefix=''):
         info=INFO,
         args=args,
         out_dirs=OUT_DIRS,
-        summary=SUMMARY
-    )
+        summary=SUMMARY)
 
     file_path = path.join(binary_dir, '{}.t7'.format(prefix))
     logger.info('Saving checkpoint {}'.format(file_path))

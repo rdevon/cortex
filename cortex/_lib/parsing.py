@@ -70,9 +70,10 @@ optimizer_args = parse_kwargs(optimizer.setup)
 default_args = dict(data=data_args, optimizer=optimizer_args, train=train_args)
 default_help = dict(data=data_help, optimizer=optimizer_help, train=train_help)
 
-_protected_args = ['arch', 'out_path', 'name', 'reload',
-                   'args', 'copy_to_local', 'meta', 'config_file',
-                   'clean', 'verbosity', 'test']
+_protected_args = [
+    'arch', 'out_path', 'name', 'reload', 'args', 'copy_to_local', 'meta',
+    'config_file', 'clean', 'verbosity', 'test'
+]
 
 logger = logging.getLogger('cortex.parsing')
 
@@ -103,27 +104,46 @@ def make_argument_parser():
         help=('Name of the experiment. If given, base name of '
               'output directory will be `--name`. If not given,'
               ' name will be the base name of the `--out_path`'))
-    parser.add_argument('-r', '--reload', type=str, default=None,
-                        help=('Path to model to reload.'))
+    parser.add_argument(
+        '-r',
+        '--reload',
+        type=str,
+        default=None,
+        help=('Path to model to reload.'))
     parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
-    parser.add_argument('-M', '--load_models',
-                        type=str, default=None,
-                        help=('Path to model to reload. Does not load args,'
-                              ' info, etc'))
+    parser.add_argument(
+        '-M',
+        '--load_models',
+        type=str,
+        default=None,
+        help=('Path to model to reload. Does not load args,'
+              ' info, etc'))
     parser.add_argument('-m', '--meta', type=str, default=None)
-    parser.add_argument('-c', '--config_file', default=None,
-                        help=('Configuration yaml file. '
-                              'See `exps/` for examples'))
-    parser.add_argument('-k', '--clean', action='store_true', default=False,
-                        help=('Cleans the output directory. '
-                              'This cannot be undone!'))
-    parser.add_argument('-v', '--verbosity', type=int, default=1,
-                        help='Verbosity of the logging. (0, 1, 2)')
+    parser.add_argument(
+        '-c',
+        '--config_file',
+        default=None,
+        help=('Configuration yaml file. '
+              'See `exps/` for examples'))
+    parser.add_argument(
+        '-k',
+        '--clean',
+        action='store_true',
+        default=False,
+        help=('Cleans the output directory. '
+              'This cannot be undone!'))
+    parser.add_argument(
+        '-v',
+        '--verbosity',
+        type=int,
+        default=1,
+        help='Verbosity of the logging. (0, 1, 2)')
     parser.add_argument('-d', '--device', type=int, default=0)
     return parser
 
 
 class StoreDictKeyPair(argparse.Action):
+
     def __call__(self, parser, namespace, values, option_string=None):
         d = {}
 
@@ -150,12 +170,13 @@ def parse_args(models):
         title='Cortex',
         help='Select an architecture.',
         description='Cortex is a wrapper '
-                    'around pytorch that makes training models '
+        'around pytorch that makes training models '
         'more convenient.',
         dest='command')
 
     subparsers.add_parser(
-        'setup', help='Setup cortex configuration.',
+        'setup',
+        help='Setup cortex configuration.',
         description='Initializes or updates the `.cortex.yml` file.')
 
     for k, model in models.items():
@@ -226,9 +247,12 @@ def parse_args(models):
                 elif isinstance(v, bool) and not v:
                     action = 'store_true'
                     dest = key + '.' + k
-                    subparser.add_argument(arg_str, dest=dest,
-                                           action=action, default=False,
-                                           help=help)
+                    subparser.add_argument(
+                        arg_str,
+                        dest=dest,
+                        action=action,
+                        default=False,
+                        help=help)
                 elif isinstance(v, bool):
                     type_ = type(v)
                     metavar = '<' + type_.__name__ + \
