@@ -49,15 +49,11 @@ def test_class(cls):
 
 def test_subplugin(cls):
     class TestModel2(ModelPlugin):
-        def __init__(self):
+        def __init__(self, contract):
             super().__init__()
-            contract = dict(
-                kwargs=dict(b='c'),
-                nets=dict(net='net2')
-            )
             self.submodel = cls(contract=contract)
 
-        def build(self, d=17, c=22):
+        def build(self, d=31, c=23):
             self.submodel.build(**self.kwargs)
             self.nets.net = FullyConnectedNet(d, c)
 
@@ -72,9 +68,30 @@ def test_subplugin(cls):
             self.results.output = output.sum().item()
             self.results.output2 = self.subplugin.results.output
 
-    model = TestModel2()
+    contract = dict(
+        kwargs=dict(b='c'),
+        nets=dict(net='net')
+    )
+
+    model = TestModel2(contract)
+
+    try:
+        model.build(**model.kwargs)
+        assert 0
+    except KeyError:
+        pass
+
+    ModelPlugin._nets.clear()
+
+    contract = dict(
+        kwargs=dict(b='c'),
+        nets=dict(net='net2')
+    )
+    model = TestModel2(contract)
+
     print(model.kwargs)
     model.build(**model.kwargs)
+    print(model.nets['net'].parameters())
     #print(model._help)
 
 

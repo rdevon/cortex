@@ -28,8 +28,10 @@ class Handler(MutableMapping):
         try:
             return self.__dict__[key]
         except:
+            d = dict((k, v) for k, v in self.__dict__.items()
+                     if not k.startswith('_'))
             raise AttributeError(self._get_error_string
-                                 .format(key, tuple(self.__dict__.keys())))
+                                 .format(key, tuple(d.keys())))
 
     def __delitem__(self, key):
         del self.__dict__[key]
@@ -70,6 +72,11 @@ class Handler(MutableMapping):
 
     def lock(self):
         self._locked = True
+
+    def __str__(self):
+        d = dict((k, v) for k, v in self.__dict__.items()
+                 if not k.startswith('_'))
+        return d.__str__()
 
 
 def convert_nested_dict_to_handler(d, _class=Handler):
@@ -144,8 +151,7 @@ class LossHandler(Handler):
         if k not in self._nets:
             raise AttributeError(
                 'Keyword `{}` not in the model_handler. Found: {}.'.format(
-                    k, tuple(
-                        self._nets.keys())))
+                    k, tuple(self._nets.keys())))
 
         if len(v.size()) > 0:
             raise ValueError('Loss must be a scalar. Got {}'.format(v.size()))

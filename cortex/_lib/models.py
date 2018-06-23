@@ -114,6 +114,15 @@ class ModelPluginBase(metaclass=PluginType):
         if contract:
             contract = self._check_contract(contract)
             self._accept_contract(contract)
+        else:
+            if hasattr(self, 'build'):
+                self.build = self._wrap(self.build)
+
+            if hasattr(self, 'routine'):
+                self.routine = self._wrap(self.routine)
+
+            if hasattr(self, 'visualize'):
+                self.visualize = self._wrap(self.visualize)
 
     def __setattr__(self, key, value):
         if isinstance(value, ModelPluginBase):
@@ -220,13 +229,13 @@ class ModelPluginBase(metaclass=PluginType):
     def results(self):
         return self._results
 
-    def aliased(self, net):
-        pass
-
     @property
     def nets(self):
-        self.aliased(self._nets)
         return self._nets
+
+    @property
+    def losses(self):
+        return self._losses
 
     @property
     def viz(self):
