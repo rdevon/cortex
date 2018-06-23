@@ -25,12 +25,10 @@ def cls():
     '''.format(arg1=arg1, arg1_help=arg1_help, arg2=arg2, arg2_help=arg2_help)
 
     class TestModel(ModelPlugin):
-        @ModelPlugin.build_method
         def build(self, a=17, b=19):
             self.nets.net = FullyConnectedNet(a, b)
         build.__doc__ = _build_doc
 
-        @ModelPlugin.routine_method
         def routine(self, inputs):
             net = self.nets.net
             output = net(inputs)
@@ -38,8 +36,6 @@ def cls():
             self.losses.net = output.sum()
             self.results.output = output.sum().item()
 
-
-    print(TestModel._kwargs)
     return TestModel
 
 
@@ -48,28 +44,25 @@ def test_class(cls):
     assert cls._help[arg2] == arg2_help, cls.help[arg2]
     assert cls._kwargs[arg1] == 17, cls.kwargs[arg1]
     assert cls._kwargs[arg2] == 19, cls.kwargs[arg2]
-    assert hasattr(cls.build, '_is_build')
+    assert cls._args[0] == 'inputs'
 
 
 def test_subplugin(cls):
     class TestModel2(ModelPlugin):
-
-        subplugins = [cls]
-
         def __init__(self):
             super().__init__()
-            self.subplugin = cls(aliases=dict(b='c'))
+            contract = dict(
+                kwargs=dict(b='c'),
+                nets=dict(net='net2')
+            )
+            self.submodel = cls(contract=contract)
 
-        def build(self, a=17, c=22):
-            kwargs = self.get_kwargs(self.subplugin.build)
-            self.subplugin.build(**kwargs)
-
-            self.nets.net = FullyConnectedNet(a, c)
-            self.nets.net2 = self.subplugin.nets.net
+        def build(self, d=17, c=22):
+            self.submodel.build(**self.kwargs)
+            self.nets.net = FullyConnectedNet(d, c)
 
         def routine(self, inputs):
-            kwargs = self.get_kwargs(self.subplugin)
-            self.subplugin.run(inputs, **kwargs)
+            self.subplugin.run(inputs, **self.kwargs)
 
             net = self.nets.net
             output = net(inputs)
@@ -79,7 +72,9 @@ def test_subplugin(cls):
             self.results.output = output.sum().item()
             self.results.output2 = self.subplugin.results.output
 
-    #model = TestModel2()
+    model = TestModel2()
+    print(model.kwargs)
+    model.build(**model.kwargs)
     #print(model._help)
 
 
@@ -87,7 +82,6 @@ def test_register(cls):
     register_model(cls)
 
     model = cls()
-    model.build_networks()
     #print(model.nets)
     #assert isinstance(model, ModelPlugin)
 

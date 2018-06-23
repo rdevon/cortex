@@ -17,8 +17,6 @@ __author_email__ = 'erroneus@gmail.com'
 __all__ = [
     'DatasetPlugin',
     'ModelPlugin',
-    'RoutinePlugin',
-    'BuildPlugin',
     'register_plugin']
 
 
@@ -159,14 +157,6 @@ class ModelPlugin(ModelPluginBase):
     data_defaults = {}
     train_defaults = {}
     optimizer_defaults = {}
-
-    @property
-    def routines(self):
-        return self._routines
-
-    @property
-    def builds(self):
-        return self._builds
 
     def get_dims(self, *queries):
         '''Gets dimensions of inputs.

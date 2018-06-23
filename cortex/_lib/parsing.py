@@ -20,17 +20,31 @@ __author_email__ = 'erroneus@gmail.com'
 def parse_kwargs(f):
     kwargs = {}
     sig = inspect.signature(f)
-    signatures = []
     for i, (sk, sv) in enumerate(sig.parameters.items()):
 
         if sk == 'self':
             pass
         elif sk == 'kwargs':
             pass
+        elif sv.default == inspect.Parameter.empty:
+            pass
         else:
-            signatures.append(sv.name)
             kwargs[sv.name] = sv.default
     return kwargs
+
+
+def parse_inputs(f):
+    args = []
+    sig = inspect.signature(f)
+    for i, (sk, sv) in enumerate(sig.parameters.items()):
+
+        if sk == 'self':
+            pass
+        elif sk == 'kwargs':
+            pass
+        elif sv.default == inspect.Parameter.empty:
+            args.append(sv.name)
+    return args
 
 
 def parse_docstring(f):

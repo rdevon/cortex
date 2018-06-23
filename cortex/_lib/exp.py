@@ -12,7 +12,6 @@ import yaml
 
 import torch
 
-from . import models
 from .log_utils import set_file_logger
 from .handlers import Handler, convert_nested_dict_to_handler
 
@@ -32,6 +31,7 @@ ARGS = Handler(
     train=Handler())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
+MODEL = None
 
 
 def _file_string(prefix=''):
@@ -159,7 +159,7 @@ def save(prefix=''):
         return
 
     models_ = {}
-    for k, model in models.MODEL.nets.items():
+    for k, model in MODEL.nets.items():
         if k == 'extras':
             continue
         if isinstance(model, (tuple, list)):
@@ -249,3 +249,15 @@ def setup_device(device):
             logger.info('GPU ' + str(device) + ' doesn\'t exists. Using CPU')
     else:
         logger.info('Using CPU')
+
+
+def reload_models(**reload_models):
+    global MODEL_HANDLER
+    if MODEL_HANDLER is None:
+        raise RuntimeError(
+            'MODEL_HANDLER not set. `reload_models` should only be used after '
+            '`models.setup_models` has been called.')
+    for k, v in reload_models.items():
+        logger.info('Reloading model {}'.format(k))
+        logger.debug(v)
+        MODEL_HANDLER[k] = v

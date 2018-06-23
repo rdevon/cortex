@@ -8,12 +8,9 @@ import os
 import sys
 import time
 
-import torch
-
-from . import data, exp, optimizer
-from .parsing import parse_docstring, parse_header, parse_kwargs
-from .handlers import (AliasHandler, Handler, NetworkHandler, LossHandler,
-                       ResultsHandler, CallSetterHandler)
+from . import data, optimizer
+from .parsing import parse_docstring, parse_inputs, parse_kwargs
+from .handlers import aliased, NetworkHandler, LossHandler, ResultsHandler
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
@@ -22,7 +19,6 @@ __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.models')
-MODEL = None
 
 _ROUTINE_PLUGINS = {}
 _BUILD_PLUGINS = {}
@@ -54,131 +50,25 @@ def check_plugin(plugin, plugin_type_str, D):
 def register_model(plugin):
     global MODEL_PLUGINS
 
-    '''
-    plugin._set_kwargs()
-    plugin._set_help()
-    check_plugin(plugin, 'model', MODEL_PLUGINS)
+    if plugin.__name__ in MODEL_PLUGINS:
+        raise KeyError('{} already registered under the same name.'
+                       .format(plugin.__name__))
 
-    plugin.plugin_help, plugin.plugin_description = parse_header(plugin)
-    '''
-
-    MODEL_PLUGINS[plugin.plugin_name] = plugin
-
-
-class BuildPluginBase():
-    def __init__(self, **aliases):
-        self._aliases = aliases
-        self._data = data.DATA_HANDLER
-        self._kwargs = None
-        self._help = None
-        self._nets = None
-        self.name = None
-
-        self.plugin_help = parse_docstring(self.build)
-        self.plugin_kwargs = parse_kwargs(self.build)
-
-    @property
-    def kwargs(self):
-        return self._kwargs
-
-    @property
-    def help(self):
-        return self._help
-
-    def __call__(self):
-        if not hasattr(self, 'build'):
-            raise ValueError(
-                'Build {} does not have `build` method set'.format(
-                    self.name))
-        kwargs_ = {}
-        for k in self.kwargs.keys():
-            kwargs_[k] = self.kwargs[k]
-
-        self.build(**kwargs_)
-
-
-class RoutinePluginBase():
-    _training_models = []
-
-    plugin_name = None
-    plugin_nets = []
-    plugin_vars = []
-    plugin_optional_inputs = []
-
-    def __init__(self, **aliases):
-        self._aliases = aliases
-        self._kwargs = None
-        self._help = None
-        self._nets = None
-        self._vars = None
-        self.name = None
-
-        self._results = ResultsHandler()
-        self._losses = None
-        self._training_nets = []
-
-        self.plugin_help = parse_docstring(self.run)
-        self.plugin_kwargs = parse_kwargs(self.run)
-
-    @property
-    def results(self):
-        return self._results
-
-    @property
-    def losses(self):
-        return self._losses
-
-    @property
-    def nets(self):
-        return self._nets
-
-    @property
-    def vars(self):
-        return self._vars
-
-    @property
-    def kwargs(self):
-        return self._kwargs
-
-    @property
-    def help(self):
-        return self._help
-
-    def perform(self):
-        if not hasattr(self, 'run'):
-            raise ValueError(
-                'Routine {} does not have `run` method set'.format(
-                    self.name))
-        kwargs_ = {}
-        for k, v in self.kwargs.items():
-            kwargs_[k] = v.value
-
-        self.run(**kwargs_)
-
-    def __call__(self):
-        # Run routine
-        if exp.DEVICE == torch.device('cpu'):
-            return self.perform()
-        else:
-            with torch.cuda.device(exp.DEVICE.index):
-                return self.perform()
-
-    def reset(self):
-        self.results.clear()
-
-    def set_viz(self, viz):
-        self._viz = viz
+    MODEL_PLUGINS[plugin.__name__] = plugin
 
 
 class PluginType(type):
     def __new__(cls, name, bases, attrs):
         help = {}
         kwargs = {}
+        args = set()
 
         for key in ['build', 'routine', 'visualize']:
             if key in attrs:
-                help_ = parse_docstring(attrs[key])
-                kwargs_ = parse_kwargs(attrs[key])
+                attr = attrs[key]
+                help_ = parse_docstring(attr)
+                kwargs_ = parse_kwargs(attr)
+                args_ = parse_inputs(attr)
 
                 for k, v in help_.items():
                     if k in help and v != help[k]:
@@ -190,26 +80,11 @@ class PluginType(type):
 
                 help.update(**help_)
                 kwargs.update(**kwargs_)
-
-        if 'subplugins' in attrs:
-            for subplugin in attrs['subplugins']:
-                print(subplugin.__dict__['_help'])
-                help_ = subplugin._help
-                kwargs_ = subplugin._kwargs
-                
-                for k, v in help_.items():
-                    if k in help and v != help[k]:
-                        cls._warn_inconsitent_help(key, k, v, kwargs[k])
-
-                for k, v in kwargs_.items():
-                    if k in kwargs and v != kwargs[k]:
-                        cls._warn_inconsitent_kwargs(key, k, v, kwargs[k])
-
-                help.update(**help_)
-                kwargs.update(**kwargs_)
+                args |= set(args_)
 
         attrs['_help'] = help
         attrs['_kwargs'] = kwargs
+        attrs['_args'] = list(args)
 
         return super(PluginType, cls).__new__(cls, name, bases, attrs)
 
@@ -223,53 +98,107 @@ class PluginType(type):
 
 
 class ModelPluginBase(metaclass=PluginType):
-    def __init__(self, aliases=None, owner=None):
-        self._aliases = aliases
+    _viz = VizHandler()
+    _data = data.DATA_HANDLER
+    _nets = NetworkHandler(allow_overwrite=False)
+    _losses = LossHandler(_nets)
+    _training_nets = []
 
-        self._nets = NetworkHandler(allow_overwrite=False)
-        self._training_nets = []
-
-        self._builds = []
-        self._routines = []
-
-        if hasattr(self, 'build'):
-            self._builds.append(getattr(self, 'build'))
-        if hasattr(self, 'routine'):
-            self._routines.append(getattr(self, 'routine'))
-
-        if owner is None:
-            self._viz = VizHandler()
-            self._data = data.DATA_HANDLER
-        else:
-            self._viz = owner.viz
-            self._data = owner.data
-            owner.builds += self.builds
-            owner.routines += self.routines
-
+    def __init__(self, contract=None):
         self._train_procedures = []
         self._eval_procedures = []
+        self._contact = None
 
         self._results = ResultsHandler(time=dict(), losses=dict())
-        self._losses = LossHandler(self._nets)
+
+        if contract:
+            contract = self._check_contract(contract)
+            self._accept_contract(contract)
 
     def __setattr__(self, key, value):
         if isinstance(value, ModelPluginBase):
-            self._import_model(value)
+            model = value
+            kwargs = model.kwargs
+            help = model.help
+            args = model.args
+            if model._contact:
+                kwargs = dict((model._contact['kwargs'].get(k, k), v)
+                              for k, v in kwargs.items())
+                help = dict((model._contact['kwargs'].get(k, k), v)
+                            for k, v in help.items())
+                args = [model._contact['args'].get(k, k) for k in args]
+            for k, v in kwargs.items():
+                if k not in self.kwargs:
+                    self.kwargs[k] = v
+                if k not in self.help:
+                    self.help[k] = help[k]
+                    
+            self._args = list(set(self.args) | set(args))
+
         super().__setattr__(key, value)
 
-    def _import_model(self, model):
-        pass
+    def _check_contract(self, contract):
+        kwargs = contract.pop('kwargs', {})
+        nets = contract.pop('nets', {})
+        args = contract.pop('args', {})
 
-    def get_kwargs(self, fn):
-        print(fn)
-        print(self.kwargs)
-        kwargs = parse_kwargs(fn)
-        print(kwargs)
-        assert False
+        if len(contract) > 0:
+            raise KeyError('Unknown keys in contract: {}'
+                           .format(tuple(contract.keys())))
+
+        for k, v in kwargs.items():
+            if k not in self.kwargs:
+                raise KeyError('{} does not have any arguments called {}'
+                               .format(self.__class__.__name__, k))
+            if not isinstance(v, str):
+                raise TypeError('Contract values must be strings.')
+
+        for k, v in args.items():
+            if k not in self.args:
+                raise KeyError('{} does not have any inputs called {}'
+                               .format(self.__class__.__name__, k))
+            if not isinstance(v, str):
+                raise TypeError('Contract values must be strings.')
+
+        return dict(args=args, kwargs=kwargs, nets=nets)
+
+    def _accept_contract(self, contract):
+        if self._contact is not None:
+            raise ValueError('Cannot accept more than one contract.')
+
+        if hasattr(self, 'build'):
+            self.build = self._wrap(self.build, kwargs=contract['kwargs'])
+
+        if hasattr(self, 'routine'):
+            self.routine = self._wrap(self.routine, kwargs=contract['kwargs'])
+
+        if hasattr(self, 'visualize'):
+            self.visualize = self._wrap(self.visualize,
+                                        kwargs=contract['kwargs'])
+
+        self._contact = contract
+        self._nets = aliased(self._nets, aliases=contract['nets'])
+
+    def _wrap(self, fn, kwargs=None):
+        kwargs = kwargs or {}
+        kwargs = dict((v, k) for k, v in kwargs.items())
+
+        kwarg_keys = parse_kwargs(fn).keys()
+
+        def wrapped(*args, **kwargs_):
+            kwargs_ = dict((kwargs.get(k, k), v) for k, v in kwargs_.items()
+                           if kwargs.get(k, k) in kwarg_keys)
+            return fn(*args, **kwargs_)
+
+        return wrapped
 
     @property
     def kwargs(self):
         return self._kwargs
+
+    @property
+    def args(self):
+        return self._args
 
     @property
     def help(self):
@@ -291,126 +220,17 @@ class ModelPluginBase(metaclass=PluginType):
     def results(self):
         return self._results
 
+    def aliased(self, net):
+        pass
+
     @property
     def nets(self):
+        self.aliased(self._nets)
         return self._nets
 
     @property
     def viz(self):
         return self._viz
-
-    def _add_routine(self, key, routine):
-        keys = routine.plugin_nets + routine.plugin_vars +\
-            list(routine.plugin_kwargs.keys())
-        if len(keys) != len(set(keys)):
-            raise ValueError('Routine `plugin_nets` ({}), `plugin_vars` ({}), '
-                             'and `kwargs`({}) must have empty union.'
-                             .format(routine.plugin_nets, routine.plugin_vars,
-                                     list(routine.plugin_kwargs.keys())))
-
-        routine.name = key
-        routine._kwargs = AliasHandler(self.kwargs)
-        routine._nets = AliasHandler(self._nets)
-        routine._vars = AliasHandler(self._vars)
-        routine._help = AliasHandler(self._help)
-        routine._losses = AliasHandler(self._losses)
-        routine._viz = self.viz
-
-        for k in routine.plugin_nets:
-            v = routine._aliases.pop(k, k)
-            routine.nets.set_alias(k, v)
-            routine.losses.set_alias(k, v)
-        for k in routine.plugin_vars:
-            v = routine._aliases.pop(k, k)
-            routine.vars.set_alias(k, v)
-        for k in routine.plugin_kwargs:
-            v = routine._aliases.pop(k, k)
-            routine.kwargs.set_alias(k, v)
-            routine.help.set_alias(k, v)
-        if len(routine._aliases) != 0:
-            raise ValueError('Unknown aliases found for routine {}: {}'
-                             .format(routine.name,
-                                     tuple(routine._aliases.keys())))
-
-    def _add_build(self, key, build):
-        keys = build.plugin_nets + list(build.plugin_kwargs.keys())
-        if len(keys) != len(set(keys)):
-            raise ValueError('Build `plugin_nets` ({}) and `kwargs`({}) '
-                             'must have empty union.'
-                             .format(build.plugin_nets,
-                                     list(build.plugin_kwargs.keys())))
-
-        build.name = key
-        build._kwargs = AliasHandler(self.kwargs)
-        build._nets = AliasHandler(self._nets)
-        build._help = AliasHandler(self._help)
-
-        for k in build.plugin_nets:
-            v = build._aliases.pop(k, k)
-            build.nets.set_alias(k, v)
-        for k in build.plugin_kwargs:
-            v = build._aliases.pop(k, k)
-            build.kwargs.set_alias(k, v)
-            build.help.set_alias(k, v)
-        if len(build._aliases) != 0:
-            raise ValueError('Unknown aliases found: {}'.format(build._aliases))
-
-    def check(self):
-        for key, routine in self._routines.items():
-            if isinstance(routine, RoutinePluginBase):
-                pass
-            else:
-                raise ValueError
-
-        for key, build in self._builds.items():
-            if isinstance(build, BuildPluginBase):
-                pass
-            else:
-                raise ValueError
-
-    def _set_kwargs(self):
-
-        def add_kwargs(obj):
-            for k, v in obj.plugin_kwargs.items():
-                if v is None:
-                    continue
-                try:
-                    obj.kwargs[k] = v
-                except RuntimeError:
-                    if obj.kwargs[k] != v:
-                        logger.warning('Multiple default values found for {}. '
-                                       'This may have unintended effects. '
-                                       'Using {} instead of {}'
-                                       .format(obj.kwargs.get_key(k),
-                                               obj.kwargs[k], v))
-
-        for build in self._builds.values():
-            add_kwargs(build)
-
-        for routine in self._routines.values():
-            add_kwargs(routine)
-
-    def _set_help(self):
-
-        def add_help(obj):
-            for k, v in obj.plugin_help.items():
-                try:
-                    obj.help[k] = v
-                except RuntimeError:
-                    logger.warning('Multiple default values found for {} help. '
-                                   'This may have unintended effects. Using '
-                                   '`{}` instead of `{}`'
-                                   .format(obj.kwargs.get_key(k), obj.help[k],
-                                           v))
-
-        if hasattr(self, 'build'):
-            add_help(self)
-
-        for build in self.builds.values():
-            add_help(build)
-
-        for routine in self.routines.values():
-            add_help(routine)
 
     def train(self, i, quit_on_bad_values=False):
         return self.run_procedure(
@@ -588,15 +408,3 @@ def build_networks():
     for build_key, build in MODEL.builds.items():
         logger.debug('{} build args: {}'.format(build_key, build.kwargs))
         build()
-
-
-def reload_models(**reload_models):
-    global MODEL_HANDLER
-    if MODEL_HANDLER is None:
-        raise RuntimeError(
-            'MODEL_HANDLER not set. `reload_models` should only be used after '
-            '`models.setup_models` has been called.')
-    for k, v in reload_models.items():
-        logger.info('Reloading model {}'.format(k))
-        logger.debug(v)
-        MODEL_HANDLER[k] = v
