@@ -6,6 +6,7 @@ import torch.nn as nn
 
 
 class View(nn.Module):
+
     def __init__(self, *shape):
         super(View, self).__init__()
         self.shape = shape
@@ -15,6 +16,7 @@ class View(nn.Module):
 
 
 class Pipeline(nn.Module):
+
     def __init__(self, networks):
         super(Pipeline, self).__init__()
         self.networks = networks

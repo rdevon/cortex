@@ -78,8 +78,11 @@ def set_config():
             arch_paths = d.get('arch_paths', {})
             out_path = d.get('out_path', None)
 
-            CONFIG.update(viz=viz, data_paths=data_paths,
-                          arch_paths=arch_paths, out_path=out_path)
+            CONFIG.update(
+                viz=viz,
+                data_paths=data_paths,
+                arch_paths=arch_paths,
+                out_path=out_path)
     else:
         logger.warning('{} not found'.format(_config_name))
         setup_config_file(config_file)
@@ -188,8 +191,9 @@ def setup_config_file(config_file):  # noqa C901
             data_name = (input(_data_name_message.format(default_name)) or
                          default_name)
             if data_name in d['data_paths']:
-                replace = yes_no('{} already taken. Replace?'.format(data_name),
-                                 default='no')
+                replace = yes_no(
+                    '{} already taken. Replace?'.format(data_name),
+                    default='no')
                 if replace:
                     d['data_paths'][data_name] = data_path
                     break

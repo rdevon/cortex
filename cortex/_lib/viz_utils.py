@@ -19,10 +19,14 @@ def scale_to_unit_interval(ndar, eps=1e-6):
     return ndar
 
 
-def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
+def tile_raster_images(X,
+                       img_shape,
+                       tile_shape,
+                       tile_spacing=(0, 0),
                        scale_rows_to_unit_interval=True,
                        output_pixel_vals=True,
-                       bottom_margin=0, right_margin=0):
+                       bottom_margin=0,
+                       right_margin=0):
     '''
     Transform an array with one flattened image per row, into an array in
     which images are reshaped and layed out like tiles on a floor.
@@ -57,8 +61,9 @@ def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
     #                tile_spacing[0]
     # out_shape[1] = (img_shape[1]+tile_spacing[1])*tile_shape[1] -
     #                tile_spacing[1]
-    out_shape = [(ishp + tsp) * tshp - tsp for ishp, tshp, tsp
-                 in zip(img_shape, tile_shape, tile_spacing)]
+    out_shape = [(ishp + tsp) * tshp - tsp
+                 for ishp, tshp, tsp in zip(img_shape, tile_shape, tile_spacing)
+                 ]
 
     out_shape = (out_shape[0] + bottom_margin, out_shape[1] + right_margin)
 
@@ -66,12 +71,11 @@ def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
         assert len(X) == 4
         # Create an output numpy ndarray to store the image
         if output_pixel_vals:
-            out_array = numpy.zeros((out_shape[0], out_shape[1], 4),
-                                    dtype='uint8')
+            out_array = numpy.zeros(
+                (out_shape[0], out_shape[1], 4), dtype='uint8')
         else:
-            out_array = numpy.zeros((out_shape[0],
-                                     out_shape[1], 4),
-                                    dtype=X.dtype)
+            out_array = numpy.zeros(
+                (out_shape[0], out_shape[1], 4), dtype=X.dtype)
 
         # colors default to 0, alpha defaults to 1 (opaque)
         if output_pixel_vals:
@@ -110,9 +114,8 @@ def tile_raster_images(X, img_shape, tile_shape, tile_spacing=(0, 0),
                 if tile_row * tile_shape[1] + tile_col < X.shape[0]:
                     this_x = X[tile_row * tile_shape[1] + tile_col]
 
-                    out_array[
-                        tile_row * (H + Hs): tile_row * (H + Hs) + H,
-                        tile_col * (W + Ws): tile_col * (W + Ws) + W
-                    ] = this_x
+                    out_array[tile_row * (H + Hs):tile_row * (H + Hs) +
+                              H, tile_col * (W + Ws):tile_col * (W + Ws) +
+                              W] = this_x
 
         return out_array

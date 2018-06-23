@@ -26,13 +26,13 @@ import os
 import torch
 import torch.utils.data as data
 
-
 __author__ = 'Tsirigotis Christos'
 __author_email__ = 'tsirif@gmail.com'
 
-DATASETS = ["G2", "S_set", "A_set", "DIM_set", "Unbalance",
-            "Aggregation", "Compound", "Pathbased", "Spiral",
-            "D31", "R15", "Jain", "Flame"]
+DATASETS = [
+    "G2", "S_set", "A_set", "DIM_set", "Unbalance", "Aggregation", "Compound",
+    "Pathbased", "Spiral", "D31", "R15", "Jain", "Flame"
+]
 DIM_VARIANT_DATASETS = ["G2", "DIM_set"]
 SD_VARIANT_DATASETS = ["G2"]
 NUM_VARIANT_DATASETS = ["S_set", "A_set"]
@@ -48,7 +48,9 @@ def make_tds_random_and_split(C):
         RandomSplitting class that wraps Toyset data class
 
     '''
+
     class RandomSplitting(C):
+
         def __init__(self, *args, idx=None, split=.8, **kwargs):
             super().__init__(*args, **kwargs)
             self.idx = idx if idx is not None else torch.randperm(len(self))
@@ -69,8 +71,12 @@ def make_tds_random_and_split(C):
 
 class _SmallDataset(data.TensorDataset):
 
-    def __init__(self, root, *select,
-                 stardardize=False, load=False, download=False):
+    def __init__(self,
+                 root,
+                 *select,
+                 stardardize=False,
+                 load=False,
+                 download=False):
         """Download or load a small dataset.
 
         Parameters

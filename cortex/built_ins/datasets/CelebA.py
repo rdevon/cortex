@@ -13,12 +13,11 @@ from .utils import build_transforms
 class CelebAPlugin(DatasetPlugin):
     sources = ['CelebA']
 
-    def handle(
-            self,
-            source,
-            copy_to_local=False,
-            normalize=True,
-            **transform_args):
+    def handle(self,
+               source,
+               copy_to_local=False,
+               normalize=True,
+               **transform_args):
         Dataset = self.make_indexing(CelebA)
         data_path = self.get_path(source)
 
@@ -55,12 +54,11 @@ class CelebA(torchvision.datasets.ImageFolder):
            'AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1')
     filename = "img_align_celeba.zip"
 
-    def __init__(
-            self,
-            root,
-            transform=None,
-            target_transform=None,
-            download=False):
+    def __init__(self,
+                 root,
+                 transform=None,
+                 target_transform=None,
+                 download=False):
         self.root = os.path.expanduser(root)
         self.transform = transform
         self.target_transform = target_transform

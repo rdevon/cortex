@@ -31,8 +31,12 @@ class DataHandler(object):
         self.batch_size = batch_size
         self.skip_last_batch = skip_last_batch
 
-    def add_dataset(self, source, dataset_entrypoint,
-                    n_workers=4, shuffle=True, DataLoader=None):
+    def add_dataset(self,
+                    source,
+                    dataset_entrypoint,
+                    n_workers=4,
+                    shuffle=True,
+                    DataLoader=None):
         DataLoader = DataLoader or torch.utils.data.DataLoader
 
         if len(dataset_entrypoint._datasets) == 0:
@@ -55,11 +59,12 @@ class DataHandler(object):
                 self.batch_size = {k: self.batch_size_}
                 batch_size = self.batch_size_
 
-            loaders[k] = DataLoader(dataset, batch_size=batch_size,
-                                    shuffle=shuffle, num_workers=n_workers,
-                                    worker_init_fn=lambda x:
-                                    signal.signal(signal.SIGINT,
-                                                  signal.SIG_IGN))
+            loaders[k] = DataLoader(
+                dataset,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                num_workers=n_workers,
+                worker_init_fn=lambda x: signal.signal(signal.SIGINT, signal.SIG_IGN))
 
         self.dims[source] = dataset_entrypoint._dims
         self.input_names[source] = dataset_entrypoint._input_names
@@ -156,15 +161,14 @@ class DataHandler(object):
         if q[0] in self.dims.keys():
             dims = self.dims
         else:
-            key = [k for k in self.dims.keys()
-                   if k not in self.noise.keys()][0]
+            key = [k for k in self.dims.keys() if k not in self.noise.keys()][0]
             dims = self.dims[key]
 
         try:
             d = [dims[q_] for q_ in q]
         except KeyError:
-            raise KeyError('Cannot resolve dimensions {}, provided {}'
-                           .format(q, dims))
+            raise KeyError('Cannot resolve dimensions {}, provided {}'.format(
+                q, dims))
         if len(d) == 1:
             return d[0]
         else:
@@ -188,6 +192,7 @@ class DataHandler(object):
                 for i, inp in enumerate(inputs):
                     inputs_.append(inp)
                 yield inputs_
+
         return iterator()
 
     def update_pbar(self):
@@ -199,18 +204,23 @@ class DataHandler(object):
         self.u = 0
 
         if make_pbar:
-            widgets = [string, Timer(), ' | ',
-                       Percentage(), ' | ', ETA(), Bar()]
-            if len([len(loader[self.mode]) for loader
-                    in self.loaders.values()]) == 0:
+            widgets = [
+                string,
+                Timer(), ' | ',
+                Percentage(), ' | ',
+                ETA(),
+                Bar()
+            ]
+            if len([len(loader[self.mode]) for loader in self.loaders.values()
+                    ]) == 0:
                 maxval = 1000
             else:
-                maxval = min(len(loader[self.mode])
-                             for loader in self.loaders.values())
+                maxval = min(
+                    len(loader[self.mode]) for loader in self.loaders.values())
             self.pbar = ProgressBar(widgets=widgets, maxval=maxval).start()
         else:
             self.pbar = None
 
         sources = self.loaders.keys()
-        self.iterators = dict((source, self.make_iterator(source))
-                              for source in sources)
+        self.iterators = dict(
+            (source, self.make_iterator(source)) for source in sources)

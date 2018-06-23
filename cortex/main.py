@@ -2,17 +2,14 @@
 
 '''
 
-
 import logging
 
 from cortex._lib import (config, data, exp, models, optimizer, setup_cortex,
                          setup_experiment, train)
 from cortex._lib.utils import print_section
 
-
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
-
 
 logger = logging.getLogger('cortex')
 

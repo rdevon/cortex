@@ -8,13 +8,17 @@ import torch.nn as nn
 
 from .utils import apply_nonlinearity, finish_layer_1d, get_nonlinearity
 
-
 logger = logging.getLogger('cortex.arch' + __name__)
 
 
 class FullyConnectedNet(nn.Module):
 
-    def __init__(self, dim_in, dim_out=None, dim_h=64, nonlinearity='ReLU', n_levels=None,
+    def __init__(self,
+                 dim_in,
+                 dim_out=None,
+                 dim_h=64,
+                 nonlinearity='ReLU',
+                 n_levels=None,
                  **layer_args):
 
         super(FullyConnectedNet, self).__init__()
@@ -37,8 +41,8 @@ class FullyConnectedNet(nn.Module):
             dim_out = dim_h
             name = 'dense_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             models.add_module(name, nn.Linear(dim_in, dim_out))
-            finish_layer_1d(models, name, dim_out,
-                            nonlinearity=nonlinearity, **layer_args)
+            finish_layer_1d(
+                models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
 
         if dim_out_:
             name = 'dense_({}/{})_{}'.format(dim_out, dim_out_, 'final')

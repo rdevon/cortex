@@ -58,10 +58,7 @@ class Handler(dict):
         try:
             v = super().__getitem__(k)
         except KeyError:
-            raise KeyError(
-                self._get_error_string.format(
-                    k, tuple(
-                        self.keys())))
+            raise KeyError(self._get_error_string.format(k, tuple(self.keys())))
         return v
 
     def update(self, **kwargs):
@@ -205,8 +202,8 @@ class NetworkHandler(Handler):
         elif self._type and not isinstance(v, self._type):
             raise ValueError('Type `{}` of `{}` not allowed. '
                              'Only `{}` and subclasses (or tuples '
-                             'of {}) are supported'
-                             .format(type(v), k, self._type, self._type))
+                             'of {}) are supported'.format(
+                                 type(v), k, self._type, self._type))
 
         return True
 
@@ -232,8 +229,7 @@ class LossHandler(Handler):
         if k not in self._nets:
             raise AttributeError(
                 'Keyword `{}` not in the model_handler. Found: {}.'.format(
-                    k, tuple(
-                        self._nets.keys())))
+                    k, tuple(self._nets.keys())))
 
         if len(v.size()) > 0:
             raise ValueError('Loss must be a scalar. Got {}'.format(v.size()))

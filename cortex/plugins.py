@@ -9,21 +9,16 @@ from torch.utils.data import Dataset
 
 from cortex._lib.config import CONFIG, _config_name
 from cortex._lib.data import DatasetPluginBase, register as register_data
-from cortex._lib.models import (
-    BuildPluginBase,
-    ModelPluginBase,
-    RoutinePluginBase,
-    register_model)
+from cortex._lib.models import (BuildPluginBase, ModelPluginBase,
+                                RoutinePluginBase, register_model)
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 __all__ = [
-    'DatasetPlugin',
-    'ModelPlugin',
-    'RoutinePlugin',
-    'BuildPlugin',
-    'register_plugin']
+    'DatasetPlugin', 'ModelPlugin', 'RoutinePlugin', 'BuildPlugin',
+    'register_plugin'
+]
 
 
 class DatasetPlugin(DatasetPluginBase):
@@ -43,9 +38,8 @@ class DatasetPlugin(DatasetPluginBase):
         local_path = CONFIG.data_paths.get('local')
 
         if local_path is None:
-            raise KeyError(
-                '`{}` not found in {} data_paths'
-                .format(local_path, _config_name))
+            raise KeyError('`{}` not found in {} data_paths'.format(
+                local_path, _config_name))
         to_path = path.join(local_path, basename)
         if ((not path.exists(to_path)) and path.exists(from_path)):
             if path.isdir(from_path):
@@ -86,8 +80,8 @@ class DatasetPlugin(DatasetPluginBase):
         '''
         p = CONFIG.data_paths.get(source)
         if p is None:
-            raise KeyError(
-                '`{}` not found in {} data_paths'.format(source, _config_name))
+            raise KeyError('`{}` not found in {} data_paths'.format(
+                source, _config_name))
         return p
 
     def set_input_names(self, input_names):
@@ -138,6 +132,7 @@ class DatasetPlugin(DatasetPluginBase):
         '''
 
         class IndexingDataset(C):
+
             def __getitem__(self, index):
                 output = super().__getitem__(index)
                 return output + (index,)
@@ -284,7 +279,9 @@ class ModelPlugin(ModelPluginBase):
 
         return name
 
-    def add_train_procedure(self, *routines, mode: str='train',
+    def add_train_procedure(self,
+                            *routines,
+                            mode: str = 'train',
                             updates_per_routine=None):
         '''Adds a training procedure.
 
@@ -297,14 +294,13 @@ class ModelPlugin(ModelPluginBase):
         '''
         updates_per_routine = updates_per_routine or [1 for _ in routines]
         if len(routines) != len(updates_per_routine):
-            raise ValueError(
-                'Number of routines must match number of updates.')
+            raise ValueError('Number of routines must match number of updates.')
         routine_names = []
         for routine in routines:
             routine_names.append(self._add_routine_name(routine))
 
-        self._train_procedures.append(
-            (mode, routine_names, updates_per_routine))
+        self._train_procedures.append((mode, routine_names,
+                                       updates_per_routine))
 
     def add_eval_procedure(self, *routines, mode='test'):
         '''Adds a evaluation procedure.

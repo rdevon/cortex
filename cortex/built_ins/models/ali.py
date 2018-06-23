@@ -68,20 +68,20 @@ class ALIDiscriminatorRoutine(RoutinePlugin):
         X_Q = F.tanh(generator(Z_Q).detach())
         Z_P = encoder(X_P).detach()
 
-        E_pos, E_neg, P_samples, Q_samples = self.score(
-            discriminator, X_P, X_Q, Z_P, Z_Q, measure)
+        E_pos, E_neg, P_samples, Q_samples = self.score(discriminator, X_P, X_Q,
+                                                        Z_P, Z_Q, measure)
         difference = E_pos - E_neg
 
         self.losses.discriminator = -difference
 
-        self.results.update(Scores=dict(Ep=P_samples.mean().item(),
-                                        Eq=Q_samples.mean().item()))
+        self.results.update(
+            Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
         self.results['{} distance'.format(measure)] = difference.item()
         self.add_image(X_Q, name='generated')
         self.add_image(X_P, name='ground truth')
-        self.add_histogram(dict(fake=Q_samples.view(-1).data,
-                                real=P_samples.view(-1).data),
-                           name='discriminator output')
+        self.add_histogram(
+            dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data),
+            name='discriminator output')
         self.add_scatter(Z_P, labels=T.data, name='latent values')
 
     @staticmethod
@@ -139,7 +139,7 @@ class DecoderRoutine(RoutinePlugin):
 
         X_d = decoder(Z)
         X_d = F.tanh(X_d)
-        self.losses.decoder = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
+        self.losses.decoder = ((X - X_d)**2).sum(1).sum(1).sum(1).mean()
 
         self.add_image(X, name='Ground truth')
         self.add_image(X_d, name='Reconstruction')
@@ -151,7 +151,9 @@ class NoiseEncoderBuild(BuildPlugin):
     plugin_name = 'Noise_encoder'
     plugin_nets = ['encoder']
 
-    def build(self, dim_in=None, dim_out=None,
+    def build(self,
+              dim_in=None,
+              dim_out=None,
               encoder_args=dict(dim_h=[64], batch_norm=False)):
         '''
         Args:
@@ -170,8 +172,10 @@ class ALIDiscriminatorBuild(BuildPlugin):
     plugin_name = 'ALI_discriminator'
     plugin_nets = ['x_encoder', 'z_encoder', 'discriminator']
 
-    def build(self, topnet_args=dict(dim_h=[512, 128], batch_norm=False),
-              dim_int=256, dim_z=None):
+    def build(self,
+              topnet_args=dict(dim_h=[512, 128], batch_norm=False),
+              dim_int=256,
+              dim_z=None):
         '''
         Args:
             topnet_args: Keyword arguments for the top network.
@@ -207,25 +211,27 @@ class ALI(ModelPlugin):
 
     def __init__(self, use_z_encoder=False):
         super().__init__()
-        self.builds.x_encoder = ImageEncoderBuild(image_encoder='x_encoder',
-                                                  dim_out='dim_int',
-                                                  encoder_args='x_encoder_args')
+        self.builds.x_encoder = ImageEncoderBuild(
+            image_encoder='x_encoder',
+            dim_out='dim_int',
+            encoder_args='x_encoder_args')
         if use_z_encoder:
             self.builds.z_encoder = NoiseEncoderBuild(
-                encoder='z_encoder', dim_in='dim_z', dim_out='dim_int',
+                encoder='z_encoder',
+                dim_in='dim_z',
+                dim_out='dim_int',
                 encoder_args='z_encoder_args')
-        self.builds.encoder = ImageEncoderBuild(image_encoder='encoder',
-                                                dim_out='dim_z')
+        self.builds.encoder = ImageEncoderBuild(
+            image_encoder='encoder', dim_out='dim_z')
         self.builds.discriminator = ALIDiscriminatorBuild()
         self.builds.generator = GeneratorBuild()
 
         self.routines.ali_discriminator = ALIDiscriminatorRoutine(
             real='data.images', noise='data.z', targets='data.targets')
-        self.routines.ali_generator = ALIGeneratorRoutine(real='data.images',
-                                                          noise='data.z')
-        self.routines.penalty = PenaltyRoutine(network='discriminator',
-                                               inputs=('data.images',
-                                                       'inferred'))
+        self.routines.ali_generator = ALIGeneratorRoutine(
+            real='data.images', noise='data.z')
+        self.routines.penalty = PenaltyRoutine(
+            network='discriminator', inputs=('data.images', 'inferred'))
         self.add_train_procedure(self.routines.ali_generator,
                                  self.routines.ali_discriminator,
                                  self.routines.penalty)

@@ -5,9 +5,14 @@
 import torchvision.transforms as transforms
 
 
-def build_transforms(normalize=True, center_crop=None, image_size=None,
-                     random_crop=None, flip=None, random_resize_crop=None,
-                     random_sized_crop=None, use_sobel=False):
+def build_transforms(normalize=True,
+                     center_crop=None,
+                     image_size=None,
+                     random_crop=None,
+                     flip=None,
+                     random_resize_crop=None,
+                     random_sized_crop=None,
+                     use_sobel=False):
     transform_ = []
 
     if random_resize_crop:

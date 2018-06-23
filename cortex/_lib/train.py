@@ -31,8 +31,7 @@ def summarize_results(results):
                 except BaseException:
                     raise ValueError(
                         'Something is wrong with result {} of type {}.'.format(
-                            k, type(
-                                v[0])))
+                            k, type(v[0])))
 
     return results_
 
@@ -53,8 +52,7 @@ def train_epoch(epoch, quit_on_bad_values, eval_during_train,
     models.MODEL.set_train()
     models.MODEL.viz.ignore = True
     data.DATA_HANDLER.reset(
-        data_mode,
-        string='Training (epoch {}): '.format(epoch))
+        data_mode, string='Training (epoch {}): '.format(epoch))
 
     try:
         while True:
@@ -78,8 +76,7 @@ def test_epoch(epoch, eval_mode=False, data_mode='test'):
     models.MODEL.reset()
     models.MODEL.set_eval()
     data.DATA_HANDLER.reset(
-        data_mode,
-        string='Evaluating (epoch {}): '.format(epoch))
+        data_mode, string='Evaluating (epoch {}): '.format(epoch))
 
     models.MODEL.viz.ignore = False
     try:
@@ -95,56 +92,50 @@ def test_epoch(epoch, eval_mode=False, data_mode='test'):
     if eval_mode:
         raise NotImplementedError()
         if models.ARCH.eval_routine is not None:
-            models.ARCH.eval_routine(
-                data.DATA_HANDLER,
-                models.MODEL.nets,
-                means)
+            models.ARCH.eval_routine(data.DATA_HANDLER, models.MODEL.nets,
+                                     means)
         stds = summarize_results_std(means)
         return means, stds
 
     return means
 
 
-def display_results(
-        train_results,
-        test_results,
-        epoch,
-        epochs,
-        epoch_time,
-        total_time):
+def display_results(train_results, test_results, epoch, epochs, epoch_time,
+                    total_time):
     if epochs and epoch:
-        print('\n\tEpoch {}/{} took {:.3f}s. Total time: {:.2f}'
-              .format(epoch + 1, epochs, epoch_time, total_time))
+        print('\n\tEpoch {}/{} took {:.3f}s. Total time: {:.2f}'.format(
+            epoch + 1, epochs, epoch_time, total_time))
 
     times = train_results.pop('time', None)
     if times:
         print('\tAvg update times: ' + ' | '
-              .join(['{}: {:.2f}'
-                     .format(k, v) for k, v in times.items()]))
+              .join(['{}: {:.2f}'.format(k, v) for k, v in times.items()]))
 
     train_losses = train_results.pop('losses')
     test_losses = test_results.pop('losses')
 
-    print('\tAvg loss: ' + ' | '.join(['{}: {:.2f} / {:.2f}'.format(
-        k, train_losses[k], test_losses[k]) for k in train_losses.keys()]))
+    print('\tAvg loss: ' + ' | '.join([
+        '{}: {:.2f} / {:.2f}'.format(k, train_losses[k], test_losses[k])
+        for k in train_losses.keys()
+    ]))
 
     for k in train_results.keys():
         v_train = train_results[k]
         v_test = test_results[k] if k in test_results else None
         if v_test is None:
             if isinstance(v_train, dict):
-                print('\t' + k + ': ' + ' | '
-                      .join(['{}: {:.2f}'
-                             .format(k_, v_train[k_])
-                             for k_ in v_train.keys()]))
+                print('\t' + k + ': ' + ' | '.join([
+                    '{}: {:.2f}'.format(k_, v_train[k_])
+                    for k_ in v_train.keys()
+                ]))
             else:
                 print('\t{}: {:.2f}'.format(k, v_train))
         else:
             if isinstance(v_train, dict):
-                print('\t' + k + ': ' + ' | '
-                      .join(['{}: {:.2f} / {:.2f}'
-                             .format(k_, v_train[k_], v_test[k_])
-                             for k_ in v_train.keys()]))
+                print('\t' + k + ': ' + ' | '.join([
+                    '{}: {:.2f} / {:.2f}'.format(k_, v_train[k_], v_test[k_])
+                    for k_ in v_train.keys()
+                ]))
             else:
                 print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))
 
@@ -169,11 +160,11 @@ def align_summaries(d_train, d_test):
                                       (max_len - len(v_test[k_])))
             else:
                 if len(v_train) > len(v_test):
-                    d_test[k] = (v_test + [v_test[-1]] *
-                                 (len(v_train) - len(v_test)))
+                    d_test[k] = (
+                        v_test + [v_test[-1]] * (len(v_train) - len(v_test)))
                 elif len(v_test) > len(v_train):
-                    d_train[k] = (v_train + [v_train[-1]] *
-                                  (len(v_test) - len(v_train)))
+                    d_train[k] = (
+                        v_train + [v_train[-1]] * (len(v_test) - len(v_train)))
         elif k in d_train:
             v_train = d_train[k]
             if isinstance(v_train, dict):
@@ -192,9 +183,15 @@ def align_summaries(d_train, d_test):
                             (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
-              save_on_best=None, save_on_lowest=None, save_on_highest=None,
-              eval_during_train=True, train_mode='train', test_mode='test',
+def main_loop(epochs=500,
+              archive_every=10,
+              quit_on_bad_values=True,
+              save_on_best=None,
+              save_on_lowest=None,
+              save_on_highest=None,
+              eval_during_train=True,
+              train_mode='train',
+              test_mode='test',
               eval_only=False):
     '''
 
@@ -263,9 +260,8 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
                         found_best = current > best
                     if found_best:
                         best = current
-                        print(
-                            '\nFound best {} (train): {}'.format(
-                                save_on_best, best))
+                        print('\nFound best {} (train): {}'.format(
+                            save_on_best, best))
                         exp.save(prefix='best_' + save_on_best)
 
             # TESTING
@@ -277,13 +273,8 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
             # Finishing up
             epoch_time = time.time() - start_time
             total_time += epoch_time
-            display_results(
-                train_results_,
-                test_results_,
-                e,
-                epochs,
-                epoch_time,
-                total_time)
+            display_results(train_results_, test_results_, e, epochs,
+                            epoch_time, total_time)
             plot()
             models.MODEL.viz.show()
             models.MODEL.viz.clear()

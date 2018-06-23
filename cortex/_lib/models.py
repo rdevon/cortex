@@ -17,7 +17,6 @@ from .handlers import (AliasHandler, Handler, NetworkHandler, LossHandler,
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
-
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
@@ -35,8 +34,8 @@ def check_plugin(plugin, plugin_type_str, D):
     if plugin.plugin_name in D:
         raise KeyError(
             'plugin_name `{}` already registered as a {} plugin in cortex. '
-            'Try using another one.'.format(
-                plugin_type_str, plugin.plugin_name))
+            'Try using another one.'.format(plugin_type_str,
+                                            plugin.plugin_name))
 
     for k in plugin._protected:
         if hasattr(plugin, k):
@@ -45,8 +44,7 @@ def check_plugin(plugin, plugin_type_str, D):
     for k in plugin._required:
         v = getattr(plugin, k, None)
         if v is None:
-            raise AttributeError(
-                'Plugin must have {} attribute set.'.format(k))
+            raise AttributeError('Plugin must have {} attribute set.'.format(k))
         else:
             setattr(plugin, k, v)
 
@@ -63,6 +61,7 @@ def register_model(plugin):
 
 
 class BuildPluginBase():
+
     def __init__(self, **aliases):
         self._aliases = aliases
         self._data = data.DATA_HANDLER
@@ -83,9 +82,8 @@ class BuildPluginBase():
 
     def __call__(self):
         if not hasattr(self, 'build'):
-            raise ValueError(
-                'Build {} does not have `build` method set'.format(
-                    self.name))
+            raise ValueError('Build {} does not have `build` method set'.format(
+                self.name))
         kwargs_ = {}
         for k in self.kwargs.keys():
             kwargs_[k] = self.kwargs[k]
@@ -142,9 +140,8 @@ class RoutinePluginBase():
 
     def perform(self):
         if not hasattr(self, 'run'):
-            raise ValueError(
-                'Routine {} does not have `run` method set'.format(
-                    self.name))
+            raise ValueError('Routine {} does not have `run` method set'.format(
+                self.name))
         kwargs_ = {}
         for k, v in self.kwargs.items():
             kwargs_[k] = v.value
@@ -167,6 +164,7 @@ class RoutinePluginBase():
 
 
 class ModelPluginBase():
+
     def __init__(self):
 
         self._nets = NetworkHandler()
@@ -233,9 +231,9 @@ class ModelPluginBase():
             list(routine.plugin_kwargs.keys())
         if len(keys) != len(set(keys)):
             raise ValueError('Routine `plugin_nets` ({}), `plugin_vars` ({}), '
-                             'and `kwargs`({}) must have empty union.'
-                             .format(routine.plugin_nets, routine.plugin_vars,
-                                     list(routine.plugin_kwargs.keys())))
+                             'and `kwargs`({}) must have empty union.'.format(
+                                 routine.plugin_nets, routine.plugin_vars,
+                                 list(routine.plugin_kwargs.keys())))
 
         routine.name = key
         routine._kwargs = AliasHandler(self.kwargs)
@@ -257,15 +255,16 @@ class ModelPluginBase():
             routine.kwargs.set_alias(k, v)
             routine.help.set_alias(k, v)
         if len(routine._aliases) != 0:
-            raise ValueError('Unknown aliases found: {}'.format(routine._aliases))
+            raise ValueError('Unknown aliases found: {}'.format(
+                routine._aliases))
 
     def _add_build(self, key, build):
         keys = build.plugin_nets + list(build.plugin_kwargs.keys())
         if len(keys) != len(set(keys)):
             raise ValueError('Build `plugin_nets` ({}) and `kwargs`({}) '
-                             'must have empty union.'
-                             .format(build.plugin_nets,
-                                     list(build.plugin_kwargs.keys())))
+                             'must have empty union.'.format(
+                                 build.plugin_nets,
+                                 list(build.plugin_kwargs.keys())))
 
         build.name = key
         build._kwargs = AliasHandler(self.kwargs)
@@ -307,9 +306,9 @@ class ModelPluginBase():
                     if obj.kwargs[k] != v:
                         logger.warning('Multiple default values found for {}. '
                                        'This may have unintended effects. '
-                                       'Using {} instead of {}'
-                                       .format(obj.kwargs.get_key(k),
-                                               obj.kwargs[k], v))
+                                       'Using {} instead of {}'.format(
+                                           obj.kwargs.get_key(k), obj.kwargs[k],
+                                           v))
 
         for build in self._builds.values():
             add_kwargs(build)
@@ -326,9 +325,8 @@ class ModelPluginBase():
                 except RuntimeError:
                     logger.warning('Multiple default values found for {} help. '
                                    'This may have unintended effects. Using '
-                                   '`{}` instead of `{}`'
-                                   .format(obj.kwargs.get_key(k), obj.help[k],
-                                           v))
+                                   '`{}` instead of `{}`'.format(
+                                       obj.kwargs.get_key(k), obj.help[k], v))
 
         for build in self.builds.values():
             add_help(build)
@@ -400,15 +398,14 @@ class ModelPluginBase():
                 # Check for bad numbers
                 bads = bad_values(routine.results)
                 if bads and quit_on_bad_values:
-                    print(
-                        'Bad values found (quitting): {} \n All:{}'.format(
-                            bads, routine.results))
+                    print('Bad values found (quitting): {} \n All:{}'.format(
+                        bads, routine.results))
                     exit(0)
 
             # Update results
             update_dict_of_lists(self._results, **routine.results)
-            update_dict_of_lists(
-                self._results['time'], **{key: end_time - start_time})
+            update_dict_of_lists(self._results['time'],
+                                 **{key: end_time - start_time})
 
         update_dict_of_lists(self._results['losses'], **losses)
 
@@ -447,8 +444,7 @@ _arch_keys_optional = dict(
     SETUP='setup',
     Dataset='Dataset',
     DataLoader='DataLoader',
-    transform='transform'
-)
+    transform='transform')
 
 _ignore = ['__init__.py', '__pycache__']
 
@@ -476,7 +472,6 @@ def import_directory(p, name):
                 logger.warning(
                     'Import of architecture (module) {} failed ({})'.format(
                         fnp, e))
-
         '''
         elif os.path.isdir(fn):
             if fn.endswith('/'):
