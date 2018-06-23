@@ -15,20 +15,19 @@ from .utils import log_sum_exp, update_decoder_args, update_encoder_args
 
 def raise_measure_error(measure):
     supported_measures = ['GAN', 'JSD', 'X2', 'KL', 'RKL', 'DV', 'H2', 'W1']
-    raise NotImplementedError(
-        'Measure `{}` not supported. Supported: {}'
-        .format(measure, supported_measures))
+    raise NotImplementedError('Measure `{}` not supported. Supported: {}'
+                              .format(measure, supported_measures))
 
 
 def get_positive_expectation(p_samples, measure):
     log_2 = math.log(2.)
 
     if measure == 'GAN':
-        Ep = - F.softplus(-p_samples)
+        Ep = -F.softplus(-p_samples)
     elif measure == 'JSD':
-        Ep = log_2 - F.softplus(- p_samples)
+        Ep = log_2 - F.softplus(-p_samples)
     elif measure == 'X2':
-        Ep = p_samples ** 2
+        Ep = p_samples**2
     elif measure == 'KL':
         Ep = p_samples + 1.
     elif measure == 'RKL':
@@ -53,7 +52,7 @@ def get_negative_expectation(q_samples, measure):
     elif measure == 'JSD':
         Eq = F.softplus(-q_samples) + q_samples - log_2
     elif measure == 'X2':
-        Eq = -0.5 * ((torch.sqrt(q_samples ** 2) + 1.) ** 2)
+        Eq = -0.5 * ((torch.sqrt(q_samples**2) + 1.)**2)
     elif measure == 'KL':
         Eq = torch.exp(q_samples)
     elif measure == 'RKL':
@@ -72,9 +71,9 @@ def get_negative_expectation(q_samples, measure):
 
 def get_boundary(samples, measure):
     if measure in ('GAN', 'JSD', 'KL', 'RKL', 'H2', 'DV'):
-        b = samples ** 2
+        b = samples**2
     elif measure == 'X2':
-        b = (samples / 2.) ** 2
+        b = (samples / 2.)**2
     elif measure == 'W':
         b = None
     else:
@@ -85,9 +84,9 @@ def get_boundary(samples, measure):
 
 def get_weight(samples, measure):
     if measure in ('GAN', 'JSD', 'KL', 'RKL', 'DV', 'H2'):
-        return samples ** 2
+        return samples**2
     elif measure == 'X2':
-        return (samples / 2.) ** 2
+        return (samples / 2.)**2
     elif measure == 'W1':
         return None
     else:
@@ -115,7 +114,7 @@ class DiscriminatorRoutine(RoutinePlugin):
     plugin_nets = ['discriminator', 'generator']
     plugin_vars = ['real', 'noise']
 
-    def run(self, measure: str='GAN'):
+    def run(self, measure: str = 'GAN'):
         '''
 
         Args:
@@ -137,13 +136,13 @@ class DiscriminatorRoutine(RoutinePlugin):
         E_neg = get_negative_expectation(Q_samples, measure)
         difference = E_pos - E_neg
 
-        self.results.update(Scores=dict(Ep=P_samples.mean().item(),
-                                        Eq=Q_samples.mean().item()))
+        self.results.update(
+            Scores=dict(Ep=P_samples.mean().item(), Eq=Q_samples.mean().item()))
         self.results['{} distance'.format(measure)] = difference.item()
         self.add_image(X_P, name='ground truth')
-        self.add_histogram(dict(fake=Q_samples.view(-1).data,
-                                real=P_samples.view(-1).data),
-                           name='discriminator output')
+        self.add_histogram(
+            dict(fake=Q_samples.view(-1).data, real=P_samples.view(-1).data),
+            name='discriminator output')
         self.losses.discriminator = -difference
 
 
@@ -155,7 +154,9 @@ class PenaltyRoutine(RoutinePlugin):
     plugin_nets = ['network']
     plugin_vars = ['inputs']
 
-    def run(self, penalty_type: str='contractive', penalty_amount: float=0.5):
+    def run(self,
+            penalty_type: str = 'contractive',
+            penalty_amount: float = 0.5):
         '''
 
         Args:
@@ -178,10 +179,13 @@ class PenaltyRoutine(RoutinePlugin):
 
     @staticmethod
     def _get_gradient(inp, output):
-        gradient = autograd.grad(outputs=output, inputs=inp,
-                                 grad_outputs=torch.ones_like(output),
-                                 create_graph=True, retain_graph=True,
-                                 only_inputs=True)[0]
+        gradient = autograd.grad(
+            outputs=output,
+            inputs=inp,
+            grad_outputs=torch.ones_like(output),
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True)[0]
         return gradient
 
     def contractive_penalty(self, network, input, penalty_amount=0.5):
@@ -199,7 +203,7 @@ class PenaltyRoutine(RoutinePlugin):
             output = network(*input)
         gradient = self._get_gradient(input, output)
         gradient = gradient.view(gradient.size()[0], -1)
-        penalty = (gradient ** 2).sum(1).mean()
+        penalty = (gradient**2).sum(1).mean()
 
         return penalty_amount * penalty
 
@@ -224,7 +228,7 @@ class PenaltyRoutine(RoutinePlugin):
             mid_out = network(mid_in)
         gradient = self._get_gradient(mid_in, mid_out)
         gradient = gradient.view(gradient.size()[0], -1)
-        penalty = ((gradient.norm(2, dim=1) - 1.) ** 2).mean()
+        penalty = ((gradient.norm(2, dim=1) - 1.)**2).mean()
 
         return penalty_amount * penalty
 
@@ -237,7 +241,7 @@ class GeneratorRoutine(RoutinePlugin):
     plugin_nets = ['generator', 'discriminator']
     plugin_vars = ['noise', 'generated']
 
-    def run(self, measure: str=None, loss_type: str='non-saturating'):
+    def run(self, measure: str = None, loss_type: str = 'non-saturating'):
         '''
 
         Args:
@@ -271,7 +275,7 @@ class DiscriminatorBuild(BuildPlugin):
     plugin_name = 'discriminator'
     plugin_nets = ['discriminator']
 
-    def build(self, discriminator_type: str='convnet', discriminator_args={}):
+    def build(self, discriminator_type: str = 'convnet', discriminator_args={}):
         '''
 
         Args:
@@ -282,7 +286,8 @@ class DiscriminatorBuild(BuildPlugin):
 
         x_shape = self.get_dims('x', 'y', 'c')
         Encoder, discriminator_args = update_encoder_args(
-            x_shape, model_type=discriminator_type,
+            x_shape,
+            model_type=discriminator_type,
             encoder_args=discriminator_args)
         discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
         self.nets.discriminator = discriminator
@@ -295,8 +300,11 @@ class GeneratorBuild(BuildPlugin):
     plugin_name = 'generator'
     plugin_nets = ['generator']
 
-    def build(self, generator_noise_type='normal', dim_z=64,
-              generator_type: str='convnet', generator_args={}):
+    def build(self,
+              generator_noise_type='normal',
+              dim_z=64,
+              generator_type: str = 'convnet',
+              generator_args={}):
         '''
 
         Args:
@@ -333,10 +341,10 @@ class GAN(ModelPlugin):
         self.builds.discriminator = DiscriminatorBuild()
         self.builds.generator = GeneratorBuild()
         self.routines.generator = GeneratorRoutine(noise='data.z')
-        self.routines.discriminator = DiscriminatorRoutine(real='data.images',
-                                                           noise='data.z')
-        self.routines.penalty = PenaltyRoutine(network='discriminator',
-                                               inputs='data.images')
+        self.routines.discriminator = DiscriminatorRoutine(
+            real='data.images', noise='data.z')
+        self.routines.penalty = PenaltyRoutine(
+            network='discriminator', inputs='data.images')
         self.add_train_procedure(self.routines.generator,
                                  self.routines.discriminator,
                                  self.routines.penalty)

@@ -13,64 +13,37 @@ from .utils import build_transforms
 
 class TorchvisionDatasetPlugin(DatasetPlugin):
     sources = [
-        'CIFAR10',
-        'CIFAR100',
-        'CocoCaptions',
-        'CocoDetection',
-        'FakeData',
-        'FashionMNIST',
-        'ImageFolder',
-        'LSUN',
-        'LSUNClass',
-        'MNIST',
-        'PhotoTour',
-        'SEMEION',
-        'STL10',
-        'SVHN']
+        'CIFAR10', 'CIFAR100', 'CocoCaptions', 'CocoDetection', 'FakeData',
+        'FashionMNIST', 'ImageFolder', 'LSUN', 'LSUNClass', 'MNIST',
+        'PhotoTour', 'SEMEION', 'STL10', 'SVHN'
+    ]
 
     def _handle_LSUN(self, Dataset, data_path, transform=None):
         train_set = Dataset(
-            data_path,
-            classes=['bedroom_train'],
-            transform=transform)
+            data_path, classes=['bedroom_train'], transform=transform)
         test_set = Dataset(
-            data_path,
-            classes=['bedroom_test'],
-            transform=transform)
+            data_path, classes=['bedroom_test'], transform=transform)
         return train_set, test_set
 
     def _handle_SVHN(self, Dataset, data_path, transform=None):
         train_set = Dataset(
-            data_path,
-            split='train',
-            transform=transform,
-            download=True)
+            data_path, split='train', transform=transform, download=True)
         test_set = Dataset(
-            data_path,
-            split='test',
-            transform=transform,
-            download=True)
+            data_path, split='test', transform=transform, download=True)
         return train_set, test_set
 
     def _handle(self, Dataset, data_path, transform=None):
         train_set = Dataset(
-            data_path,
-            train=True,
-            transform=transform,
-            download=True)
+            data_path, train=True, transform=transform, download=True)
         test_set = Dataset(
-            data_path,
-            train=False,
-            transform=transform,
-            download=True)
+            data_path, train=False, transform=transform, download=True)
         return train_set, test_set
 
-    def handle(
-            self,
-            source,
-            copy_to_local=False,
-            normalize=True,
-            **transform_args):
+    def handle(self,
+               source,
+               copy_to_local=False,
+               normalize=True,
+               **transform_args):
 
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
@@ -85,11 +58,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
 
         if normalize and isinstance(normalize, bool):
             if source in [
-                'MNIST',
-                'dSprites',
-                'Fashion-MNIST',
-                'EMNIST',
-                    'PhotoTour']:
+                    'MNIST', 'dSprites', 'Fashion-MNIST', 'EMNIST', 'PhotoTour'
+            ]:
                 normalize = [(0.5,), (0.5,)]
                 scale = (0, 1)
             else:

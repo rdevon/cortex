@@ -13,7 +13,6 @@ from cortex.built_ins.models.classifier import (SimpleClassifierBuild,
 
 from .utils import update_encoder_args, update_decoder_args
 
-
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
 __author_email__ = 'erroneus@gmail.com'
 
@@ -44,8 +43,8 @@ class VAENetwork(nn.Module):
 
     def reparametrize(self, mu, std):
         if self.training:
-            esp = Variable(std.data.new(std.size()).normal_(),
-                           requires_grad=False).cuda()
+            esp = Variable(
+                std.data.new(std.size()).normal_(), requires_grad=False).cuda()
             return mu + std * esp
         else:
             return mu
@@ -87,8 +86,8 @@ class VAERoutine(RoutinePlugin):
         gen = F.tanh(gen)
 
         r_loss = vae_criterion(outputs, X, size_average=False) / X.size(0)
-        kl = (0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. *
-                     torch.log(vae_net.std) - 1.).sum(1).mean())
+        kl = (0.5 * (vae_net.std**2 + vae_net.mu**2 -
+                     2. * torch.log(vae_net.std) - 1.).sum(1).mean())
 
         self.losses.vae = (r_loss + beta_kld * kl)
         self.results.update(KL_divergence=kl.item())
@@ -107,7 +106,9 @@ class ImageEncoderBuild(BuildPlugin):
     plugin_name = 'image_encoder'
     plugin_nets = ['image_encoder']
 
-    def build(self, encoder_type: str='convnet', dim_out: int=None,
+    def build(self,
+              encoder_type: str = 'convnet',
+              dim_out: int = None,
               encoder_args={}):
         '''
 
@@ -118,9 +119,8 @@ class ImageEncoderBuild(BuildPlugin):
 
         '''
         x_shape = self.get_dims('x', 'y', 'c')
-        Encoder, encoder_args = update_encoder_args(x_shape,
-                                                    model_type=encoder_type,
-                                                    encoder_args=encoder_args)
+        Encoder, encoder_args = update_encoder_args(
+            x_shape, model_type=encoder_type, encoder_args=encoder_args)
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.nets.image_encoder = encoder
 
@@ -132,7 +132,9 @@ class ImageDecoderBuild(BuildPlugin):
     plugin_name = 'image_decoder'
     plugin_nets = ['image_decoder']
 
-    def build(self, decoder_type: str='convnet', dim_in: int=64,
+    def build(self,
+              decoder_type: str = 'convnet',
+              dim_in: int = 64,
               decoder_args={}):
         '''
 
@@ -143,9 +145,8 @@ class ImageDecoderBuild(BuildPlugin):
 
         '''
         x_shape = self.get_dims('x', 'y', 'c')
-        Decoder, decoder_args = update_decoder_args(x_shape,
-                                                    model_type=decoder_type,
-                                                    decoder_args=decoder_args)
+        Decoder, decoder_args = update_decoder_args(
+            x_shape, model_type=decoder_type, decoder_args=decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.nets.image_decoder = decoder
 
@@ -171,8 +172,7 @@ class VAEBuild(BuildPlugin):
         self.add_noise('z', dist='normal', size=dim_z)
         encoder = self.nets.encoder
         decoder = self.nets.decoder
-        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out,
-                         dim_z=dim_z)
+        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
         self.nets.vae = vae
 
 
@@ -199,19 +199,21 @@ class VAE(ModelPlugin):
 
         '''
         super().__init__()
-        self.builds.encoder = ImageEncoderBuild(dim_out='dim_encoder_out',
-                                                image_encoder='encoder')
-        self.builds.decoder = ImageDecoderBuild(dim_in='dim_z',
-                                                image_decoder='decoder')
+        self.builds.encoder = ImageEncoderBuild(
+            dim_out='dim_encoder_out', image_encoder='encoder')
+        self.builds.decoder = ImageDecoderBuild(
+            dim_in='dim_z', image_decoder='decoder')
         self.builds.vae = VAEBuild()
-        self.routines.vae = VAERoutine(input='data.images', noise='data.z',
-                                       targets='data.targets')
+        self.routines.vae = VAERoutine(
+            input='data.images', noise='data.z', targets='data.targets')
 
         if add_classification:
             self.builds.classifier = SimpleClassifierBuild(dim_in='dim_z')
             self.routines.classify = ClassifyRoutine(
-                classifier='simple_classifier', inputs='encoder_mean',
-                targets='data.targets', images='data.images')
+                classifier='simple_classifier',
+                inputs='encoder_mean',
+                targets='data.targets',
+                images='data.images')
             self.add_train_procedure(self.routines.vae, self.routines.classify)
         else:
             self.add_train_procedure(self.routines.vae)

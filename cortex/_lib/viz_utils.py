@@ -115,7 +115,7 @@ def tile_raster_images(X,
                     this_x = X[tile_row * tile_shape[1] + tile_col]
 
                     out_array[tile_row * (H + Hs):tile_row * (H + Hs) +
-                                                  H, tile_col * (W + Ws):tile_col * (W + Ws) +
-                                                                         W] = this_x
+                              H, tile_col * (W + Ws):tile_col * (W + Ws) +
+                              W] = this_x
 
         return out_array

@@ -2,7 +2,6 @@
 
 '''
 
-
 from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
                             RoutinePlugin)
 import torch
@@ -33,8 +32,8 @@ class ClassifyRoutine(RoutinePlugin):
         targets = self.vars.targets
         images = self.vars.images
 
-        predicted = self.classify(classifier, inputs, targets,
-                                  criterion=criterion)
+        predicted = self.classify(
+            classifier, inputs, targets, criterion=criterion)
         if images is not None:
             self.visualize(images, targets, predicted)
 
@@ -54,8 +53,10 @@ class ClassifyRoutine(RoutinePlugin):
         return predicted
 
     def visualize(self, inputs, targets, predicted):
-        self.add_image(inputs.data, labels=(targets.data, predicted.data),
-                       name=self.name + '_gt_pred')
+        self.add_image(
+            inputs.data,
+            labels=(targets.data, predicted.data),
+            name=self.name + '_gt_pred')
 
 
 class SimpleClassifierBuild(BuildPlugin):
@@ -65,7 +66,7 @@ class SimpleClassifierBuild(BuildPlugin):
     plugin_name = 'simple_classifier'
     plugin_nets = ['simple_classifier']
 
-    def build(self, dim_in: int=None, dim_h=[200, 200], classifier_args={}):
+    def build(self, dim_in: int = None, dim_h=[200, 200], classifier_args={}):
         '''
 
         Args:
@@ -76,8 +77,8 @@ class SimpleClassifierBuild(BuildPlugin):
 
         '''
         dim_l = self.get_dims('labels')
-        classifier = FullyConnectedNet(dim_in, dim_h=dim_h,
-                                       dim_out=dim_l, **classifier_args)
+        classifier = FullyConnectedNet(
+            dim_in, dim_h=dim_h, dim_out=dim_l, **classifier_args)
         self.nets.simple_classifier = classifier
 
 
@@ -88,7 +89,8 @@ class ImageClassifierBuild(BuildPlugin):
     plugin_name = 'image_classifier'
     plugin_nets = ['image_classifier']
 
-    def build(self, classifier_type='convnet',
+    def build(self,
+              classifier_type='convnet',
               classifier_args=dict(dropout=0.2)):
         '''Builds a simple image classifier.
 
@@ -102,8 +104,8 @@ class ImageClassifierBuild(BuildPlugin):
         shape = self.get_dims('x', 'y', 'c')
         dim_l = self.get_dims('labels')
 
-        Encoder, args = update_encoder_args(shape, model_type=classifier_type,
-                                            encoder_args=classifier_args)
+        Encoder, args = update_encoder_args(
+            shape, model_type=classifier_type, encoder_args=classifier_args)
 
         args.update(**classifier_args)
 
@@ -127,10 +129,11 @@ class ImageClassification(ModelPlugin):
         super().__init__()
         self.builds.classifier = ImageClassifierBuild(
             image_classifier='my_classifier')
-        self.routines.classify = ClassifyRoutine(classifier='my_classifier',
-                                                 inputs='data.images',
-                                                 targets='data.targets',
-                                                 images='data.images')
+        self.routines.classify = ClassifyRoutine(
+            classifier='my_classifier',
+            inputs='data.images',
+            targets='data.targets',
+            images='data.images')
         self.add_train_procedure(self.routines.classify)
 
 

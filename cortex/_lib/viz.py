@@ -261,6 +261,7 @@ def save_text(labels, max_samples=64, out_file=None, text_id=0, caption=''):
             for l__ in l_:
                 f.write(l__)
 
+
 # TODO: C901 'save_images' is too complex (23)
 def save_images(
         images,

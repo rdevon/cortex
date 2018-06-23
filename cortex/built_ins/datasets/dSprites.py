@@ -4,7 +4,6 @@ Taken and adapted from https://github.com/Near32/PYTORCH_VAE
 
 '''
 
-
 from os import path
 import urllib.request
 
@@ -13,7 +12,6 @@ import numpy as np
 from PIL import Image
 
 from . import logger
-
 
 DATASETS = ['dSprites']
 

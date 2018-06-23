@@ -91,13 +91,9 @@ class ImageFolder(data.Dataset):
         imgs = make_dataset(root, patterns)
 
         if len(imgs) == 0:
-            raise (
-                RuntimeError(
-                    "Found 0 images in subfolders of: " +
-                    root +
-                    "\n"
-                    "Supported image extensions are: " +
-                    ",".join(IMG_EXTENSIONS)))
+            raise (RuntimeError(
+                "Found 0 images in subfolders of: " + root + "\n"
+                "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
 
         self.root = root
         self.imgs = imgs
