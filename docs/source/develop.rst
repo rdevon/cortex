@@ -3,7 +3,7 @@ Develop
 
 Documentation
 ~~~~~~~~~~~~~
-
+Make sure that the cortex package is installed and configured.
 Generate API documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
