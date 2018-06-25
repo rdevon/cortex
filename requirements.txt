@@ -1,10 +1,3 @@
-torch
-imageio
-matplotlib
-progressbar2
-scipy
-sklearn
-torchvision
-visdom
-pathlib
-pyyaml
+sphinx
+sphinx_rtd_theme
+numpydoc
