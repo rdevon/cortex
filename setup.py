@@ -20,7 +20,7 @@ setup(
     author_email='erroneus@gmail.com',
     packages=packages,
     install_requires=install_requirements,
-    extras_requiremes=extras_requirements,
+    extras_require=extras_requirements,
     entry_points={'console_scripts': ['cortex=cortex.main:main']},
     zip_safe=False)
 
