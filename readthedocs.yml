@@ -4,5 +4,6 @@ build:
 python:
   version: 3.6
   formats: []
+  pip_install : true
   extra_requirements:
         - docs
