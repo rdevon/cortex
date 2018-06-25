@@ -23,3 +23,4 @@ setup(
     extras_requiremes=extras_requirements,
     entry_points={'console_scripts': ['cortex=cortex.main:main']},
     zip_safe=False)
+
