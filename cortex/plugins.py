@@ -158,6 +158,47 @@ class ModelPlugin(ModelPluginBase):
     train_defaults = {}
     optimizer_defaults = {}
 
+    def build(self, *args, **kwargs):
+        raise NotImplementedError('`build` is not implemented for model class {}'
+                                  .format(self.__class__.__name__))
+
+    def routine(self, *args, **kwargs):
+        raise NotImplementedError(
+            '`routine` is not implemented for model class {}'
+            .format(self.__class__.__name__))
+
+    def eval(self, *args, **kwargs):
+        raise NotImplementedError(
+            '`eval` is not implemented for model class {}'
+            .format(self.__class__.__name__))
+
+    def visualize(self, *args, **kwargs):
+        raise NotImplementedError(
+            '`visualize` is not implemented for model class{}'
+            .format(self.__class__.__name__))
+
+    def train_step(self):
+        self.data.next()
+
+        inputs = self.get_inputs(self.routine)
+        kwargs = self.get_kwargs(self.routine)
+        self.routine(*inputs, **kwargs)
+        self.optimizer_step()
+
+    def eval_step(self):
+        self.data.next()
+
+        inputs = self.get_inputs(self.routine)
+        kwargs = self.get_kwargs(self.routine)
+        self.routine(*inputs, **kwargs)
+
+    def optimizer_step(self):
+        keys = self.losses.keys()
+        for k in keys:
+            loss = self.losses.pop(k)
+            loss.backward()
+            self._optimizers[k].step()
+
     def get_dims(self, *queries):
         '''Gets dimensions of inputs.
 
@@ -169,11 +210,6 @@ class ModelPlugin(ModelPluginBase):
 
         '''
         return self._data.get_dims(*queries)
-
-    def build_networks(self):
-        for k, build in self.builds.items():
-            kwargs = self.get_kwargs(build)
-            build(**kwargs)
 
     def add_noise(self, key, dist=None, size=None, **kwargs):
         '''Adds a noise variable to the model.
@@ -215,58 +251,6 @@ class ModelPlugin(ModelPluginBase):
 
         '''
         self._viz.add_scatter(*args, **kwargs)
-
-    def _add_routine_name(self, routine):
-        '''Adds a routine
-
-        Args:
-            routine: Routine plugin instance.
-
-        '''
-
-        if routine in self.routines.values():
-            return routine.name
-
-        name = routine.plugin_name
-        self.routines[name] = routine
-
-        return name
-
-    def add_train_procedure(self, *routines, mode: str='train',
-                            updates_per_routine=None):
-        '''Adds a training procedure.
-
-        Args:
-            *routines: TODO
-            mode (str): Data mode on which the procedure will be run.
-            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary
-            of updates for each routine.
-
-        '''
-        updates_per_routine = updates_per_routine or [1 for _ in routines]
-        if len(routines) != len(updates_per_routine):
-            raise ValueError(
-                'Number of routines must match number of updates.')
-        routine_names = []
-        for routine in routines:
-            routine_names.append(self._add_routine_name(routine))
-
-        self._train_procedures.append(
-            (mode, routine_names, updates_per_routine))
-
-    def add_eval_procedure(self, *routines, mode='test'):
-        '''Adds a evaluation procedure.
-
-        Args:
-            *routines: TODO
-            mode (str): Data mode on which the procedure will be run.
-
-        '''
-        routine_names = []
-        for routine in routines:
-            routine_names.append(self._add_routine_name(routine))
-
-        self._eval_procedures.append((mode, routine_names))
 
 
 def register_plugin(plugin):

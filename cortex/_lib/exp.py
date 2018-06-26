@@ -101,7 +101,7 @@ def setup_new(
         d = torch.load(model_file)
         reloads = reloads or d['builds'].keys()
         for k in reloads:
-            models.reload_models(**{k: d['builds'][k]})
+            reload_models(**{k: d['builds'][k]})
             if isinstance(d['builds'][k], list):
                 for m in d['builds'][k]:
                     m.to(DEVICE)
@@ -134,7 +134,7 @@ def reload(exp_file, reloads, name, out_path, clean, config):
 
     reloads = reloads or d['builds'].keys()
     for k in reloads:
-        models.reload_models(**{k: d['builds'][k]})
+        reload_models(**{k: d['builds'][k]})
         if isinstance(d['builds'][k], list):
             for m in d['builds'][k]:
                 m.to(DEVICE)

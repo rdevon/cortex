@@ -102,9 +102,7 @@ def setup(  # noqa C901
         data.DATA_HANDLER.reset('train', make_pbar=False)
         models.MODEL.run_procedure(0)
 
-    training_nets = []
-    for routine in models.MODEL.routines.values():
-        training_nets += routine._training_nets
+    training_nets = models.MODEL._get_training_nets()
 
     for network_key in set(training_nets):
         logger.info('Building optimizer for {}'.format(network_key))

@@ -11,9 +11,9 @@ import readline
 import socket
 import yaml
 
-from .handlers import Handler
 
 logger = logging.getLogger('cortex.config')
+
 
 class ConfigHandler:
     def __init__(self):

@@ -10,7 +10,8 @@ import time
 
 from . import data, optimizer
 from .parsing import parse_docstring, parse_inputs, parse_kwargs
-from .handlers import aliased, NetworkHandler, LossHandler, ResultsHandler
+from .handlers import (aliased, prefixed, NetworkHandler, LossHandler,
+                       ResultsHandler)
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
@@ -63,12 +64,13 @@ class PluginType(type):
         kwargs = {}
         args = set()
 
-        for key in ['build', 'routine', 'visualize']:
+        for key in ['build', 'routine', 'visualize', 'train_step',
+                    'eval_step']:
             if key in attrs:
                 attr = attrs[key]
                 help_ = parse_docstring(attr)
                 kwargs_ = parse_kwargs(attr)
-                args_ = parse_inputs(attr)
+                args_ = set(parse_inputs(attr))
 
                 for k, v in help_.items():
                     if k in help and v != help[k]:
@@ -80,11 +82,11 @@ class PluginType(type):
 
                 help.update(**help_)
                 kwargs.update(**kwargs_)
-                args |= set(args_)
+                args |= args_
 
         attrs['_help'] = help
         attrs['_kwargs'] = kwargs
-        attrs['_args'] = list(args)
+        attrs['_args'] = args
 
         return super(PluginType, cls).__new__(cls, name, bases, attrs)
 
@@ -100,106 +102,69 @@ class PluginType(type):
 class ModelPluginBase(metaclass=PluginType):
     _viz = VizHandler()
     _data = data.DATA_HANDLER
-    _nets = NetworkHandler(allow_overwrite=False)
-    _losses = LossHandler(_nets)
-    _training_nets = []
+    _optimizers = optimizer.OPTIMIZERS
+
+    _kwargs = dict()
+    _help = dict()
+    _owners = dict()
+    _training_nets = dict()
+
+    _all_nets = NetworkHandler(allow_overwrite=False)
+    _all_losses = LossHandler(_all_nets)
+    _all_results = ResultsHandler()
+
+    _all_epoch_results = ResultsHandler()
+    _all_epoch_losses = ResultsHandler()
+    _all_epoch_times = ResultsHandler()
 
     def __init__(self, contract=None):
-        self._train_procedures = []
-        self._eval_procedures = []
-        self._contact = None
-
-        self._results = ResultsHandler(time=dict(), losses=dict())
+        self._contract = None
+        self._kwarg_dict = dict()
+        self._input_dict = dict()
 
         if contract:
             contract = self._check_contract(contract)
             self._accept_contract(contract)
+
+        if self._contract and len(self._contract['nets']) > 0:
+            self._nets = aliased(self._all_nets, aliases=contract['nets'])
+            self._losses = aliased(self._all_losses, aliases=contract['nets'])
         else:
-            if hasattr(self, 'build'):
-                self.build = self._wrap(self.build)
+            self._nets = aliased(self._all_nets)
+            self._losses = aliased(self._all_losses)
 
-            if hasattr(self, 'routine'):
-                self.routine = self._wrap(self.routine)
+        try:
+            self.eval()
+        except NotImplementedError:
+            self.eval = self.routine
 
-            if hasattr(self, 'visualize'):
-                self.visualize = self._wrap(self.visualize)
+        for k in ['build', 'routine', 'visualize', 'train_step',
+                  'eval_step']:
+            fn = getattr(self, k)
+            fid = self._get_id(fn)
+            self._owners[fid] = self.__class__.__name__
 
-    def __setattr__(self, key, value):
-        if isinstance(value, ModelPluginBase):
-            model = value
-            kwargs = model.kwargs
-            help = model.help
-            args = model.args
-            if model._contact:
-                kwargs = dict((model._contact['kwargs'].get(k, k), v)
-                              for k, v in kwargs.items())
-                help = dict((model._contact['kwargs'].get(k, k), v)
-                            for k, v in help.items())
-                args = [model._contact['args'].get(k, k) for k in args]
-            for k, v in kwargs.items():
-                if k not in self.kwargs:
-                    self.kwargs[k] = v
-                if k not in self.help:
-                    self.help[k] = help[k]
-                    
-            self._args = list(set(self.args) | set(args))
+        self._wrap_build()
+        self._wrap_routine()
+        self.train_step = self._wrap_step(self.train_step)
+        self.eval_step = self._wrap_step(self.eval_step)
 
-        super().__setattr__(key, value)
+        self._results = prefixed(
+            self._all_results, prefix=self.__class__.__name__)
+        self._epoch_results = prefixed(
+            self._all_epoch_results, prefix=self.__class__.__name__)
+        self._epoch_losses = prefixed(
+            self._all_epoch_losses, prefix=self.__class__.__name__)
+        self._epoch_times = prefixed(
+            self._all_epoch_times, prefix=self.__class__.__name__)
 
-    def _check_contract(self, contract):
-        kwargs = contract.pop('kwargs', {})
-        nets = contract.pop('nets', {})
-        args = contract.pop('args', {})
+    def _reset_epoch(self):
+        self._all_epoch_results.clear()
+        self._all_epoch_losses.clear()
+        self._all_epoch_times.clear()
 
-        if len(contract) > 0:
-            raise KeyError('Unknown keys in contract: {}'
-                           .format(tuple(contract.keys())))
-
-        for k, v in kwargs.items():
-            if k not in self.kwargs:
-                raise KeyError('{} does not have any arguments called {}'
-                               .format(self.__class__.__name__, k))
-            if not isinstance(v, str):
-                raise TypeError('Contract values must be strings.')
-
-        for k, v in args.items():
-            if k not in self.args:
-                raise KeyError('{} does not have any inputs called {}'
-                               .format(self.__class__.__name__, k))
-            if not isinstance(v, str):
-                raise TypeError('Contract values must be strings.')
-
-        return dict(args=args, kwargs=kwargs, nets=nets)
-
-    def _accept_contract(self, contract):
-        if self._contact is not None:
-            raise ValueError('Cannot accept more than one contract.')
-
-        if hasattr(self, 'build'):
-            self.build = self._wrap(self.build, kwargs=contract['kwargs'])
-
-        if hasattr(self, 'routine'):
-            self.routine = self._wrap(self.routine, kwargs=contract['kwargs'])
-
-        if hasattr(self, 'visualize'):
-            self.visualize = self._wrap(self.visualize,
-                                        kwargs=contract['kwargs'])
-
-        self._contact = contract
-        self._nets = aliased(self._nets, aliases=contract['nets'])
-
-    def _wrap(self, fn, kwargs=None):
-        kwargs = kwargs or {}
-        kwargs = dict((v, k) for k, v in kwargs.items())
-
-        kwarg_keys = parse_kwargs(fn).keys()
-
-        def wrapped(*args, **kwargs_):
-            kwargs_ = dict((kwargs.get(k, k), v) for k, v in kwargs_.items()
-                           if kwargs.get(k, k) in kwarg_keys)
-            return fn(*args, **kwargs_)
-
-        return wrapped
+    def _get_id(self, fn):
+        return fn
 
     @property
     def kwargs(self):
@@ -214,20 +179,20 @@ class ModelPluginBase(metaclass=PluginType):
         return self._help
 
     @property
-    def setup(self):
-        return self._setup
-
-    @property
-    def train_procedures(self):
-        return self._train_procedures
-
-    @property
-    def eval_procedures(self):
-        return self._eval_procedures
-
-    @property
     def results(self):
         return self._results
+
+    @property
+    def epoch_results(self):
+        return self._epoch_results
+
+    @property
+    def epoch_losses(self):
+        return self._epoch_losses
+
+    @property
+    def epoch_times(self):
+        return self._epoch_times
 
     @property
     def nets(self):
@@ -241,101 +206,197 @@ class ModelPluginBase(metaclass=PluginType):
     def viz(self):
         return self._viz
 
-    def train(self, i, quit_on_bad_values=False):
-        return self.run_procedure(
-            i, quit_on_bad_values=quit_on_bad_values, train=True)
+    @property
+    def data(self):
+        return self._data
 
-    def run_procedure(self, i, quit_on_bad_values=False, train=False):
-        self._data.next()
-        self.reset_routines()
-        self._vars.clear()
-        mode, procedure, updates = self._train_procedures[i]
+    def __setattr__(self, key, value):
+        if isinstance(value, ModelPluginBase):
+            model = value
+            kwargs = model.kwargs
+            help = model.help
+            if model._contract:
+                kwargs = dict((model._contract['kwargs'].get(k, k), v)
+                              for k, v in kwargs.items())
+                help = dict((model._contract['kwargs'].get(k, k), v)
+                            for k, v in help.items())
+            for k, v in kwargs.items():
+                if k not in self.kwargs:
+                    self.kwargs[k] = v
+                if k not in self.help:
+                    self.help[k] = help[k]
 
-        for k, v in self._data.batch.items():
-            self._vars['data.' + k] = v
+        super().__setattr__(key, value)
 
-        losses = {}
+    def _check_contract(self, contract):
+        kwargs = contract.pop('kwargs', {})
+        nets = contract.pop('nets', {})
+        inputs = contract.pop('inputs', {})
 
-        for key, update in zip(procedure, updates):
-            if not train:
-                update = 1
-            for u in range(update):
-                if u > 0:
-                    self._data.next()
+        if len(contract) > 0:
+            raise KeyError('Unknown keys in contract: {}'
+                           .format(tuple(contract.keys())))
 
-                routine = self._routines[key]
-                routine.reset()
+        for k, v in kwargs.items():
+            if k not in self.kwargs:
+                raise KeyError('Invalid contract: {} does not have any '
+                               'arguments called {}'
+                               .format(self.__class__.__name__, k))
 
-                # Set to `requires_grad` for models that are trained with this
-                # routine.
-                if train:
-                    for k in optimizer.OPTIMIZERS.keys():
-                        net = self.nets[k]
-                        optimizer.OPTIMIZERS[k].zero_grad()
-                        for p in net.parameters():
-                            p.requires_grad = k in routine._training_nets
+            if not isinstance(v, str):
+                raise TypeError('Contract values must be strings.')
 
-                start_time = time.time()
-                losses_before = {k: v for k, v in self._losses.items()}
-                routine()
-                losses_after = {k: v for k, v in self._losses.items()}
+        for k, v in inputs.items():
+            if k not in self.args:
+                raise KeyError('Invalid contract: {} does not have any '
+                               'inputs called {}'
+                               .format(self.__class__.__name__, k))
 
-                # Check which networks the routine changed losses to.
+            if not isinstance(v, str):
+                raise TypeError('Contract values must be strings.')
+
+        return dict(inputs=inputs, kwargs=kwargs, nets=nets)
+
+    def _accept_contract(self, contract):
+        if self._contract is not None:
+            raise ValueError('Cannot accept more than one contract.')
+
+        self._contract = contract
+
+        for k in ['build', 'routine', 'visualize', 'train_step',
+                  'eval_step']:
+            fn = getattr(self, k)
+            fid = self._get_id(fn)
+            self._kwarg_dict[fid] = contract['kwargs']
+            self._input_dict[fid] = contract['inputs']
+
+    def _wrap_build(self):
+        fn = self.build
+
+        def wrapped(*args, **kwargs):
+            return fn(*args, **kwargs)
+
+        wrapped._fn = fn
+        self.build = wrapped
+
+    def _wrap_routine(self):
+        '''
+
+        Set to `requires_grad` for models that are trained with this routine.
+
+        Args:
+            routine:
+
+        Returns:
+
+        '''
+
+        fn = self.routine
+
+        def wrapped(*args, **kwargs):
+            fid = self._get_id(fn)
+
+            if fid not in self._training_nets:
+                losses_before = dict(kv for kv in self.losses.items())
+                fn(*args, **kwargs)
+                losses_after = dict(kv for kv in self.losses.items())
+
+                training_nets = []
+
                 for k, v in losses_after.items():
-                    if k not in routine._training_nets:
-                        if k not in losses_before:
-                            routine._training_nets.append(k)
-                        elif v != losses_before[k]:
-                            routine._training_nets.append(k)
+                    if k not in losses_before:
+                        training_nets.append(k)
+                    elif v != losses_before[k]:
+                        training_nets.append(k)
+                self._training_nets[fid] = training_nets
+            else:
+                training_nets = self._training_nets[fid]
 
-                # Backprop the losses.
-                keys = list(self._losses.keys())
-                for i, k in enumerate(keys):
-                    loss = self._losses.pop(k)
-                    if k in losses:
-                        losses[k] += loss.item()
-                    else:
-                        losses[k] = loss.item()
-                    if train and loss is not None:
-                        loss.backward()
-                        optimizer.OPTIMIZERS[k].step()
+            for k in training_nets:
+                net = self.nets[k]
+                self._optimizers[k].zero_grad()
+                for p in net.parameters():
+                    p.requires_grad = k in training_nets
+                net.train()
 
-                end_time = time.time()
+            start = time.time()
+            output = fn(*args, **kwargs)
+            self._check_bad_values()
+            end = time.time()
 
-                # Check for bad numbers
-                bads = bad_values(routine.results)
-                if bads and quit_on_bad_values:
-                    print(
-                        'Bad values found (quitting): {} \n All:{}'.format(
-                            bads, routine.results))
-                    exit(0)
+            owner = self._owners[self._get_id(fn)]
+            update_dict_of_lists(self.epoch_results, **self.results)
+            update_dict_of_lists(self.epoch_times, **{owner: end - start})
+            update_dict_of_lists(self.epoch_losses, **self.losses)
 
-            # Update results
-            update_dict_of_lists(self._results, **routine.results)
-            update_dict_of_lists(
-                self._results['time'], **{key: end_time - start_time})
+            return output
 
-        update_dict_of_lists(self._results['losses'], **losses)
+        wrapped._fn = fn
+        self.routine = wrapped
 
-    def reset_routines(self):
-        self._losses.clear()
-        for routine in self._routines.values():
-            routine.reset()
+    def _wrap_step(self, fn):
 
-    def reset(self):
-        self.reset_routines()
-        self._results.clear()
-        self._results.update(losses=dict(), time=dict())
-        self._vars.clear()
-        self._losses.clear()
+        def wrapped(*args, **kwargs):
+            for net in self.nets.values():
+                net.eval()
 
-    def set_train(self):
-        for net in self._nets.values():
-            net.train()
+            self._all_losses.clear()
+            self._all_results.clear()
 
-    def set_eval(self):
-        for net in self._nets.values():
-            net.eval()
+            output = fn(*args, **kwargs)
+
+            return output
+
+        wrapped._fn = fn
+        return wrapped
+
+    def get_inputs(self, fn):
+        fid = self._get_id(fn._fn)
+        input_dict = self._input_dict.get(fid, {})
+        input_keys = parse_inputs(fn._fn)
+
+        inputs = []
+        for k in input_keys:
+            key = input_dict.get(k, k)
+            inp = self.data[key]
+            inputs.append(inp)
+
+        return inputs
+
+    def get_kwargs(self, fn):
+        fid = self._get_id(fn._fn)
+        kwarg_dict = self._kwarg_dict.get(fid, {})
+        kwarg_dict = dict((v, k) for k, v in kwarg_dict.items())
+        kwarg_keys = parse_kwargs(fn._fn).keys()
+
+        kwargs = dict()
+        for k in kwarg_keys:
+            key = kwarg_dict.get(k, k)
+            value = self.kwargs[key]
+            kwargs[k] = value
+
+        return kwargs
+
+    def _get_training_nets(self):
+        training_nets = []
+        for v in self._training_nets.values():
+            training_nets += v
+
+    def _check_bad_values(self):
+        # Check for bad numbers
+        bads = bad_values(self.results)
+        if bads:
+            print(
+                'Bad values found (quitting): {} \n All:{}'.format(
+                    bads, self.results))
+            exit(0)
+
+        bads = bad_values(self.losses)
+        if bads:
+            print(
+                'Bad values found (quitting): {} \n All:{}'.format(
+                    bads, self.losses))
+            exit(0)
 
 
 def setup_model(model_key):

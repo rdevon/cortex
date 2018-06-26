@@ -1,3 +1,4 @@
+# flake8: noqa
 '''Generative adversarial networks with various objectives and penalties.
 
 '''

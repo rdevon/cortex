@@ -27,11 +27,10 @@ class Handler(MutableMapping):
     def __getitem__(self, key):
         try:
             return self.__dict__[key]
-        except:
+        except KeyError:
             d = dict((k, v) for k, v in self.__dict__.items()
                      if not k.startswith('_'))
-            raise AttributeError(self._get_error_string
-                                 .format(key, tuple(d.keys())))
+            raise KeyError(self._get_error_string.format(key, tuple(d.keys())))
 
     def __delitem__(self, key):
         del self.__dict__[key]
@@ -97,14 +96,17 @@ class AliasedHandler(Handler):
         if item.startswith('_'):
             return super().__setattr__(item)
         item = self._aliases.get(item, item)
-        return self._handler.__getattr__(item)
+        return self._handler.__getitem__(item)
 
     def __setattr__(self, key, value):
         if key.startswith('_'):
             return super().__setattr__(key, value)
 
+        if key in self._aliases.values():
+            raise KeyError('Name clash. Key is a value in the set of aliases.')
+
         key = self._aliases.get(key, key)
-        return self._handler.__setattr__(key, value)
+        self._handler.__setattr__(key, value)
 
     def __getitem__(self, item):
         if item.startswith('_'):
@@ -116,12 +118,87 @@ class AliasedHandler(Handler):
         if key.startswith('_'):
             return super().__setitem__(key, value)
 
+        if key in self._aliases.values():
+            raise KeyError('Name clash. Key is a value in the set of aliases.')
+
         key = self._aliases.get(key, key)
         return self._handler.__setitem__(key, value)
+
+    def __str__(self):
+        r_aliases = dict((v, k) for k, v in self._aliases.items())
+        d = dict((r_aliases.get(k, k), v)
+                 for k, v in self._handler.__dict__.items()
+                 if not k.startswith('_'))
+        return d.__str__()
+
+    def __len__(self):
+        return len(self._handler)
+
+    def __iter__(self):
+        r_aliases = dict((v, k) for k, v in self._aliases.items())
+        for k in self._handler:
+            yield r_aliases.get(k, k)
+
+    def __delitem__(self, key):
+        key = self._aliases.get(key, key)
+        self._handler.__delattr__(key)
 
 
 def aliased(handler, aliases=None):
     return AliasedHandler(handler, aliases=aliases)
+
+
+class PrefixedAliasedHandler(Handler):
+    def __init__(self, handler, prefix=None):
+        self._prefix = prefix or ''
+        self._handler = handler
+
+    def __getattr__(self, item):
+        if item.startswith('_'):
+            return super().__setattr__(item)
+        item = self._prefix + '_' + item
+        return self._handler.__getitem__(item)
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            return super().__setattr__(key, value)
+
+        key = self._prefix + '_' + key
+        return self._handler.__setattr__(key, value)
+
+    def __getitem__(self, item):
+        if item.startswith('_'):
+            return super().__getitem__(item)
+        item = self._prefix + '_' + item
+        return self._handler.__getitem__(item)
+
+    def __setitem__(self, key, value):
+        if key.startswith('_'):
+            return super().__setitem__(key, value)
+
+        key = self._prefix + '_' + key
+        return self._handler.__setitem__(key, value)
+
+    def __str__(self):
+        d = dict((k[len(self._prefix) + 1:], v)
+                 for k, v in self._handler.__dict__.items()
+                 if not k.startswith('_'))
+        return d.__str__()
+
+    def __len__(self):
+        return len(self._handler)
+
+    def __iter__(self):
+        for item in self._handler:
+            yield item[len(self._prefix) + 1:]
+
+    def __delitem__(self, key):
+        key = self._prefix + '_' + key
+        self._handler.__delattr__(key)
+
+
+def prefixed(handler, prefix=None):
+    return PrefixedAliasedHandler(handler, prefix=prefix)
 
 
 class NetworkHandler(Handler):
@@ -129,6 +206,7 @@ class NetworkHandler(Handler):
     _get_error_string = 'Model `{}` not found. You must add ' \
                         'it in `build_models` (as a dict entry).' \
                         ' Found: {}'
+
 
 ResultsHandler = Handler
 

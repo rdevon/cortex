@@ -72,7 +72,7 @@ class VizHandler():
     def __init__(self):
         self.clear()
         self.ignore = True
-        print(dir(exp))
+
         self.output_dirs = exp.OUT_DIRS
         self.prefix = exp._file_string('')
         self.image_scale = (-1, 1)

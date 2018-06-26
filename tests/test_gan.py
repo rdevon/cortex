@@ -1,8 +1,11 @@
 """
 Test suite for GAN network.
 """
-import pytest
+
 '''
+import pytest
+
+
 from cortex.built_ins.models.gan import raise_measure_error
 
 
