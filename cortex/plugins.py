@@ -167,11 +167,6 @@ class ModelPlugin(ModelPluginBase):
             '`routine` is not implemented for model class {}'
             .format(self.__class__.__name__))
 
-    def eval(self, *args, **kwargs):
-        raise NotImplementedError(
-            '`eval` is not implemented for model class {}'
-            .format(self.__class__.__name__))
-
     def visualize(self, *args, **kwargs):
         raise NotImplementedError(
             '`visualize` is not implemented for model class{}'

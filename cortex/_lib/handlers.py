@@ -19,7 +19,7 @@ class Handler(MutableMapping):
         self._locked = False
         self._storage = dict(**kwargs)
 
-    def _check_type(self, value):
+    def _check_keyvalue(self, key, value):
         if self._type and not isinstance(value, self._type):
             raise TypeError('Invalid type ({}), expected {}.'
                             .format(type(value), self._type))
@@ -36,7 +36,7 @@ class Handler(MutableMapping):
         del self.__dict__[key]
 
     def __setitem__(self, key, value):
-        self._check_type(value)
+        self._check_keyvalue(key, value)
 
         if self._locked:
             raise KeyError('Handler is locked.')
@@ -49,7 +49,7 @@ class Handler(MutableMapping):
         if key.startswith('_'):
             return super().__setattr__(key, value)
 
-        self._check_type(value)
+        self._check_keyvalue(key, value)
 
         if self._locked:
             raise KeyError('Handler is locked.')
@@ -218,14 +218,12 @@ class LossHandler(Handler):
     _type = torch.Tensor
     _get_error_string = 'Loss `{}` not found. You must add it as a dict entry'
 
-    def __init__(self, nets):
+    def __init__(self, nets, *args, **kwargs):
         self._nets = nets
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
-    def check_key_value(self, k, v):
-        if k.startswith('_'):
-            return True
-        super().check_key_value(k, v)
+    def _check_keyvalue(self, k, v):
+        super()._check_keyvalue(k, v)
         if k not in self._nets:
             raise AttributeError(
                 'Keyword `{}` not in the model_handler. Found: {}.'.format(

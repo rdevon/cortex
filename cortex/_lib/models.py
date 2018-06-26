@@ -109,8 +109,11 @@ class ModelPluginBase(metaclass=PluginType):
     _owners = dict()
     _training_nets = dict()
 
+    _kwarg_dict = dict()
+    _input_dict = dict()
+
     _all_nets = NetworkHandler(allow_overwrite=False)
-    _all_losses = LossHandler(_all_nets)
+    _all_losses = LossHandler(_all_nets, allow_overwrite=False)
     _all_results = ResultsHandler()
 
     _all_epoch_results = ResultsHandler()
@@ -119,8 +122,6 @@ class ModelPluginBase(metaclass=PluginType):
 
     def __init__(self, contract=None):
         self._contract = None
-        self._kwarg_dict = dict()
-        self._input_dict = dict()
 
         if contract:
             contract = self._check_contract(contract)
@@ -132,11 +133,6 @@ class ModelPluginBase(metaclass=PluginType):
         else:
             self._nets = aliased(self._all_nets)
             self._losses = aliased(self._all_losses)
-
-        try:
-            self.eval()
-        except NotImplementedError:
-            self.eval = self.routine
 
         for k in ['build', 'routine', 'visualize', 'train_step',
                   'eval_step']:
@@ -309,6 +305,8 @@ class ModelPluginBase(metaclass=PluginType):
                     elif v != losses_before[k]:
                         training_nets.append(k)
                 self._training_nets[fid] = training_nets
+                for k in training_nets:
+                    self.losses.pop(k)
             else:
                 training_nets = self._training_nets[fid]
 
@@ -366,13 +364,12 @@ class ModelPluginBase(metaclass=PluginType):
     def get_kwargs(self, fn):
         fid = self._get_id(fn._fn)
         kwarg_dict = self._kwarg_dict.get(fid, {})
-        kwarg_dict = dict((v, k) for k, v in kwarg_dict.items())
         kwarg_keys = parse_kwargs(fn._fn).keys()
 
         kwargs = dict()
         for k in kwarg_keys:
             key = kwarg_dict.get(k, k)
-            value = self.kwargs[key]
+            value = self.kwargs.get(key, key)
             kwargs[k] = value
 
         return kwargs
