@@ -2,10 +2,7 @@
 
 '''
 
-import importlib
 import logging
-import os
-import sys
 import time
 
 from . import data, optimizer
@@ -21,31 +18,7 @@ __author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.models')
 
-_ROUTINE_PLUGINS = {}
-_BUILD_PLUGINS = {}
 MODEL_PLUGINS = {}
-
-
-def check_plugin(plugin, plugin_type_str, D):
-    if plugin.plugin_name is None:
-        ValueError('Set `plugin_name` static member for plugin.')
-    if plugin.plugin_name in D:
-        raise KeyError(
-            'plugin_name `{}` already registered as a {} plugin in cortex. '
-            'Try using another one.'.format(
-                plugin_type_str, plugin.plugin_name))
-
-    for k in plugin._protected:
-        if hasattr(plugin, k):
-            raise AttributeError('{} is a protected attribute.'.format(k))
-
-    for k in plugin._required:
-        v = getattr(plugin, k, None)
-        if v is None:
-            raise AttributeError(
-                'Plugin must have {} attribute set.'.format(k))
-        else:
-            setattr(plugin, k, v)
 
 
 def register_model(plugin):
@@ -153,6 +126,24 @@ class ModelPluginBase(metaclass=PluginType):
             self._all_epoch_losses, prefix=self.__class__.__name__)
         self._epoch_times = prefixed(
             self._all_epoch_times, prefix=self.__class__.__name__)
+
+    @classmethod
+    def _reset_class(cls):
+        cls._kwargs.clear()
+        cls._help.clear()
+        cls._owners.clear()
+        cls._training_nets.clear()
+
+        cls._kwarg_dict = dict()
+        cls._input_dict = dict()
+
+        cls._all_nets.clear()
+        cls._all_losses.clear()
+        cls._all_results.clear()
+
+        cls._all_epoch_results.clear()
+        cls._all_epoch_losses.clear()
+        cls._all_epoch_times.clear()
 
     def _reset_epoch(self):
         self._all_epoch_results.clear()
@@ -293,9 +284,9 @@ class ModelPluginBase(metaclass=PluginType):
             fid = self._get_id(fn)
 
             if fid not in self._training_nets:
-                losses_before = dict(kv for kv in self.losses.items())
+                losses_before = dict(kv for kv in self._all_losses.items())
                 fn(*args, **kwargs)
-                losses_after = dict(kv for kv in self.losses.items())
+                losses_after = dict(kv for kv in self._all_losses.items())
 
                 training_nets = []
 
@@ -343,6 +334,10 @@ class ModelPluginBase(metaclass=PluginType):
 
             output = fn(*args, **kwargs)
 
+            loss_keys = self.losses.keys()
+            for key in loss_keys:
+                self.losses.pop(key)
+
             return output
 
         wrapped._fn = fn
@@ -379,6 +374,8 @@ class ModelPluginBase(metaclass=PluginType):
         for v in self._training_nets.values():
             training_nets += v
 
+        return training_nets
+
     def _check_bad_values(self):
         # Check for bad numbers
         bads = bad_values(self.results)
@@ -394,84 +391,3 @@ class ModelPluginBase(metaclass=PluginType):
                 'Bad values found (quitting): {} \n All:{}'.format(
                     bads, self.losses))
             exit(0)
-
-
-def setup_model(model_key):
-    global MODEL
-    logger.info('Using model `{}`'.format(model_key))
-    MODEL = MODEL_PLUGINS[model_key]
-    return MODEL
-
-
-_arch_keys_optional = dict(
-    TEST_ROUTINES='test_routines',
-    FINISH_TRAIN_ROUTINES='finish_train_routines',
-    FINISH_TEST_ROUTINES='finish_test_routines',
-    SETUP='setup',
-    Dataset='Dataset',
-    DataLoader='DataLoader',
-    transform='transform'
-)
-
-_ignore = ['__init__.py', '__pycache__']
-
-
-def import_directory(p, name):
-    '''
-    Adds custom directories to the framwework
-    '''
-
-    global ARCHS
-
-    if p.endswith('/'):
-        p = p[:-1]
-
-    logger.info('Adding {} to `sys.path`.'.format(p))
-    sys.path.append(p)
-
-    for fn in os.listdir(p):
-        if fn.endswith('.py') and fn not in _ignore:
-            fnp = fn[:-3]
-            importlib.import_module(fnp)
-            try:
-                importlib.import_module(fnp)
-            except Exception as e:
-                logger.warning(
-                    'Import of architecture (module) {} failed ({})'.format(
-                        fnp, e))
-
-        '''
-        elif os.path.isdir(fn):
-            if fn.endswith('/'):
-                fn = fn[:-1]
-            if fn not in _ignore:
-                add_directory(fn, name + '.' + os.path.basename(fn))
-        '''
-
-
-def find_models(model_paths):
-    for k, p in model_paths.items():
-        import_directory(p, k)
-
-    global MODEL_PLUGINS
-    keys = list(MODEL_PLUGINS.keys())
-    for k in keys:
-        v = MODEL_PLUGINS[k]
-        v.check()
-        try:
-            v.check()
-        except Exception as e:
-            logger.warning('`{}` checks failed ({}).'.format(k, e))
-            MODEL_PLUGINS.pop(k)
-
-
-def build_networks():
-    '''Builds the generator and discriminator.
-
-    If architecture module contains a `build_model` function, use that,
-    otherwise, use the one found in this module.
-
-    '''
-    for build_key, build in MODEL.builds.items():
-        logger.debug('{} build args: {}'.format(build_key, build.kwargs))
-        build()

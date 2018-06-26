@@ -8,7 +8,7 @@ import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from . import data, exp, models, reg
+from . import exp, reg
 
 
 __author__ = 'R Devon Hjelm'
@@ -24,9 +24,9 @@ _optimizer_defaults = dict(
 
 
 def setup(  # noqa C901
+        model,
         optimizer='Adam',
         learning_rate=1.e-4,
-        updates_per_routine={},
         clipping={},
         weight_decay={},
         l1_decay={},
@@ -62,15 +62,6 @@ def setup(  # noqa C901
             'Default optimizer options for'
             ' `{}` not available.'.format(optimizer))
 
-    # Set the number of updates per routine
-    updates_per_routine = updates_per_routine or {}
-    for i in range(len(models.MODEL.train_procedures)):
-        _, procedure, updates = models.MODEL.train_procedures[i]
-        for i, routine in enumerate(procedure):
-            if routine in updates_per_routine:
-                updates[i] = updates_per_routine[routine]
-
-    # Initialize regularization
     # initialize regularization
     reg.init(clipping=clipping, weight_decay=l1_decay)
 
@@ -83,30 +74,27 @@ def setup(  # noqa C901
         raise NotImplementedError(
             'Optimizer not supported `{}`'.format(optimizer))
 
-    for network_key, network in models.MODEL.nets.items():
+    for network_key, network in model.nets.items():
         # Set model parameters to cpu or gpu
-        if isinstance(network, (tuple, list)):
-            for net in network:
-                net.to(exp.DEVICE)
-                torch.nn.DataParallel(
-                    net, device_ids=range(
-                        torch.cuda.device_count()))
+        network.to(exp.DEVICE)
+        # TODO(Devon): is the next line really doing anything?
+        if str(exp.DEVICE) == 'cpu':
+            pass
         else:
-            network.to(exp.DEVICE)
-            # TODO(Devon): is the next line really doing anything?
             torch.nn.DataParallel(
                 network, device_ids=range(
                     torch.cuda.device_count()))
 
-    with torch.no_grad():
-        data.DATA_HANDLER.reset('train', make_pbar=False)
-        models.MODEL.run_procedure(0)
+    try:
+        model.eval_step()
+    except KeyError:
+        pass
 
-    training_nets = models.MODEL._get_training_nets()
+    training_nets = model._get_training_nets()
 
     for network_key in set(training_nets):
         logger.info('Building optimizer for {}'.format(network_key))
-        network = models.MODEL.nets[network_key]
+        network = model.nets[network_key]
 
         if isinstance(network, (tuple, list)):
             params = []
