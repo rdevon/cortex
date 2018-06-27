@@ -2,13 +2,14 @@
 
 '''
 
+from collections import defaultdict
 import logging
 
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from . import exp, reg
+from . import exp
 
 
 __author__ = 'R Devon Hjelm'
@@ -23,15 +24,50 @@ _optimizer_defaults = dict(
 )
 
 
-def setup(  # noqa C901
-        model,
-        optimizer='Adam',
-        learning_rate=1.e-4,
-        clipping={},
-        weight_decay={},
-        l1_decay={},
-        optimizer_options={},
-        model_optimizer_options={}):
+def wrap_optimizer(C):
+    class Op(C):
+        def __init__(self, params, clipping=None, **kwargs):
+            super().__init__(params, **kwargs)
+
+            if clipping is not None and clipping < 0.0:
+                raise ValueError(
+                    "Invalid clipping value: {}".format(clipping))
+
+            self.defaults.update(clipping=clipping)
+
+            self.state = defaultdict(dict)
+            self.param_groups = []
+
+            param_groups = list(params)
+            if len(param_groups) == 0:
+                raise ValueError("optimizer got an empty parameter list")
+            if not isinstance(param_groups[0], dict):
+                param_groups = [{'params': param_groups}]
+
+            for param_group in param_groups:
+                self.add_param_group(param_group)
+
+        def step(self, closure=None):
+            """Performs a single optimization step.
+
+            Arguments:
+                closure (callable, optional): A closure that reevaluates the model
+                    and returns the loss.
+            """
+            loss = super().step(closure=closure)
+
+            for group in self.param_groups:
+                bound = group['clipping']
+                for p in group['params']:
+                    p.data.clamp_(-bound, bound)
+            return loss
+
+    return Op
+
+
+def setup(model, optimizer='Adam', learning_rate=1.e-4,
+          weight_decay={}, clipping={}, optimizer_options={},
+          model_optimizer_options={}):
     '''Optimizer entrypoint.
 
     Args:
@@ -40,7 +76,6 @@ def setup(  # noqa C901
         updates_per_routine: Updates per routine.
         clipping: If set, this is the clipping for each model.
         weight_decay: If set, this is the weight decay for specified model.
-        l1_decay: If set, this is the l1 decay for specified model.
         optimizer_options: Optimizer options.
         model_optimizer_options: Optimizer options for specified model.
 
@@ -48,7 +83,6 @@ def setup(  # noqa C901
 
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
-    l1_decay = l1_decay or {}
     clipping = clipping or {}
 
     # Set the optimizer options
@@ -61,9 +95,6 @@ def setup(  # noqa C901
         raise ValueError(
             'Default optimizer options for'
             ' `{}` not available.'.format(optimizer))
-
-    # initialize regularization
-    reg.init(clipping=clipping, weight_decay=l1_decay)
 
     # Set the optimizers
     if callable(optimizer):
@@ -117,31 +148,26 @@ def setup(  # noqa C901
         else:
             wd = weight_decay
 
+        if isinstance(clipping, dict):
+            cl = clipping.get(network_key, 0)
+        else:
+            cl = clipping
+
         # Update the optimizer options
         optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
+        optimizer_options_.update(weight_decay=wd, clipping=cl)
+
         if network_key in model_optimizer_options.keys():
             optimizer_options_.update(**model_optimizer_options)
 
-        # Creat the optimizer
-        optimizer = op(params, lr=eta, weight_decay=wd, **optimizer_options_)
+        # Create the optimizer
+        op = wrap_optimizer(op)
+        optimizer = op(params, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
 
         logger.info(
             'Training {} routine with {}'.format(
                 network_key, optimizer))
-
-        # Additional regularization
-        if network_key in reg.CLIPPING.keys():
-            logger.info(
-                'Clipping {} with {}'.format(
-                    network_key,
-                    reg.CLIPPING[network_key]))
-
-        if network_key in reg.L1_DECAY.keys():
-            logger.info(
-                'L1 Decay {} with {}'.format(
-                    network_key,
-                    reg.L1_DECAY[network_key]))
 
     if not exp.DEVICE == torch.device('cpu'):
         cudnn.benchmark = True

@@ -133,9 +133,12 @@ class ModelPluginBase(metaclass=PluginType):
         if self._contract and len(self._contract['nets']) > 0:
             self._nets = aliased(self._all_nets, aliases=contract['nets'])
             self._losses = aliased(self._all_losses, aliases=contract['nets'])
+            self._epoch_losses = aliased(
+                self._all_epoch_losses, aliases=contract['nets'])
         else:
             self._nets = aliased(self._all_nets)
             self._losses = aliased(self._all_losses)
+            self._epoch_losses = aliased(self._all_epoch_losses)
 
         for k in ['build', 'routine', 'visualize', 'train_step',
                   'eval_step']:
@@ -147,15 +150,14 @@ class ModelPluginBase(metaclass=PluginType):
         self._wrap_routine()
         self.train_step = self._wrap_step(self.train_step)
         self.eval_step = self._wrap_step(self.eval_step, train=False)
+        self.train_loop = self._wrap_loop(self.train_loop, train=True)
+        self.eval_loop = self._wrap_loop(self.eval_loop, train=False)
 
         self._results = prefixed(
             self._all_results, prefix=self.__class__.__name__)
         self._epoch_results = prefixed(
             self._all_epoch_results, prefix=self.__class__.__name__)
-        self._epoch_losses = prefixed(
-            self._all_epoch_losses, prefix=self.__class__.__name__)
-        self._epoch_times = prefixed(
-            self._all_epoch_times, prefix=self.__class__.__name__)
+        self._epoch_times = self._all_epoch_times
 
     @classmethod
     def _reset_class(cls):
@@ -388,7 +390,8 @@ class ModelPluginBase(metaclass=PluginType):
             owner = self._owners[self._get_id(fn)]
             update_dict_of_lists(self.epoch_results, **self.results)
             update_dict_of_lists(self.epoch_times, **{owner: end - start})
-            update_dict_of_lists(self.epoch_losses, **self.losses)
+            losses = dict((k, v.item()) for k, v in self.losses.items())
+            update_dict_of_lists(self.epoch_losses, **losses)
 
             return output
 
@@ -426,6 +429,33 @@ class ModelPluginBase(metaclass=PluginType):
                 self.losses.pop(key)
 
             return output
+
+        wrapped._fn = fn
+        return wrapped
+
+    def _wrap_loop(self, fn, train=True):
+        '''
+
+        Args:
+            fn: TODO
+            train: TODO
+
+        Returns:
+
+        '''
+
+        data_mode = 'train' if train else 'test'
+
+        def wrapped(epoch, data_mode=data_mode):
+            self._reset_epoch()
+            self.data.reset(data_mode,
+                            string='Training (epoch {}): '.format(epoch))
+
+            fn()
+
+            results = self._all_epoch_results
+            results['losses'] = dict(self._all_epoch_losses)
+            results['times'] = dict(self._all_epoch_times)
 
         wrapped._fn = fn
         return wrapped

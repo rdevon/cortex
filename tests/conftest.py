@@ -33,18 +33,19 @@ def data_class():
             self.bs = 5
 
         def next(self):
-            if self.i >= 10:
+            if self.i >= 9:
                 self.i = 0
                 raise StopIteration
 
             d = self._data[self.i * self.bs: (self.i + 1) * self.bs]
+            self.i +=1
             return d
 
         def __getitem__(self, item):
             return self._data[self.i * self.bs: (self.i + 1) * self.bs]
 
         def reset(self, *args, **kwargs):
-            pass
+            self.i = 0
 
     return DummyData
 
@@ -96,12 +97,11 @@ def model_class_with_submodel(model_class):
         def train_step(self):
             self.data.next()
 
-            kwargs = self.get_kwargs(self.routine)
-            inputs = self.get_inputs(self.routine)
-            self.routine(*inputs, **kwargs)
+            self.easy_routine()
             self.optimizer_step()
 
-            self.submodel.train_step()
+            self.submodel.easy_routine()
+            self.submodel.optimizer_step()
 
         def eval_step(self):
             self.data.next()

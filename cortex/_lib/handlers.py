@@ -182,15 +182,19 @@ class PrefixedAliasedHandler(Handler):
     def __str__(self):
         d = dict((k[len(self._prefix) + 1:], v)
                  for k, v in self._handler.__dict__.items()
-                 if not k.startswith('_'))
+                 if not k.startswith('_') and k.startswith(self._prefix + '_'))
         return d.__str__()
 
     def __len__(self):
-        return len(self._handler)
+        d = dict((k[len(self._prefix) + 1:], v)
+                 for k, v in self._handler.__dict__.items()
+                 if not k.startswith('_') and k.startswith(self._prefix + '_'))
+        return len(d)
 
     def __iter__(self):
         for item in self._handler:
-            yield item[len(self._prefix) + 1:]
+            if item.startswith(self._prefix + '_'):
+                yield item[len(self._prefix) + 1:]
 
     def __delitem__(self, key):
         key = self._prefix + '_' + key
