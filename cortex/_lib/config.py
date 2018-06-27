@@ -11,16 +11,14 @@ import readline
 import socket
 import yaml
 
+from cortex._lib.handlers import Handler
 
 logger = logging.getLogger('cortex.config')
 
 
-class ConfigHandler:
+class ConfigHandler(Handler):
     def __init__(self):
-        self.viz = {}
-        self.data_paths = {}
-        self.arch_paths = {}
-        self.out_path = None
+        super().__init__(viz={}, data_paths={}, arch_paths={}, out_path=None)
 
 
 CONFIG = ConfigHandler()

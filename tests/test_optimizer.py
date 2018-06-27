@@ -13,4 +13,4 @@ def test_optimizer(model_with_submodel):
 
     optimizer.setup(model)
 
-    assert list(optimizer.OPTIMIZERS.keys()) == ['net']
+    assert set(optimizer.OPTIMIZERS.keys()) == set(['net', 'net2'])

@@ -42,6 +42,10 @@ def data_class():
 
         def __getitem__(self, item):
             return self._data[self.i * self.bs: (self.i + 1) * self.bs]
+
+        def reset(self, *args, **kwargs):
+            pass
+
     return DummyData
 
 

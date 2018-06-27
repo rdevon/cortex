@@ -22,46 +22,65 @@ MODEL_PLUGINS = {}
 
 
 def register_model(plugin):
+    '''
+
+    Args:
+        plugin: TODO
+
+    Returns:
+        TODO
+
+    '''
+
     global MODEL_PLUGINS
 
     if plugin.__name__ in MODEL_PLUGINS:
         raise KeyError('{} already registered under the same name.'
                        .format(plugin.__name__))
 
-    MODEL_PLUGINS[plugin.__name__] = plugin
+    MODEL_PLUGINS[plugin.__name__] = plugin()
+
+
+def get_model(model_name):
+    try:
+        return MODEL_PLUGINS[model_name]
+    except KeyError:
+        raise KeyError('Model {} not found. Available: {}'
+                       .format(model_name, tuple(MODEL_PLUGINS.keys())))
 
 
 class PluginType(type):
-    def __new__(cls, name, bases, attrs):
+    def __new__(metacls, name, bases, attrs):
+        cls = super(PluginType, metacls).__new__(metacls, name, bases, attrs)
+
         help = {}
         kwargs = {}
         args = set()
 
-        for key in ['build', 'routine', 'visualize', 'train_step',
-                    'eval_step']:
-            if key in attrs:
-                attr = attrs[key]
+        for key in ['build', 'routine', 'visualize', 'train_step', 'eval_step']:
+            if hasattr(cls, key):
+                attr = getattr(cls, key)
                 help_ = parse_docstring(attr)
                 kwargs_ = parse_kwargs(attr)
                 args_ = set(parse_inputs(attr))
 
                 for k, v in help_.items():
                     if k in help and v != help[k]:
-                        cls._warn_inconsitent_help(key, k, v, kwargs[k])
+                        metacls._warn_inconsitent_help(key, k, v, kwargs[k])
 
                 for k, v in kwargs_.items():
                     if k in kwargs and v != kwargs[k]:
-                        cls._warn_inconsitent_kwargs(key, k, v, kwargs[k])
+                        metacls._warn_inconsitent_kwargs(key, k, v, kwargs[k])
 
                 help.update(**help_)
                 kwargs.update(**kwargs_)
                 args |= args_
 
-        attrs['_help'] = help
-        attrs['_kwargs'] = kwargs
-        attrs['_args'] = args
+        cls._help = help
+        cls._kwargs = kwargs
+        cls._args = args
 
-        return super(PluginType, cls).__new__(cls, name, bases, attrs)
+        return cls
 
     def _warn_inconsitent_help(cls, k, v, v_):
         logger.warning('Inconsistent docstring found with argument {k}. '
@@ -73,6 +92,10 @@ class PluginType(type):
 
 
 class ModelPluginBase(metaclass=PluginType):
+    '''
+    TODO
+    '''
+
     _viz = VizHandler()
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
@@ -94,7 +117,14 @@ class ModelPluginBase(metaclass=PluginType):
     _all_epoch_times = ResultsHandler()
 
     def __init__(self, contract=None):
+        '''
+
+        Args:
+            contract: TODO
+        '''
+
         self._contract = None
+        self._train = False
 
         if contract:
             contract = self._check_contract(contract)
@@ -116,7 +146,7 @@ class ModelPluginBase(metaclass=PluginType):
         self._wrap_build()
         self._wrap_routine()
         self.train_step = self._wrap_step(self.train_step)
-        self.eval_step = self._wrap_step(self.eval_step)
+        self.eval_step = self._wrap_step(self.eval_step, train=False)
 
         self._results = prefixed(
             self._all_results, prefix=self.__class__.__name__)
@@ -129,6 +159,12 @@ class ModelPluginBase(metaclass=PluginType):
 
     @classmethod
     def _reset_class(cls):
+        '''
+
+        Returns:
+            TODO
+
+        '''
         cls._kwargs.clear()
         cls._help.clear()
         cls._owners.clear()
@@ -151,6 +187,15 @@ class ModelPluginBase(metaclass=PluginType):
         self._all_epoch_times.clear()
 
     def _get_id(self, fn):
+        '''
+
+        Args:
+            fn: TODO
+
+        Returns:
+            TODO
+
+        '''
         return fn
 
     @property
@@ -198,6 +243,16 @@ class ModelPluginBase(metaclass=PluginType):
         return self._data
 
     def __setattr__(self, key, value):
+        '''
+
+        Args:
+            key: TODO
+            value: TODO
+
+        Returns:
+            TODO
+
+        '''
         if isinstance(value, ModelPluginBase):
             model = value
             kwargs = model.kwargs
@@ -216,6 +271,15 @@ class ModelPluginBase(metaclass=PluginType):
         super().__setattr__(key, value)
 
     def _check_contract(self, contract):
+        '''
+
+        Args:
+            contract: TODO
+
+        Returns:
+            TODO
+
+        '''
         kwargs = contract.pop('kwargs', {})
         nets = contract.pop('nets', {})
         inputs = contract.pop('inputs', {})
@@ -245,6 +309,15 @@ class ModelPluginBase(metaclass=PluginType):
         return dict(inputs=inputs, kwargs=kwargs, nets=nets)
 
     def _accept_contract(self, contract):
+        '''
+
+        Args:
+            contract: TODO
+
+        Returns:
+            TODO
+
+        '''
         if self._contract is not None:
             raise ValueError('Cannot accept more than one contract.')
 
@@ -272,9 +345,7 @@ class ModelPluginBase(metaclass=PluginType):
         Set to `requires_grad` for models that are trained with this routine.
 
         Args:
-            routine:
-
-        Returns:
+            routine: TODO
 
         '''
 
@@ -301,12 +372,13 @@ class ModelPluginBase(metaclass=PluginType):
             else:
                 training_nets = self._training_nets[fid]
 
-            for k in training_nets:
-                net = self.nets[k]
-                self._optimizers[k].zero_grad()
-                for p in net.parameters():
-                    p.requires_grad = k in training_nets
-                net.train()
+            if self._train:
+                for k in training_nets:
+                    net = self.nets[k]
+                    self._optimizers[k].zero_grad()
+                    for p in net.parameters():
+                        p.requires_grad = k in training_nets
+                    net.train()
 
             start = time.time()
             output = fn(*args, **kwargs)
@@ -323,11 +395,26 @@ class ModelPluginBase(metaclass=PluginType):
         wrapped._fn = fn
         self.routine = wrapped
 
-    def _wrap_step(self, fn):
+    def _wrap_step(self, fn, train=True):
+        '''
+
+        Args:
+            fn: TODO
+            train: TODO
+
+        Returns:
+
+        '''
 
         def wrapped(*args, **kwargs):
-            for net in self.nets.values():
-                net.eval()
+            if train:
+                self._train = True
+                for net in self.nets.values():
+                    net.train()
+            else:
+                self._train = False
+                for net in self.nets.values():
+                    net.eval()
 
             self._all_losses.clear()
             self._all_results.clear()
@@ -344,6 +431,16 @@ class ModelPluginBase(metaclass=PluginType):
         return wrapped
 
     def get_inputs(self, fn):
+        '''
+
+        Args:
+            fn: TODO
+
+        Returns:
+            TODO
+
+        '''
+
         fid = self._get_id(fn._fn)
         input_dict = self._input_dict.get(fid, {})
         input_keys = parse_inputs(fn._fn)
@@ -357,6 +454,16 @@ class ModelPluginBase(metaclass=PluginType):
         return inputs
 
     def get_kwargs(self, fn):
+        '''
+
+        Args:
+            fn: TODO
+
+        Returns:
+            TODO
+
+        '''
+
         fid = self._get_id(fn._fn)
         kwarg_dict = self._kwarg_dict.get(fid, {})
         kwarg_keys = parse_kwargs(fn._fn).keys()
@@ -370,6 +477,13 @@ class ModelPluginBase(metaclass=PluginType):
         return kwargs
 
     def _get_training_nets(self):
+        '''
+
+        Returns:
+            TODO
+
+        '''
+
         training_nets = []
         for v in self._training_nets.values():
             training_nets += v
@@ -377,7 +491,15 @@ class ModelPluginBase(metaclass=PluginType):
         return training_nets
 
     def _check_bad_values(self):
-        # Check for bad numbers
+        '''
+
+        Check for bad numbers.
+
+        Returns:
+            TODO
+
+        '''
+
         bads = bad_values(self.results)
         if bads:
             print(

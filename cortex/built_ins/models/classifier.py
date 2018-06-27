@@ -16,8 +16,11 @@ class SimpleClassifierBuild(ModelPlugin):
     '''Build a simple feed-forward classifier.
 
     '''
-    plugin_name = 'simple_classifier'
-    plugin_nets = ['simple_classifier']
+
+    defaults = dict(
+        data=dict(batch_size=128),
+        optimizer=dict(optimizer='Adam', learning_rate=1e-4),
+        train=dict(epochs=200, save_on_best='losses.classifier'))
 
     def build(self, dim_in: int=None, dim_h=[200, 200], classifier_args={}):
         '''
@@ -32,7 +35,7 @@ class SimpleClassifierBuild(ModelPlugin):
         dim_l = self.get_dims('labels')
         classifier = FullyConnectedNet(dim_in, dim_h=dim_h,
                                        dim_out=dim_l, **classifier_args)
-        self.nets.simple_classifier = classifier
+        self.nets.classifier = classifier
 
     def routine(self, inputs, targets, criterion=nn.CrossEntropyLoss()):
         '''
@@ -41,8 +44,8 @@ class SimpleClassifierBuild(ModelPlugin):
             criterion: Classifier criterion.
 
         '''
-
-        classifier = self.classifier
+        
+        classifier = self.nets.classifier
 
         outputs = classifier(inputs)
         predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
@@ -55,7 +58,7 @@ class SimpleClassifierBuild(ModelPlugin):
         self.results['accuracy'] = correct
 
     def predict(self, inputs):
-        classifier = self.classifier
+        classifier = self.nets.classifier
 
         outputs = classifier(inputs)
         predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
@@ -65,7 +68,7 @@ class SimpleClassifierBuild(ModelPlugin):
     def visualize(self, images, inputs, targets):
         predicted = self.predict(inputs)
 
-        self.add_image(inputs.data, labels=(targets.data, predicted.data),
+        self.add_image(images.data, labels=(targets.data, predicted.data),
                        name='gt_pred')
 
 
@@ -76,24 +79,25 @@ class ImageClassification(SimpleClassifierBuild):
 
     '''
 
-    data_defaults = dict(batch_size=128)
-    optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
-    train_defaults = dict(epochs=200, save_on_best='losses.classifier')
+    defaults = dict(
+        data=dict(batch_size=128, inputs=dict(inputs='images')),
+        optimizer=dict(optimizer='Adam', learning_rate=1e-4),
+        train=dict(epochs=200, save_on_best='losses.classifier'))
 
-    def build(self, images, classifier_type='convnet',
+    def build(self, classifier_type='convnet',
               classifier_args=dict(dropout=0.2)):
         '''Builds a simple image classifier.
 
         Args:
-            images: Tensor of images.
             classifier_type (str): Network type for the classifier.
             classifier_args: Classifier arguments. Can include dropout,
             batch_norm, layer_norm, etc.
 
         '''
+
         classifier_args = classifier_args or {}
 
-        shape = images.size(1, 2, 3)
+        shape = self.get_dims('x', 'y', 'c')
         dim_l = self.get_dims('labels')
 
         Encoder, args = update_encoder_args(

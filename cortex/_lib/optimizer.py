@@ -85,10 +85,8 @@ def setup(  # noqa C901
                 network, device_ids=range(
                     torch.cuda.device_count()))
 
-    try:
-        model.eval_step()
-    except KeyError:
-        pass
+    model.data.reset(make_pbar=False, mode='test')
+    model.eval_step()
 
     training_nets = model._get_training_nets()
 

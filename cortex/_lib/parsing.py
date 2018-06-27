@@ -173,10 +173,12 @@ def parse_args(models):
         description='Initializes or updates the `.cortex.yml` file.')
 
     for k, model in models.items():
+        model_help, model_description = parse_header(model)
+
         subparser = subparsers.add_parser(
             k,
-            help=model.plugin_help,
-            description=model.plugin_description,
+            help=model_help,
+            description=model_description,
             formatter_class=lambda prog: argparse.HelpFormatter(
                 prog,
                 max_help_position=50,
@@ -185,6 +187,7 @@ def parse_args(models):
         helps = model.help
 
         for k, v in kwargs.items():
+            print(k, v)
             arg_str = '--' + k
             help = helps.get(k, None)
             choices = None

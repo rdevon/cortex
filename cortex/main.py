@@ -34,16 +34,16 @@ def main():
             config.set_config()
 
             print_section('EXPERIMENT')
-            setup_experiment(args)
+            model = setup_experiment(args)
 
             print_section('DATA')
-            data.setup(**exp.ARGS.data)
+            data.setup(**exp.ARGS['data'])
 
             print_section('NETWORKS')
-            models.build_networks()
+            model.easy_build()
 
             print_section('OPTIMIZER')
-            optimizer.setup(**exp.ARGS.optimizer)
+            optimizer.setup(model, **exp.ARGS['optimizer'])
 
     except KeyboardInterrupt:
         print('Cancelled')

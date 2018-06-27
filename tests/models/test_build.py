@@ -20,8 +20,9 @@ def test_class(model_class, arguments):
 
 
 def test_register(model_class):
+    MODEL_PLUGINS.clear()
     register_model(model_class)
-    assert model_class in MODEL_PLUGINS.values()
+    assert isinstance(list(MODEL_PLUGINS.values())[0], model_class)
     MODEL_PLUGINS.clear()
 
 

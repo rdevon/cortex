@@ -26,8 +26,6 @@ def setup_cortex():
         TODO
 
     '''
-    models.find_models(config.CONFIG.arch_paths)
-
     args = parse_args(models.MODEL_PLUGINS)
 
     log_utils.set_stream_logger(args.verbosity)
@@ -48,7 +46,7 @@ def setup_experiment(args):
     experiment_args = copy.deepcopy(default_args)
     exp.update_args(experiment_args)
 
-    model = models.setup_model(model_name)
+    model = models.get_model(model_name)
 
     viz_init(config.CONFIG.viz)
 
@@ -86,10 +84,8 @@ def setup_experiment(args):
     update_nested_dicts(command_line_args['model'], model.kwargs)
     command_line_args['model'].update(**model.kwargs)
     exp.update_args(command_line_args)
-
     for k, v in exp.ARGS.items():
         logger.info('Ultimate {} arguments: \n{}'
                     .format(k, pprint.pformat(v)))
 
-    if model.setup is not None:
-        model.setup(**exp.ARGS)
+    return model

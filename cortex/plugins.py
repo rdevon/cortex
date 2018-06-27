@@ -182,7 +182,6 @@ class ModelPlugin(ModelPluginBase):
 
     def eval_step(self):
         self.data.next()
-
         inputs = self.get_inputs(self.routine)
         kwargs = self.get_kwargs(self.routine)
         self.routine(*inputs, **kwargs)
@@ -193,6 +192,34 @@ class ModelPlugin(ModelPluginBase):
             loss = self.losses.pop(k)
             loss.backward()
             self._optimizers[k].step()
+
+    def train_loop(self):
+        self._reset_epoch()
+
+        try:
+            while True:
+                self.train_step()
+
+                for net_key in model.nets:
+                    reg.clip(net_key)  # weight clipping
+                    reg.l1_decay(net_key)  # l1 weight decay
+        except StopIteration:
+            pass
+
+    def eval_loop(self):
+        self._reset_epoch()
+
+        try:
+            while True:
+                self.eval_step()
+
+        except StopIteration:
+            pass
+
+    def easy_build(self):
+        kwargs = self.get_kwargs(self.build)
+        inputs = self.get_inputs(self.build)
+        return self.build(*inputs, **kwargs)
 
     def get_dims(self, *queries):
         '''Gets dimensions of inputs.
@@ -259,7 +286,7 @@ def register_plugin(plugin):
     '''
 
     if issubclass(plugin, ModelPlugin):
-        register_model(plugin())
+        register_model(plugin)
     elif issubclass(plugin, DatasetPlugin):
         register_data(plugin)
     else:

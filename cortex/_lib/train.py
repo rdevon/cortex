@@ -9,7 +9,7 @@ import time
 
 import numpy as np
 
-from . import data, exp, models, viz, reg
+from . import exp, viz, reg
 from .utils import convert_to_numpy, update_dict_of_lists
 from .viz import plot
 
@@ -47,20 +47,16 @@ def summarize_results_std(results):
     return results_
 
 
-def train_epoch(epoch, quit_on_bad_values, eval_during_train,
+def train_epoch(model, epoch, quit_on_bad_values, eval_during_train,
                 data_mode='train'):
-    models.MODEL.reset()
-    models.MODEL.set_train()
-    models.MODEL.viz.ignore = True
-    data.DATA_HANDLER.reset(
-        data_mode,
-        string='Training (epoch {}): '.format(epoch))
+    model._reset_epoch()
+    model.data.reset(data_mode, string='Training (epoch {}): '.format(epoch))
 
     try:
         while True:
-            models.MODEL.train(0, quit_on_bad_values=quit_on_bad_values)
+            model.train_step()
 
-            for net_key in models.MODEL.nets:
+            for net_key in model.nets:
                 reg.clip(net_key)  # weight clipping
                 reg.l1_decay(net_key)  # l1 weight decay
 
@@ -68,65 +64,59 @@ def train_epoch(epoch, quit_on_bad_values, eval_during_train,
         pass
 
     if not eval_during_train:
-        return test_epoch(epoch, data_mode=data_mode)
+        return test_epoch(model, epoch, data_mode=data_mode)
 
-    results = summarize_results(models.MODEL.results)
+    results = model._epoch_results
+    results['losses'] = model._epoch_losses
+    results['times'] = model._epoch_times
+
+    results = summarize_results(results)
     return results
 
 
-def test_epoch(epoch, eval_mode=False, data_mode='test'):
-    models.MODEL.reset()
-    models.MODEL.set_eval()
-    data.DATA_HANDLER.reset(
-        data_mode,
-        string='Evaluating (epoch {}): '.format(epoch))
+def test_epoch(model, epoch, data_mode='test'):
+    model._reset_epoch()
+    model.data.reset(data_mode, string='Evaluating (epoch {}): '.format(epoch))
 
-    models.MODEL.viz.ignore = False
     try:
         while True:
-            models.MODEL.run_procedure(0)
-            models.MODEL.viz.ignore = True
+            model.eval_step()
 
     except StopIteration:
         pass
 
-    means = summarize_results(models.MODEL.results)
+    results = model._epoch_results
+    results['losses'] = model._epoch_losses
+    results['times'] = model._epoch_times
 
-    if eval_mode:
-        raise NotImplementedError()
-        if models.ARCH.eval_routine is not None:
-            models.ARCH.eval_routine(
-                data.DATA_HANDLER,
-                models.MODEL.nets,
-                means)
-        stds = summarize_results_std(means)
-        return means, stds
+    results = summarize_results(results)
 
-    return means
+    try:
+        model.visualize()
+    except NotImplementedError:
+        pass
+
+    return results
 
 
-def display_results(
-        train_results,
-        test_results,
-        epoch,
-        epochs,
-        epoch_time,
-        total_time):
+def display_results(train_results, test_results, epoch, epochs, epoch_time,
+                    total_time):
     if epochs and epoch:
         print('\n\tEpoch {}/{} took {:.3f}s. Total time: {:.2f}'
               .format(epoch + 1, epochs, epoch_time, total_time))
 
-    times = train_results.pop('time', None)
+    times = train_results.pop('times', None)
     if times:
-        print('\tAvg update times: ' + ' | '
-              .join(['{}: {:.2f}'
-                     .format(k, v) for k, v in times.items()]))
+        time_strs = ['{}: {:.2f}'.format(k, v) for k, v in times.items()]
+        print('\tAvg update times: ' + ' | '.join(time_strs))
 
     train_losses = train_results.pop('losses')
     test_losses = test_results.pop('losses')
 
-    print('\tAvg loss: ' + ' | '.join(['{}: {:.2f} / {:.2f}'.format(
-        k, train_losses[k], test_losses[k]) for k in train_losses.keys()]))
+    loss_strs = ['{}: {:.2f} / {:.2f}'
+        .format(k, train_losses[k], test_losses[k])
+                 for k in train_losses.keys()]
+    print('\tAvg loss: ' + ' | '.join(loss_strs))
 
     for k in train_results.keys():
         v_train = train_results[k]

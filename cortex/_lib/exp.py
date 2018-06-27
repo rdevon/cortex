@@ -24,11 +24,7 @@ logger = logging.getLogger('cortex.exp')
 NAME = 'X'
 SUMMARY = {'train': {}, 'test': {}}
 OUT_DIRS = {}
-ARGS = Handler(
-    data=Handler(),
-    model=Handler(),
-    optimizer=Handler(),
-    train=Handler())
+ARGS = dict(data=dict(), model=dict(), optimizer=dict(), train=dict())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
 MODEL = None
@@ -53,7 +49,6 @@ def update_args(kwargs):
                 else:
                     to_kwargs[k] = v
 
-    kwargs = convert_nested_dict_to_handler(kwargs)
     for k in kwargs:
         if k not in ARGS:
             raise KeyError(
