@@ -5,7 +5,7 @@
 
 import logging
 
-from cortex._lib import (config, data, exp, models, optimizer, setup_cortex,
+from cortex._lib import (config, data, exp, optimizer, setup_cortex,
                          setup_experiment, train)
 from cortex._lib.utils import print_section
 
@@ -49,4 +49,4 @@ def main():
         print('Cancelled')
         exit(0)
 
-    train.main_loop(**exp.ARGS.train)
+    train.main_loop(model, **exp.ARGS['train'])

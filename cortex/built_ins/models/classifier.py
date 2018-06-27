@@ -44,7 +44,7 @@ class SimpleClassifierBuild(ModelPlugin):
             criterion: Classifier criterion.
 
         '''
-        
+
         classifier = self.nets.classifier
 
         outputs = classifier(inputs)
@@ -55,7 +55,7 @@ class SimpleClassifierBuild(ModelPlugin):
             targets.data).cpu().sum() / targets.size(0)
 
         self.losses.classifier = loss
-        self.results['accuracy'] = correct
+        self.results.accuracy = correct
 
     def predict(self, inputs):
         classifier = self.nets.classifier
@@ -67,7 +67,6 @@ class SimpleClassifierBuild(ModelPlugin):
 
     def visualize(self, images, inputs, targets):
         predicted = self.predict(inputs)
-
         self.add_image(images.data, labels=(targets.data, predicted.data),
                        name='gt_pred')
 
@@ -81,7 +80,7 @@ class ImageClassification(SimpleClassifierBuild):
 
     defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
-        optimizer=dict(optimizer='Adam', learning_rate=1e-4),
+        optimizer=dict(optimizer='Adam', learning_rate=1e-3),
         train=dict(epochs=200, save_on_best='losses.classifier'))
 
     def build(self, classifier_type='convnet',

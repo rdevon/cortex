@@ -69,11 +69,14 @@ class PluginType(type):
                         metacls._warn_inconsitent_help(key, k, v, kwargs[k])
 
                 for k, v in kwargs_.items():
-                    if k in kwargs and v != kwargs[k]:
+                    if k in kwargs and v != kwargs[k] and v is not None:
                         metacls._warn_inconsitent_kwargs(key, k, v, kwargs[k])
 
                 help.update(**help_)
-                kwargs.update(**kwargs_)
+
+                for k, v in kwargs_.items():
+                    if k not in kwargs or (k in kwargs and v is not None):
+                        kwargs[k] = v
                 args |= args_
 
         cls._help = help
@@ -100,8 +103,6 @@ class ModelPluginBase(metaclass=PluginType):
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
 
-    _kwargs = dict()
-    _help = dict()
     _owners = dict()
     _training_nets = dict()
 
@@ -109,7 +110,7 @@ class ModelPluginBase(metaclass=PluginType):
     _input_dict = dict()
 
     _all_nets = NetworkHandler(allow_overwrite=False)
-    _all_losses = LossHandler(_all_nets, allow_overwrite=False)
+    _all_losses = LossHandler(_all_nets)
     _all_results = ResultsHandler()
 
     _all_epoch_results = ResultsHandler()
@@ -148,6 +149,7 @@ class ModelPluginBase(metaclass=PluginType):
 
         self._wrap_build()
         self._wrap_routine()
+        self._wrap_visualize()
         self.train_step = self._wrap_step(self.train_step)
         self.eval_step = self._wrap_step(self.eval_step, train=False)
         self.train_loop = self._wrap_loop(self.train_loop, train=True)
@@ -259,16 +261,18 @@ class ModelPluginBase(metaclass=PluginType):
             model = value
             kwargs = model.kwargs
             help = model.help
+
             if model._contract:
                 kwargs = dict((model._contract['kwargs'].get(k, k), v)
-                              for k, v in kwargs.items())
+                              for k, v in kwargs.items() if v is not None)
                 help = dict((model._contract['kwargs'].get(k, k), v)
                             for k, v in help.items())
             for k, v in kwargs.items():
-                if k not in self.kwargs:
+                if k not in self.kwargs or self.kwargs[k] is None:
                     self.kwargs[k] = v
                 if k not in self.help:
                     self.help[k] = help[k]
+            model._kwargs = self._kwargs
 
         super().__setattr__(key, value)
 
@@ -340,6 +344,15 @@ class ModelPluginBase(metaclass=PluginType):
 
         wrapped._fn = fn
         self.build = wrapped
+
+    def _wrap_visualize(self):
+        fn = self.visualize
+
+        def wrapped(*args, **kwargs):
+            return fn(*args, **kwargs)
+
+        wrapped._fn = fn
+        self.visualize = wrapped
 
     def _wrap_routine(self):
         '''
@@ -419,14 +432,7 @@ class ModelPluginBase(metaclass=PluginType):
                 for net in self.nets.values():
                     net.eval()
 
-            self._all_losses.clear()
-            self._all_results.clear()
-
             output = fn(*args, **kwargs)
-
-            loss_keys = self.losses.keys()
-            for key in loss_keys:
-                self.losses.pop(key)
 
             return output
 
@@ -501,7 +507,7 @@ class ModelPluginBase(metaclass=PluginType):
         kwargs = dict()
         for k in kwarg_keys:
             key = kwarg_dict.get(k, k)
-            value = self.kwargs.get(key, key)
+            value = self.kwargs[key]
             kwargs[k] = value
 
         return kwargs

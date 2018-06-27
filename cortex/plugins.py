@@ -183,17 +183,19 @@ class ModelPlugin(ModelPluginBase):
 
     def optimizer_step(self):
         keys = self.losses.keys()
+
         for k in keys:
             loss = self.losses.pop(k)
             loss.backward()
-            self._optimizers[k].step()
+            key = self.nets._aliases.get(k, k)
+            self._optimizers[key].step()
 
     def train_loop(self):
         self._reset_epoch()
 
         try:
             while True:
-                self.train_step()
+                self.easy_train_step()
 
         except StopIteration:
             pass
@@ -203,7 +205,7 @@ class ModelPlugin(ModelPluginBase):
 
         try:
             while True:
-                self.eval_step()
+                self.easy_eval_step()
 
         except StopIteration:
             pass
@@ -217,6 +219,19 @@ class ModelPlugin(ModelPluginBase):
         kwargs = self.get_kwargs(self.routine)
         inputs = self.get_inputs(self.routine)
         return self.routine(*inputs, **kwargs)
+
+    def easy_visualize(self):
+        kwargs = self.get_kwargs(self.visualize)
+        inputs = self.get_inputs(self.visualize)
+        return self.visualize(*inputs, **kwargs)
+
+    def easy_train_step(self):
+        kwargs = self.get_kwargs(self.train_step)
+        return self.train_step(**kwargs)
+
+    def easy_eval_step(self):
+        kwargs = self.get_kwargs(self.eval_step)
+        return self.eval_step(**kwargs)
 
     def get_dims(self, *queries):
         '''Gets dimensions of inputs.

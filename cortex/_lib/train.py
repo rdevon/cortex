@@ -9,7 +9,7 @@ import time
 
 import numpy as np
 
-from . import exp, viz, reg
+from . import exp, viz
 from .utils import convert_to_numpy, update_dict_of_lists
 from .viz import plot
 
@@ -49,50 +49,24 @@ def summarize_results_std(results):
 
 def train_epoch(model, epoch, quit_on_bad_values, eval_during_train,
                 data_mode='train'):
-    model._reset_epoch()
-    model.data.reset(data_mode, string='Training (epoch {}): '.format(epoch))
-
-    try:
-        while True:
-            model.train_step()
-
-            for net_key in model.nets:
-                reg.clip(net_key)  # weight clipping
-                reg.l1_decay(net_key)  # l1 weight decay
-
-    except StopIteration:
-        pass
+    model.train_loop(epoch, data_mode=data_mode)
 
     if not eval_during_train:
         return test_epoch(model, epoch, data_mode=data_mode)
 
-    results = model._epoch_results
-    results['losses'] = model._epoch_losses
-    results['times'] = model._epoch_times
-
-    results = summarize_results(results)
+    results = summarize_results(model._all_epoch_results)
     return results
 
 
 def test_epoch(model, epoch, data_mode='test'):
-    model._reset_epoch()
-    model.data.reset(data_mode, string='Evaluating (epoch {}): '.format(epoch))
+    model.eval_loop(epoch, data_mode=data_mode)
+    results = summarize_results(model._all_epoch_results)
+
+    model.data.reset(make_pbar=False, mode='test')
+    model.data.next()
 
     try:
-        while True:
-            model.eval_step()
-
-    except StopIteration:
-        pass
-
-    results = model._epoch_results
-    results['losses'] = model._epoch_losses
-    results['times'] = model._epoch_times
-
-    results = summarize_results(results)
-
-    try:
-        model.visualize()
+        model.easy_visualize()
     except NotImplementedError:
         pass
 
@@ -114,7 +88,7 @@ def display_results(train_results, test_results, epoch, epochs, epoch_time,
     test_losses = test_results.pop('losses')
 
     loss_strs = ['{}: {:.2f} / {:.2f}'
-        .format(k, train_losses[k], test_losses[k])
+                 .format(k, train_losses[k], test_losses[k])
                  for k in train_losses.keys()]
     print('\tAvg loss: ' + ' | '.join(loss_strs))
 
@@ -182,7 +156,7 @@ def align_summaries(d_train, d_test):
                             (max_len - len(v_test[k_]))
 
 
-def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
+def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
               save_on_best=None, save_on_lowest=None, save_on_highest=None,
               eval_during_train=True, train_mode='train', test_mode='test',
               eval_only=False):
@@ -222,9 +196,7 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
 
             # TRAINING
             train_results_ = train_epoch(
-                epoch,
-                quit_on_bad_values,
-                eval_during_train,
+                model, epoch, quit_on_bad_values, eval_during_train,
                 data_mode=train_mode)
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
@@ -256,10 +228,10 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
                         print(
                             '\nFound best {} (train): {}'.format(
                                 save_on_best, best))
-                        exp.save(prefix='best_' + save_on_best)
+                        exp.save(model, prefix='best_' + save_on_best)
 
             # TESTING
-            test_results_ = test_epoch(epoch, data_mode=test_mode)
+            test_results_ = test_epoch(model, epoch, data_mode=test_mode)
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
             align_summaries(exp.SUMMARY['train'], exp.SUMMARY['test'])
@@ -267,18 +239,13 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
             # Finishing up
             epoch_time = time.time() - start_time
             total_time += epoch_time
-            display_results(
-                train_results_,
-                test_results_,
-                e,
-                epochs,
-                epoch_time,
-                total_time)
+            display_results(train_results_, test_results_, e, epochs,
+                            epoch_time, total_time)
             plot()
-            models.MODEL.viz.show()
-            models.MODEL.viz.clear()
+            model.viz.show()
+            model.viz.clear()
             if (archive_every and epoch % archive_every == 0):
-                exp.save(prefix=epoch)
+                exp.save(model, prefix=epoch)
 
             exp.INFO['epoch'] += 1
 
@@ -303,8 +270,8 @@ def main_loop(epochs=500, archive_every=10, quit_on_bad_values=True,
 
         if kill:
             print('Training interrupted')
-            exp.save(prefix='interrupted')
+            exp.save(model, prefix='interrupted')
             sys.exit(0)
 
     logger.info('Successfully completed training')
-    exp.save(prefix='final')
+    exp.save(model, prefix='final')

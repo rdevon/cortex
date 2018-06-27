@@ -58,8 +58,9 @@ def wrap_optimizer(C):
 
             for group in self.param_groups:
                 bound = group['clipping']
-                for p in group['params']:
-                    p.data.clamp_(-bound, bound)
+                if bound:
+                    for p in group['params']:
+                        p.data.clamp_(-bound, bound)
             return loss
 
     return Op
@@ -117,7 +118,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
                     torch.cuda.device_count()))
 
     model.data.reset(make_pbar=False, mode='test')
-    model.eval_step()
+    model.easy_eval_step()
 
     training_nets = model._get_training_nets()
 
@@ -149,13 +150,13 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
             wd = weight_decay
 
         if isinstance(clipping, dict):
-            cl = clipping.get(network_key, 0)
+            cl = clipping.get(network_key, None)
         else:
             cl = clipping
 
         # Update the optimizer options
         optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
-        optimizer_options_.update(weight_decay=wd, clipping=cl)
+        optimizer_options_.update(weight_decay=wd, clipping=cl, lr=eta)
 
         if network_key in model_optimizer_options.keys():
             optimizer_options_.update(**model_optimizer_options)

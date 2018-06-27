@@ -13,7 +13,6 @@ import yaml
 import torch
 
 from .log_utils import set_file_logger
-from .handlers import Handler, convert_nested_dict_to_handler
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -27,7 +26,6 @@ OUT_DIRS = {}
 ARGS = dict(data=dict(), model=dict(), optimizer=dict(), train=dict())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
-MODEL = None
 
 
 def _file_string(prefix=''):
@@ -147,23 +145,11 @@ def reload(exp_file, reloads, name, out_path, clean, config):
     OUT_DIRS.update(**out_dirs)
 
 
-def save(prefix=''):
+def save(model, prefix=''):
     prefix = _file_string(prefix)
     binary_dir = OUT_DIRS.get('binary_dir', None)
     if binary_dir is None:
         return
-
-    models_ = {}
-    for k, model in MODEL.nets.items():
-        if k == 'extras':
-            continue
-        if isinstance(model, (tuple, list)):
-            nets = []
-            for net in model:
-                nets.append(net)
-            models_[k] = nets
-        else:
-            models_[k] = model
 
     def strip_Nones(d):
         d_ = {}
@@ -174,12 +160,10 @@ def save(prefix=''):
                 d_[k] = v
         return d_
 
-    args = strip_Nones(ARGS)
-
     state = dict(
-        models=models_,
+        nets=dict(model.nets),
         info=INFO,
-        args=args,
+        args=ARGS,
         out_dirs=OUT_DIRS,
         summary=SUMMARY
     )

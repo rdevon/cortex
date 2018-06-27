@@ -187,7 +187,6 @@ def parse_args(models):
         helps = model.help
 
         for k, v in kwargs.items():
-            print(k, v)
             arg_str = '--' + k
             help = helps.get(k, None)
             choices = None

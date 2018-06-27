@@ -16,6 +16,20 @@ def test_loop(model_with_submodel):
 
     print(results)
 
-    assert len(results['TestModel2_output']) ==\
-           len(results.losses['net']) ==\
-           len(results.times['TestModel2'])
+    rlen = len(results['TestModel2_output'])
+
+    assert len(results['TestModel2_output']) == \
+        len(results.losses['net']) == \
+        len(results.times['TestModel2'])
+
+    model.train_loop(0)
+
+    results = model._all_epoch_results
+
+    print(results)
+
+    assert len(results['TestModel2_output']) == \
+        len(results.losses['net']) == \
+        len(results.times['TestModel2'])
+
+    assert rlen == len(results['TestModel2_output'])

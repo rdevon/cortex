@@ -38,7 +38,7 @@ def data_class():
                 raise StopIteration
 
             d = self._data[self.i * self.bs: (self.i + 1) * self.bs]
-            self.i +=1
+            self.i += 1
             return d
 
         def __getitem__(self, item):

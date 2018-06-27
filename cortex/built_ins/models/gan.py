@@ -5,8 +5,7 @@
 
 import math
 
-from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
-                            RoutinePlugin)
+from cortex.plugins import register_plugin, ModelPlugin
 import torch
 from torch import autograd
 import torch.nn.functional as F
@@ -110,7 +109,8 @@ def generator_loss(q_samples, measure, loss_type=None):
 
 class GradientPenalty(ModelPlugin):
 
-    def run(self, penalty_type: str='contractive', penalty_amount: float=0.5):
+    def routine(self, inputs, penalty_type: str='contractive',
+                penalty_amount: float=0.5):
         '''
 
         Args:
@@ -120,7 +120,6 @@ class GradientPenalty(ModelPlugin):
 
         '''
         if penalty_type == 'contractive':
-            inputs = self.vars.inputs
             penalty = self.contractive_penalty(
                 self.nets.network, inputs, penalty_amount=penalty_amount)
         else:
@@ -128,7 +127,7 @@ class GradientPenalty(ModelPlugin):
 
         if penalty:
             self.losses.network = penalty
-            key = self.name + '_' + penalty_type + '_' + 'penalty'
+            key = penalty_type + '_' + 'penalty'
             self.results[key] = penalty.item()
 
     @staticmethod
@@ -202,7 +201,7 @@ class Discriminator(ModelPlugin):
         discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
         self.nets.discriminator = discriminator
 
-    def run(self, measure: str='GAN'):
+    def routine(self, real, fake, measure: str='GAN'):
         '''
 
         Args:
@@ -211,16 +210,10 @@ class Discriminator(ModelPlugin):
                 Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}
 
         '''
-        discriminator = self.nets.discriminator
-        generator = self.nets.generator
 
-        X_P = self.vars.real
-        Z = self.vars.noise
-
-        X_Q = generator(Z)
-
-        E_pos, E_neg, P_samples, Q_samples = self.score(
-            discriminator, X_P, X_Q, measure)
+        X_P = real
+        X_Q = fake
+        E_pos, E_neg, P_samples, Q_samples = self.score(X_P, X_Q, measure)
 
         difference = E_pos - E_neg
         self.results.update(Scores=dict(Ep=P_samples.mean().item(),
@@ -238,8 +231,12 @@ class Discriminator(ModelPlugin):
 
         return E_pos, E_neg, P_samples, Q_samples
 
-    def visualize(self):
-        self.add_image(X_P, name='ground truth')
+    def visualize(self, real, fake, measure=None):
+        X_P = real
+        X_Q = fake
+
+        E_pos, E_neg, P_samples, Q_samples = self.score(X_P, X_Q, measure)
+
         self.add_histogram(dict(fake=Q_samples.view(-1).data,
                                 real=P_samples.view(-1).data),
                            name='discriminator output')
@@ -266,7 +263,7 @@ class Generator(ModelPlugin):
 
         self.nets.generator = generator
 
-    def routine(self, measure: str=None, loss_type: str='non-saturating'):
+    def routine(self, Z, measure: str=None, loss_type: str='non-saturating'):
         '''
 
         Args:
@@ -274,7 +271,6 @@ class Generator(ModelPlugin):
                 {non-saturating, minimax, boundary-seek}
 
         '''
-        Z = self.vars.noise
         discriminator = self.nets.discriminator
         generator = self.nets.generator
 
@@ -291,7 +287,8 @@ class Generator(ModelPlugin):
     def generate(self, Z):
         return self.nets.generator(Z)
 
-    def visualize(self):
+    def visualize(self, Z):
+        X_Q = self.generate(Z)
         self.add_image(X_Q, name='generated')
 
 
@@ -303,32 +300,68 @@ class GAN(ModelPlugin):
     '''
     plugin_name = 'GAN'
 
-    data_defaults = dict(batch_size=dict(train=64, test=64))
-    train_defaults = dict(save_on_lowest='losses.gan')
+    defaults = dict(
+        data=dict(batch_size=dict(train=64, test=64),
+                  inputs=dict(inputs='images')),
+        train=dict(save_on_lowest='losses.gan')
+    )
 
     def __init__(self):
         super().__init__()
-        self.penalty.nets.network = self.nets.discriminator
-        self.generator.nets.discriminator = self.nets.discriminator
+
+        self.discriminator = Discriminator()
+        penalty_contract = dict(nets=dict(network='discriminator'))
+        self.penalty = GradientPenalty(contract=penalty_contract)
+        self.generator = Generator()
 
     def build(self, noise_type='normal', dim_z=64):
-        self.add_noise('z', dist=noise_type, size=dim_z)
-        self.add_noise('e', dist='uniform', size=1)
+        '''
+
+        Args:
+            noise_type: Distribution of input noise for generator.
+
+        '''
+        self.add_noise('Z', dist=noise_type, size=dim_z)
+        self.add_noise('E', dist='uniform', size=1)
 
         self.generator.build()
         self.discriminator.build()
-        self.generator.nets.discriminator = self.discriminator.nets.discriminator
 
-    def routine(self, noise, generator_updates=1, discriminator_updates=1):
+    def routine(self, inputs, Z):
+        generated = self.generator.generate(Z)
 
-        for _ in discriminator_updates:
-            generated = self.generator.nets.generator(noise)
-            self.discriminator.vars.fake = generated
+        kwargs = self.get_kwargs(self.discriminator.routine)
+        self.discriminator.routine(inputs, generated, **kwargs)
 
-            self.discriminator.routine()
-            self.penalty.routine()
+    def train_step(self, generator_updates=1, discriminator_updates=1):
+        '''
 
-        for _ in generator_updates():
-            self.generator.run()
+        Args:
+            generator_updates: Number of generator updates per step.
+            discriminator_updates: Number of discriminator updates per step.
+
+        '''
+        
+        for _ in range(discriminator_updates):
+            self.data.next()
+            self.easy_routine()
+            self.discriminator.optimizer_step()
+            self.penalty.train_step()
+
+        for _ in range(generator_updates):
+            self.generator.train_step()
+
+    def eval_step(self):
+        self.data.next()
+        self.easy_routine()
+        self.penalty.easy_routine()
+        self.generator.easy_routine()
+
+    def visualize(self, images, Z):
+        self.add_image(images, name='ground truth')
+        generated = self.generator.generate(Z)
+        kwargs = self.get_kwargs(self.discriminator.visualize)
+        self.discriminator.visualize(images, generated, **kwargs)
+        self.generator.easy_visualize()
 
 register_plugin(GAN)

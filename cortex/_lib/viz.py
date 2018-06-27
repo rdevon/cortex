@@ -71,8 +71,6 @@ def setup(use_tanh=None, quantized=None, img=None, label_names=None,
 class VizHandler():
     def __init__(self):
         self.clear()
-        self.ignore = True
-
         self.output_dirs = exp.OUT_DIRS
         self.prefix = exp._file_string('')
         self.image_scale = (-1, 1)
@@ -84,8 +82,6 @@ class VizHandler():
         self.heatmaps = {}
 
     def add_image(self, im, name='image', labels=None):
-        if self.ignore:
-            return
         im = convert_to_numpy(im)
         mi, ma = self.image_scale
         im = (im - mi) / float(ma - mi)
@@ -98,8 +94,6 @@ class VizHandler():
         self.images[name] = (im, labels)
 
     def add_histogram(self, hist, name='histogram'):
-        if self.ignore:
-            return
         if name in self.histograms:
             logger.warning('{} already added'
                            ' to visualization.'
@@ -109,8 +103,6 @@ class VizHandler():
         self.histograms[name] = hist
 
     def add_heatmap(self, hm, name='heatmap'):
-        if self.ignore:
-            return
         if name in self.heatmaps:
             logger.warning('{} already'
                            ' added to visualization.'
@@ -126,12 +118,12 @@ class VizHandler():
         self.scatters[name] = (sc, labels)
 
     def show(self):
+        image_dir = self.output_dirs['image_dir']
         for i, (k, (im, labels)) in enumerate(self.images.items()):
-            if self.image_dir:
-                logger.debug('Saving images to {}'.format(self.image_dir))
+            if image_dir:
+                logger.debug('Saving images to {}'.format(image_dir))
                 out_path = path.join(
-                    self.image_dir, '{}_{}_image.png'.format(
-                        self.prefix, k))
+                    image_dir, '{}_{}_image.png'.format(self.prefix, k))
             else:
                 out_path = None
 
@@ -146,11 +138,10 @@ class VizHandler():
                 logger.info('Scatter greater than 2D. Performing TSNE to 2D')
                 sc = compute_tsne(sc)
 
-            if self.image_dir:
-                logger.debug('Saving scatter to {}'.format(self.image_dir))
+            if image_dir:
+                logger.debug('Saving scatter to {}'.format(image_dir))
                 out_path = path.join(
-                    self.image_dir, '{}_{}_scatter.png'.format(
-                        self.prefix, k))
+                    image_dir, '{}_{}_scatter.png'.format(self.prefix, k))
             else:
                 out_path = None
 
@@ -159,21 +150,19 @@ class VizHandler():
                          title=k)
 
         for i, (k, hist) in enumerate(self.histograms.items()):
-            if self.image_dir:
-                logger.debug('Saving histograms to {}'.format(self.image_dir))
+            if image_dir:
+                logger.debug('Saving histograms to {}'.format(image_dir))
                 out_path = path.join(
-                    self.image_dir, '{}_{}_histogram.png'.format(
-                        self.prefix, k))
+                    image_dir, '{}_{}_histogram.png'.format(self.prefix, k))
             else:
                 out_path = None
             save_hist(hist, out_file=out_path, hist_id=i)
 
         for i, (k, hm) in enumerate(self.heatmaps.items()):
-            if self.image_dir:
-                logger.debug('Saving heatmap to {}'.format(self.image_dir))
+            if image_dir:
+                logger.debug('Saving heatmap to {}'.format(image_dir))
                 out_path = path.join(
-                    self.image_dir, '{}_{}_heatmap.png'.format(
-                        self.prefix, k))
+                    image_dir, '{}_{}_heatmap.png'.format(self.prefix, k))
             else:
                 out_path = None
             save_heatmap(hm, out_file=out_path, image_id=i, title=k)
@@ -265,6 +254,7 @@ def save_text(labels, max_samples=64, out_file=None, text_id=0,
 def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
                 max_samples=None, margin_x=5, margin_y=5, image_id=0,
                 caption='', title=''):
+
     if labels is not None:
         if isinstance(labels, (tuple, list)):
             labels = zip(*labels)
@@ -312,14 +302,6 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
     im = Image.fromarray(arr)
 
     if labels is not None:
-        try:
-            font = ImageFont.truetype(config_font, 9)
-        except BaseException:
-            if config_font is None:
-                raise ValueError('font must be added to config file in '
-                                 '`viz`.')
-            font = ImageFont.truetype(config_font, 9)
-
         idr = ImageDraw.Draw(im)
         for i, label in enumerate(labels):
             x_ = (i % num_x) * (dim_x + margin_x)
@@ -342,7 +324,7 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
                 l_ = l_.replace('_', '\n')
             else:
                 l_ = str(label)
-            idr.text((x_, y_), l_, fill=fill, font=font)
+            idr.text((x_, y_), l_, fill=fill)
 
     arr = np.array(im)
     if arr.ndim == 3:
@@ -365,13 +347,8 @@ def save_heatmap(X, out_file=None, caption='', title='', image_id=0):
         env=exp.NAME)
 
 
-def save_scatter(
-        points,
-        out_file=None,
-        labels=None,
-        caption='',
-        title='',
-        image_id=0):
+def save_scatter(points, out_file=None, labels=None, caption='', title='',
+                 image_id=0):
     if labels is not None:
         Y = (labels + 1.5).astype(int)
     else:
