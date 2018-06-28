@@ -61,7 +61,7 @@ class ImageEncoder(ModelPlugin):
     '''
 
     def build(self, encoder_type: str='convnet', dim_out: int=None,
-              encoder_args={}):
+              encoder_args=dict(fully_connected_layers=1028)):
         '''
 
         Args:
