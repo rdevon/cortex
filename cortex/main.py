@@ -40,7 +40,7 @@ def main():
             data.setup(**exp.ARGS['data'])
 
             print_section('NETWORKS')
-            model.easy_build()
+            model.build()
 
             print_section('OPTIMIZER')
             optimizer.setup(model, **exp.ARGS['optimizer'])

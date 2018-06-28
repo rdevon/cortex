@@ -5,14 +5,9 @@
 import torch
 import torch.nn.functional as F
 
-from classifier import classify
-from gan import generator_loss
-from featnet import (apply_gradient_penalty, build_discriminator,
-                     get_results, score, shape_noise, visualize)
-from modules.fully_connected import FullyConnectedNet
-# from utils import cross_correlation
-from vae import build_encoder, build_decoder
-from utils import update_decoder_args, update_encoder_args
+from cortex.plugins import ModelPlugin
+from cortex.built_ins.models.gan import SimpleDiscriminator, GradientPenalty
+from cortex.built_ins.models.vae import ImageDecoder, ImageEncoder
 
 
 def encode(models, X, output_nonlin=False, noise_type='hypercubes', key='autoencoder'):
@@ -62,10 +57,52 @@ def penalty_routine(data, models, losses, results, viz, penalty_amount=0.5,
         losses.discriminator = penalty
 
 
-def main_routine(data, models, losses, results, viz, measure=None, noise_type='hypercubes',
-                 output_nonlin=False, generator_loss_type='non-saturating', beta=1.0):
-    X_P, Z_P, T, U = data.get_batch('images', 'y', 'targets', 'u')
-    Z_P = shape_noise(Z_P, U, noise_type)
+class AdversarialAutoencoder(ModelPlugin):
+    '''Adversarial Autoencoder
+
+    Autoencoder with a GAN loss on the latent space.
+
+    '''
+
+    def __init__(self):
+        encoder_contract = dict(kwargs=dict(dim_out='dim_z'))
+        decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
+        disc_contract = dict(kwargs=dict(dim_in='dim_z'))
+        penalty_contract = dict(nets=dict(network='discriminator'))
+
+        self.encoder = ImageEncoder(contract=encoder_contract)
+        self.decoder = ImageDecoder(contract=decoder_contract)
+        self.discriminator = SimpleDiscriminator(contract=disc_contract)
+        self.penalty = GradientPenalty(contract=penalty_contract)
+
+    def build(self, noise_type='normal', dim_z=64):
+        '''
+
+        Args:
+            noise_type: Prior noise distribution.
+            dim_z: Dimensionality of latent space.
+
+        '''
+
+        self.add_noise('Z', dist=noise_type, size=dim_z)
+        self.encoder.easy_build()
+        self.decoder.easy_build()
+        self.discriminator.easy_build()
+
+    def routine(self, inputs, Z, encoder_loss_type='non-saturating'):
+        Z_Q = self.encoder.encode(inputs)
+        kwargs = self.get_kwargs(self.discriminator.routine)
+        self.discriminator.routine(Z, Z_Q, **kwargs)
+
+    def train_step(self, n_discriminator_updates=1):
+        '''
+
+        Args:
+            n_discriminator_updates: Number of discriminator updates per step.
+
+        '''
+        for _ in range(n_discriminator_updates):
+
 
     Z_Q = encode(models, X_P, output_nonlin=output_nonlin, noise_type=noise_type)
     E_pos, E_neg, P_samples, Q_samples = score(models, Z_P, Z_Q, measure)

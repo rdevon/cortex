@@ -192,11 +192,8 @@ def plot():
             Y = []
             legend = []
             for k_ in v_train:
-                Y_, legend_ = get_Y_legend(k_,
-                                           v_train[k_], v_test[k_]
-                                           if v_test is not None
-                                           else
-                                           None)
+                vt = v_test.get(k_) if v_test is not None else None
+                Y_, legend_ = get_Y_legend(k_, v_train[k_], vt)
                 Y += Y_
                 legend += legend_
         else:

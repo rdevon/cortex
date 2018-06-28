@@ -42,6 +42,8 @@ def data_class():
             return d
 
         def __getitem__(self, item):
+            if item != 'test':
+                raise KeyError(item)
             return self._data[self.i * self.bs: (self.i + 1) * self.bs]
 
         def reset(self, *args, **kwargs):
@@ -83,8 +85,7 @@ def model_class_with_submodel(model_class):
             self.submodel = model_class(contract=sub_contract)
 
         def build(self, d=31, c=23):
-            kwargs = self.get_kwargs(self.submodel.build)
-            self.submodel.build(**kwargs)
+            self.submodel.build()
             self.nets.net = FullyConnectedNet(d, c)
 
         def routine(self, B):
@@ -97,18 +98,19 @@ def model_class_with_submodel(model_class):
         def train_step(self):
             self.data.next()
 
-            self.easy_routine()
+            B = self.inputs('B')
+            self.routine(B)
             self.optimizer_step()
 
-            self.submodel.easy_routine()
+            A = self.submodel.inputs('A')
+            self.submodel.routine(A)
             self.submodel.optimizer_step()
 
         def eval_step(self):
             self.data.next()
 
-            kwargs = self.get_kwargs(self.routine)
-            inputs = self.get_inputs(self.routine)
-            self.routine(*inputs, **kwargs)
+            B = self.inputs('B')
+            self.routine(B)
 
             self.submodel.eval_step()
 
@@ -124,11 +126,8 @@ def model_class_with_submodel_2(model_class):
             self.submodel2 = model_class(contract=sub_contract2)
 
         def build(self, d=31, c=23):
-            kwargs = self.get_kwargs(self.submodel1.build)
-            self.submodel1.build(**kwargs)
-
-            kwargs = self.get_kwargs(self.submodel2.build)
-            self.submodel2.build(**kwargs)
+            self.submodel1.build()
+            self.submodel2.build()
 
             self.nets.net = FullyConnectedNet(d, c)
 
@@ -142,9 +141,8 @@ def model_class_with_submodel_2(model_class):
         def train_step(self):
             self.data.next()
 
-            inputs = self.get_inputs(self.routine)
-            kwargs = self.get_kwargs(self.routine)
-            self.routine(*inputs, **kwargs)
+            B = self.inputs('B')
+            self.routine(B)
             self.optimizer_step()
 
             self.submodel1.train_step()
@@ -153,9 +151,8 @@ def model_class_with_submodel_2(model_class):
         def eval_step(self):
             self.data.next()
 
-            inputs = self.get_inputs(self.routine)
-            kwargs = self.get_kwargs(self.routine)
-            self.routine(*inputs, **kwargs)
+            B = self.inputs('B')
+            self.routine(B)
 
             self.submodel1.eval_step()
             self.submodel2.eval_step()

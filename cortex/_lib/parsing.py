@@ -192,13 +192,17 @@ def parse_args(models):
             choices = None
 
             if isinstance(v, dict):
+                dstr = ',,'.join(
+                    ['{}={}'.format(k, v) for k, v in v.items()])
+                metavar = '<k1=v1,,k2=v2...>' + ' defaults={' + dstr + '})'
+                print(metavar[-1])
                 subparser.add_argument(
                     arg_str,
                     dest=k,
                     default=v,
                     action=StoreDictKeyPair,
                     help=help,
-                    metavar='<k1=v1,,k2=v2...>')
+                    metavar=metavar)
             elif isinstance(v, bool) and not v:
                 action = 'store_true'
                 subparser.add_argument(

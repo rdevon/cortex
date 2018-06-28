@@ -5,6 +5,7 @@
 
 import math
 
+from cortex.built_ins.networks.fully_connected import FullyConnectedNet
 from cortex.plugins import register_plugin, ModelPlugin
 import torch
 from torch import autograd
@@ -242,6 +243,25 @@ class Discriminator(ModelPlugin):
                            name='discriminator output')
 
 
+class SimpleDiscriminator(Discriminator):
+    '''Discriminator for 1d vectors.
+
+    '''
+
+    def build(self, dim_in: int=None, classifier_args=dict(dim_h=[200, 200])):
+        '''
+
+        Args:
+            dim_in (int): Input size
+            dim_out (int): Output size
+            classifier_args: Extra arguments for building the classifier
+
+        '''
+
+        classifier = FullyConnectedNet(dim_in, dim_out=1, **classifier_args)
+        self.nets.classifier = classifier
+
+
 class Generator(ModelPlugin):
 
     def build(self, dim_z=64, generator_type: str='convnet',
@@ -327,12 +347,6 @@ class GAN(ModelPlugin):
         self.generator.build()
         self.discriminator.build()
 
-    def routine(self, inputs, Z):
-        generated = self.generator.generate(Z)
-
-        kwargs = self.get_kwargs(self.discriminator.routine)
-        self.discriminator.routine(inputs, generated, **kwargs)
-
     def train_step(self, generator_updates=1, discriminator_updates=1):
         '''
 
@@ -344,8 +358,10 @@ class GAN(ModelPlugin):
         
         for _ in range(discriminator_updates):
             self.data.next()
-            self.easy_routine()
-            self.discriminator.optimizer_step()
+            inputs, Z = self.inputs('inputs', 'Z')
+            generated = self.generator.generate(Z)
+            self.discriminator.routine(inputs, generated.detach())
+            self.optimizer_step()
             self.penalty.train_step()
 
         for _ in range(generator_updates):
@@ -353,15 +369,17 @@ class GAN(ModelPlugin):
 
     def eval_step(self):
         self.data.next()
-        self.easy_routine()
-        self.penalty.easy_routine()
-        self.generator.easy_routine()
+
+        inputs, Z = self.inputs('inputs', 'Z')
+        generated = self.generator.generate(Z)
+        self.discriminator.routine(inputs, generated)
+        self.penalty.routine(auto_input=True)
+        self.generator.routine(auto_input=True)
 
     def visualize(self, images, Z):
         self.add_image(images, name='ground truth')
         generated = self.generator.generate(Z)
-        kwargs = self.get_kwargs(self.discriminator.visualize)
-        self.discriminator.visualize(images, generated, **kwargs)
-        self.generator.easy_visualize()
+        self.discriminator.visualize(images, generated)
+        self.generator.visualize(Z)
 
 register_plugin(GAN)

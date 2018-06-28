@@ -7,7 +7,7 @@ from cortex._lib import optimizer
 
 def test_optimizer(model_with_submodel):
     model = model_with_submodel
-    model.easy_build()
+    model.build()
 
     optimizer.setup(model)
 
@@ -18,7 +18,7 @@ def test_optimizer(model_with_submodel):
 
 def test_clipping(model_with_submodel, clip=0.0001):
     model = model_with_submodel
-    model.easy_build()
+    model.build()
 
     optimizer.setup(model, clipping=clip)
 

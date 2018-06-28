@@ -103,14 +103,10 @@ class ModelPluginBase(metaclass=PluginType):
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
 
-    _owners = dict()
     _training_nets = dict()
 
-    _kwarg_dict = dict()
-    _input_dict = dict()
-
     _all_nets = NetworkHandler(allow_overwrite=False)
-    _all_losses = LossHandler(_all_nets)
+    _all_losses = LossHandler(_all_nets, add_values=True)
     _all_results = ResultsHandler()
 
     _all_epoch_results = ResultsHandler()
@@ -141,15 +137,9 @@ class ModelPluginBase(metaclass=PluginType):
             self._losses = aliased(self._all_losses)
             self._epoch_losses = aliased(self._all_epoch_losses)
 
-        for k in ['build', 'routine', 'visualize', 'train_step',
-                  'eval_step']:
-            fn = getattr(self, k)
-            fid = self._get_id(fn)
-            self._owners[fid] = self.__class__.__name__
-
-        self._wrap_build()
+        self.build = self._wrap(self.build)
         self._wrap_routine()
-        self._wrap_visualize()
+        self.visualize = self._wrap(self.visualize)
         self.train_step = self._wrap_step(self.train_step)
         self.eval_step = self._wrap_step(self.eval_step, train=False)
         self.train_loop = self._wrap_loop(self.train_loop, train=True)
@@ -171,11 +161,7 @@ class ModelPluginBase(metaclass=PluginType):
         '''
         cls._kwargs.clear()
         cls._help.clear()
-        cls._owners.clear()
         cls._training_nets.clear()
-
-        cls._kwarg_dict = dict()
-        cls._input_dict = dict()
 
         cls._all_nets.clear()
         cls._all_losses.clear()
@@ -206,9 +192,34 @@ class ModelPluginBase(metaclass=PluginType):
     def kwargs(self):
         return self._kwargs
 
-    @property
-    def args(self):
-        return self._args
+    def inputs(self, *keys):
+        '''
+
+        Args:
+            keys: TODO
+
+        Returns:
+            TODO
+
+        '''
+
+        if self._contract is not None:
+            input_dict = self._contract['inputs']
+        else:
+            input_dict = {}
+
+        inputs = []
+        for k in keys:
+            key = input_dict.get(k, k)
+            inp = self.data[key]
+            inputs.append(inp)
+
+        if len(inputs) == 0:
+            return None
+        elif len(inputs) == 1:
+            return inputs[0]
+        else:
+            return inputs
 
     @property
     def help(self):
@@ -217,18 +228,6 @@ class ModelPluginBase(metaclass=PluginType):
     @property
     def results(self):
         return self._results
-
-    @property
-    def epoch_results(self):
-        return self._epoch_results
-
-    @property
-    def epoch_losses(self):
-        return self._epoch_losses
-
-    @property
-    def epoch_times(self):
-        return self._epoch_times
 
     @property
     def nets(self):
@@ -270,6 +269,7 @@ class ModelPluginBase(metaclass=PluginType):
             for k, v in kwargs.items():
                 if k not in self.kwargs or self.kwargs[k] is None:
                     self.kwargs[k] = v
+            for k, v in help.items():
                 if k not in self.help:
                     self.help[k] = help[k]
             model._kwargs = self._kwargs
@@ -295,7 +295,7 @@ class ModelPluginBase(metaclass=PluginType):
                            .format(tuple(contract.keys())))
 
         for k, v in kwargs.items():
-            if k not in self.kwargs:
+            if k not in self._kwargs:
                 raise KeyError('Invalid contract: {} does not have any '
                                'arguments called {}'
                                .format(self.__class__.__name__, k))
@@ -304,7 +304,7 @@ class ModelPluginBase(metaclass=PluginType):
                 raise TypeError('Contract values must be strings.')
 
         for k, v in inputs.items():
-            if k not in self.args:
+            if k not in self._args:
                 raise KeyError('Invalid contract: {} does not have any '
                                'inputs called {}'
                                .format(self.__class__.__name__, k))
@@ -329,30 +329,47 @@ class ModelPluginBase(metaclass=PluginType):
 
         self._contract = contract
 
-        for k in ['build', 'routine', 'visualize', 'train_step',
-                  'eval_step']:
-            fn = getattr(self, k)
-            fid = self._get_id(fn)
-            self._kwarg_dict[fid] = contract['kwargs']
-            self._input_dict[fid] = contract['inputs']
+    def _wrap(self, fn):
 
-    def _wrap_build(self):
-        fn = self.build
+        def _fetch_kwargs():
+            if self._contract is not None:
+                kwarg_dict = self._contract['kwargs']
+            else:
+                kwarg_dict = {}
+            kwarg_keys = parse_kwargs(fn).keys()
 
-        def wrapped(*args, **kwargs):
+            kwargs = dict()
+            for k in kwarg_keys:
+                key = kwarg_dict.get(k, k)
+                value = self.kwargs[key]
+                kwargs[k] = value
+
+            return kwargs
+
+        def _fetch_inputs():
+            if self._contract is not None:
+                input_dict = self._contract['inputs']
+            else:
+                input_dict = {}
+            input_keys = parse_inputs(fn)
+
+            inputs = []
+            for k in input_keys:
+                key = input_dict.get(k, k)
+                value = self.data[key]
+                inputs.append(value)
+            return inputs
+
+        def wrapped(*args, auto_input=False, **kwargs):
+            kwargs_ = _fetch_kwargs()
+            kwargs.update(kwargs_)
+
+            if auto_input:
+                args = _fetch_inputs()
+
             return fn(*args, **kwargs)
 
-        wrapped._fn = fn
-        self.build = wrapped
-
-    def _wrap_visualize(self):
-        fn = self.visualize
-
-        def wrapped(*args, **kwargs):
-            return fn(*args, **kwargs)
-
-        wrapped._fn = fn
-        self.visualize = wrapped
+        return wrapped
 
     def _wrap_routine(self):
         '''
@@ -365,6 +382,7 @@ class ModelPluginBase(metaclass=PluginType):
         '''
 
         fn = self.routine
+        fn = self._wrap(fn)
 
         def wrapped(*args, **kwargs):
             fid = self._get_id(fn)
@@ -390,7 +408,11 @@ class ModelPluginBase(metaclass=PluginType):
             if self._train:
                 for k in training_nets:
                     net = self.nets[k]
-                    self._optimizers[k].zero_grad()
+
+                    optimizer = self._optimizers.get(k)
+                    if optimizer is not None:
+                        optimizer.zero_grad()
+
                     for p in net.parameters():
                         p.requires_grad = k in training_nets
                     net.train()
@@ -400,15 +422,14 @@ class ModelPluginBase(metaclass=PluginType):
             self._check_bad_values()
             end = time.time()
 
-            owner = self._owners[self._get_id(fn)]
-            update_dict_of_lists(self.epoch_results, **self.results)
-            update_dict_of_lists(self.epoch_times, **{owner: end - start})
+            update_dict_of_lists(self._epoch_results, **self.results)
+            update_dict_of_lists(self._epoch_times,
+                                 **{self.__class__.__name__: end - start})
             losses = dict((k, v.item()) for k, v in self.losses.items())
-            update_dict_of_lists(self.epoch_losses, **losses)
+            update_dict_of_lists(self._epoch_losses, **losses)
 
             return output
 
-        wrapped._fn = fn
         self.routine = wrapped
 
     def _wrap_step(self, fn, train=True):
@@ -422,8 +443,8 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
-        def wrapped(*args, **kwargs):
-            if train:
+        def wrapped(*args, _init=False, **kwargs):
+            if train and not _init:
                 self._train = True
                 for net in self.nets.values():
                     net.train()
@@ -433,10 +454,10 @@ class ModelPluginBase(metaclass=PluginType):
                     net.eval()
 
             output = fn(*args, **kwargs)
+            self.losses.clear()
 
             return output
 
-        wrapped._fn = fn
         return wrapped
 
     def _wrap_loop(self, fn, train=True):
@@ -463,54 +484,7 @@ class ModelPluginBase(metaclass=PluginType):
             results['losses'] = dict(self._all_epoch_losses)
             results['times'] = dict(self._all_epoch_times)
 
-        wrapped._fn = fn
         return wrapped
-
-    def get_inputs(self, fn):
-        '''
-
-        Args:
-            fn: TODO
-
-        Returns:
-            TODO
-
-        '''
-
-        fid = self._get_id(fn._fn)
-        input_dict = self._input_dict.get(fid, {})
-        input_keys = parse_inputs(fn._fn)
-
-        inputs = []
-        for k in input_keys:
-            key = input_dict.get(k, k)
-            inp = self.data[key]
-            inputs.append(inp)
-
-        return inputs
-
-    def get_kwargs(self, fn):
-        '''
-
-        Args:
-            fn: TODO
-
-        Returns:
-            TODO
-
-        '''
-
-        fid = self._get_id(fn._fn)
-        kwarg_dict = self._kwarg_dict.get(fid, {})
-        kwarg_keys = parse_kwargs(fn._fn).keys()
-
-        kwargs = dict()
-        for k in kwarg_keys:
-            key = kwarg_dict.get(k, k)
-            value = self.kwargs[key]
-            kwargs[k] = value
-
-        return kwargs
 
     def _get_training_nets(self):
         '''

@@ -159,8 +159,9 @@ class ModelPlugin(ModelPluginBase):
     optimizer_defaults = {}
 
     def build(self, *args, **kwargs):
-        raise NotImplementedError('`build` is not implemented for model class {}'
-                                  .format(self.__class__.__name__))
+        raise NotImplementedError(
+            '`build` is not implemented for model class {}'
+            .format(self.__class__.__name__))
 
     def routine(self, *args, **kwargs):
         raise NotImplementedError(
@@ -174,12 +175,13 @@ class ModelPlugin(ModelPluginBase):
 
     def train_step(self):
         self.data.next()
-        self.easy_routine()
+        self.routine(auto_input=True)
+        print(self.losses)
         self.optimizer_step()
 
     def eval_step(self):
         self.data.next()
-        self.easy_routine()
+        self.routine(auto_input=True)
 
     def optimizer_step(self):
         keys = self.losses.keys()
@@ -188,14 +190,17 @@ class ModelPlugin(ModelPluginBase):
             loss = self.losses.pop(k)
             loss.backward()
             key = self.nets._aliases.get(k, k)
-            self._optimizers[key].step()
+
+            optimizer = self._optimizers.get(key)
+            if optimizer is not None:
+                optimizer.step()
 
     def train_loop(self):
         self._reset_epoch()
 
         try:
             while True:
-                self.easy_train_step()
+                self.train_step()
 
         except StopIteration:
             pass
@@ -205,33 +210,10 @@ class ModelPlugin(ModelPluginBase):
 
         try:
             while True:
-                self.easy_eval_step()
+                self.eval_step()
 
         except StopIteration:
             pass
-
-    def easy_build(self):
-        kwargs = self.get_kwargs(self.build)
-        inputs = self.get_inputs(self.build)
-        return self.build(*inputs, **kwargs)
-
-    def easy_routine(self):
-        kwargs = self.get_kwargs(self.routine)
-        inputs = self.get_inputs(self.routine)
-        return self.routine(*inputs, **kwargs)
-
-    def easy_visualize(self):
-        kwargs = self.get_kwargs(self.visualize)
-        inputs = self.get_inputs(self.visualize)
-        return self.visualize(*inputs, **kwargs)
-
-    def easy_train_step(self):
-        kwargs = self.get_kwargs(self.train_step)
-        return self.train_step(**kwargs)
-
-    def easy_eval_step(self):
-        kwargs = self.get_kwargs(self.eval_step)
-        return self.eval_step(**kwargs)
 
     def get_dims(self, *queries):
         '''Gets dimensions of inputs.

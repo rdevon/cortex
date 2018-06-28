@@ -7,7 +7,7 @@ from cortex._lib import optimizer
 
 def test_loop(model_with_submodel):
     model = model_with_submodel
-    model.easy_build()
+    model.build()
     optimizer.setup(model)
 
     model.train_loop(0)

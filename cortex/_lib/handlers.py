@@ -222,8 +222,9 @@ class LossHandler(Handler):
     _type = torch.Tensor
     _get_error_string = 'Loss `{}` not found. You must add it as a dict entry'
 
-    def __init__(self, nets, *args, **kwargs):
+    def __init__(self, nets, *args, add_values=False, **kwargs):
         self._nets = nets
+        self._add_values = add_values
         super().__init__(*args, **kwargs)
 
     def _check_keyvalue(self, k, v):
@@ -237,3 +238,26 @@ class LossHandler(Handler):
             raise ValueError('Loss must be a scalar. Got {}'.format(v.size()))
 
         return True
+
+    def __setitem__(self, key, value):
+        self._check_keyvalue(key, value)
+
+        if self._locked:
+            raise KeyError('Handler is locked.')
+
+        if self._add_values and hasattr(self, key):
+            self.__dict__[key] += value
+        else:
+            self.__dict__[key] = value
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            return super().__setattr__(key, value)
+
+        self._check_keyvalue(key, value)
+
+
+        if self._add_values and hasattr(self, key):
+            super().__setattr__(key, value + getattr(self, key))
+        else:
+            super().__setattr__(key, value)

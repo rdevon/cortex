@@ -77,6 +77,15 @@ class ImageEncoder(ModelPlugin):
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.nets.encoder = encoder
 
+    def encode(self, inputs):
+        return self.nets.encoder(inputs)
+
+    def visualize(self, inputs, targets):
+        Z = self.encode(inputs)
+        if targets is not None:
+            targets = targets.data
+        self.add_scatter(Z.data, labels=targets, name='latent values')
+
 
 class ImageDecoder(ModelPlugin):
     '''Builds a simple image encoder.
@@ -100,8 +109,11 @@ class ImageDecoder(ModelPlugin):
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.nets.decoder = decoder
 
+    def decode(self, Z):
+        return self.nets.decoder(Z)
+
     def visualize(self, Z):
-        gen = self.nets.decoder(Z)
+        gen = self.decode(Z)
         self.add_image(gen, name='generated')
 
 
@@ -140,8 +152,8 @@ class VAE(ModelPlugin):
                              decoding to mu and log sigma.
 
         '''
-        self.encoder.easy_build()
-        self.decoder.easy_build()
+        self.encoder.build()
+        self.decoder.build()
 
         self.add_noise('Z', dist='normal', size=dim_z)
         encoder = self.nets.encoder
@@ -179,7 +191,7 @@ class VAE(ModelPlugin):
         self.add_image(outputs, name='reconstruction')
         self.add_image(inputs, name='ground truth')
         self.add_scatter(vae.mu.data, labels=targets.data, name='latent values')
-        self.decoder.easy_visualize()
+        self.decoder.visualize(vae.mu.data)
 
 
 register_plugin(VAE)

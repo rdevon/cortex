@@ -8,6 +8,13 @@ from cortex.plugins import ModelPlugin, register_model
 
 
 def test_class(model_class, arguments):
+    '''Tests simple class attributions.
+
+    Args:
+        model_class: ModulePlugin subclass.
+        arguments: Arguments for the class.
+
+    '''
     arg1 = arguments['arg1']
     arg2 = arguments['arg2']
     arg1_help = arguments['arg1_help']
@@ -20,6 +27,13 @@ def test_class(model_class, arguments):
 
 
 def test_register(model_class):
+    '''Tests registration of a model.
+
+    Args:
+        model_class: ModelPlugin subclass.
+
+    '''
+
     MODEL_PLUGINS.clear()
     register_model(model_class)
     assert isinstance(list(MODEL_PLUGINS.values())[0], model_class)
@@ -27,6 +41,13 @@ def test_register(model_class):
 
 
 def test_build(model_class, arguments):
+    '''Tests building the model.
+
+    Args:
+        model_class: ModulePlugin subclass.
+        arguments: Arguments for the class.
+
+    '''
     ModelPlugin._all_nets.clear()
     kwargs = {arguments['arg1']: 11, arguments['arg2']: 13}
 
@@ -35,11 +56,23 @@ def test_build(model_class, arguments):
 
     model.build()
 
-    print(model.nets)
+    print('Model networks:', model.nets)
     assert isinstance(model.nets.net, FullyConnectedNet)
+
+    parameters = list(model.nets.net.parameters())
+
+    print('Parameter sizes:', [p.size() for p in parameters])
+    assert parameters[0].size(1) == 11
+    assert parameters[2].size(0) == parameters[3].size(0) == 13
 
 
 def test_subplugin(model_class_with_submodel):
+    '''Tests a model with a model inside.
+
+    Args:
+        model_class_with_submodel: ModulePlugin subclass.
+
+    '''
 
     contract = dict(
         kwargs=dict(b='c'),
@@ -48,12 +81,11 @@ def test_subplugin(model_class_with_submodel):
 
     model = model_class_with_submodel(sub_contract=contract)
 
-    kwargs = model.get_kwargs(model.build)
     try:
-        model.build(**kwargs)
+        model.build()
         assert 0
-    except KeyError:
-        pass
+    except KeyError as e:
+        print('build failed ({}). This is expected.'.format(e))
 
     ModelPlugin._all_nets.clear()
 
@@ -63,6 +95,4 @@ def test_subplugin(model_class_with_submodel):
     )
     model = model_class_with_submodel(sub_contract=sub_contract)
 
-    kwargs = model.get_kwargs(model.build)
-    model.build(**kwargs)
-    print(model.nets['net'].parameters())
+    model.build()

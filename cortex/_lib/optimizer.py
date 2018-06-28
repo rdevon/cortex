@@ -118,7 +118,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
                     torch.cuda.device_count()))
 
     model.data.reset(make_pbar=False, mode='test')
-    model.easy_eval_step()
+    model.train_step(_init=True)
 
     training_nets = model._get_training_nets()
 

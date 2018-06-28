@@ -13,26 +13,22 @@ def test_routine(model_class, arguments, data_class):
     kwargs = {arguments['arg1']: 11, arguments['arg2']: 13}
     data = data_class(11)
 
-    contract = dict(inputs=dict(A='test'))
-    model = model_class(contract=contract)
+    model = model_class(contract=dict(inputs=dict(A='test')))
     model._data = data
     model.kwargs.update(**kwargs)
 
-    inputs = model.get_inputs(model.build)
-    kwargs = model.get_kwargs(model.build)
-    model.build(*inputs, **kwargs)
-
-    inputs = model.get_inputs(model.routine)
-    kwargs = model.get_kwargs(model.routine)
+    model.build()
 
     model.eval_step()
-    assert 'net' in list(model._training_nets.values())[0], model._training_nets
+    print('Training nets: ', model._training_nets)
+    assert 'net' in list(model._training_nets.values())[0]
 
     params = list(model.nets.net.parameters())
     op = optim.SGD(params, lr=0.0001)
     model._optimizers = dict(net=op)
 
-    model.routine(*inputs, **kwargs)
+    A = model.inputs('A')
+    model.routine(A)
 
     model._reset_epoch()
 
@@ -40,9 +36,9 @@ def test_routine(model_class, arguments, data_class):
     model.train_step()
     model.train_step()
 
-    print(model._all_epoch_results)
-    print(model._all_epoch_losses)
-    print(model._all_epoch_times)
+    print('Results:', model._all_epoch_results)
+    print('Losses:', model._all_epoch_losses)
+    print('Times:', model._all_epoch_times)
 
     assert len(list(model._all_epoch_results.values())[0]) == 3
     assert len(list(model._all_epoch_losses.values())[0]) == 3
@@ -51,10 +47,7 @@ def test_routine(model_class, arguments, data_class):
 
 def test_routine_with_submodels(model_with_submodel):
     model = model_with_submodel
-
-    inputs = model.get_inputs(model.build)
-    kwargs = model.get_kwargs(model.build)
-    model.build(*inputs, **kwargs)
+    model.build()
 
     params = list(model.nets.net.parameters())
     op = optim.SGD(params, lr=0.0001)
@@ -99,9 +92,7 @@ def test_routine_with_submodels_2(model_class_with_submodel_2, data_class):
     model.submodel2._data = data
     model.kwargs.update(**kwargs)
 
-    inputs = model.get_inputs(model.build)
-    kwargs = model.get_kwargs(model.build)
-    model.build(*inputs, **kwargs)
+    model.build()
 
     params = list(model.nets.net.parameters())
     op = optim.SGD(params, lr=0.0001)

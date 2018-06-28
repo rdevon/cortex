@@ -66,7 +66,7 @@ def test_epoch(model, epoch, data_mode='test'):
     model.data.next()
 
     try:
-        model.easy_visualize()
+        model.visualize(auto_input=True)
     except NotImplementedError:
         pass
 
