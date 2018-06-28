@@ -193,9 +193,12 @@ def parse_args(models):
 
             if isinstance(v, dict):
                 dstr = ',,'.join(
-                    ['{}={}'.format(k, v) for k, v in v.items()])
-                metavar = '<k1=v1,,k2=v2...>' + ' defaults={' + dstr + '})'
-                print(metavar[-1])
+                    ['{}={}'.format(k, str(v)) for k, v in v.items()])
+                dstr = dstr.replace(' ', '')
+                dstr = dstr.replace(']', '')
+                dstr = dstr.replace('[', '')
+                metavar = '<k1=v1>' + ' defaults={' + dstr + '})'
+
                 subparser.add_argument(
                     arg_str,
                     dest=k,
@@ -234,8 +237,15 @@ def parse_args(models):
                 arg_str = '--' + key[0] + '.' + k
                 help = default_help[key][k]
                 dest = key + '.' + k
-                metavar = '<k1=v1,,k2=v2...>'
+
                 if isinstance(v, dict):
+                    dstr = ',,'.join(
+                        ['{}={}'.format(k, str(v)) for k, v in v.items()])
+                    dstr = dstr.replace(' ', '')
+                    dstr = dstr.replace(']', '')
+                    dstr = dstr.replace('[', '')
+                    metavar = '<k1=v1>' + ' defaults={' + dstr + '})'
+
                     subparser.add_argument(
                         arg_str,
                         dest=dest,

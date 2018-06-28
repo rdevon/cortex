@@ -19,7 +19,7 @@ logger = logging.getLogger('cortex.optimizer')
 OPTIMIZERS = {}
 
 _optimizer_defaults = dict(
-    SGD=dict(momentum=0.9),
+    SGD=dict(),
     Adam=dict(betas=(0.5, 0.999))
 )
 
@@ -82,6 +82,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
 
     '''
 
+    OPTIMIZERS.clear()
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
     clipping = clipping or {}
@@ -163,6 +164,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
 
         # Create the optimizer
         op = wrap_optimizer(op)
+
         optimizer = op(params, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
 

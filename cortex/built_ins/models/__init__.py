@@ -1,1 +1,1 @@
-__all__ = ['ali', 'classifier', 'gan', 'vae']
+__all__ = ['adversarial_autoencoder', 'ali', 'classifier', 'gan', 'vae']

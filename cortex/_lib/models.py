@@ -107,6 +107,8 @@ class ModelPluginBase(metaclass=PluginType):
 
     _all_nets = NetworkHandler(allow_overwrite=False)
     _all_losses = LossHandler(_all_nets, add_values=True)
+    # TODO(Devon): This is done in conjunction with clearing all losses
+    # after train_step.
     _all_results = ResultsHandler()
 
     _all_epoch_results = ResultsHandler()
@@ -122,6 +124,7 @@ class ModelPluginBase(metaclass=PluginType):
 
         self._contract = None
         self._train = False
+        self._models = []
 
         if contract:
             contract = self._check_contract(contract)
@@ -245,6 +248,16 @@ class ModelPluginBase(metaclass=PluginType):
     def data(self):
         return self._data
 
+    def _set_train(self):
+        self._train = True
+        for m in self._models:
+            m._set_train()
+
+    def _set_eval(self):
+        self._train = False
+        for m in self._models:
+            m._set_eval()
+
     def __setattr__(self, key, value):
         '''
 
@@ -273,6 +286,7 @@ class ModelPluginBase(metaclass=PluginType):
                 if k not in self.help:
                     self.help[k] = help[k]
             model._kwargs = self._kwargs
+            self._models.append(model)
 
         super().__setattr__(key, value)
 
@@ -445,11 +459,11 @@ class ModelPluginBase(metaclass=PluginType):
 
         def wrapped(*args, _init=False, **kwargs):
             if train and not _init:
-                self._train = True
+                self._set_train()
                 for net in self.nets.values():
                     net.train()
             else:
-                self._train = False
+                self._set_eval()
                 for net in self.nets.values():
                     net.eval()
 

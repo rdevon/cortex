@@ -7,7 +7,7 @@ from os import path
 
 import imageio
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import visdom
 
 from . import data, exp

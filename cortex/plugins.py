@@ -176,7 +176,6 @@ class ModelPlugin(ModelPluginBase):
     def train_step(self):
         self.data.next()
         self.routine(auto_input=True)
-        print(self.losses)
         self.optimizer_step()
 
     def eval_step(self):
@@ -186,9 +185,10 @@ class ModelPlugin(ModelPluginBase):
     def optimizer_step(self):
         keys = self.losses.keys()
 
-        for k in keys:
+        for i, k in enumerate(keys):
             loss = self.losses.pop(k)
-            loss.backward()
+            loss.backward(retain_graph=(i < len(keys)))
+            #  TODO(Devon): Is this a good idea?
             key = self.nets._aliases.get(k, k)
 
             optimizer = self._optimizers.get(key)

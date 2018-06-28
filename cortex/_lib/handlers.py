@@ -256,7 +256,6 @@ class LossHandler(Handler):
 
         self._check_keyvalue(key, value)
 
-
         if self._add_values and hasattr(self, key):
             super().__setattr__(key, value + getattr(self, key))
         else:

@@ -1,4 +1,3 @@
-# flake8: noqa
 '''Generative adversarial networks with various objectives and penalties.
 
 '''
@@ -248,7 +247,7 @@ class SimpleDiscriminator(Discriminator):
 
     '''
 
-    def build(self, dim_in: int=None, classifier_args=dict(dim_h=[200, 200])):
+    def build(self, dim_in: int=None, discriminator_args=dict(dim_h=[200, 200])):
         '''
 
         Args:
@@ -258,8 +257,9 @@ class SimpleDiscriminator(Discriminator):
 
         '''
 
-        classifier = FullyConnectedNet(dim_in, dim_out=1, **classifier_args)
-        self.nets.classifier = classifier
+        discriminator = FullyConnectedNet(dim_in, dim_out=1,
+                                          **discriminator_args)
+        self.nets.discriminator = discriminator
 
 
 class Generator(ModelPlugin):
@@ -355,7 +355,7 @@ class GAN(ModelPlugin):
             discriminator_updates: Number of discriminator updates per step.
 
         '''
-        
+
         for _ in range(discriminator_updates):
             self.data.next()
             inputs, Z = self.inputs('inputs', 'Z')
@@ -381,5 +381,6 @@ class GAN(ModelPlugin):
         generated = self.generator.generate(Z)
         self.discriminator.visualize(images, generated)
         self.generator.visualize(Z)
+
 
 register_plugin(GAN)

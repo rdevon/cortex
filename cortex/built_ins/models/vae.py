@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from .utils import update_encoder_args, update_decoder_args
+from .utils import update_encoder_args, update_decoder_args, ms_ssim
 
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
@@ -109,6 +109,19 @@ class ImageDecoder(ModelPlugin):
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.nets.decoder = decoder
 
+    def routine(self, inputs, Z, decoder_crit=F.mse_loss):
+        '''
+
+        Args:
+            decoder_crit: Criterion for the decoder.
+
+        '''
+
+        X = self.decode(Z)
+        self.losses.decoder = decoder_crit(X, inputs) / inputs.size(0)
+        msssim = ms_ssim(inputs, X)
+        self.results.ms_ssim = msssim.item()
+
     def decode(self, Z):
         return self.nets.decoder(Z)
 
@@ -180,8 +193,10 @@ class VAE(ModelPlugin):
         kl = (0.5 * (vae.std ** 2 + vae.mu ** 2 - 2. *
                      torch.log(vae.std) - 1.).sum(1).mean())
 
+        msssim = ms_ssim(inputs, outputs)
+
         self.losses.vae = (r_loss + beta_kld * kl)
-        self.results.update(KL_divergence=kl.item())
+        self.results.update(KL_divergence=kl.item(), ms_ssim=msssim.item())
 
     def visualize(self, inputs, targets):
         vae = self.nets.vae

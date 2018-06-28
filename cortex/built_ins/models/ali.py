@@ -209,8 +209,6 @@ class ALI(ModelPlugin):
             discriminator_updates: Number of discriminator updates per step.
 
         '''
-        print('here', self.losses)
-
         for _ in range(discriminator_updates):
             self.data.next()
             inputs, Z = self.inputs('inputs', 'Z')
@@ -220,15 +218,12 @@ class ALI(ModelPlugin):
 
             self.discriminator.routine(
                 inputs, generated.detach(), inferred.detach(), Z)
-            print(self.losses)
             self.optimizer_step()
-            print(self.losses)
 
-            #self.penalty.routine((inputs, inferred))
-            #self.optimizer_step()
+            self.penalty.routine((inputs, inferred))
+            self.optimizer_step()
 
         self.bidirectional_model.train_step()
-        print(self.losses)
 
     def eval_step(self):
         self.data.next()
