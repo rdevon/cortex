@@ -34,6 +34,15 @@ class DatasetPlugin(DatasetPluginBase):
     sources = []
 
     def copy_to_local_path(self, from_path: str) -> str:
+        ''' Copies data to a local path.
+
+        Path is set in the .cortex.yml file. This can be set up through
+        `cortex setup`.
+
+        Args:
+            from_path: The path to the data to be copied.
+
+        '''
         if from_path.endswith('/'):
             from_path = from_path[:-1]
         basename = path.basename(from_path)
@@ -54,6 +63,8 @@ class DatasetPlugin(DatasetPluginBase):
                 shutil.copytree(from_path, to_path)
             else:
                 shutil.copy(from_path, local_path)
+
+            logger.info('Finished copying.')
 
         return to_path
 
@@ -167,30 +178,74 @@ class ModelPlugin(ModelPluginBase):
     optimizer_defaults = {}
 
     def build(self, *args, **kwargs):
+        '''Builds the neural networks.
+
+        The the model is to build something, this needs to be overridden.
+
+        Args:
+            *args: Inputs to be passed to the function.
+            **kwargs: Hyperparameters to be passed to the function
+
+        '''
         raise NotImplementedError(
             '`build` is not implemented for model class {}'
             .format(self.__class__.__name__))
 
     def routine(self, *args, **kwargs):
+        '''Derives losses and results.
+
+            The the model is to train something, this needs to be
+            overridden.
+
+            Args:
+                *args: Inputs to be passed to the function.
+                **kwargs: Hyperparameters to be passed to the function
+
+            '''
         raise NotImplementedError(
             '`routine` is not implemented for model class {}'
             .format(self.__class__.__name__))
 
     def visualize(self, *args, **kwargs):
+        '''Visualizes.
+
+            The the model is to visualize something, this needs to be
+            overridden.
+
+            Args:
+                *args: Inputs to be passed to the function.
+                **kwargs: Hyperparameters to be passed to the function
+
+            '''
         raise NotImplementedError(
             '`visualize` is not implemented for model class{}'
             .format(self.__class__.__name__))
 
     def train_step(self):
+        '''Makes a training step.
+
+        This can be overridden to change the behavior at each training step.
+
+        '''
         self.data.next()
         self.routine(auto_input=True)
         self.optimizer_step()
 
     def eval_step(self):
+        '''Makes an evaluation step.
+
+        This can be overridden to change the behavior of each evaluation step.
+
+        '''
         self.data.next()
         self.routine(auto_input=True)
 
     def optimizer_step(self):
+        '''Makes a step of the optimizers for which losses are defined.
+
+        This can be overridden to change the behavior of the optimizer.
+
+        '''
         keys = self.losses.keys()
 
         for i, k in enumerate(keys):
@@ -204,6 +259,11 @@ class ModelPlugin(ModelPluginBase):
                 optimizer.step()
 
     def train_loop(self):
+        '''The training loop.
+
+        This can be overridden to change the behavior of the training loop.
+
+        '''
         self._reset_epoch()
 
         try:
@@ -214,6 +274,11 @@ class ModelPlugin(ModelPluginBase):
             pass
 
     def eval_loop(self):
+        '''The evaluation loop.
+
+        This can be overridden to change the behavior of the evaluation loop.
+
+        '''
         self._reset_epoch()
 
         try:
@@ -227,10 +292,10 @@ class ModelPlugin(ModelPluginBase):
         '''Gets dimensions of inputs.
 
         Args:
-            *queries: TODO
+            *queries: Variables to get dimensions of .
 
         Returns:
-            TODO
+            Dimensions of the variables.
 
         '''
         return self._data.get_dims(*queries)

@@ -16,7 +16,7 @@ __author_email__ = 'erroneus@gmail.com'
 logger = logging.getLogger('cortex.init')
 
 
-def setup_cortex():
+def setup_cortex(model=None):
     '''Sets up cortex
 
     Finds all the models in cortex, parses the command line, and sets the
@@ -26,14 +26,14 @@ def setup_cortex():
         TODO
 
     '''
-    args = parse_args(models.MODEL_PLUGINS)
+    args = parse_args(models.MODEL_PLUGINS, model=model)
 
     log_utils.set_stream_logger(args.verbosity)
 
     return args
 
 
-def setup_experiment(args):
+def setup_experiment(args, model=None):
     '''Sets up the experiment
 
     Args:
@@ -41,12 +41,15 @@ def setup_experiment(args):
 
     '''
     exp.setup_device(args.device)
-    model_name = args.command
+
+    if model is None:
+        model_name = args.command
+        model = models.get_model(model_name)
+    else:
+        model_name = model.__class__.__name__
 
     experiment_args = copy.deepcopy(default_args)
     exp.update_args(experiment_args)
-
-    model = models.get_model(model_name)
 
     viz_init(config.CONFIG.viz)
 

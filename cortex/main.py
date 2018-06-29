@@ -17,14 +17,14 @@ __author_email__ = 'erroneus@gmail.com'
 logger = logging.getLogger('cortex')
 
 
-def main():
+def run(model=None):
     '''Main function.
 
     '''
     # Parse the command-line arguments
 
     try:
-        args = setup_cortex()
+        args = setup_cortex(model=model)
 
         if args.command == 'setup':
             # Performs setup only.
@@ -34,7 +34,7 @@ def main():
             config.set_config()
 
             print_section('EXPERIMENT')
-            model = setup_experiment(args)
+            model = setup_experiment(args, model=model)
 
             print_section('DATA')
             data.setup(**exp.ARGS['data'])

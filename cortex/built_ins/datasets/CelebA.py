@@ -7,7 +7,7 @@ import os
 import torchvision
 
 from cortex.plugins import DatasetPlugin, register_plugin
-from .utils import build_transforms
+from cortex.built_ins.datasets.utils import build_transforms
 
 
 class CelebAPlugin(DatasetPlugin):

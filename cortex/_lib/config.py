@@ -98,7 +98,80 @@ def setup():
     setup_config_file(config_file)
 
 
-def setup_config_file(config_file):  # noqa C901
+def _complete_path(text, state):
+    '''Completes a path for readline.
+
+    '''
+    return (glob.glob(text + '*') + [None])[state]
+
+
+def _check_dir(query, default, required=False):
+    while True:
+        p = (input(query.format(default)) or default)
+
+        if p is None:
+            if required:
+                print('Required path must be specified')
+            else:
+                return
+        else:
+            isdir = path.isdir(p)
+            if isdir:
+                return p
+            else:
+                create_path = _yes_no('Path not found at {}. Create?'
+                                      .format(p))
+                if create_path:
+                    pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+                    return p
+
+
+def _yes_no(query, default='no'):
+    yes = ['yes', 'y', 'Yes', 'Y', 'YES']
+    no = ['no', 'n', 'No', 'N', 'NO']
+    query_ = query + ' (yes/no) [{}] '.format(default)
+    while True:
+        response = input(query_) or default
+        if response in yes:
+            return True
+        elif response in no:
+            return False
+        else:
+            print('Please enter `yes` or `no`')
+
+
+def _query_dataset(d):
+    data_path = input(_data_path_message) or None
+    if data_path is None:
+        return True
+
+    is_file = path.isfile(data_path)
+    is_dir = path.isdir(data_path)
+    if is_file:
+        default_name = path.basename(data_path).split('.')[-1]
+    elif is_dir:
+        if data_path.endswith('/'):
+            data_path = data_path[:-1]
+        default_name = path.basename(data_path)
+    else:
+        print('Data not found at {}'.format(data_path))
+        return False
+
+    while True:
+        data_name = (input(_data_name_message.format(default_name)) or
+                     default_name)
+        if data_name in d['data_paths']:
+            replace = _yes_no('{} already taken. Replace?'.format(data_name),
+                              default='no')
+            if replace:
+                d['data_paths'][data_name] = data_path
+                return True
+        else:
+            d['data_paths'][data_name] = data_path
+            return True
+
+
+def setup_config_file(config_file):
     isfile = path.isfile(config_file)
 
     if isfile:
@@ -107,48 +180,9 @@ def setup_config_file(config_file):  # noqa C901
     else:
         d = dict(data_paths={}, viz={}, out_path=None)
 
-    def complete_path(text, state):
-        '''Completes a path for readline.
-
-        '''
-        return (glob.glob(text + '*') + [None])[state]
-
-    def check_dir(query, default, required=False):
-        while True:
-            p = (input(query.format(default)) or default)
-
-            if p is None:
-                if required:
-                    print('Required path must be specified')
-                else:
-                    return
-            else:
-                isdir = path.isdir(p)
-                if isdir:
-                    return p
-                else:
-                    create_path = yes_no('Path not found at {}. Create?'
-                                         .format(p))
-                    if create_path:
-                        pathlib.Path(p).mkdir(parents=True, exist_ok=True)
-                        return p
-
-    def yes_no(query, default='no'):
-        yes = ['yes', 'y', 'Yes', 'Y', 'YES']
-        no = ['no', 'n', 'No', 'N', 'NO']
-        query_ = query + ' (yes/no) [{}] '.format(default)
-        while True:
-            response = input(query_) or default
-            if response in yes:
-                return True
-            elif response in no:
-                return False
-            else:
-                print('Please enter `yes` or `no`')
-
     readline.set_completer_delims(' \t\n;')
     readline.parse_and_bind('tab: complete')
-    readline.set_completer(complete_path)
+    readline.set_completer(_complete_path)
 
     # Welcome
     print()
@@ -159,14 +193,14 @@ def setup_config_file(config_file):  # noqa C901
 
     # Local path
     local_default = d['data_paths'].get('local')
-    local_path = check_dir(_local_path_message, local_default)
+    local_path = _check_dir(_local_path_message, local_default)
     if local_path is not None:
         d['data_paths']['local'] = local_path
     print()
 
     # Torchvision path
     tv_default = d['data_paths'].get('torchvision')
-    tv_path = check_dir(_tv_path_message, tv_default)
+    tv_path = _check_dir(_tv_path_message, tv_default)
     if tv_path is not None:
         d['data_paths']['torchvision'] = local_path
     print()
@@ -174,34 +208,9 @@ def setup_config_file(config_file):  # noqa C901
     # Extra data paths
     print(_data_message)
     while True:
-        data_path = input(_data_path_message) or None
-        if data_path is None:
+        break_loop = _query_dataset(d)
+        if break_loop:
             break
-
-        is_file = path.isfile(data_path)
-        is_dir = path.isdir(data_path)
-        if is_file:
-            default_name = path.basename(data_path).split('.')[-1]
-        elif is_dir:
-            if data_path.endswith('/'):
-                data_path = data_path[:-1]
-            default_name = path.basename(data_path)
-        else:
-            print('Data not found at {}'.format(data_path))
-            continue
-
-        while True:
-            data_name = (input(_data_name_message.format(default_name)) or
-                         default_name)
-            if data_name in d['data_paths']:
-                replace = yes_no('{} already taken. Replace?'.format(data_name),
-                                 default='no')
-                if replace:
-                    d['data_paths'][data_name] = data_path
-                    break
-            else:
-                d['data_paths'][data_name] = data_path
-                break
     print()
     print(_visdom_message)
 
@@ -217,7 +226,7 @@ def setup_config_file(config_file):  # noqa C901
 
     print(_out_message)
     output_default = d.get('out_path')
-    out_path = check_dir(_out_path_message, output_default, required=True)
+    out_path = _check_dir(_out_path_message, output_default, required=True)
     d['out_path'] = out_path
 
     with open(config_file, 'w') as f:

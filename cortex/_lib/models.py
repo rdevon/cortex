@@ -119,7 +119,8 @@ class ModelPluginBase(metaclass=PluginType):
         '''
 
         Args:
-            contract: TODO
+            contract: A dictionary of strings which specify naming w.r.t.
+                the model that creates this model.
         '''
 
         self._contract = None
@@ -156,10 +157,7 @@ class ModelPluginBase(metaclass=PluginType):
 
     @classmethod
     def _reset_class(cls):
-        '''
-
-        Returns:
-            TODO
+        '''Resets the static variables.
 
         '''
         cls._kwargs.clear()
@@ -180,13 +178,13 @@ class ModelPluginBase(metaclass=PluginType):
         self._all_epoch_times.clear()
 
     def _get_id(self, fn):
-        '''
+        '''Gets a unique identifier for a function.
 
         Args:
-            fn: TODO
+            fn: a callable.
 
         Returns:
-            TODO
+            An indetifier.
 
         '''
         return fn
@@ -196,13 +194,15 @@ class ModelPluginBase(metaclass=PluginType):
         return self._kwargs
 
     def inputs(self, *keys):
-        '''
+        '''Pulls inputs from the data.
+
+        This uses the contract to pull the right key from the data.
 
         Args:
-            keys: TODO
+            keys: List of string variable names.
 
         Returns:
-            TODO
+            Tensor variables.
 
         '''
 
@@ -259,14 +259,10 @@ class ModelPluginBase(metaclass=PluginType):
             m._set_eval()
 
     def __setattr__(self, key, value):
-        '''
+        '''Sets an attribute for the model.
 
-        Args:
-            key: TODO
-            value: TODO
-
-        Returns:
-            TODO
+        Overriding is done to handle adding a ModelPlugin attribute to this
+        object.
 
         '''
         if isinstance(value, ModelPluginBase):
@@ -291,13 +287,16 @@ class ModelPluginBase(metaclass=PluginType):
         super().__setattr__(key, value)
 
     def _check_contract(self, contract):
-        '''
+        '''Checks the compatability of the contract.
+
+        Checks the keys in the contract to make sure they correspond to inputs
+        or hyperparameters of functions in this class.
 
         Args:
-            contract: TODO
+            contract: Dictionary contract.
 
         Returns:
-            TODO
+            A cleaned up version of the contract.
 
         '''
         kwargs = contract.pop('kwargs', {})
@@ -329,13 +328,10 @@ class ModelPluginBase(metaclass=PluginType):
         return dict(inputs=inputs, kwargs=kwargs, nets=nets)
 
     def _accept_contract(self, contract):
-        '''
+        '''Accepts the contract.
 
         Args:
-            contract: TODO
-
-        Returns:
-            TODO
+            contract: Dictionary contract.
 
         '''
         if self._contract is not None:
@@ -344,6 +340,15 @@ class ModelPluginBase(metaclass=PluginType):
         self._contract = contract
 
     def _wrap(self, fn):
+        '''Wraps methods to allow for auto inputs and kwargs.
+
+        Args:
+            fn: A callable.
+
+        Returns:
+            A wrapped version of the callable.
+
+        '''
 
         def _fetch_kwargs():
             if self._contract is not None:
@@ -386,12 +391,9 @@ class ModelPluginBase(metaclass=PluginType):
         return wrapped
 
     def _wrap_routine(self):
-        '''
+        '''Wraps the routine.
 
         Set to `requires_grad` for models that are trained with this routine.
-
-        Args:
-            routine: TODO
 
         '''
 
@@ -447,13 +449,14 @@ class ModelPluginBase(metaclass=PluginType):
         self.routine = wrapped
 
     def _wrap_step(self, fn, train=True):
-        '''
+        '''Wraps the training or evaluation step.
 
         Args:
-            fn: TODO
-            train: TODO
+            fn: Callable step function.
+            train (bool): For train or eval step.
 
         Returns:
+            Wrapped version of the function.
 
         '''
 
@@ -475,13 +478,14 @@ class ModelPluginBase(metaclass=PluginType):
         return wrapped
 
     def _wrap_loop(self, fn, train=True):
-        '''
+        '''Wraps a loop.
 
         Args:
-            fn: TODO
-            train: TODO
+            fn: Callable loop function.
+            train (bool): For train or eval loop.
 
         Returns:
+            Wrapped version of the function.
 
         '''
 
@@ -501,10 +505,7 @@ class ModelPluginBase(metaclass=PluginType):
         return wrapped
 
     def _get_training_nets(self):
-        '''
-
-        Returns:
-            TODO
+        '''Retrieves the training nets for the object.
 
         '''
 
@@ -515,12 +516,9 @@ class ModelPluginBase(metaclass=PluginType):
         return training_nets
 
     def _check_bad_values(self):
-        '''
+        '''Check for bad numbers.
 
-        Check for bad numbers.
-
-        Returns:
-            TODO
+        This checks the results and the losses for nan or inf.
 
         '''
 
