@@ -491,10 +491,15 @@ class ModelPluginBase(metaclass=PluginType):
 
         data_mode = 'train' if train else 'test'
 
+        if train:
+            epoch_str = 'Training (epoch {}): '
+        else:
+            epoch_str = 'Evaluating (epoch {}): '
+
         def wrapped(epoch, data_mode=data_mode):
             self._reset_epoch()
             self.data.reset(data_mode,
-                            string='Training (epoch {}): '.format(epoch))
+                            string=epoch_str.format(epoch))
 
             fn()
 
