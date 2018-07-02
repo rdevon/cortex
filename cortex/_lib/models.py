@@ -2,6 +2,7 @@
 
 '''
 
+import copy
 import logging
 import time
 
@@ -275,9 +276,10 @@ class ModelPluginBase(metaclass=PluginType):
                               for k, v in kwargs.items() if v is not None)
                 help = dict((model._contract['kwargs'].get(k, k), v)
                             for k, v in help.items())
+            print(model, kwargs)
             for k, v in kwargs.items():
                 if k not in self.kwargs or self.kwargs[k] is None:
-                    self.kwargs[k] = v
+                    self.kwargs[k] = copy.deepcopy(v)
             for k, v in help.items():
                 if k not in self.help:
                     self.help[k] = help[k]

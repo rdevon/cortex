@@ -4,6 +4,7 @@
 
 import argparse
 import ast
+import copy
 import inspect
 import logging
 import re
@@ -29,7 +30,8 @@ def parse_kwargs(f):
         elif sv.default == inspect.Parameter.empty:
             pass
         else:
-            kwargs[sv.name] = sv.default
+            v = copy.deepcopy(sv.default)
+            kwargs[sv.name] = v
     return kwargs
 
 
@@ -102,7 +104,9 @@ def make_argument_parser():
         argparse.parser
 
     '''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=lambda prog: argparse.HelpFormatter(
+            prog, max_help_position=50, width=100))
     parser.add_argument(
         '-o',
         '--out_path',
@@ -268,7 +272,7 @@ def _parse_kwargs(k, v, help, subparser):
             dest=k,
             choices=choices,
             metavar=metavar,
-            default=None,
+            default=v,
             type=type_,
             help=help)
 
@@ -305,9 +309,7 @@ def parse_args(models, model=None):
                 help=model_help,
                 description=model_description,
                 formatter_class=lambda prog: argparse.HelpFormatter(
-                    prog,
-                    max_help_position=50,
-                    width=100))
+                    prog, max_help_position=50, width=100))
 
             _parse_model(model, subparser)
 
@@ -324,21 +326,11 @@ def parse_args(models, model=None):
 def update_args(kwargs, kwargs_to_update):
     def _update_args(from_kwargs, to_kwargs):
         for k, v in from_kwargs.items():
-            if k not in to_kwargs:
+            if isinstance(v, dict) and k not in to_kwargs:
                 to_kwargs[k] = v
+            elif isinstance(v, dict) and isinstance(to_kwargs[k], dict):
+                _update_args(v, to_kwargs[k])
             else:
-                if isinstance(v, dict) and isinstance(to_kwargs[k], dict):
-                    _update_args(v, to_kwargs[k])
-                else:
-                    to_kwargs[k] = v
+                to_kwargs[k] = v
 
-    for k in kwargs:
-        if k not in kwargs_to_update:
-            raise KeyError(
-                'Argument key {} not supported. Available: {}'.format(
-                    k, tuple(
-                        kwargs_to_update.keys())))
-        elif not isinstance(kwargs[k], dict):
-            raise ValueError('Only dictionaries supported for base values.')
-        else:
-            _update_args(kwargs[k], kwargs_to_update[k])
+    _update_args(kwargs, kwargs_to_update)
