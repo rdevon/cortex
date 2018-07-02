@@ -12,7 +12,7 @@ from cortex.built_ins.networks.fully_connected import FullyConnectedNet
 from .utils import update_encoder_args
 
 
-class SimpleClassifierBuild(ModelPlugin):
+class SimpleClassifier(ModelPlugin):
     '''Build a simple feed-forward classifier.
 
     '''
@@ -71,7 +71,7 @@ class SimpleClassifierBuild(ModelPlugin):
                        name='gt_pred')
 
 
-class ImageClassification(SimpleClassifierBuild):
+class ImageClassification(SimpleClassifier):
     '''Basic image classifier.
 
     Classifies images using standard convnets.

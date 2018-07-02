@@ -172,10 +172,7 @@ class ModelPlugin(ModelPluginBase):
     _required = []
     _optional = ['setup']
 
-    plugin_name = None
-    data_defaults = {}
-    train_defaults = {}
-    optimizer_defaults = {}
+    defaults = {}
 
     def build(self, *args, **kwargs):
         '''Builds the neural networks.
@@ -264,7 +261,6 @@ class ModelPlugin(ModelPluginBase):
         This can be overridden to change the behavior of the training loop.
 
         '''
-        self._reset_epoch()
 
         try:
             while True:
@@ -279,7 +275,6 @@ class ModelPlugin(ModelPluginBase):
         This can be overridden to change the behavior of the evaluation loop.
 
         '''
-        self._reset_epoch()
 
         try:
             while True:

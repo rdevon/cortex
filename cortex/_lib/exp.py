@@ -75,14 +75,8 @@ def configure_from_yaml(config_file=None):
         ARGS.data.update(**d.get('data', {}))
 
 
-def setup_new(
-        arch_default_args,
-        name,
-        out_path,
-        clean,
-        config,
-        model_file,
-        reloads):
+def setup_new(arch_default_args, name, out_path, clean, config, model_file,
+              reloads):
     global NAME, INFO
     update_args(arch_default_args)
 

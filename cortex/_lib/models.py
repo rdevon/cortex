@@ -385,7 +385,6 @@ class ModelPluginBase(metaclass=PluginType):
 
             if auto_input:
                 args = _fetch_inputs()
-
             return fn(*args, **kwargs)
 
         return wrapped
