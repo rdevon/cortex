@@ -22,7 +22,7 @@ class SimpleClassifier(ModelPlugin):
         optimizer=dict(optimizer='Adam', learning_rate=1e-4),
         train=dict(epochs=200, save_on_best='losses.classifier'))
 
-    def build(self, dim_in: int=None, dim_h=[200, 200], classifier_args={}):
+    def build(self, dim_in: int=None, classifier_args=dict(dim_h=[200, 200])):
         '''
 
         Args:
@@ -33,8 +33,7 @@ class SimpleClassifier(ModelPlugin):
 
         '''
         dim_l = self.get_dims('labels')
-        classifier = FullyConnectedNet(dim_in, dim_h=dim_h,
-                                       dim_out=dim_l, **classifier_args)
+        classifier = FullyConnectedNet(dim_in, dim_out=dim_l, **classifier_args)
         self.nets.classifier = classifier
 
     def routine(self, inputs, targets, criterion=nn.CrossEntropyLoss()):

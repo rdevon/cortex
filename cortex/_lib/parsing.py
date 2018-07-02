@@ -157,12 +157,19 @@ def str2bool(v):
 
 
 def _parse_model(model, subparser):
-    kwargs = model.kwargs
+    global default_args
+    kwargs = dict((k, v) for k, v in model.kwargs.items())
+    model_defaults = model.defaults
+    model_defaults_model = model.defaults.pop('model', {})
+    update_args(model_defaults_model, kwargs)
     helps = model.help
 
     for k, v in kwargs.items():
         help = helps.get(k, None)
         _parse_kwargs(k, v, help, subparser)
+
+    default_args = dict((k, v) for k, v in default_args.items())
+    update_args(model_defaults, default_args)
 
     for key, args in default_args.items():
         _parse_defaults(key, args, subparser)
@@ -214,7 +221,7 @@ def _parse_defaults(key, args, subparser):
             subparser.add_argument(
                 arg_str,
                 dest=dest,
-                default=None,
+                default=v,
                 metavar=metavar,
                 type=type_,
                 help=help)
@@ -261,7 +268,7 @@ def _parse_kwargs(k, v, help, subparser):
             dest=k,
             choices=choices,
             metavar=metavar,
-            default=v,
+            default=None,
             type=type_,
             help=help)
 
@@ -312,3 +319,26 @@ def parse_args(models, model=None):
         args.command = None
 
     return args
+
+
+def update_args(kwargs, kwargs_to_update):
+    def _update_args(from_kwargs, to_kwargs):
+        for k, v in from_kwargs.items():
+            if k not in to_kwargs:
+                to_kwargs[k] = v
+            else:
+                if isinstance(v, dict) and isinstance(to_kwargs[k], dict):
+                    _update_args(v, to_kwargs[k])
+                else:
+                    to_kwargs[k] = v
+
+    for k in kwargs:
+        if k not in kwargs_to_update:
+            raise KeyError(
+                'Argument key {} not supported. Available: {}'.format(
+                    k, tuple(
+                        kwargs_to_update.keys())))
+        elif not isinstance(kwargs[k], dict):
+            raise ValueError('Only dictionaries supported for base values.')
+        else:
+            _update_args(kwargs[k], kwargs_to_update[k])

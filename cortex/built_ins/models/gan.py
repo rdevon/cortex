@@ -193,7 +193,6 @@ class Discriminator(ModelPlugin):
             discriminator_args: Discriminator network arguments.
 
         '''
-
         x_shape = self.get_dims('x', 'y', 'c')
         Encoder, discriminator_args = update_encoder_args(
             x_shape, model_type=discriminator_type,
@@ -256,7 +255,6 @@ class SimpleDiscriminator(Discriminator):
             classifier_args: Extra arguments for building the classifier
 
         '''
-
         discriminator = FullyConnectedNet(dim_in, dim_out=1,
                                           **discriminator_args)
         self.nets.discriminator = discriminator
@@ -318,7 +316,6 @@ class GAN(ModelPlugin):
     A generative adversarial network on images.
 
     '''
-    plugin_name = 'GAN'
 
     defaults = dict(
         data=dict(batch_size=dict(train=64, test=64),

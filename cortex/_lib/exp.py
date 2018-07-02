@@ -13,6 +13,7 @@ import yaml
 import torch
 
 from .log_utils import set_file_logger
+from .parsing import update_args
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -34,31 +35,6 @@ def _file_string(prefix=''):
     return '{}({})'.format(NAME, prefix)
 
 
-def update_args(kwargs):
-    global ARGS
-
-    def _update_args(from_kwargs, to_kwargs):
-        for k, v in from_kwargs.items():
-            if k not in to_kwargs:
-                to_kwargs[k] = v
-            else:
-                if isinstance(v, dict) and isinstance(to_kwargs[k], dict):
-                    _update_args(v, to_kwargs[k])
-                else:
-                    to_kwargs[k] = v
-
-    for k in kwargs:
-        if k not in ARGS:
-            raise KeyError(
-                'Argument key {} not supported. Available: {}'.format(
-                    k, tuple(
-                        ARGS.keys())))
-        elif not isinstance(kwargs[k], dict):
-            raise ValueError('Only dictionaries supported for base values.')
-        else:
-            _update_args(kwargs[k], ARGS[k])
-
-
 def configure_from_yaml(config_file=None):
     '''Loads arguments into a yaml file.
 
@@ -75,10 +51,8 @@ def configure_from_yaml(config_file=None):
         ARGS.data.update(**d.get('data', {}))
 
 
-def setup_new(arch_default_args, name, out_path, clean, config, model_file,
-              reloads):
+def setup_new(name, out_path, clean, config, model_file, reloads):
     global NAME, INFO
-    update_args(arch_default_args)
 
     NAME = name
     INFO['name'] = name

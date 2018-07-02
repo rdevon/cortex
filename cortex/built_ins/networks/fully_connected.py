@@ -14,8 +14,8 @@ logger = logging.getLogger('cortex.arch' + __name__)
 
 class FullyConnectedNet(nn.Module):
 
-    def __init__(self, dim_in, dim_out=None, dim_h=64, nonlinearity='ReLU', n_levels=None,
-                 **layer_args):
+    def __init__(self, dim_in, dim_out=None, dim_h=64, nonlinearity='ReLU',
+                 n_levels=None, **layer_args):
 
         super(FullyConnectedNet, self).__init__()
         models = nn.Sequential()
