@@ -2,6 +2,7 @@
 
 '''
 
+import logging
 from os import path
 import shutil
 
@@ -9,11 +10,7 @@ from torch.utils.data import Dataset
 
 from cortex._lib.config import CONFIG, _config_name
 from cortex._lib.data import DatasetPluginBase, register as register_data
-from cortex._lib.models import (
-    BuildPluginBase,
-    ModelPluginBase,
-    RoutinePluginBase,
-    register_model)
+from cortex._lib.models import ModelPluginBase, register_model
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -21,9 +18,9 @@ __author_email__ = 'erroneus@gmail.com'
 __all__ = [
     'DatasetPlugin',
     'ModelPlugin',
-    'RoutinePlugin',
-    'BuildPlugin',
     'register_plugin']
+
+logger = logging.getLogger('cortex.plugins')
 
 
 class DatasetPlugin(DatasetPluginBase):
@@ -37,6 +34,15 @@ class DatasetPlugin(DatasetPluginBase):
     sources = []
 
     def copy_to_local_path(self, from_path: str) -> str:
+        ''' Copies data to a local path.
+
+        Path is set in the .cortex.yml file. This can be set up through
+        `cortex setup`.
+
+        Args:
+            from_path: The path to the data to be copied.
+
+        '''
         if from_path.endswith('/'):
             from_path = from_path[:-1]
         basename = path.basename(from_path)
@@ -48,10 +54,17 @@ class DatasetPlugin(DatasetPluginBase):
                 .format(local_path, _config_name))
         to_path = path.join(local_path, basename)
         if ((not path.exists(to_path)) and path.exists(from_path)):
+
+            logger.info('Copying dataset {} from {} to {} directory.... '
+                        '(This may take time)'
+                        .format(self.__class__.__name__, from_path, to_path))
+
             if path.isdir(from_path):
                 shutil.copytree(from_path, to_path)
             else:
                 shutil.copy(from_path, local_path)
+
+            logger.info('Finished copying.')
 
         return to_path
 
@@ -145,27 +158,153 @@ class DatasetPlugin(DatasetPluginBase):
         return IndexingDataset
 
 
-class RoutinePlugin(RoutinePluginBase):
-    '''Plugin for custom routines.
+class ModelPlugin(ModelPluginBase):
+    '''Module plugin.
 
     Attributes:
         plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for
-        this routine.
-        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for
-        this routine.
-        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this
-        routine.
+        data_defaults (:obj:`dict`): Data defaults.
+        train_defaults (:obj:`dict`): Train defaults.
+        optimizer_defaults (:obj:`dict`): Optimizer defaults.
 
     '''
-    _protected = ['updates']
-    _required = ['run']
+    _protected = ['description']
+    _required = []
+    _optional = ['setup']
 
-    plugin_name = None
-    plugin_nets = []
-    plugin_inputs = []
-    plugin_outputs = []
-    plugin_optional_inputs = []
+    defaults = {}
+
+    def build(self, *args, **kwargs):
+        '''Builds the neural networks.
+
+        The the model is to build something, this needs to be overridden.
+
+        Args:
+            *args: Inputs to be passed to the function.
+            **kwargs: Hyperparameters to be passed to the function
+
+        '''
+        raise NotImplementedError(
+            '`build` is not implemented for model class {}'
+            .format(self.__class__.__name__))
+
+    def routine(self, *args, **kwargs):
+        '''Derives losses and results.
+
+            The the model is to train something, this needs to be
+            overridden.
+
+            Args:
+                *args: Inputs to be passed to the function.
+                **kwargs: Hyperparameters to be passed to the function
+
+            '''
+        raise NotImplementedError(
+            '`routine` is not implemented for model class {}'
+            .format(self.__class__.__name__))
+
+    def visualize(self, *args, **kwargs):
+        '''Visualizes.
+
+            The the model is to visualize something, this needs to be
+            overridden.
+
+            Args:
+                *args: Inputs to be passed to the function.
+                **kwargs: Hyperparameters to be passed to the function
+
+            '''
+        raise NotImplementedError(
+            '`visualize` is not implemented for model class{}'
+            .format(self.__class__.__name__))
+
+    def train_step(self):
+        '''Makes a training step.
+
+        This can be overridden to change the behavior at each training step.
+
+        '''
+        self.data.next()
+        self.routine(auto_input=True)
+        self.optimizer_step()
+
+    def eval_step(self):
+        '''Makes an evaluation step.
+
+        This can be overridden to change the behavior of each evaluation step.
+
+        '''
+        self.data.next()
+        self.routine(auto_input=True)
+
+    def optimizer_step(self):
+        '''Makes a step of the optimizers for which losses are defined.
+
+        This can be overridden to change the behavior of the optimizer.
+
+        '''
+        keys = self.losses.keys()
+
+        for i, k in enumerate(keys):
+            loss = self.losses.pop(k)
+            loss.backward(retain_graph=(i < len(keys)))
+            #  TODO(Devon): Is this a good idea?
+            key = self.nets._aliases.get(k, k)
+
+            optimizer = self._optimizers.get(key)
+            if optimizer is not None:
+                optimizer.step()
+
+    def train_loop(self):
+        '''The training loop.
+
+        This can be overridden to change the behavior of the training loop.
+
+        '''
+
+        try:
+            while True:
+                self.train_step()
+
+        except StopIteration:
+            pass
+
+    def eval_loop(self):
+        '''The evaluation loop.
+
+        This can be overridden to change the behavior of the evaluation loop.
+
+        '''
+
+        try:
+            while True:
+                self.eval_step()
+
+        except StopIteration:
+            pass
+
+    def get_dims(self, *queries):
+        '''Gets dimensions of inputs.
+
+        Args:
+            *queries: Variables to get dimensions of .
+
+        Returns:
+            Dimensions of the variables.
+
+        '''
+        return self._data.get_dims(*queries)
+
+    def add_noise(self, key, dist=None, size=None, **kwargs):
+        '''Adds a noise variable to the model.
+
+        Args:
+            key (str): Name of the noise variable.
+            dist (str): Noise distribution.
+            size (int): Size of the noise.
+            **kwargs: keyword arguments for noise distribution.
+        '''
+        self._data.add_noise(key, dist=dist, size=size, **kwargs)
 
     def add_image(self, *args, **kwargs):
         '''Adds image for visualization.
@@ -198,129 +337,6 @@ class RoutinePlugin(RoutinePluginBase):
         self._viz.add_scatter(*args, **kwargs)
 
 
-class BuildPlugin(BuildPluginBase):
-    '''Plugin for custom build routines.
-
-    Attributes:
-        plugin_name (str): Name of the plugin.
-        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this build.
-        nets (:obj:`Handler` of :obj:`nn.Module`):
-
-    '''
-    _protected = []
-    _required = ['build']
-
-    plugin_name = None
-    plugin_nets = []
-
-    @property
-    def nets(self):
-        return self._nets
-
-    def get_dims(self, *queries):
-        '''Gets dimensions of inputs.
-
-        Args:
-            *queries: TODO
-
-        Returns:
-            TODO
-
-        '''
-        return self._data.get_dims(*queries)
-
-    def add_noise(self, key, dist=None, size=None, **kwargs):
-        '''Adds a noise variable to the model.
-
-        Args:
-            key (str): Name of the noise variable.
-            dist (str): Noise distribution.
-            size (int): Size of the noise.
-            **kwargs: keyword arguments for noise distribution.
-        '''
-        self._data.add_noise(key, dist=dist, size=size, **kwargs)
-
-
-class ModelPlugin(ModelPluginBase):
-    '''Module plugin.
-
-    Attributes:
-        plugin_name (str): Name of the plugin.
-        data_defaults (:obj:`dict`): Data defaults.
-        train_defaults (:obj:`dict`): Train defaults.
-        optimizer_defaults (:obj:`dict`): Optimizer defaults.
-
-    '''
-    _protected = ['description']
-    _required = []
-    _optional = ['setup']
-
-    plugin_name = None
-    data_defaults = {}
-    train_defaults = {}
-    optimizer_defaults = {}
-
-    @property
-    def routines(self):
-        return self._routines
-
-    @property
-    def builds(self):
-        return self._builds
-
-    def _add_routine_name(self, routine):
-        '''Adds a routine
-
-        Args:
-            routine: Routine plugin instance.
-
-        '''
-
-        if routine in self.routines.values():
-            return routine.name
-
-        name = routine.plugin_name
-        self.routines[name] = routine
-
-        return name
-
-    def add_train_procedure(self, *routines, mode: str='train',
-                            updates_per_routine=None):
-        '''Adds a training procedure.
-
-        Args:
-            *routines: TODO
-            mode (str): Data mode on which the procedure will be run.
-            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary
-            of updates for each routine.
-
-        '''
-        updates_per_routine = updates_per_routine or [1 for _ in routines]
-        if len(routines) != len(updates_per_routine):
-            raise ValueError(
-                'Number of routines must match number of updates.')
-        routine_names = []
-        for routine in routines:
-            routine_names.append(self._add_routine_name(routine))
-
-        self._train_procedures.append(
-            (mode, routine_names, updates_per_routine))
-
-    def add_eval_procedure(self, *routines, mode='test'):
-        '''Adds a evaluation procedure.
-
-        Args:
-            *routines: TODO
-            mode (str): Data mode on which the procedure will be run.
-
-        '''
-        routine_names = []
-        for routine in routines:
-            routine_names.append(self._add_routine_name(routine))
-
-        self._eval_procedures.append((mode, routine_names))
-
-
 def register_plugin(plugin):
     '''Registers a plugin into cortex
 
@@ -332,7 +348,7 @@ def register_plugin(plugin):
     '''
 
     if issubclass(plugin, ModelPlugin):
-        register_model(plugin())
+        register_model(plugin)
     elif issubclass(plugin, DatasetPlugin):
         register_data(plugin)
     else:

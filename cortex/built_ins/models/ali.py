@@ -1,184 +1,97 @@
-"""
-Adversarially learned inference and Bi-GAN
+'''Adversarially learned inference and Bi-GAN
 
 Currently noise encoder is not implemented.
 
-"""
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
-                            RoutinePlugin)
-from cortex.built_ins.models.gan import (get_positive_expectation,
-                                         get_negative_expectation,
-                                         GeneratorBuild, PenaltyRoutine)
-from cortex.built_ins.models.vae import ImageEncoderBuild
-from cortex.built_ins.networks.fully_connected import FullyConnectedNet
+'''
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
 __author_email__ = 'erroneus@gmail.com'
 
+from cortex.plugins import register_plugin, ModelPlugin
+from cortex.built_ins.models.gan import (
+    get_positive_expectation, get_negative_expectation, GradientPenalty)
+from cortex.built_ins.models.vae import ImageDecoder, ImageEncoder
+from cortex.built_ins.networks.fully_connected import FullyConnectedNet
 
-class ALIDiscriminator(nn.Module):
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class ALIDiscriminatorModule(nn.Module):
     '''ALI discriminator model.
-    '''
 
+    '''
     def __init__(self, x_encoder, z_encoder, topnet):
-        super(ALIDiscriminator, self).__init__()
+        super(ALIDiscriminatorModule, self).__init__()
         self.x_encoder = x_encoder
         self.z_encoder = z_encoder
         self.topnet = topnet
 
     def forward(self, x, z, nonlinearity=None):
         w = F.relu(self.x_encoder(x))
+
         if self.z_encoder is None:
             v = torch.cat([w, z], 1)
         else:
             u = F.relu(self.z_encoder(z))
             v = torch.cat([w, u], 1)
+
         y = self.topnet(v, nonlinearity=nonlinearity)
         return y
 
 
-class ALIDiscriminatorRoutine(RoutinePlugin):
-    '''Adversarially-learned inference / BiGAN
+class BidirectionalModel(ModelPlugin):
 
-    '''
-    plugin_name = 'ALI_discriminator'
-    plugin_nets = ['generator', 'encoder', 'discriminator']
-    plugin_vars = ['real', 'noise', 'targets']
+    def __init__(self, discriminator, **kwargs):
+        super().__init__(**kwargs)
+        self.discriminator = discriminator
 
-    def run(self, measure='GAN'):
-        '''
+        encoder_contract = dict(kwargs=dict(dim_out='dim_z'))
+        decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
+        self.decoder = ImageDecoder(contract=decoder_contract)
+        self.encoder = ImageEncoder(contract=encoder_contract)
 
-        Args:
-            measure: GAN measure.
-                {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2
-                (squared Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}
+    def build(self):
+        self.decoder.build()
+        self.encoder.build()
 
-        '''
-        X_P = self.vars.real
-        T = self.vars.targets
-        Z_Q = self.vars.noise
-        generator = self.nets.generator
+    def routine(self, inputs, Z, measure=None):
+        decoder = self.nets.decoder
         encoder = self.nets.encoder
-        discriminator = self.nets.discriminator
 
-        X_Q = F.tanh(generator(Z_Q).detach())
-        Z_P = encoder(X_P).detach()
+        X_P, Z_Q = inputs, Z
 
-        E_pos, E_neg, P_samples, Q_samples = self.score(
-            discriminator, X_P, X_Q, Z_P, Z_Q, measure)
-        difference = E_pos - E_neg
-
-        self.losses.discriminator = -difference
-
-        self.results.update(Scores=dict(Ep=P_samples.mean().item(),
-                                        Eq=Q_samples.mean().item()))
-        self.results['{} distance'.format(measure)] = difference.item()
-        self.add_image(X_Q, name='generated')
-        self.add_image(X_P, name='ground truth')
-        self.add_histogram(dict(fake=Q_samples.view(-1).data,
-                                real=P_samples.view(-1).data),
-                           name='discriminator output')
-        self.add_scatter(Z_P, labels=T.data, name='latent values')
-
-    @staticmethod
-    def score(discriminator, X_P, X_Q, Z_P, Z_Q, measure):
-        P_samples = discriminator(X_P, Z_P)
-        Q_samples = discriminator(X_Q, Z_Q)
-
-        E_pos = get_positive_expectation(P_samples, measure)
-        E_neg = get_negative_expectation(Q_samples, measure)
-
-        return E_pos, E_neg, P_samples, Q_samples
-
-
-class ALIGeneratorRoutine(RoutinePlugin):
-    '''Routine for the encoder and decoder of ALI.
-
-    '''
-    plugin_name = 'ALI_generator'
-    plugin_nets = ['generator', 'encoder', 'discriminator']
-    plugin_vars = ['real', 'noise', 'generated', 'inferred']
-
-    def run(self, measure=None):
-        X_P = self.vars.real
-        Z_Q = self.vars.noise
-        generator = self.nets.generator
-        encoder = self.nets.encoder
-        discriminator = self.nets.discriminator
-
-        X_Q = F.tanh(generator(Z_Q))
+        X_Q = decoder(Z_Q)
         Z_P = encoder(X_P)
 
-        E_pos, E_neg, _, _ = ALIDiscriminatorRoutine.score(
-            discriminator, X_P, X_Q, Z_P, Z_Q, measure)
+        E_pos, E_neg, _, _ = self.discriminator.score(
+            X_P, X_Q, Z_P, Z_Q, measure)
 
-        self.losses.generator = -E_neg
+        self.losses.decoder = -E_neg
         self.losses.encoder = E_pos
 
-        self.vars.generated = X_Q.detach()
-        self.vars.inferred = Z_P.detach()
+    def visualize(self):
+        self.decoder.visualize(auto_input=True)
+        self.encoder.visualize(auto_input=True)
 
 
-class DecoderRoutine(RoutinePlugin):
-    '''Routine for a simple decoder for images.
-
-    '''
-    plugin_name = 'decoder'
-    plugin_nets = ['decoder']
-    plugin_vars = ['inputs', 'targets']
-
-    def run(self):
-        Z = self.vars.inputs
-        X = self.vars.targets
-
-        decoder = self.nets.decoder
-
-        X_d = decoder(Z)
-        X_d = F.tanh(X_d)
-        self.losses.decoder = ((X - X_d) ** 2).sum(1).sum(1).sum(1).mean()
-
-        self.add_image(X, name='Ground truth')
-        self.add_image(X_d, name='Reconstruction')
-
-
-class NoiseEncoderBuild(BuildPlugin):
-    '''Builder for encoding the noise for discrimination.
-    '''
-    plugin_name = 'Noise_encoder'
-    plugin_nets = ['encoder']
-
-    def build(self, dim_in=None, dim_out=None,
-              encoder_args=dict(dim_h=[64], batch_norm=False)):
-        '''
-        Args:
-            dim_in: Input dimension.
-            dim_out: Output dimension.
-            encoder_args: Arguments for the encoder.
-        '''
-
-        encoder = FullyConnectedNet(dim_in, dim_out, **encoder_args)
-        self.nets.encoder = encoder
-
-
-class ALIDiscriminatorBuild(BuildPlugin):
-    '''Builder for ALI discriminator.
-    '''
-    plugin_name = 'ALI_discriminator'
-    plugin_nets = ['x_encoder', 'z_encoder', 'discriminator']
+class ALIDiscriminator(ModelPlugin):
 
     def build(self, topnet_args=dict(dim_h=[512, 128], batch_norm=False),
               dim_int=256, dim_z=None):
         '''
         Args:
             topnet_args: Keyword arguments for the top network.
+            dim_int: Intermediate layer size for discriminator.
         '''
 
         x_encoder = self.nets.x_encoder
-        z_encoder = self.nets.z_encoder
+
+        try:
+            z_encoder = self.nets.z_encoder
+        except KeyError:
+            z_encoder = None
 
         if z_encoder is not None:
             dim_in = 2 * dim_int
@@ -187,50 +100,147 @@ class ALIDiscriminatorBuild(BuildPlugin):
 
         topnet = FullyConnectedNet(dim_in, 1, **topnet_args)
 
-        discriminator = ALIDiscriminator(x_encoder, z_encoder, topnet)
+        discriminator = ALIDiscriminatorModule(x_encoder, z_encoder, topnet)
 
         self.nets.discriminator = discriminator
+
+    def routine(self, X_real, X_fake, Z_real, Z_fake, measure='GAN'):
+        '''
+
+        Args:
+            measure: GAN measure.
+                {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2
+                (squared Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}
+
+        '''
+
+        X_P, Z_P = X_real, Z_real
+        X_Q, Z_Q = X_fake, Z_fake
+
+        E_pos, E_neg, P_samples, Q_samples = self.score(
+            X_P, X_Q, Z_P, Z_Q, measure)
+        difference = E_pos - E_neg
+
+        self.losses.discriminator = -difference
+        self.results.update(Scores=dict(Ep=P_samples.mean().item(),
+                                        Eq=Q_samples.mean().item()))
+        self.results['{} distance'.format(measure)] = difference.item()
+
+    def score(self, X_P, X_Q, Z_P, Z_Q, measure):
+        discriminator = self.nets.discriminator
+
+        P_samples = discriminator(X_P, Z_P)
+        Q_samples = discriminator(X_Q, Z_Q)
+
+        E_pos = get_positive_expectation(P_samples, measure)
+        E_neg = get_negative_expectation(Q_samples, measure)
+
+        return E_pos, E_neg, P_samples, Q_samples
+
+    def visualize(self, X_real, X_fake, Z_real, Z_fake, targets):
+        discriminator = self.nets.discriminator
+
+        X_P, Z_P = X_real, Z_real
+        X_Q, Z_Q = X_fake, Z_fake
+
+        P_samples = discriminator(X_P, Z_P)
+        Q_samples = discriminator(X_Q, Z_Q)
+
+        self.add_histogram(dict(fake=Q_samples.view(-1).data,
+                                real=P_samples.view(-1).data),
+                           name='discriminator output')
+        self.add_scatter(Z_P, labels=targets.data, name='latent values')
 
 
 class ALI(ModelPlugin):
     '''Adversarially learned inference.
 
+    a.k.a. BiGAN
     Note:
-        Noise in the encoder is not implemented yet.
+        Currently noisy encoder not supported.
 
     '''
-    plugin_name = 'ALI'
 
-    data_defaults = dict(batch_size=dict(train=64, test=640))
-    optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
-    train_defaults = dict(epochs=500, save_on_lowest='losses.generator')
+    defaults = dict(
+        data=dict(batch_size=dict(train=64, test=640),
+                  inputs=dict(inputs='images')),
+        optimizer=dict(optimizer='Adam', learning_rate=1e-4),
+        train=dict(epochs=500, save_on_lowest='losses.generator')
+    )
 
-    def __init__(self, use_z_encoder=False):
+    def __init__(self):
         super().__init__()
-        self.builds.x_encoder = ImageEncoderBuild(image_encoder='x_encoder',
-                                                  dim_out='dim_int',
-                                                  encoder_args='x_encoder_args')
-        if use_z_encoder:
-            self.builds.z_encoder = NoiseEncoderBuild(
-                encoder='z_encoder', dim_in='dim_z', dim_out='dim_int',
-                encoder_args='z_encoder_args')
-        self.builds.encoder = ImageEncoderBuild(image_encoder='encoder',
-                                                dim_out='dim_z')
-        self.builds.discriminator = ALIDiscriminatorBuild()
-        self.builds.generator = GeneratorBuild()
+        self.discriminator = ALIDiscriminator()
+        self.bidirectional_model = BidirectionalModel(
+            discriminator=self.discriminator)
 
-        self.routines.ali_discriminator = ALIDiscriminatorRoutine(
-            real='data.images', noise='data.z', targets='data.targets')
-        self.routines.ali_generator = ALIGeneratorRoutine(real='data.images',
-                                                          noise='data.z')
-        self.routines.penalty = PenaltyRoutine(network='discriminator',
-                                               inputs=('data.images',
-                                                       'inferred'))
-        self.add_train_procedure(self.routines.ali_generator,
-                                 self.routines.ali_discriminator,
-                                 self.routines.penalty)
-        self.add_eval_procedure(self.routines.ali_generator,
-                                self.routines.ali_discriminator)
+        encoder_contract = dict(nets=dict(encoder='x_encoder'),
+                                kwargs=dict(dim_out='dim_int'))
+        self.encoder = ImageEncoder(contract=encoder_contract)
+
+        penalty_contract = dict(nets=dict(network='discriminator'))
+        self.penalty = GradientPenalty(contract=penalty_contract)
+
+    def build(self, dim_z=None, dim_int=None, use_z_encoder=False,
+              z_encoder_args=dict(dim_h=256, batch_norm=True),
+              noise_type='normal'):
+        '''
+
+        Args:
+            use_z_encoder: Use a neural network for Z pathway in discriminator.
+            z_encoder_args: Arguments for the Z pathway encoder.
+
+        '''
+        self.add_noise('Z', dist=noise_type, size=dim_z)
+
+        if use_z_encoder:
+            encoder = FullyConnectedNet(dim_z, dim_int, **z_encoder_args)
+            self.nets.z_encoder = encoder
+
+        self.encoder.build()
+        self.discriminator.build()
+        self.bidirectional_model.build()
+
+    def train_step(self, discriminator_updates=1):
+        '''
+
+        Args:
+            generator_updates: Number of generator updates per step.
+            discriminator_updates: Number of discriminator updates per step.
+
+        '''
+        for _ in range(discriminator_updates):
+            self.data.next()
+            inputs, Z = self.inputs('inputs', 'Z')
+
+            generated = self.bidirectional_model.decoder.decode(Z)
+            inferred = self.bidirectional_model.encoder.encode(inputs)
+
+            self.discriminator.routine(
+                inputs, generated.detach(), inferred.detach(), Z)
+            self.optimizer_step()
+
+            self.penalty.routine((inputs, inferred))
+            self.optimizer_step()
+
+        self.bidirectional_model.train_step()
+
+    def eval_step(self):
+        self.data.next()
+        inputs, Z = self.inputs('inputs', 'Z')
+
+        generated = self.bidirectional_model.decoder.decode(Z)
+        inferred = self.bidirectional_model.encoder.encode(inputs)
+
+        self.discriminator.routine(inputs, generated, inferred, Z)
+        self.bidirectional_model.eval_step()
+
+    def visualize(self, inputs, Z, targets):
+        generated = self.bidirectional_model.decoder.decode(Z)
+        inferred = self.bidirectional_model.encoder.encode(inputs)
+
+        self.bidirectional_model.visualize()
+        self.discriminator.visualize(inputs, generated, inferred, Z, targets)
 
 
 register_plugin(ALI)

@@ -95,7 +95,8 @@ class MNISTConv(nn.Module):
 
 class SimpleConvEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64,
-                 fully_connected_layers=None, nonlinearity='ReLU', f_size=4,
+                 fully_connected_layers=None, nonlinearity='ReLU',
+                 output_nonlinearity=None, f_size=4,
                  stride=2, pad=1, min_dim=4, n_steps=None,
                  spectral_norm=False, **layer_args):
         super(SimpleConvEncoder, self).__init__()
@@ -105,6 +106,7 @@ class SimpleConvEncoder(nn.Module):
         models = nn.Sequential()
 
         nonlinearity = get_nonlinearity(nonlinearity)
+        self.output_nonlinearity = output_nonlinearity
 
         dim_out_ = dim_out
         fully_connected_layers = fully_connected_layers or []
@@ -170,6 +172,8 @@ class SimpleConvEncoder(nn.Module):
             dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
+        nonlinearity = nonlinearity or self.output_nonlinearity
+
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
 

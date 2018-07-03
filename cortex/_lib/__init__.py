@@ -7,7 +7,7 @@ import logging
 import pprint
 
 from . import config, exp, log_utils, models
-from .parsing import default_args, parse_args
+from .parsing import default_args, parse_args, update_args
 from .viz import init as viz_init
 
 __author__ = 'R Devon Hjelm'
@@ -16,7 +16,7 @@ __author_email__ = 'erroneus@gmail.com'
 logger = logging.getLogger('cortex.init')
 
 
-def setup_cortex():
+def setup_cortex(model=None):
     '''Sets up cortex
 
     Finds all the models in cortex, parses the command line, and sets the
@@ -26,16 +26,14 @@ def setup_cortex():
         TODO
 
     '''
-    models.find_models(config.CONFIG.arch_paths)
-
-    args = parse_args(models.MODEL_PLUGINS)
+    args = parse_args(models.MODEL_PLUGINS, model=model)
 
     log_utils.set_stream_logger(args.verbosity)
 
     return args
 
 
-def setup_experiment(args):
+def setup_experiment(args, model=None):
     '''Sets up the experiment
 
     Args:
@@ -43,12 +41,15 @@ def setup_experiment(args):
 
     '''
     exp.setup_device(args.device)
-    model_name = args.command
+
+    if model is None:
+        model_name = args.command
+        model = models.get_model(model_name)
+    else:
+        model_name = model.__class__.__name__
 
     experiment_args = copy.deepcopy(default_args)
-    exp.update_args(experiment_args)
-
-    model = models.setup_model(model_name)
+    update_args(experiment_args, exp.ARGS)
 
     viz_init(config.CONFIG.viz)
 
@@ -57,8 +58,8 @@ def setup_experiment(args):
                    args.out_path, args.clean, config.CONFIG)
     else:
         name = args.name or model_name
-        exp.setup_new(model.defaults, name, args.out_path, args.clean,
-                      config.CONFIG, args.load_models, args.reloads)
+        exp.setup_new(name, args.out_path, args.clean, config.CONFIG,
+                      args.load_models, args.reloads)
 
     exp.configure_from_yaml(config_file=args.config_file)
 
@@ -85,11 +86,10 @@ def setup_experiment(args):
 
     update_nested_dicts(command_line_args['model'], model.kwargs)
     command_line_args['model'].update(**model.kwargs)
-    exp.update_args(command_line_args)
+    update_args(command_line_args, exp.ARGS)
 
     for k, v in exp.ARGS.items():
         logger.info('Ultimate {} arguments: \n{}'
                     .format(k, pprint.pformat(v)))
 
-    if model.setup is not None:
-        model.setup(**exp.ARGS)
+    return model
