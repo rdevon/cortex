@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath('/home/joel/MILA/cortex2.0'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Cortex'
-copyright = '2018, Devon Hjelm'
+project = 'Cortex2.0'
+copyright = '2018, MILA'
 author = 'Devon Hjelm'
 
 # The short X.Y version
