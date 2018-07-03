@@ -7,7 +7,7 @@ packages = [
 ]
 
 install_requirements = [
-    'imageio', 'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
+    'imageio', 'http://download.pytorch.org/whl/cpu/torch-0.4.0-cp35-cp35m-linux_x86_64.whl', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
     'sklearn', 'torchvision', 'visdom', 'pyyaml', 'pathlib'
 ]
 extras_requirements = {'docs':['sphinx >= 1.4','sphinx_rtd_theme', 'numpydoc']}
