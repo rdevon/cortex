@@ -1,0 +1,6 @@
+name: cortex
+dependencies:
+  - python=3.6
+  - pytorch-cpu
+  - torchvision-cpu
+  - pytorch
