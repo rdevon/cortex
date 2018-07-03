@@ -2,6 +2,8 @@
 
 '''
 
+from os import path
+
 import torchvision
 
 from cortex.plugins import DatasetPlugin, register_data
@@ -17,22 +19,12 @@ class ImageFolder(DatasetPlugin):
         Dataset = self.make_indexing(torchvision.datasets.ImageFolder)
         data_path = self.get_path(source)
 
-        if isinstance(data_path, dict):
-            train_path = data_path['train']
-            test_path = data_path['test']
-            if copy_to_local:
-                train_path = self.copy_to_local_path(train_path)
-                test_path = self.copy_to_local_path(test_path)
-        elif isinstance(data_path, (tuple, list)):
-            train_path, test_path = data_path
-            if copy_to_local:
-                train_path = self.copy_to_local_path(train_path)
-                test_path = self.copy_to_local_path(test_path)
-        else:
-            train_path = data_path
-            if copy_to_local:
-                train_path = self.copy_to_local_path(train_path)
-            test_path = data_path
+        train_path = path.join(data_path, 'train')
+        test_path = path.join(data_path, 'val')
+
+        if copy_to_local:
+            train_path = self.copy_to_local_path(train_path)
+            test_path = self.copy_to_local_path(test_path)
 
         if normalize and isinstance(normalize, bool):
             normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
