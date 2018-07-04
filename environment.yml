@@ -1,4 +1,8 @@
 name: cortex
+channels:
+  - pytorch
 dependencies:
   - python=3.6
-  - pytorch
+  - pip
+  - pytorch-cpu
+  - torchvision
