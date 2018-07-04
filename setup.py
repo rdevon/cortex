@@ -7,7 +7,7 @@ packages = [
 ]
 
 install_requirements = [
-    'imageio', 'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
+    'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
     'sklearn', 'torchvision', 'visdom', 'pyyaml', 'pathlib'
 ]
 extras_requirements = {'docs':['sphinx >= 1.4','sphinx_rtd_theme', 'numpydoc']}
