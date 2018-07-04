@@ -2,7 +2,20 @@ name: cortex
 channels:
   - pytorch
 dependencies:
-  - python=3.6
+  - imageio
+  - torch
+  - scipy
+  - visdom
+  - sklearn
+  - pyyaml
+  - pathlib
+  - progressbar2
+  - scipy
+  - sklearn
+  - pathlib
   - pip
-  - pytorch-cpu
-  - torchvision
+  - python >= 3.6.0
+  - pytorch-cpu<0.4
+  - torchvision-cpu
+
+

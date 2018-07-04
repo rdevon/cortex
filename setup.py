@@ -6,7 +6,7 @@ packages = [
     'cortex.built_ins.networks', 'cortex.built_ins.transforms']
 
 install_requirements = [
-    'imageio', 'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
+    'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
     'sklearn', 'torchvision', 'visdom', 'pyyaml', 'pathlib'
 ]
 
