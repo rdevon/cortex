@@ -23,7 +23,6 @@ dependencies:
   - backcall==0.1.0
   - bleach==2.1.3
   - chardet==3.0.4
-  - cortex==0.1
   - cycler==0.10.0
   - decorator==4.3.0
   - entrypoints==0.2.3
@@ -93,5 +92,4 @@ dependencies:
   - webencodings==0.5.1
   - websocket-client==0.48.0
   - widgetsnbextension==3.2.1
-prefix: /u/poulijoe/.conda/envs/cortex
 
