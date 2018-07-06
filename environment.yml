@@ -120,9 +120,7 @@ dependencies:
   - sympy==1.1.1
   - terminado==0.8.1
   - testpath==0.3.1
-  - torch==0.4.0
   - torchfile==0.1.0
-  - torchvision==0.2.1
   - tornado==5.0.2
   - traitlets==4.3.2
   - visdom==0.1.8.3
