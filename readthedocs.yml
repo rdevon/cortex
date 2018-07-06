@@ -1,7 +1,0 @@
-build:
-  image: latest
-conda:
-  file: environment.yml
-python:
-  version: 3.6
-  formats: []
