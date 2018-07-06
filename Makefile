@@ -5,7 +5,7 @@
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = Cortex
-SOURCEDIR     = source
+SOURCEDIR     = docs/source
 BUILDDIR      = docs
 
 # Put it first so that "make" without argument is like "make help".

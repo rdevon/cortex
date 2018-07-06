@@ -1,0 +1,426 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>cortex.built_ins.models.vae &mdash; Cortex2.0  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+
+  
+  <script src="../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> Cortex2.0
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Cortex2.0</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>cortex.built_ins.models.vae</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for cortex.built_ins.models.vae</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;Simple Variational Autoencoder model.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="p">(</span><span class="n">register_plugin</span><span class="p">,</span> <span class="n">BuildPlugin</span><span class="p">,</span> <span class="n">ModelPlugin</span><span class="p">,</span>
+                            <span class="n">RoutinePlugin</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
+
+<span class="kn">from</span> <span class="nn">cortex.built_ins.models.classifier</span> <span class="k">import</span> <span class="p">(</span><span class="n">SimpleClassifierBuild</span><span class="p">,</span>
+                                                <span class="n">ClassifyRoutine</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">update_encoder_args</span><span class="p">,</span> <span class="n">update_decoder_args</span>
+
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;R Devon Hjelm and Samuel Lavoie&#39;</span>
+<span class="n">__author_email__</span> <span class="o">=</span> <span class="s1">&#39;erroneus@gmail.com&#39;</span>
+
+
+<div class="viewcode-block" id="VAENetwork"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAENetwork">[docs]</a><span class="k">class</span> <span class="nc">VAENetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;VAE model.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        encoder: Encoder network.</span>
+<span class="sd">        mu_net: Single layer network for caculating mean.</span>
+<span class="sd">        logvar_net: Single layer network for calculating log variance.</span>
+<span class="sd">        decoder: Decoder network.</span>
+<span class="sd">        mu: The mean after encoding.</span>
+<span class="sd">        logvar: The log variance after encoding.</span>
+<span class="sd">        latent: The latent state (Z).</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="n">decoder</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VAENetwork</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_net</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">dim_out</span><span class="p">,</span> <span class="n">dim_z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logvar_net</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">dim_out</span><span class="p">,</span> <span class="n">dim_z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logvar</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latent</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="VAENetwork.reparametrize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAENetwork.reparametrize">[docs]</a>    <span class="k">def</span> <span class="nf">reparametrize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">std</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training</span><span class="p">:</span>
+            <span class="n">esp</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">std</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">std</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">.</span><span class="n">normal_</span><span class="p">(),</span>
+                           <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">std</span> <span class="o">*</span> <span class="n">esp</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mu</span></div>
+
+<div class="viewcode-block" id="VAENetwork.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAENetwork.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">encoded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">encoded</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_net</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logvar_net</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span><span class="o">.</span><span class="n">exp_</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reparametrize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latent</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="VAERoutine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAERoutine">[docs]</a><span class="k">class</span> <span class="nc">VAERoutine</span><span class="p">(</span><span class="n">RoutinePlugin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;VAE for training the VAE.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">plugin_name</span> <span class="o">=</span> <span class="s1">&#39;VAE&#39;</span>
+    <span class="n">plugin_nets</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;vae&#39;</span><span class="p">]</span>
+    <span class="n">plugin_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="s1">&#39;noise&#39;</span><span class="p">,</span> <span class="s1">&#39;targets&#39;</span><span class="p">,</span> <span class="s1">&#39;encoder_mean&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="VAERoutine.run"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAERoutine.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vae_criterion</span><span class="o">=</span><span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">,</span> <span class="n">beta_kld</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            vae_criterion: Reconstruction criterion.</span>
+<span class="sd">            beta_kld: Beta scaling for KL term in lower-bound.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vars</span><span class="o">.</span><span class="n">input</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vars</span><span class="o">.</span><span class="n">targets</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vars</span><span class="o">.</span><span class="n">noise</span>
+
+        <span class="n">vae_net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">vae</span>
+
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">vae_net</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span>
+        <span class="n">gen</span> <span class="o">=</span> <span class="n">vae_net</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="n">gen</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">gen</span><span class="p">)</span>
+
+        <span class="n">r_loss</span> <span class="o">=</span> <span class="n">vae_criterion</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">size_average</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">kl</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">vae_net</span><span class="o">.</span><span class="n">std</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">vae_net</span><span class="o">.</span><span class="n">mu</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mf">2.</span> <span class="o">*</span>
+                     <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">vae_net</span><span class="o">.</span><span class="n">std</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">vae</span> <span class="o">=</span> <span class="p">(</span><span class="n">r_loss</span> <span class="o">+</span> <span class="n">beta_kld</span> <span class="o">*</span> <span class="n">kl</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">KL_divergence</span><span class="o">=</span><span class="n">kl</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;reconstruction&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">gen</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;generated&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;ground truth&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span><span class="n">vae_net</span><span class="o">.</span><span class="n">mu</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">Y</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;latent values&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vars</span><span class="o">.</span><span class="n">encoder_mean</span> <span class="o">=</span> <span class="n">vae_net</span><span class="o">.</span><span class="n">mu</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="ImageEncoderBuild"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageEncoderBuild">[docs]</a><span class="k">class</span> <span class="nc">ImageEncoderBuild</span><span class="p">(</span><span class="n">BuildPlugin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Builds a simple image encoder.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">plugin_name</span> <span class="o">=</span> <span class="s1">&#39;image_encoder&#39;</span>
+    <span class="n">plugin_nets</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;image_encoder&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="ImageEncoderBuild.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageEncoderBuild.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder_type</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;convnet&#39;</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">encoder_args</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            encoder_type: Encoder model type.</span>
+<span class="sd">            dim_out: Output size.</span>
+<span class="sd">            encoder_args: Arguments for encoder build.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
+        <span class="n">Encoder</span><span class="p">,</span> <span class="n">encoder_args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span>
+                                                    <span class="n">model_type</span><span class="o">=</span><span class="n">encoder_type</span><span class="p">,</span>
+                                                    <span class="n">encoder_args</span><span class="o">=</span><span class="n">encoder_args</span><span class="p">)</span>
+        <span class="n">encoder</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_out</span><span class="p">,</span> <span class="o">**</span><span class="n">encoder_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">image_encoder</span> <span class="o">=</span> <span class="n">encoder</span></div></div>
+
+
+<div class="viewcode-block" id="ImageDecoderBuild"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageDecoderBuild">[docs]</a><span class="k">class</span> <span class="nc">ImageDecoderBuild</span><span class="p">(</span><span class="n">BuildPlugin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Builds a simple image encoder.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">plugin_name</span> <span class="o">=</span> <span class="s1">&#39;image_decoder&#39;</span>
+    <span class="n">plugin_nets</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;image_decoder&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="ImageDecoderBuild.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageDecoderBuild.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">decoder_type</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;convnet&#39;</span><span class="p">,</span> <span class="n">dim_in</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+              <span class="n">decoder_args</span><span class="o">=</span><span class="p">{}):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            decoder_type: Decoder model type.</span>
+<span class="sd">            dim_in: Input size.</span>
+<span class="sd">            decoder_args: Arguments for the decoder.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
+        <span class="n">Decoder</span><span class="p">,</span> <span class="n">decoder_args</span> <span class="o">=</span> <span class="n">update_decoder_args</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span>
+                                                    <span class="n">model_type</span><span class="o">=</span><span class="n">decoder_type</span><span class="p">,</span>
+                                                    <span class="n">decoder_args</span><span class="o">=</span><span class="n">decoder_args</span><span class="p">)</span>
+        <span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="n">dim_in</span><span class="p">,</span> <span class="o">**</span><span class="n">decoder_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">image_decoder</span> <span class="o">=</span> <span class="n">decoder</span></div></div>
+
+
+<div class="viewcode-block" id="VAEBuild"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAEBuild">[docs]</a><span class="k">class</span> <span class="nc">VAEBuild</span><span class="p">(</span><span class="n">BuildPlugin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Builds a VAE</span>
+
+<span class="sd">    This model builds on encoders and decoders build before it.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">plugin_name</span> <span class="o">=</span> <span class="s1">&#39;VAE&#39;</span>
+    <span class="n">plugin_nets</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;encoder&#39;</span><span class="p">,</span> <span class="s1">&#39;decoder&#39;</span><span class="p">,</span> <span class="s1">&#39;vae&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="VAEBuild.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAEBuild.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">dim_encoder_out</span><span class="o">=</span><span class="mi">1028</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dim_z: Latent dimension.</span>
+<span class="sd">            dim_encoder_out: Dimension of the final layer of the decoder before</span>
+<span class="sd">                             decoding to mu and log sigma.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_noise</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="s1">&#39;normal&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
+        <span class="n">encoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span>
+        <span class="n">decoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span>
+        <span class="n">vae</span> <span class="o">=</span> <span class="n">VAENetwork</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">decoder</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_encoder_out</span><span class="p">,</span>
+                         <span class="n">dim_z</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">vae</span> <span class="o">=</span> <span class="n">vae</span></div></div>
+
+
+<div class="viewcode-block" id="VAE"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAE">[docs]</a><span class="k">class</span> <span class="nc">VAE</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Variational autoencder.</span>
+
+<span class="sd">    A generative model trained using the variational lower-bound to the</span>
+<span class="sd">    log-likelihood.</span>
+<span class="sd">    See: Kingma, Diederik P., and Max Welling.</span>
+<span class="sd">    &quot;Auto-encoding variational bayes.&quot; arXiv preprint arXiv:1312.6114 (2013).</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">plugin_name</span> <span class="o">=</span> <span class="s1">&#39;VAE&#39;</span>
+
+    <span class="n">data_defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">train</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="mi">640</span><span class="p">))</span>
+    <span class="n">optimizer_defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">)</span>
+    <span class="n">train_defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">save_on_lowest</span><span class="o">=</span><span class="s1">&#39;losses.vae&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">add_classification</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            add_classification: Adds a classifier on top of the latents.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">builds</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">ImageEncoderBuild</span><span class="p">(</span><span class="n">dim_out</span><span class="o">=</span><span class="s1">&#39;dim_encoder_out&#39;</span><span class="p">,</span>
+                                                <span class="n">image_encoder</span><span class="o">=</span><span class="s1">&#39;encoder&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">builds</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">ImageDecoderBuild</span><span class="p">(</span><span class="n">dim_in</span><span class="o">=</span><span class="s1">&#39;dim_z&#39;</span><span class="p">,</span>
+                                                <span class="n">image_decoder</span><span class="o">=</span><span class="s1">&#39;decoder&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">builds</span><span class="o">.</span><span class="n">vae</span> <span class="o">=</span> <span class="n">VAEBuild</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="o">.</span><span class="n">vae</span> <span class="o">=</span> <span class="n">VAERoutine</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;data.images&#39;</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="s1">&#39;data.z&#39;</span><span class="p">,</span>
+                                       <span class="n">targets</span><span class="o">=</span><span class="s1">&#39;data.targets&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">add_classification</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">builds</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">SimpleClassifierBuild</span><span class="p">(</span><span class="n">dim_in</span><span class="o">=</span><span class="s1">&#39;dim_z&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="o">.</span><span class="n">classify</span> <span class="o">=</span> <span class="n">ClassifyRoutine</span><span class="p">(</span>
+                <span class="n">classifier</span><span class="o">=</span><span class="s1">&#39;simple_classifier&#39;</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="s1">&#39;encoder_mean&#39;</span><span class="p">,</span>
+                <span class="n">targets</span><span class="o">=</span><span class="s1">&#39;data.targets&#39;</span><span class="p">,</span> <span class="n">images</span><span class="o">=</span><span class="s1">&#39;data.images&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_train_procedure</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="o">.</span><span class="n">vae</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="o">.</span><span class="n">classify</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_train_procedure</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="o">.</span><span class="n">vae</span><span class="p">)</span></div>
+
+
+<span class="n">register_plugin</span><span class="p">(</span><span class="n">VAE</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, MILA.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

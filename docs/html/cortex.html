@@ -24,15 +24,15 @@
 
   
 
-  <link rel="stylesheet" href="static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="cortex.built_ins package" href="cortex.built_ins.html" />
     <link rel="prev" title="cortex" href="modules.html" /> 
 
   
-  <script src="static/js/modernizr.min.js"></script>
+  <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
@@ -151,7 +151,7 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="sources/cortex.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/cortex.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -232,7 +232,7 @@
 <span id="cortex-config-module"></span><h2>cortex.config module<a class="headerlink" href="#module-cortex.config" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="cortex.config.configure">
-<code class="descclassname">cortex.config.</code><code class="descname">configure</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/config.html#configure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.config.configure" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cortex.config.</code><code class="descname">configure</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/config.html#configure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.config.configure" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </div>
@@ -241,7 +241,7 @@
 <p>Main file for running experiments.</p>
 <dl class="function">
 <dt id="cortex.main.main">
-<code class="descclassname">cortex.main.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/main.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.main.main" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cortex.main.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/main.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.main.main" title="Permalink to this definition">¶</a></dt>
 <dd><p>Main function.</p>
 </dd></dl>
 
@@ -251,7 +251,7 @@
 <p>Module for plugins</p>
 <dl class="class">
 <dt id="cortex.plugins.DatasetPlugin">
-<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">DatasetPlugin</code><a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">DatasetPlugin</code><a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">cortex._lib.data.DatasetPluginBase</span></code></p>
 <p>Basic plugin class for datasets into cortex</p>
 <dl class="attribute">
@@ -262,7 +262,7 @@
 
 <dl class="method">
 <dt id="cortex.plugins.DatasetPlugin.add_dataset">
-<code class="descname">add_dataset</code><span class="sig-paren">(</span><em>mode: str</em>, <em>dataset: torch.utils.data.dataset.Dataset</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin.add_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.add_dataset" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_dataset</code><span class="sig-paren">(</span><em>mode: str</em>, <em>dataset: torch.utils.data.dataset.Dataset</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin.add_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.add_dataset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds a dataset to the plugin.</p>
 <p>Any dataset added in this way will be used in the training or testing
 loops, depending on the mode specified.</p>
@@ -283,12 +283,12 @@ loops, depending on the mode specified.</p>
 
 <dl class="method">
 <dt id="cortex.plugins.DatasetPlugin.copy_to_local_path">
-<code class="descname">copy_to_local_path</code><span class="sig-paren">(</span><em>from_path: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin.copy_to_local_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.copy_to_local_path" title="Permalink to this definition">¶</a></dt>
+<code class="descname">copy_to_local_path</code><span class="sig-paren">(</span><em>from_path: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin.copy_to_local_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.copy_to_local_path" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="cortex.plugins.DatasetPlugin.get_path">
-<code class="descname">get_path</code><span class="sig-paren">(</span><em>source: str</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin.get_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.get_path" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_path</code><span class="sig-paren">(</span><em>source: str</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin.get_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.get_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get’s the path to a source.</p>
 <p>This is derived from config.yaml file.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -305,7 +305,7 @@ loops, depending on the mode specified.</p>
 
 <dl class="method">
 <dt id="cortex.plugins.DatasetPlugin.make_indexing">
-<code class="descname">make_indexing</code><span class="sig-paren">(</span><em>C</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin.make_indexing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.make_indexing" title="Permalink to this definition">¶</a></dt>
+<code class="descname">make_indexing</code><span class="sig-paren">(</span><em>C</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin.make_indexing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.make_indexing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes an indexing dataset.</p>
 <p>Index comes in as the last element of the batch.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -322,7 +322,7 @@ loops, depending on the mode specified.</p>
 
 <dl class="method">
 <dt id="cortex.plugins.DatasetPlugin.set_dims">
-<code class="descname">set_dims</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin.set_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.set_dims" title="Permalink to this definition">¶</a></dt>
+<code class="descname">set_dims</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin.set_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.set_dims" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sets the dimenisions of the data</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -336,7 +336,7 @@ loops, depending on the mode specified.</p>
 
 <dl class="method">
 <dt id="cortex.plugins.DatasetPlugin.set_input_names">
-<code class="descname">set_input_names</code><span class="sig-paren">(</span><em>input_names</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin.set_input_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.set_input_names" title="Permalink to this definition">¶</a></dt>
+<code class="descname">set_input_names</code><span class="sig-paren">(</span><em>input_names</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin.set_input_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.set_input_names" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sets the names of the elements of the dataset.</p>
 <p>For use downstream in models.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -352,7 +352,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.DatasetPlugin.set_scale">
-<code class="descname">set_scale</code><span class="sig-paren">(</span><em>scale</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#DatasetPlugin.set_scale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.set_scale" title="Permalink to this definition">¶</a></dt>
+<code class="descname">set_scale</code><span class="sig-paren">(</span><em>scale</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#DatasetPlugin.set_scale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.DatasetPlugin.set_scale" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sets the min / max values for the data.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
@@ -377,7 +377,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="class">
 <dt id="cortex.plugins.ModelPlugin">
-<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">ModelPlugin</code><a class="reference internal" href="modules/cortex/plugins.html#ModelPlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.ModelPlugin" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">ModelPlugin</code><a class="reference internal" href="_modules/cortex/plugins.html#ModelPlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.ModelPlugin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">cortex._lib.models.ModelPluginBase</span></code></p>
 <p>Module plugin.</p>
 <dl class="attribute">
@@ -406,7 +406,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.ModelPlugin.add_eval_procedure">
-<code class="descname">add_eval_procedure</code><span class="sig-paren">(</span><em>*routines</em>, <em>mode='test'</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#ModelPlugin.add_eval_procedure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.ModelPlugin.add_eval_procedure" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_eval_procedure</code><span class="sig-paren">(</span><em>*routines</em>, <em>mode='test'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#ModelPlugin.add_eval_procedure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.ModelPlugin.add_eval_procedure" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds a evaluation procedure.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -424,7 +424,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.ModelPlugin.add_train_procedure">
-<code class="descname">add_train_procedure</code><span class="sig-paren">(</span><em>*routines</em>, <em>mode: str = 'train'</em>, <em>updates_per_routine=None</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#ModelPlugin.add_train_procedure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.ModelPlugin.add_train_procedure" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_train_procedure</code><span class="sig-paren">(</span><em>*routines</em>, <em>mode: str = 'train'</em>, <em>updates_per_routine=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#ModelPlugin.add_train_procedure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.ModelPlugin.add_train_procedure" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds a training procedure.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -476,7 +476,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="class">
 <dt id="cortex.plugins.RoutinePlugin">
-<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">RoutinePlugin</code><span class="sig-paren">(</span><em>name=None</em>, <em>**aliases</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#RoutinePlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">RoutinePlugin</code><span class="sig-paren">(</span><em>name=None</em>, <em>**aliases</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#RoutinePlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">cortex._lib.models.RoutinePluginBase</span></code></p>
 <p>Plugin for custom routines.</p>
 <dl class="attribute">
@@ -520,7 +520,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.RoutinePlugin.add_histogram">
-<code class="descname">add_histogram</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#RoutinePlugin.add_histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin.add_histogram" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_histogram</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#RoutinePlugin.add_histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin.add_histogram" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds histogram for visualizaiton.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -538,7 +538,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.RoutinePlugin.add_image">
-<code class="descname">add_image</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#RoutinePlugin.add_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin.add_image" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_image</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#RoutinePlugin.add_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin.add_image" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds image for visualization.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -556,7 +556,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.RoutinePlugin.add_scatter">
-<code class="descname">add_scatter</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#RoutinePlugin.add_scatter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin.add_scatter" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_scatter</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#RoutinePlugin.add_scatter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.RoutinePlugin.add_scatter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds a scatter plot to visualization.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -601,7 +601,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="class">
 <dt id="cortex.plugins.BuildPlugin">
-<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">BuildPlugin</code><span class="sig-paren">(</span><em>**aliases</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#BuildPlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.BuildPlugin" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.plugins.</code><code class="descname">BuildPlugin</code><span class="sig-paren">(</span><em>**aliases</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#BuildPlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.BuildPlugin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">cortex._lib.models.BuildPluginBase</span></code></p>
 <p>Plugin for custom build routines.</p>
 <dl class="attribute">
@@ -624,7 +624,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.BuildPlugin.add_noise">
-<code class="descname">add_noise</code><span class="sig-paren">(</span><em>key</em>, <em>dist=None</em>, <em>size=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#BuildPlugin.add_noise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.BuildPlugin.add_noise" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_noise</code><span class="sig-paren">(</span><em>key</em>, <em>dist=None</em>, <em>size=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#BuildPlugin.add_noise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.BuildPlugin.add_noise" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds a noise variable to the model.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -644,7 +644,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="method">
 <dt id="cortex.plugins.BuildPlugin.get_dims">
-<code class="descname">get_dims</code><span class="sig-paren">(</span><em>*queries</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#BuildPlugin.get_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.BuildPlugin.get_dims" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_dims</code><span class="sig-paren">(</span><em>*queries</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#BuildPlugin.get_dims"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.BuildPlugin.get_dims" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets dimensions of inputs.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -677,7 +677,7 @@ Should be the same size as the output of the dataset iterator.</td>
 
 <dl class="function">
 <dt id="cortex.plugins.register_plugin">
-<code class="descclassname">cortex.plugins.</code><code class="descname">register_plugin</code><span class="sig-paren">(</span><em>plugin</em><span class="sig-paren">)</span><a class="reference internal" href="modules/cortex/plugins.html#register_plugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.register_plugin" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">cortex.plugins.</code><code class="descname">register_plugin</code><span class="sig-paren">(</span><em>plugin</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/plugins.html#register_plugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.plugins.register_plugin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Registers a plugin into cortex</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -747,14 +747,14 @@ Should be the same size as the output of the dataset iterator.</td>
             SOURCELINK_SUFFIX: '.txt'
         };
     </script>
-      <script type="text/javascript" src="static/jquery.js"></script>
-      <script type="text/javascript" src="static/underscore.js"></script>
-      <script type="text/javascript" src="static/doctools.js"></script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
       <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 
-  <script type="text/javascript" src="static/js/theme.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
