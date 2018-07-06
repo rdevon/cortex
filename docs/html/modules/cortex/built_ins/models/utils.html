@@ -1,0 +1,399 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>cortex.built_ins.models.utils &mdash; Cortex2.0  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../../static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+
+  
+  <script src="../../../../static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> Cortex2.0
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Cortex2.0</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>cortex.built_ins.models.utils</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for cortex.built_ins.models.utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;Model misc utilities.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">svm</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;cortex.arch&#39;</span> <span class="o">+</span> <span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="log_sum_exp"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.utils.log_sum_exp">[docs]</a><span class="k">def</span> <span class="nf">log_sum_exp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">x_max</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x_max</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="p">))</span> <span class="o">+</span> <span class="n">x_max</span>
+    <span class="k">return</span> <span class="n">y</span></div>
+
+
+<div class="viewcode-block" id="cross_correlation"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.utils.cross_correlation">[docs]</a><span class="k">def</span> <span class="nf">cross_correlation</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">remove_diagonal</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">X_s</span> <span class="o">=</span> <span class="n">X</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">X_m</span> <span class="o">=</span> <span class="n">X_s</span> <span class="o">-</span> <span class="n">X_s</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">b</span><span class="p">,</span> <span class="n">dim</span> <span class="o">=</span> <span class="n">X_m</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">correlations</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_m</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span> <span class="o">*</span>
+                    <span class="n">X_m</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">dim</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">remove_diagonal</span><span class="p">:</span>
+        <span class="n">Id</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+        <span class="n">Id</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">Id</span><span class="o">.</span><span class="n">cuda</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">correlations</span> <span class="o">-=</span> <span class="n">Id</span>
+
+    <span class="k">return</span> <span class="n">correlations</span></div>
+
+
+<div class="viewcode-block" id="perform_svc"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.utils.perform_svc">[docs]</a><span class="k">def</span> <span class="nf">perform_svc</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">clf</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">clf</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">clf</span> <span class="o">=</span> <span class="n">svm</span><span class="o">.</span><span class="n">LinearSVC</span><span class="p">()</span>
+        <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+
+    <span class="n">Y_hat</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">clf</span><span class="p">,</span> <span class="n">Y_hat</span></div>
+
+
+<div class="viewcode-block" id="ms_ssim"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.utils.ms_ssim">[docs]</a><span class="k">def</span> <span class="nf">ms_ssim</span><span class="p">(</span><span class="n">X_a</span><span class="p">,</span> <span class="n">X_b</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">size_average</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">C1</span><span class="o">=</span><span class="mf">0.01</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">C2</span><span class="o">=</span><span class="mf">0.03</span><span class="o">**</span><span class="mi">2</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Taken from Po-Hsun-Su/pytorch-ssim</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">channel</span> <span class="o">=</span> <span class="n">X_a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="n">sigma</span><span class="o">=</span><span class="mf">1.5</span><span class="p">):</span>
+        <span class="n">gauss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span>
+                      <span class="mi">2</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">window_size</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">gauss</span> <span class="o">/</span> <span class="n">gauss</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">create_window</span><span class="p">():</span>
+        <span class="n">_1D_window</span> <span class="o">=</span> <span class="n">gaussian</span><span class="p">(</span><span class="n">window_size</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">_2D_window</span> <span class="o">=</span> <span class="n">_1D_window</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span>
+            <span class="n">_1D_window</span><span class="o">.</span><span class="n">t</span><span class="p">())</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">window</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">(</span>
+            <span class="n">_2D_window</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span>
+                              <span class="n">window_size</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">window</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+
+    <span class="n">window</span> <span class="o">=</span> <span class="n">create_window</span><span class="p">()</span>
+
+    <span class="n">mu1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">X_a</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span>
+                                     <span class="n">padding</span><span class="o">=</span><span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">channel</span><span class="p">)</span>
+    <span class="n">mu2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">X_b</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span>
+                                     <span class="n">padding</span><span class="o">=</span><span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">channel</span><span class="p">)</span>
+
+    <span class="n">mu1_sq</span> <span class="o">=</span> <span class="n">mu1</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">mu2_sq</span> <span class="o">=</span> <span class="n">mu2</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">mu1_mu2</span> <span class="o">=</span> <span class="n">mu1</span> <span class="o">*</span> <span class="n">mu2</span>
+
+    <span class="n">sigma1_sq</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
+        <span class="n">X_a</span> <span class="o">*</span> <span class="n">X_a</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">channel</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_sq</span>
+    <span class="n">sigma2_sq</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
+        <span class="n">X_b</span> <span class="o">*</span> <span class="n">X_b</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">channel</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu2_sq</span>
+    <span class="n">sigma12</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span>
+        <span class="n">X_a</span> <span class="o">*</span> <span class="n">X_b</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">channel</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_mu2</span>
+
+    <span class="n">ssim_map</span> <span class="o">=</span> <span class="p">(((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">mu1_mu2</span> <span class="o">+</span> <span class="n">C1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma12</span> <span class="o">+</span> <span class="n">C2</span><span class="p">))</span> <span class="o">/</span>
+                <span class="p">((</span><span class="n">mu1_sq</span> <span class="o">+</span> <span class="n">mu2_sq</span> <span class="o">+</span> <span class="n">C1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">sigma1_sq</span> <span class="o">+</span> <span class="n">sigma2_sq</span> <span class="o">+</span> <span class="n">C2</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="n">size_average</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ssim_map</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ssim_map</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<span class="n">resnet_encoder_args_</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">f_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">mnist_encoder_args_</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">f_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                           <span class="n">pad</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">min_dim</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">convnet_encoder_args_</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="update_encoder_args"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.utils.update_encoder_args">[docs]</a><span class="k">def</span> <span class="nf">update_encoder_args</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;convnet&#39;</span><span class="p">,</span> <span class="n">encoder_args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">encoder_args</span> <span class="o">=</span> <span class="n">encoder_args</span> <span class="ow">or</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;resnet&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.resnets</span> <span class="k">import</span> <span class="n">ResEncoder</span> <span class="k">as</span> <span class="n">Encoder</span>
+        <span class="n">encoder_args_</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">resnet_encoder_args_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;convnet&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.convnets</span> <span class="k">import</span> <span class="n">SimpleConvEncoder</span> <span class="k">as</span> <span class="n">Encoder</span>
+        <span class="n">encoder_args_</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">convnet_encoder_args_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;mnist&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.convnets</span> <span class="k">import</span> <span class="n">SimpleConvEncoder</span> <span class="k">as</span> <span class="n">Encoder</span>
+        <span class="n">encoder_args_</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">mnist_encoder_args_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">elif</span> <span class="n">model_type</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;tv&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.torchvision</span> <span class="k">import</span> <span class="n">models</span>
+        <span class="n">model_attributes</span> <span class="o">=</span> <span class="n">model_type</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_attributes</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;`tvr` model type should be in form `tv.&lt;MODEL&gt;`&#39;</span><span class="p">)</span>
+        <span class="n">model_key</span> <span class="o">=</span> <span class="n">model_attributes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">tv_model</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">model_key</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">model_attributes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># TODO This lambda function is necessary because Encoder takes shape</span>
+        <span class="c1"># and dim_out.</span>
+        <span class="n">Encoder</span> <span class="o">=</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">tv_model</span><span class="p">(</span><span class="n">num_classes</span><span class="o">=</span><span class="n">dim_out</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+        <span class="n">encoder_args_</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">elif</span> <span class="n">model_type</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;tv-wrapper&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks</span> <span class="k">import</span> <span class="n">tv_models_wrapper</span> <span class="k">as</span> <span class="n">models</span>
+        <span class="n">model_attributes</span> <span class="o">=</span> <span class="n">model_type</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_attributes</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;`tv-wrapper` model type should be in form&#39;</span>
+                <span class="s1">&#39; `tv-wrapper.&lt;MODEL&gt;`&#39;</span><span class="p">)</span>
+        <span class="n">model_key</span> <span class="o">=</span> <span class="n">model_attributes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">Encoder</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">model_key</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">model_attributes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">encoder_args_</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">model_type</span><span class="p">)</span>
+
+    <span class="n">encoder_args_</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">encoder_args</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">x_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">64</span><span class="p">:</span>
+        <span class="n">encoder_args_</span><span class="p">[</span><span class="s1">&#39;n_steps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="k">elif</span> <span class="n">x_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">128</span><span class="p">:</span>
+        <span class="n">encoder_args_</span><span class="p">[</span><span class="s1">&#39;n_steps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="k">return</span> <span class="n">Encoder</span><span class="p">,</span> <span class="n">encoder_args_</span></div>
+
+
+<span class="n">resnet_decoder_args_</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">f_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">mnist_decoder_args_</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">f_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                           <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">convnet_decoder_args_</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="update_decoder_args"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.utils.update_decoder_args">[docs]</a><span class="k">def</span> <span class="nf">update_decoder_args</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;convnet&#39;</span><span class="p">,</span> <span class="n">decoder_args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">decoder_args</span> <span class="o">=</span> <span class="n">decoder_args</span> <span class="ow">or</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;resnet&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.resnets</span> <span class="k">import</span> <span class="n">ResDecoder</span> <span class="k">as</span> <span class="n">Decoder</span>
+        <span class="n">decoder_args_</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">resnet_decoder_args_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;convnet&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.conv_decoders</span> <span class="k">import</span> <span class="p">(</span>
+            <span class="n">SimpleConvDecoder</span> <span class="k">as</span> <span class="n">Decoder</span><span class="p">)</span>
+        <span class="n">decoder_args_</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">convnet_decoder_args_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;mnist&#39;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.conv_decoders</span> <span class="k">import</span> <span class="p">(</span>
+            <span class="n">SimpleConvDecoder</span> <span class="k">as</span> <span class="n">Decoder</span><span class="p">)</span>
+        <span class="n">decoder_args_</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">mnist_decoder_args_</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="n">model_type</span><span class="p">)</span>
+
+    <span class="n">decoder_args_</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">decoder_args</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">x_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">64</span><span class="p">:</span>
+        <span class="n">decoder_args_</span><span class="p">[</span><span class="s1">&#39;n_steps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="k">elif</span> <span class="n">x_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">128</span><span class="p">:</span>
+        <span class="n">decoder_args_</span><span class="p">[</span><span class="s1">&#39;n_steps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="k">return</span> <span class="n">Decoder</span><span class="p">,</span> <span class="n">decoder_args_</span></div>
+
+
+<div class="viewcode-block" id="to_one_hot"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.utils.to_one_hot">[docs]</a><span class="k">def</span> <span class="nf">to_one_hot</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">K</span><span class="p">):</span>
+    <span class="n">y_</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>
+
+    <span class="n">one_hot</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">K</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+    <span class="n">one_hot</span><span class="o">.</span><span class="n">scatter_</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">y_</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">cuda</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">one_hot</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, MILA.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../../../static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
