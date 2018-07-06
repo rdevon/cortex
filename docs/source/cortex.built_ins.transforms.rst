@@ -1,11 +1,11 @@
-cortex.built\_ins.transforms package
-====================================
+cortex.built_ins.transforms package
+===================================
 
 Submodules
 ----------
 
-cortex.built\_ins.transforms.sobel module
------------------------------------------
+cortex.built_ins.transforms.sobel module
+----------------------------------------
 
 .. automodule:: cortex.built_ins.transforms.sobel
     :members:

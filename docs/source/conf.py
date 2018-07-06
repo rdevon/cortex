@@ -14,7 +14,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('/home/joel/MILA/cortex2.0'))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "cortex")))
 
 # -- Project information -----------------------------------------------------
 
@@ -198,3 +198,4 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+

@@ -1,5 +1,5 @@
-cortex.built\_ins package
-=========================
+cortex.built_ins package
+========================
 
 Subpackages
 -----------

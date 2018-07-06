@@ -1,67 +1,67 @@
-cortex.built\_ins.networks package
-==================================
+cortex.built_ins.networks package
+=================================
 
 Submodules
 ----------
 
-cortex.built\_ins.networks.SpectralNormLayer module
----------------------------------------------------
+cortex.built_ins.networks.SpectralNormLayer module
+--------------------------------------------------
 
 .. automodule:: cortex.built_ins.networks.SpectralNormLayer
     :members:
     :undoc-members:
     :show-inheritance:
 
-cortex.built\_ins.networks.conv\_decoders module
-------------------------------------------------
+cortex.built_ins.networks.conv_decoders module
+----------------------------------------------
 
 .. automodule:: cortex.built_ins.networks.conv_decoders
     :members:
     :undoc-members:
     :show-inheritance:
 
-cortex.built\_ins.networks.convnets module
-------------------------------------------
+cortex.built_ins.networks.convnets module
+-----------------------------------------
 
 .. automodule:: cortex.built_ins.networks.convnets
     :members:
     :undoc-members:
     :show-inheritance:
 
-cortex.built\_ins.networks.fully\_connected module
---------------------------------------------------
+cortex.built_ins.networks.fully_connected module
+------------------------------------------------
 
 .. automodule:: cortex.built_ins.networks.fully_connected
     :members:
     :undoc-members:
     :show-inheritance:
 
-cortex.built\_ins.networks.modules module
------------------------------------------
+cortex.built_ins.networks.modules module
+----------------------------------------
 
 .. automodule:: cortex.built_ins.networks.modules
     :members:
     :undoc-members:
     :show-inheritance:
 
-cortex.built\_ins.networks.resnets module
------------------------------------------
+cortex.built_ins.networks.resnets module
+----------------------------------------
 
 .. automodule:: cortex.built_ins.networks.resnets
     :members:
     :undoc-members:
     :show-inheritance:
 
-cortex.built\_ins.networks.tv\_models\_wrapper module
------------------------------------------------------
+cortex.built_ins.networks.tv_models_wrapper module
+--------------------------------------------------
 
 .. automodule:: cortex.built_ins.networks.tv_models_wrapper
     :members:
     :undoc-members:
     :show-inheritance:
 
-cortex.built\_ins.networks.utils module
----------------------------------------
+cortex.built_ins.networks.utils module
+--------------------------------------
 
 .. automodule:: cortex.built_ins.networks.utils
     :members:

@@ -9,7 +9,7 @@ packages = [
 install_requirements = [
     'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
     'sklearn', 'torchvision', 'visdom', 'pyyaml', 'pathlib',
-    'sphinxcontrib-napoleon'
+    'sphinxcontrib-napoleon', 'nibabel'
 ]
 
 extras_requirements = {'docs':['sphinx >= 1.4','sphinx_rtd_theme', 'numpydoc']}
