@@ -7,8 +7,8 @@ packages = [
 ]
 
 install_requirements = [
-    'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
-    'sklearn', 'torchvision', 'visdom', 'pyyaml', 'pathlib',
+    'imageio', 'matplotlib', 'progressbar2', 'scipy',
+    'sklearn', 'visdom', 'pyyaml', 'pathlib',
     'sphinxcontrib-napoleon', 'nibabel'
 ]
 

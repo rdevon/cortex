@@ -1,35 +1,135 @@
 name: cortex
 channels:
-- defaults
 - pytorch
+- defaults
 dependencies:
+- alabaster=0.7.11=py36_0
+- asn1crypto=0.24.0=py36_0
+- babel=2.6.0=py36_0
+- blas=1.0=mkl
 - ca-certificates=2018.03.07=0
 - certifi=2018.4.16=py36_0
+- cffi=1.11.5=py36h9745a5d_0
+- chardet=3.0.4=py36h0f667ec_1
+- cryptography=2.2.2=py36h14c3975_0
+- cudatoolkit=8.0=3
+- docutils=0.14=py36hb0f60f5_0
+- freetype=2.8=hab7d2ae_1
+- idna=2.7=py36_0
+- imagesize=1.0.0=py36_0
+- intel-openmp=2018.0.3=0
+- jinja2=2.10=py36ha16c418_0
+- jpeg=9b=h024ee3a_2
 - libedit=3.1.20170329=h6b74fdf_2
 - libffi=3.2.1=hd88cf55_4
 - libgcc-ng=7.2.0=hdf63c60_3
+- libgfortran-ng=7.2.0=hdf63c60_3
+- libpng=1.6.34=hb9fc6fc_0
 - libstdcxx-ng=7.2.0=hdf63c60_3
+- libtiff=4.0.9=he85c1e1_1
+- markupsafe=1.0=py36hd9260cd_1
+- mkl=2018.0.3=1
+- mkl_fft=1.0.1=py36h3010b51_0
+- mkl_random=1.0.1=py36h629b387_0
 - ncurses=6.1=hf484d3e_0
+- ninja=1.8.2=py36h6bb024c_1
+- numpy=1.14.5=py36hcd700cb_3
+- numpy-base=1.14.5=py36hdbf6ddf_3
+- olefile=0.45.1=py36_0
 - openssl=1.0.2o=h20670df_0
+- packaging=17.1=py36_0
+- pillow=5.1.0=py36h3deb7b8_0
 - pip=10.0.1=py36_0
+- pycparser=2.18=py36hf9f622e_1
+- pygments=2.2.0=py36h0d3125c_0
+- pyopenssl=18.0.0=py36_0
+- pyparsing=2.2.0=py36hee85983_1
+- pysocks=1.6.8=py36_0
 - python=3.6.6=hc3d631a_0
+- pytz=2018.5=py36_0
 - readline=7.0=ha6073c6_4
+- requests=2.19.1=py36_0
 - setuptools=39.2.0=py36_0
+- six=1.11.0=py36h372c433_1
+- snowballstemmer=1.2.1=py36h6febd40_0
+- sphinx=1.7.5=py36_0
+- sphinxcontrib=1.0=py36h6d0f590_1
+- sphinxcontrib-websupport=1.1.0=py36_1
 - sqlite=3.24.0=h84994c4_0
 - tk=8.6.7=hc745277_3
+- urllib3=1.23=py36_0
 - wheel=0.31.1=py36_0
 - xz=5.2.4=h14c3975_4
 - zlib=1.2.11=ha838bed_2
-- torchvision-cpu
-- pytorch-cpu
+- pytorch-cpu=0.4.0=py36_cpu_1
+- torchvision-cpu=0.2.1=py36_1
 - pip:
+  - backcall==0.1.0
+  - bleach==2.1.3
+  - cortex==0.1
+  - cycler==0.10.0
+  - decorator==4.3.0
+  - entrypoints==0.2.3
+  - html5lib==1.0.1
   - imageio==2.3.0
+  - ipykernel==4.8.2
+  - ipython==6.4.0
+  - ipython-genutils==0.2.0
+  - ipywidgets==7.2.1
+  - jedi==0.12.0
+  - jsonschema==2.6.0
+  - jupyter==1.0.0
+  - jupyter-client==5.2.3
+  - jupyter-console==5.2.0
+  - jupyter-core==4.4.0
+  - kiwisolver==1.0.1
+  - logger==1.4
   - matplotlib==2.2.2
+  - mistune==0.8.3
+  - mkl-fft==1.0.0
+  - mkl-random==1.0.1
+  - mpmath==1.0.0
+  - nbconvert==5.3.1
+  - nbformat==4.4.0
+  - nibabel==2.3.0
+  - nose==1.3.7
+  - notebook==5.5.0
+  - pandas==0.23.0
+  - pandocfilters==1.4.2
+  - parso==0.2.1
   - pathlib==1.0.1
+  - pexpect==4.6.0
+  - pickleshare==0.7.4
+  - pip-autoremove==0.9.1
+  - pockets==0.6.2
   - progressbar2==3.38.0
-  - pytz==2018.4
+  - prompt-toolkit==1.0.15
+  - ptyprocess==0.5.2
+  - python-dateutil==2.7.3
+  - python-utils==2.3.0
   - pyyaml==3.12
+  - pyzmq==17.0.0
+  - qtconsole==4.3.1
+  - scikit-learn==0.19.1
   - scipy==1.1.0
+  - send2trash==1.5.0
+  - simplegeneric==0.8.1
   - sklearn==0.0
+  - sphinx-rtd-theme==0.4.0
   - sphinxcontrib-napoleon==0.6.1
+  - sympy==1.1.1
+  - terminado==0.8.1
+  - testpath==0.3.1
+  - torch==0.4.0
+  - torchfile==0.1.0
+  - torchvision==0.2.1
+  - tornado==5.0.2
+  - traitlets==4.3.2
   - visdom==0.1.8.3
+  - wcwidth==0.1.7
+  - webencodings==0.5.1
+  - websocket-client==0.48.0
+  - widgetsnbextension==3.2.1
+  - sphinx
+  - sphinx_rtd_theme
+  - numpydoc

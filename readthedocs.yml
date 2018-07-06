@@ -5,5 +5,3 @@ conda:
 python:
   version: 3.6
   formats: []
-  extra_requirements:
-    - docs
