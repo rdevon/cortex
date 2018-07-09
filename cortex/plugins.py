@@ -33,7 +33,6 @@ class DatasetPlugin(DatasetPluginBase):
         sources: list of dataset string names that this plugin will support.
 
     '''
-
     sources = []
 
     def copy_to_local_path(self, from_path: str) -> str:
