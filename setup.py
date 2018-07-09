@@ -7,12 +7,9 @@ packages = [
 ]
 
 install_requirements = [
-    'imageio', 'matplotlib', 'progressbar2', 'scipy',
-    'sklearn', 'visdom', 'pyyaml', 'pathlib',
-    'sphinxcontrib-napoleon', 'nibabel'
+    'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn', 'visdom',
+    'pyyaml', 'pathlib', 'sphinxcontrib-napoleon', 'nibabel'
 ]
-
-extras_requirements = {'docs': ['sphinx >= 1.4', 'sphinx_rtd_theme', 'numpydoc']}
 
 setup(
     name='cortex',
@@ -22,6 +19,5 @@ setup(
     author_email='erroneus@gmail.com',
     packages=packages,
     install_requires=install_requirements,
-    extras_require=extras_requirements,
     entry_points={'console_scripts': ['cortex=cortex.main:main']},
     zip_safe=False)
