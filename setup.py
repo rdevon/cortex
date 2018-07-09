@@ -12,7 +12,7 @@ install_requirements = [
     'sphinxcontrib-napoleon', 'nibabel'
 ]
 
-extras_requirements = {'docs':['sphinx >= 1.4','sphinx_rtd_theme', 'numpydoc']}
+extras_requirements = {'docs': ['sphinx >= 1.4', 'sphinx_rtd_theme', 'numpydoc']}
 
 setup(
     name='cortex',
@@ -25,4 +25,3 @@ setup(
     extras_require=extras_requirements,
     entry_points={'console_scripts': ['cortex=cortex.main:main']},
     zip_safe=False)
-
