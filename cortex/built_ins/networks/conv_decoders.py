@@ -52,7 +52,11 @@ class MNISTDeConv(nn.Module):
         self.models = models
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
-        nonlinearity_args = nonlinearity_args or {}
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
         x = self.models(x)
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
 
@@ -141,6 +145,10 @@ class SimpleConvDecoder(nn.Module):
             dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
-        nonlinearity = nonlinearity or self.output_nonlinearity
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
         x = self.models(x)
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)

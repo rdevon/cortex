@@ -15,10 +15,12 @@ logger = logging.getLogger('cortex.arch' + __name__)
 class FullyConnectedNet(nn.Module):
 
     def __init__(self, dim_in, dim_out=None, dim_h=64, nonlinearity='ReLU',
-                 n_levels=None, **layer_args):
+                 n_levels=None, output_nonlinearity=None, **layer_args):
 
         super(FullyConnectedNet, self).__init__()
         models = nn.Sequential()
+
+        self.output_nonlinearity = output_nonlinearity
 
         dim_out_ = dim_out
 
@@ -47,5 +49,10 @@ class FullyConnectedNet(nn.Module):
         self.models = models
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
         x = self.models(x)
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)

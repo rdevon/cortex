@@ -77,8 +77,8 @@ class ImageEncoder(ModelPlugin):
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.nets.encoder = encoder
 
-    def encode(self, inputs):
-        return self.nets.encoder(inputs)
+    def encode(self, inputs, **kwargs):
+        return self.nets.encoder(inputs, **kwargs)
 
     def visualize(self, inputs, targets):
         Z = self.encode(inputs)

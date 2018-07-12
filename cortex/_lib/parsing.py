@@ -147,7 +147,10 @@ class StoreDictKeyPair(argparse.Action):
 
         for kv in values.split(',,'):
             k, v = kv.split('=')
-            d[k] = ast.literal_eval(v)
+            try:
+                d[k] = ast.literal_eval(v)
+            except ValueError:
+                d[k] = v
         setattr(namespace, self.dest, d)
 
 
