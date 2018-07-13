@@ -31,12 +31,7 @@ class AENetwork(nn.Module):
     def __init__(self, encoder, decoder, dim_out=None, dim_z=None):
         super(AENetwork, self).__init__()
         self.encoder = encoder
-        # self.mu_net = nn.Linear(dim_out, dim_z)
-        # self.logvar_net = nn.Linear(dim_out, dim_z)
         self.decoder = decoder
-        # self.mu = None
-        # self.logvar = None
-        self.latent = None
 
     # def reparametrize(self, mu, std):
     #     if self.training:
@@ -52,7 +47,7 @@ class AENetwork(nn.Module):
         # self.mu = self.mu_net(encoded)
         # self.std = self.logvar_net(encoded).exp_()
         # self.latent = self.reparametrize(self.mu, self.std)
-        return self.decoder(self.latent, nonlinearity=nonlinearity)
+        return self.decoder(None, nonlinearity=nonlinearity)
 
 
 class ImageEncoder(ModelPlugin):
@@ -184,10 +179,8 @@ class AE(ModelPlugin):
             beta_kld: Beta scaling for KL term in lower-bound.
 
         '''
-
         ae = self.nets.ae
         outputs = ae(inputs)
-
         r_loss = ae_criterion(
             outputs, inputs, size_average=False) / inputs.size(0)
         # kl = (0.5 * (ae.std ** 2 + ae.mu ** 2 - 2. *
@@ -211,6 +204,6 @@ class AE(ModelPlugin):
 
 
 if __name__ == '__main__':
-    classifier = AE()
-    run(model=classifier)
+    autoencoder = AE()
+    run(model=autoencoder)
 

@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-
-from .utils import update_encoder_args, update_decoder_args, ms_ssim
+from cortex.main import run
+from cortex.built_ins.models.utils import update_encoder_args, update_decoder_args, ms_ssim
 
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
@@ -208,5 +208,6 @@ class VAE(ModelPlugin):
         self.add_scatter(vae.mu.data, labels=targets.data, name='latent values')
         self.decoder.visualize(vae.mu.data)
 
-
-register_plugin(VAE)
+if __name__ == '__main__':
+    classifier = VAE()
+    run(model=classifier)
