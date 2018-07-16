@@ -1,14 +1,13 @@
 '''Simple Variational Autoencoder model.
 '''
 
-from cortex.plugins import register_plugin, ModelPlugin
+from cortex.plugins import ModelPlugin
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from cortex.main import run
 from cortex.built_ins.models.utils import update_encoder_args, update_decoder_args, ms_ssim
-
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
 __author_email__ = 'erroneus@gmail.com'
@@ -60,7 +59,7 @@ class ImageEncoder(ModelPlugin):
 
     '''
 
-    def build(self, encoder_type: str='convnet', dim_out: int=None,
+    def build(self, encoder_type: str = 'convnet', dim_out: int = None,
               encoder_args=dict(fully_connected_layers=1028)):
         '''
 
@@ -92,7 +91,7 @@ class ImageDecoder(ModelPlugin):
 
     '''
 
-    def build(self, decoder_type: str='convnet', dim_in: int=64,
+    def build(self, decoder_type: str = 'convnet', dim_in: int = 64,
               decoder_args=dict(output_nonlinearity='tanh')):
         '''
 
@@ -209,6 +208,7 @@ class VAE(ModelPlugin):
         self.add_image(inputs, name='ground truth')
         self.add_scatter(vae.mu.data, labels=targets.data, name='latent values')
         self.decoder.visualize(vae.mu.data)
+
 
 if __name__ == '__main__':
     classifier = VAE()
