@@ -9,8 +9,8 @@ from cortex.built_ins.models.utils import update_encoder_args, update_decoder_ar
 class ImageEncoder(ModelPlugin):
 
     def build(self,
+              dim_out,
               encoder_type: str = 'convnet',
-              dim_out: int = None,
               encoder_args=dict(fully_connected_layers=1028)):
         x_shape = self.get_dims('x', 'y', 'c')
         Encoder, encoder_args = update_encoder_args(
@@ -31,8 +31,8 @@ class ImageEncoder(ModelPlugin):
 class ImageDecoder(ModelPlugin):
 
     def build(self,
+              dim_in,
               decoder_type: str = 'convnet',
-              dim_in: int = 64,
               decoder_args=dict(output_nonlinearity='tanh')):
         x_shape = self.get_dims('x', 'y', 'c')
         Decoder, decoder_args = update_decoder_args(
@@ -76,14 +76,12 @@ class AE(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        encoder_contract = dict(kwargs=dict(dim_out='dim_encoder_out'))
-        self.encoder = ImageEncoder(contract=encoder_contract)
-        decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
-        self.decoder = ImageDecoder(contract=decoder_contract)
+        self.encoder = ImageEncoder()
+        self.decoder = ImageDecoder()
 
     def build(self, dim_z=64, dim_encoder_out=64):
-        self.encoder.build()
-        self.decoder.build()
+        self.encoder.build(dim_encoder_out)
+        self.decoder.build(dim_z)
         encoder = self.nets.encoder
         decoder = self.nets.decoder
         ae = AENetwork(encoder, decoder)
