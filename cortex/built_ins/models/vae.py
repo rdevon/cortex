@@ -107,6 +107,7 @@ class ImageDecoder(ModelPlugin):
                                                     model_type=decoder_type,
                                                     decoder_args=decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
+        decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.nets.decoder = decoder
 
     def routine(self, inputs, Z, decoder_crit=F.mse_loss):
@@ -114,7 +115,8 @@ class ImageDecoder(ModelPlugin):
 
         Args:
             decoder_crit: Criterion for the decoder.
-
+        x = self.encoder(x)
+        x = self.decoder(x)
         '''
 
         X = self.decode(Z)
