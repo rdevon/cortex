@@ -6,13 +6,9 @@ import copy
 import logging
 import pprint
 
-import cortex._lib.data as data
-from . import config, exp, optimizer, log_utils, models
+from . import config, exp, log_utils, models
 from .parsing import default_args, parse_args, update_args
 from .viz import init as viz_init
-from .utils import print_section
-
-import torch
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -95,23 +91,5 @@ def setup_experiment(args, model=None):
     for k, v in exp.ARGS.items():
         logger.info('Ultimate {} arguments: \n{}'
                     .format(k, pprint.pformat(v)))
-
-    print_section('DATA')
-    data.setup(**exp.ARGS['data'])
-
-    print_section('NETWORKS')
-
-    if args.reload and not args.load_models:
-        pass
-    else:
-        model.build()
-
-    if args.load_models:
-        d = torch.load(args.load_models)
-        for k in args.reloads:
-            model.nets[k].load_state_dict(d['nets'][k].state_dict())
-
-    print_section('OPTIMIZER')
-    optimizer.setup(model, **exp.ARGS['optimizer'])
 
     return model
