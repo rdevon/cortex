@@ -20,6 +20,14 @@ cortex.built\_ins.datasets.dSprites module
     :undoc-members:
     :show-inheritance:
 
+cortex.built\_ins.datasets.imagenet module
+------------------------------------------
+
+.. automodule:: cortex.built_ins.datasets.imagenet
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 cortex.built\_ins.datasets.nii\_dataload module
 -----------------------------------------------
 

@@ -15,6 +15,17 @@ class ImageFolder(DatasetPlugin):
 
     def handle(self, source, copy_to_local=False, normalize=True,
                **transform_args):
+        """
+
+        Args:
+            source:
+            copy_to_local:
+            normalize:
+            **transform_args:
+
+        Returns:
+
+        """
 
         Dataset = self.make_indexing(torchvision.datasets.ImageFolder)
         data_path = self.get_path(source)

@@ -1,6 +1,6 @@
-'''Extra functions for build-in datasets
-
-'''
+"""
+Extra functions for build-in datasets
+"""
 
 import torchvision.transforms as transforms
 
@@ -8,6 +8,21 @@ import torchvision.transforms as transforms
 def build_transforms(normalize=True, center_crop=None, image_size=None,
                      random_crop=None, flip=None, random_resize_crop=None,
                      random_sized_crop=None, use_sobel=False):
+    """
+
+    Args:
+        normalize:
+        center_crop:
+        image_size:
+        random_crop:
+        flip:
+        random_resize_crop:
+        random_sized_crop:
+        use_sobel:
+
+    Returns:
+
+    """
     transform_ = []
 
     if random_resize_crop:

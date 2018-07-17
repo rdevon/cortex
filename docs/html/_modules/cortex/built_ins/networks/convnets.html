@@ -158,7 +158,8 @@
 <span class="kn">from</span> <span class="nn">.modules</span> <span class="k">import</span> <span class="n">View</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">apply_nonlinearity</span><span class="p">,</span> <span class="n">finish_layer_1d</span><span class="p">,</span> <span class="n">finish_layer_2d</span><span class="p">,</span>
                     <span class="n">get_nonlinearity</span><span class="p">)</span>
-
+<span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">ModelPlugin</span>
+<span class="kn">from</span> <span class="nn">cortex.built_ins.models.utils</span> <span class="k">import</span> <span class="n">update_encoder_args</span><span class="p">,</span> <span class="n">update_decoder_args</span><span class="p">,</span> <span class="n">ms_ssim</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;cortex.arch&#39;</span> <span class="o">+</span> <span class="vm">__name__</span><span class="p">)</span>
 
@@ -190,9 +191,12 @@
 <div class="viewcode-block" id="MNISTConv"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.MNISTConv">[docs]</a><span class="k">class</span> <span class="nc">MNISTConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">layer_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;ReLU&#39;</span><span class="p">,</span>
+                 <span class="n">output_nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">spectral_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">MNISTConv</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="n">models</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span> <span class="o">=</span> <span class="n">output_nonlinearity</span>
 
         <span class="n">nonlinearity</span> <span class="o">=</span> <span class="n">get_nonlinearity</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">)</span>
         <span class="n">Conv2d</span> <span class="o">=</span> <span class="n">SNConv2d</span> <span class="k">if</span> <span class="n">spectral_norm</span> <span class="k">else</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span>
@@ -225,24 +229,22 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">models</span>
 
-<div class="viewcode-block" id="MNISTConv.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.MNISTConv.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity_args</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">nonlinearity_args</span> <span class="o">=</span> <span class="n">nonlinearity_args</span> <span class="ow">or</span> <span class="p">{}</span>
+<div class="viewcode-block" id="MNISTConv.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.MNISTConv.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">nonlinearity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">nonlinearity</span><span class="p">:</span>
+            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="kc">None</span>
+
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
 
-        <span class="k">if</span> <span class="n">nonlinearity</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">):</span>
-                <span class="n">x</span> <span class="o">=</span> <span class="n">nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">):</span>
-                <span class="n">x</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">x</span></div></div>
+        <span class="k">return</span> <span class="n">apply_nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="SimpleConvEncoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.SimpleConvEncoder">[docs]</a><span class="k">class</span> <span class="nc">SimpleConvEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
-                 <span class="n">fully_connected_layers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;ReLU&#39;</span><span class="p">,</span> <span class="n">f_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                 <span class="n">fully_connected_layers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;ReLU&#39;</span><span class="p">,</span>
+                 <span class="n">output_nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">f_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
                  <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">min_dim</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">spectral_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">SimpleConvEncoder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -252,6 +254,7 @@
         <span class="n">models</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
 
         <span class="n">nonlinearity</span> <span class="o">=</span> <span class="n">get_nonlinearity</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span> <span class="o">=</span> <span class="n">output_nonlinearity</span>
 
         <span class="n">dim_out_</span> <span class="o">=</span> <span class="n">dim_out</span>
         <span class="n">fully_connected_layers</span> <span class="o">=</span> <span class="n">fully_connected_layers</span> <span class="ow">or</span> <span class="p">[]</span>
@@ -317,10 +320,63 @@
             <span class="n">dim_x</span><span class="p">,</span> <span class="n">kx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">px</span><span class="p">),</span> <span class="n">infer_conv_size</span><span class="p">(</span><span class="n">dim_y</span><span class="p">,</span> <span class="n">ky</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">py</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SimpleConvEncoder.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.SimpleConvEncoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">nonlinearity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">nonlinearity</span><span class="p">:</span>
+            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="kc">None</span>
+
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">apply_nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ImageEncoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageEncoder">[docs]</a><span class="k">class</span> <span class="nc">ImageEncoder</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ImageEncoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageEncoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+              <span class="n">dim_out</span><span class="p">,</span>
+              <span class="n">encoder_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;convnet&#39;</span><span class="p">,</span>
+              <span class="n">encoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">fully_connected_layers</span><span class="o">=</span><span class="mi">1028</span><span class="p">)):</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
+        <span class="n">Encoder</span><span class="p">,</span> <span class="n">encoder_args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span>
+            <span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">encoder_type</span><span class="p">,</span> <span class="n">encoder_args</span><span class="o">=</span><span class="n">encoder_args</span><span class="p">)</span>
+        <span class="n">encoder</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_out</span><span class="p">,</span> <span class="o">**</span><span class="n">encoder_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">encoder</span></div>
+
+<div class="viewcode-block" id="ImageEncoder.encode"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageEncoder.encode">[docs]</a>    <span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ImageEncoder.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageEncoder.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">targets</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="n">targets</span><span class="o">.</span><span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span><span class="n">Z</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">targets</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;latent values&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ImageDecoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageDecoder">[docs]</a><span class="k">class</span> <span class="nc">ImageDecoder</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ImageDecoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageDecoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+              <span class="n">dim_in</span><span class="p">,</span>
+              <span class="n">decoder_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;convnet&#39;</span><span class="p">,</span>
+              <span class="n">decoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">output_nonlinearity</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">)):</span>
+        <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
+        <span class="n">Decoder</span><span class="p">,</span> <span class="n">decoder_args</span> <span class="o">=</span> <span class="n">update_decoder_args</span><span class="p">(</span>
+            <span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">decoder_type</span><span class="p">,</span> <span class="n">decoder_args</span><span class="o">=</span><span class="n">decoder_args</span><span class="p">)</span>
+        <span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="n">dim_in</span><span class="p">,</span> <span class="o">**</span><span class="n">decoder_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder</span></div>
+
+<div class="viewcode-block" id="ImageDecoder.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageDecoder.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">decoder_crit</span><span class="o">=</span><span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder_crit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">inputs</span><span class="p">)</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">msssim</span> <span class="o">=</span> <span class="n">ms_ssim</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">ms_ssim</span> <span class="o">=</span> <span class="n">msssim</span><span class="o">.</span><span class="n">item</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ImageDecoder.decode"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageDecoder.decode">[docs]</a>    <span class="k">def</span> <span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Z</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ImageDecoder.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.ImageDecoder.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Z</span><span class="p">):</span>
+        <span class="n">gen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">gen</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;generated&#39;</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

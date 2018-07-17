@@ -154,18 +154,14 @@
 <span class="kn">import</span> <span class="nn">torchvision</span>
 
 <span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">DatasetPlugin</span><span class="p">,</span> <span class="n">register_plugin</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">build_transforms</span>
+<span class="kn">from</span> <span class="nn">cortex.built_ins.datasets.utils</span> <span class="k">import</span> <span class="n">build_transforms</span>
 
 
 <div class="viewcode-block" id="CelebAPlugin"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebAPlugin">[docs]</a><span class="k">class</span> <span class="nc">CelebAPlugin</span><span class="p">(</span><span class="n">DatasetPlugin</span><span class="p">):</span>
     <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CelebA&#39;</span><span class="p">]</span>
 
-<div class="viewcode-block" id="CelebAPlugin.handle"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebAPlugin.handle">[docs]</a>    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span>
-            <span class="bp">self</span><span class="p">,</span>
-            <span class="n">source</span><span class="p">,</span>
-            <span class="n">copy_to_local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-            <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
+<div class="viewcode-block" id="CelebAPlugin.handle"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebAPlugin.handle">[docs]</a>    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">copy_to_local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+               <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
         <span class="n">Dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_indexing</span><span class="p">(</span><span class="n">CelebA</span><span class="p">)</span>
         <span class="n">data_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
 
