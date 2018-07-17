@@ -7,18 +7,14 @@ import os
 import torchvision
 
 from cortex.plugins import DatasetPlugin, register_plugin
-from .utils import build_transforms
+from cortex.built_ins.datasets.utils import build_transforms
 
 
 class CelebAPlugin(DatasetPlugin):
     sources = ['CelebA']
 
-    def handle(
-            self,
-            source,
-            copy_to_local=False,
-            normalize=True,
-            **transform_args):
+    def handle(self, source, copy_to_local=False, normalize=True,
+               **transform_args):
         Dataset = self.make_indexing(CelebA)
         data_path = self.get_path(source)
 

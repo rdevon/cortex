@@ -2,13 +2,14 @@
 
 '''
 
+from collections import defaultdict
 import logging
 
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 
-from . import data, exp, models, reg
+from . import exp
 
 
 __author__ = 'R Devon Hjelm'
@@ -18,20 +19,56 @@ logger = logging.getLogger('cortex.optimizer')
 OPTIMIZERS = {}
 
 _optimizer_defaults = dict(
-    SGD=dict(momentum=0.9),
+    SGD=dict(),
     Adam=dict(betas=(0.5, 0.999))
 )
 
 
-def setup(  # noqa C901
-        optimizer='Adam',
-        learning_rate=1.e-4,
-        updates_per_routine={},
-        clipping={},
-        weight_decay={},
-        l1_decay={},
-        optimizer_options={},
-        model_optimizer_options={}):
+def wrap_optimizer(C):
+    class Op(C):
+        def __init__(self, params, clipping=None, **kwargs):
+            super().__init__(params, **kwargs)
+
+            if clipping is not None and clipping < 0.0:
+                raise ValueError(
+                    "Invalid clipping value: {}".format(clipping))
+
+            self.defaults.update(clipping=clipping)
+
+            self.state = defaultdict(dict)
+            self.param_groups = []
+
+            param_groups = list(params)
+            if len(param_groups) == 0:
+                raise ValueError("optimizer got an empty parameter list")
+            if not isinstance(param_groups[0], dict):
+                param_groups = [{'params': param_groups}]
+
+            for param_group in param_groups:
+                self.add_param_group(param_group)
+
+        def step(self, closure=None):
+            """Performs a single optimization step.
+
+            Arguments:
+                closure (callable, optional): A closure that reevaluates the model
+                    and returns the loss.
+            """
+            loss = super().step(closure=closure)
+
+            for group in self.param_groups:
+                bound = group['clipping']
+                if bound:
+                    for p in group['params']:
+                        p.data.clamp_(-bound, bound)
+            return loss
+
+    return Op
+
+
+def setup(model, optimizer='Adam', learning_rate=1.e-4,
+          weight_decay={}, clipping={}, optimizer_options={},
+          model_optimizer_options={}):
     '''Optimizer entrypoint.
 
     Args:
@@ -40,15 +77,14 @@ def setup(  # noqa C901
         updates_per_routine: Updates per routine.
         clipping: If set, this is the clipping for each model.
         weight_decay: If set, this is the weight decay for specified model.
-        l1_decay: If set, this is the l1 decay for specified model.
         optimizer_options: Optimizer options.
         model_optimizer_options: Optimizer options for specified model.
 
     '''
 
+    OPTIMIZERS.clear()
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
-    l1_decay = l1_decay or {}
     clipping = clipping or {}
 
     # Set the optimizer options
@@ -62,18 +98,6 @@ def setup(  # noqa C901
             'Default optimizer options for'
             ' `{}` not available.'.format(optimizer))
 
-    # Set the number of updates per routine
-    updates_per_routine = updates_per_routine or {}
-    for i in range(len(models.MODEL.train_procedures)):
-        _, procedure, updates = models.MODEL.train_procedures[i]
-        for i, routine in enumerate(procedure):
-            if routine in updates_per_routine:
-                updates[i] = updates_per_routine[routine]
-
-    # Initialize regularization
-    # initialize regularization
-    reg.init(clipping=clipping, weight_decay=l1_decay)
-
     # Set the optimizers
     if callable(optimizer):
         op = optimizer
@@ -83,32 +107,25 @@ def setup(  # noqa C901
         raise NotImplementedError(
             'Optimizer not supported `{}`'.format(optimizer))
 
-    for network_key, network in models.MODEL.nets.items():
+    for network_key, network in model.nets.items():
         # Set model parameters to cpu or gpu
-        if isinstance(network, (tuple, list)):
-            for net in network:
-                net.to(exp.DEVICE)
-                torch.nn.DataParallel(
-                    net, device_ids=range(
-                        torch.cuda.device_count()))
+        network.to(exp.DEVICE)
+        # TODO(Devon): is the next line really doing anything?
+        if str(exp.DEVICE) == 'cpu':
+            pass
         else:
-            network.to(exp.DEVICE)
-            # TODO(Devon): is the next line really doing anything?
             torch.nn.DataParallel(
                 network, device_ids=range(
                     torch.cuda.device_count()))
 
-    with torch.no_grad():
-        data.DATA_HANDLER.reset('train', make_pbar=False)
-        models.MODEL.run_procedure(0)
+    model.data.reset(make_pbar=False, mode='test')
+    model.train_step(_init=True)
 
-    training_nets = []
-    for routine in models.MODEL.routines.values():
-        training_nets += routine._training_nets
+    training_nets = model._get_training_nets()
 
-    for network_key in training_nets:
+    for network_key in set(training_nets):
         logger.info('Building optimizer for {}'.format(network_key))
-        network = models.MODEL.nets[network_key]
+        network = model.nets[network_key]
 
         if isinstance(network, (tuple, list)):
             params = []
@@ -133,31 +150,27 @@ def setup(  # noqa C901
         else:
             wd = weight_decay
 
+        if isinstance(clipping, dict):
+            cl = clipping.get(network_key, None)
+        else:
+            cl = clipping
+
         # Update the optimizer options
         optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
+        optimizer_options_.update(weight_decay=wd, clipping=cl, lr=eta)
+
         if network_key in model_optimizer_options.keys():
             optimizer_options_.update(**model_optimizer_options)
 
-        # Creat the optimizer
-        optimizer = op(params, lr=eta, weight_decay=wd, **optimizer_options_)
+        # Create the optimizer
+        op = wrap_optimizer(op)
+
+        optimizer = op(params, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
 
         logger.info(
             'Training {} routine with {}'.format(
                 network_key, optimizer))
-
-        # Additional regularization
-        if network_key in reg.CLIPPING.keys():
-            logger.info(
-                'Clipping {} with {}'.format(
-                    network_key,
-                    reg.CLIPPING[network_key]))
-
-        if network_key in reg.L1_DECAY.keys():
-            logger.info(
-                'L1 Decay {} with {}'.format(
-                    network_key,
-                    reg.L1_DECAY[network_key]))
 
     if not exp.DEVICE == torch.device('cpu'):
         cudnn.benchmark = True

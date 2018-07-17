@@ -43,9 +43,12 @@ class SimpleNet(nn.Module):
 class MNISTConv(nn.Module):
     def __init__(self, shape, dim_out=1, dim_h=64, batch_norm=True,
                  layer_norm=False, nonlinearity='ReLU',
+                 output_nonlinearity=None,
                  spectral_norm=False):
         super(MNISTConv, self).__init__()
         models = nn.Sequential()
+
+        self.output_nonlinearity = output_nonlinearity
 
         nonlinearity = get_nonlinearity(nonlinearity)
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
@@ -78,24 +81,22 @@ class MNISTConv(nn.Module):
 
         self.models = models
 
-    def forward(self, x, nonlinearity=None, nonlinearity_args=None):
-        nonlinearity_args = nonlinearity_args or {}
+    def forward(self, x, nonlinearity=None, **nonlinearity_args):
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
 
-        if nonlinearity:
-            if callable(nonlinearity):
-                x = nonlinearity(x, **nonlinearity_args)
-            elif hasattr(F, nonlinearity):
-                x = getattr(F, nonlinearity)(x, **nonlinearity_args)
-            else:
-                raise ValueError()
-        return x
+        return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
 
 
 class SimpleConvEncoder(nn.Module):
     def __init__(self, shape, dim_out=None, dim_h=64,
-                 fully_connected_layers=None, nonlinearity='ReLU', f_size=4,
+                 fully_connected_layers=None, nonlinearity='ReLU',
+                 output_nonlinearity=None, f_size=4,
                  stride=2, pad=1, min_dim=4, n_steps=None,
                  spectral_norm=False, **layer_args):
         super(SimpleConvEncoder, self).__init__()
@@ -105,6 +106,7 @@ class SimpleConvEncoder(nn.Module):
         models = nn.Sequential()
 
         nonlinearity = get_nonlinearity(nonlinearity)
+        self.output_nonlinearity = output_nonlinearity
 
         dim_out_ = dim_out
         fully_connected_layers = fully_connected_layers or []
@@ -170,6 +172,11 @@ class SimpleConvEncoder(nn.Module):
             dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
         x = self.models(x)
         x = x.view(x.size()[0], x.size()[1])
 

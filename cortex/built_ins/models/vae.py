@@ -1,17 +1,13 @@
 '''Simple Variational Autoencoder model.
 '''
 
-from cortex.plugins import (register_plugin, BuildPlugin, ModelPlugin,
-                            RoutinePlugin)
+from cortex.plugins import register_plugin, ModelPlugin
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from cortex.built_ins.models.classifier import (SimpleClassifierBuild,
-                                                ClassifyRoutine)
-
-from .utils import update_encoder_args, update_decoder_args
+from .utils import update_encoder_args, update_decoder_args, ms_ssim
 
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
@@ -59,56 +55,13 @@ class VAENetwork(nn.Module):
         return self.decoder(self.latent, nonlinearity=nonlinearity)
 
 
-class VAERoutine(RoutinePlugin):
-    '''VAE for training the VAE.
-
-    '''
-    plugin_name = 'VAE'
-    plugin_nets = ['vae']
-    plugin_vars = ['input', 'noise', 'targets', 'encoder_mean']
-
-    def run(self, vae_criterion=F.mse_loss, beta_kld=1.):
-        '''
-
-        Args:
-            vae_criterion: Reconstruction criterion.
-            beta_kld: Beta scaling for KL term in lower-bound.
-
-        '''
-        X = self.vars.input
-        Y = self.vars.targets
-        Z = self.vars.noise
-
-        vae_net = self.nets.vae
-
-        outputs = vae_net(X)
-        outputs = F.tanh(outputs)
-        gen = vae_net.decoder(Z)
-        gen = F.tanh(gen)
-
-        r_loss = vae_criterion(outputs, X, size_average=False) / X.size(0)
-        kl = (0.5 * (vae_net.std ** 2 + vae_net.mu ** 2 - 2. *
-                     torch.log(vae_net.std) - 1.).sum(1).mean())
-
-        self.losses.vae = (r_loss + beta_kld * kl)
-        self.results.update(KL_divergence=kl.item())
-
-        self.add_image(outputs, name='reconstruction')
-        self.add_image(gen, name='generated')
-        self.add_image(X, name='ground truth')
-        self.add_scatter(vae_net.mu.data, labels=Y.data, name='latent values')
-        self.vars.encoder_mean = vae_net.mu.detach()
-
-
-class ImageEncoderBuild(BuildPlugin):
+class ImageEncoder(ModelPlugin):
     '''Builds a simple image encoder.
 
     '''
-    plugin_name = 'image_encoder'
-    plugin_nets = ['image_encoder']
 
     def build(self, encoder_type: str='convnet', dim_out: int=None,
-              encoder_args={}):
+              encoder_args=dict(fully_connected_layers=1028)):
         '''
 
         Args:
@@ -122,18 +75,25 @@ class ImageEncoderBuild(BuildPlugin):
                                                     model_type=encoder_type,
                                                     encoder_args=encoder_args)
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
-        self.nets.image_encoder = encoder
+        self.nets.encoder = encoder
+
+    def encode(self, inputs, **kwargs):
+        return self.nets.encoder(inputs, **kwargs)
+
+    def visualize(self, inputs, targets):
+        Z = self.encode(inputs)
+        if targets is not None:
+            targets = targets.data
+        self.add_scatter(Z.data, labels=targets, name='latent values')
 
 
-class ImageDecoderBuild(BuildPlugin):
+class ImageDecoder(ModelPlugin):
     '''Builds a simple image encoder.
 
     '''
-    plugin_name = 'image_decoder'
-    plugin_nets = ['image_decoder']
 
     def build(self, decoder_type: str='convnet', dim_in: int=64,
-              decoder_args={}):
+              decoder_args=dict(output_nonlinearity='tanh')):
         '''
 
         Args:
@@ -147,33 +107,27 @@ class ImageDecoderBuild(BuildPlugin):
                                                     model_type=decoder_type,
                                                     decoder_args=decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
-        self.nets.image_decoder = decoder
+        self.nets.decoder = decoder
 
-
-class VAEBuild(BuildPlugin):
-    '''Builds a VAE
-
-    This model builds on encoders and decoders build before it.
-
-    '''
-    plugin_name = 'VAE'
-    plugin_nets = ['encoder', 'decoder', 'vae']
-
-    def build(self, dim_z=64, dim_encoder_out=1028):
+    def routine(self, inputs, Z, decoder_crit=F.mse_loss):
         '''
 
         Args:
-            dim_z: Latent dimension.
-            dim_encoder_out: Dimension of the final layer of the decoder before
-                             decoding to mu and log sigma.
+            decoder_crit: Criterion for the decoder.
 
         '''
-        self.add_noise('z', dist='normal', size=dim_z)
-        encoder = self.nets.encoder
-        decoder = self.nets.decoder
-        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out,
-                         dim_z=dim_z)
-        self.nets.vae = vae
+
+        X = self.decode(Z)
+        self.losses.decoder = decoder_crit(X, inputs) / inputs.size(0)
+        msssim = ms_ssim(inputs, X)
+        self.results.ms_ssim = msssim.item()
+
+    def decode(self, Z):
+        return self.nets.decoder(Z)
+
+    def visualize(self, Z):
+        gen = self.decode(Z)
+        self.add_image(gen, name='generated')
 
 
 class VAE(ModelPlugin):
@@ -187,34 +141,72 @@ class VAE(ModelPlugin):
     '''
     plugin_name = 'VAE'
 
-    data_defaults = dict(batch_size=dict(train=64, test=640))
-    optimizer_defaults = dict(optimizer='Adam', learning_rate=1e-4)
-    train_defaults = dict(save_on_lowest='losses.vae')
+    defaults = dict(
+        data=dict(batch_size=dict(train=64, test=640),
+                  inputs=dict(inputs='images')),
+        optimizer=dict(optimizer='Adam', learning_rate=1e-4),
+        train=dict(save_on_lowest='losses.vae')
+    )
 
-    def __init__(self, add_classification=True):
+    def __init__(self):
+        super().__init__()
+
+        encoder_contract = dict(kwargs=dict(dim_out='dim_encoder_out'))
+        self.encoder = ImageEncoder(contract=encoder_contract)
+        decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
+        self.decoder = ImageDecoder(contract=decoder_contract)
+
+    def build(self, dim_z=64, dim_encoder_out=1028):
         '''
 
         Args:
-            add_classification: Adds a classifier on top of the latents.
+            dim_z: Latent dimension.
+            dim_encoder_out: Dimension of the final layer of the decoder before
+                             decoding to mu and log sigma.
 
         '''
-        super().__init__()
-        self.builds.encoder = ImageEncoderBuild(dim_out='dim_encoder_out',
-                                                image_encoder='encoder')
-        self.builds.decoder = ImageDecoderBuild(dim_in='dim_z',
-                                                image_decoder='decoder')
-        self.builds.vae = VAEBuild()
-        self.routines.vae = VAERoutine(input='data.images', noise='data.z',
-                                       targets='data.targets')
+        self.encoder.build()
+        self.decoder.build()
 
-        if add_classification:
-            self.builds.classifier = SimpleClassifierBuild(dim_in='dim_z')
-            self.routines.classify = ClassifyRoutine(
-                classifier='simple_classifier', inputs='encoder_mean',
-                targets='data.targets', images='data.images')
-            self.add_train_procedure(self.routines.vae, self.routines.classify)
-        else:
-            self.add_train_procedure(self.routines.vae)
+        self.add_noise('Z', dist='normal', size=dim_z)
+        encoder = self.nets.encoder
+        decoder = self.nets.decoder
+        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out,
+                         dim_z=dim_z)
+        self.nets.vae = vae
+
+    def routine(self, inputs, targets, Z, vae_criterion=F.mse_loss,
+                beta_kld=1.):
+        '''
+
+        Args:
+            vae_criterion: Reconstruction criterion.
+            beta_kld: Beta scaling for KL term in lower-bound.
+
+        '''
+
+        vae = self.nets.vae
+        outputs = vae(inputs)
+
+        r_loss = vae_criterion(
+            outputs, inputs, size_average=False) / inputs.size(0)
+        kl = (0.5 * (vae.std ** 2 + vae.mu ** 2 - 2. *
+                     torch.log(vae.std) - 1.).sum(1).mean())
+
+        msssim = ms_ssim(inputs, outputs)
+
+        self.losses.vae = (r_loss + beta_kld * kl)
+        self.results.update(KL_divergence=kl.item(), ms_ssim=msssim.item())
+
+    def visualize(self, inputs, targets):
+        vae = self.nets.vae
+
+        outputs = vae(inputs)
+
+        self.add_image(outputs, name='reconstruction')
+        self.add_image(inputs, name='ground truth')
+        self.add_scatter(vae.mu.data, labels=targets.data, name='latent values')
+        self.decoder.visualize(vae.mu.data)
 
 
 register_plugin(VAE)
