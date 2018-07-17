@@ -44,6 +44,14 @@ cortex.built\_ins.models.gan module
     :undoc-members:
     :show-inheritance:
 
+cortex.built\_ins.models.mine module
+------------------------------------
+
+.. automodule:: cortex.built_ins.models.mine
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 cortex.built\_ins.models.utils module
 -------------------------------------
 

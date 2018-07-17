@@ -89,7 +89,7 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex.config">cortex.config module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cortex.html#cortex-config-module">cortex.config module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex.main">cortex.main module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex.plugins">cortex.plugins module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex">Module contents</a></li>
@@ -251,7 +251,7 @@ registered hooks while the latter silently ignores them.</p>
 
 <dl class="class">
 <dt id="cortex.built_ins.networks.conv_decoders.SimpleConvDecoder">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.conv_decoders.</code><code class="descname">SimpleConvDecoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_in=None</em>, <em>initial_layer=None</em>, <em>dim_h=64</em>, <em>nonlinearity='ReLU'</em>, <em>f_size=4</em>, <em>stride=2</em>, <em>pad=1</em>, <em>n_steps=3</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/conv_decoders.html#SimpleConvDecoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.conv_decoders.SimpleConvDecoder" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.conv_decoders.</code><code class="descname">SimpleConvDecoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_in=None</em>, <em>initial_layer=None</em>, <em>dim_h=64</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>f_size=4</em>, <em>stride=2</em>, <em>pad=1</em>, <em>n_steps=3</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/conv_decoders.html#SimpleConvDecoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.conv_decoders.SimpleConvDecoder" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.conv_decoders.SimpleConvDecoder.forward">
@@ -284,12 +284,132 @@ registered hooks while the latter silently ignores them.</p>
 <span id="cortex-built-ins-networks-convnets-module"></span><h2>cortex.built_ins.networks.convnets module<a class="headerlink" href="#module-cortex.built_ins.networks.convnets" title="Permalink to this headline">¶</a></h2>
 <p>Convoluational encoders</p>
 <dl class="class">
+<dt id="cortex.built_ins.networks.convnets.ImageDecoder">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">ImageDecoder</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageDecoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageDecoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.networks.convnets.ImageDecoder.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_in</em>, <em>decoder_type: str = 'convnet'</em>, <em>decoder_args={'output_nonlinearity': 'tanh'}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageDecoder.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageDecoder.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds the neural networks.</p>
+<p>The the model is to build something, this needs to be overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.networks.convnets.ImageDecoder.decode">
+<code class="descname">decode</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageDecoder.decode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageDecoder.decode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.networks.convnets.ImageDecoder.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>Z</em>, <em>decoder_crit=&lt;function mse_loss&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageDecoder.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageDecoder.routine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Derives losses and results.</p>
+<p>The the model is to train something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.networks.convnets.ImageDecoder.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageDecoder.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageDecoder.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.networks.convnets.ImageEncoder">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">ImageEncoder</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageEncoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.networks.convnets.ImageEncoder.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_out</em>, <em>encoder_type: str = 'convnet'</em>, <em>encoder_args={'fully_connected_layers': 1028}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageEncoder.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageEncoder.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds the neural networks.</p>
+<p>The the model is to build something, this needs to be overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.networks.convnets.ImageEncoder.encode">
+<code class="descname">encode</code><span class="sig-paren">(</span><em>inputs</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageEncoder.encode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageEncoder.encode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.networks.convnets.ImageEncoder.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#ImageEncoder.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.ImageEncoder.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="cortex.built_ins.networks.convnets.MNISTConv">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">MNISTConv</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=1</em>, <em>dim_h=64</em>, <em>batch_norm=True</em>, <em>layer_norm=False</em>, <em>nonlinearity='ReLU'</em>, <em>spectral_norm=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#MNISTConv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.MNISTConv" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">MNISTConv</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=1</em>, <em>dim_h=64</em>, <em>batch_norm=True</em>, <em>layer_norm=False</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>spectral_norm=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#MNISTConv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.MNISTConv" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.convnets.MNISTConv.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em>, <em>nonlinearity=None</em>, <em>nonlinearity_args=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#MNISTConv.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.MNISTConv.forward" title="Permalink to this definition">¶</a></dt>
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em>, <em>nonlinearity=None</em>, <em>**nonlinearity_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#MNISTConv.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.MNISTConv.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines the computation performed at every call.</p>
 <p>Should be overridden by all subclasses.</p>
 <div class="admonition note">
@@ -305,7 +425,7 @@ registered hooks while the latter silently ignores them.</p>
 
 <dl class="class">
 <dt id="cortex.built_ins.networks.convnets.SimpleConvEncoder">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">SimpleConvEncoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>fully_connected_layers=None</em>, <em>nonlinearity='ReLU'</em>, <em>f_size=4</em>, <em>stride=2</em>, <em>pad=1</em>, <em>min_dim=4</em>, <em>n_steps=None</em>, <em>spectral_norm=False</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#SimpleConvEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.SimpleConvEncoder" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">SimpleConvEncoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>fully_connected_layers=None</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>f_size=4</em>, <em>stride=2</em>, <em>pad=1</em>, <em>min_dim=4</em>, <em>n_steps=None</em>, <em>spectral_norm=False</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#SimpleConvEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.SimpleConvEncoder" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.convnets.SimpleConvEncoder.forward">
@@ -359,7 +479,7 @@ registered hooks while the latter silently ignores them.</p>
 <p>Simple dense network encoders</p>
 <dl class="class">
 <dt id="cortex.built_ins.networks.fully_connected.FullyConnectedNet">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.fully_connected.</code><code class="descname">FullyConnectedNet</code><span class="sig-paren">(</span><em>dim_in</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>nonlinearity='ReLU'</em>, <em>n_levels=None</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/fully_connected.html#FullyConnectedNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.fully_connected.FullyConnectedNet" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.fully_connected.</code><code class="descname">FullyConnectedNet</code><span class="sig-paren">(</span><em>dim_in</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>nonlinearity='ReLU'</em>, <em>n_levels=None</em>, <em>output_nonlinearity=None</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/fully_connected.html#FullyConnectedNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.fully_connected.FullyConnectedNet" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.fully_connected.FullyConnectedNet.forward">
@@ -487,7 +607,7 @@ registered hooks while the latter silently ignores them.</p>
 
 <dl class="class">
 <dt id="cortex.built_ins.networks.resnets.ResDecoder">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.resnets.</code><code class="descname">ResDecoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_in=None</em>, <em>f_size=3</em>, <em>dim_h=64</em>, <em>n_steps=3</em>, <em>nonlinearity='ReLU'</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#ResDecoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.ResDecoder" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.resnets.</code><code class="descname">ResDecoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_in=None</em>, <em>f_size=3</em>, <em>dim_h=64</em>, <em>n_steps=3</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#ResDecoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.ResDecoder" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.resnets.ResDecoder.forward">
@@ -507,7 +627,7 @@ registered hooks while the latter silently ignores them.</p>
 
 <dl class="class">
 <dt id="cortex.built_ins.networks.resnets.ResEncoder">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.resnets.</code><code class="descname">ResEncoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>fully_connected_layers=None</em>, <em>f_size=3</em>, <em>n_steps=3</em>, <em>nonlinearity='ReLU'</em>, <em>spectral_norm=False</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#ResEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.ResEncoder" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.resnets.</code><code class="descname">ResEncoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>fully_connected_layers=None</em>, <em>f_size=3</em>, <em>n_steps=3</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>spectral_norm=False</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#ResEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.ResEncoder" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.resnets.ResEncoder.forward">

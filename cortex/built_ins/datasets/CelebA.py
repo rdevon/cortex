@@ -15,6 +15,17 @@ class CelebAPlugin(DatasetPlugin):
 
     def handle(self, source, copy_to_local=False, normalize=True,
                **transform_args):
+        """
+
+        Args:
+            source:
+            copy_to_local:
+            normalize:
+            **transform_args:
+
+        Returns:
+
+        """
         Dataset = self.make_indexing(CelebA)
         data_path = self.get_path(source)
 
@@ -67,6 +78,11 @@ class CelebA(torchvision.datasets.ImageFolder):
         super(CelebA, self).__init__(root, transform, target_transform)
 
     def download(self):
+        """
+
+        Returns:
+
+        """
         import errno
         import zipfile
         from six.moves import urllib

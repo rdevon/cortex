@@ -149,6 +149,7 @@
 
 <span class="sd">&#39;&#39;&#39;</span>
 
+<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">os</span> <span class="k">import</span> <span class="n">path</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
 
@@ -156,11 +157,7 @@
 
 <span class="kn">from</span> <span class="nn">cortex._lib.config</span> <span class="k">import</span> <span class="n">CONFIG</span><span class="p">,</span> <span class="n">_config_name</span>
 <span class="kn">from</span> <span class="nn">cortex._lib.data</span> <span class="k">import</span> <span class="n">DatasetPluginBase</span><span class="p">,</span> <span class="n">register</span> <span class="k">as</span> <span class="n">register_data</span>
-<span class="kn">from</span> <span class="nn">cortex._lib.models</span> <span class="k">import</span> <span class="p">(</span>
-    <span class="n">BuildPluginBase</span><span class="p">,</span>
-    <span class="n">ModelPluginBase</span><span class="p">,</span>
-    <span class="n">RoutinePluginBase</span><span class="p">,</span>
-    <span class="n">register_model</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">cortex._lib.models</span> <span class="k">import</span> <span class="n">ModelPluginBase</span><span class="p">,</span> <span class="n">register_model</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;R Devon Hjelm&#39;</span>
 <span class="n">__author_email__</span> <span class="o">=</span> <span class="s1">&#39;erroneus@gmail.com&#39;</span>
@@ -168,9 +165,9 @@
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s1">&#39;DatasetPlugin&#39;</span><span class="p">,</span>
     <span class="s1">&#39;ModelPlugin&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;RoutinePlugin&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;BuildPlugin&#39;</span><span class="p">,</span>
     <span class="s1">&#39;register_plugin&#39;</span><span class="p">]</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;cortex.plugins&#39;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="DatasetPlugin"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.DatasetPlugin">[docs]</a><span class="k">class</span> <span class="nc">DatasetPlugin</span><span class="p">(</span><span class="n">DatasetPluginBase</span><span class="p">):</span>
@@ -184,6 +181,15 @@
     <span class="n">sources</span> <span class="o">=</span> <span class="p">[]</span>
 
 <div class="viewcode-block" id="DatasetPlugin.copy_to_local_path"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.DatasetPlugin.copy_to_local_path">[docs]</a>    <span class="k">def</span> <span class="nf">copy_to_local_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&#39;&#39;&#39; Copies data to a local path.</span>
+
+<span class="sd">        Path is set in the .cortex.yml file. This can be set up through</span>
+<span class="sd">        `cortex setup`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            from_path: The path to the data to be copied.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">if</span> <span class="n">from_path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
             <span class="n">from_path</span> <span class="o">=</span> <span class="n">from_path</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">basename</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">from_path</span><span class="p">)</span>
@@ -195,10 +201,17 @@
                 <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">local_path</span><span class="p">,</span> <span class="n">_config_name</span><span class="p">))</span>
         <span class="n">to_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_path</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
         <span class="k">if</span> <span class="p">((</span><span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">to_path</span><span class="p">))</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">from_path</span><span class="p">)):</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Copying dataset </span><span class="si">{}</span><span class="s1"> from </span><span class="si">{}</span><span class="s1"> to </span><span class="si">{}</span><span class="s1"> directory.... &#39;</span>
+                        <span class="s1">&#39;(This may take time)&#39;</span>
+                        <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">from_path</span><span class="p">,</span> <span class="n">to_path</span><span class="p">))</span>
+
             <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">from_path</span><span class="p">):</span>
                 <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">from_path</span><span class="p">,</span> <span class="n">to_path</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">from_path</span><span class="p">,</span> <span class="n">local_path</span><span class="p">)</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Finished copying.&#39;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">to_path</span></div>
 
@@ -292,102 +305,6 @@
         <span class="k">return</span> <span class="n">IndexingDataset</span></div></div>
 
 
-<div class="viewcode-block" id="RoutinePlugin"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.RoutinePlugin">[docs]</a><span class="k">class</span> <span class="nc">RoutinePlugin</span><span class="p">(</span><span class="n">RoutinePluginBase</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;Plugin for custom routines.</span>
-
-<span class="sd">    Attributes:</span>
-<span class="sd">        plugin_name (str): Name of the plugin.</span>
-<span class="sd">        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for</span>
-<span class="sd">        this routine.</span>
-<span class="sd">        plugin_inputs (:obj:`list` of :obj:`str`): Inputs that will be used for</span>
-<span class="sd">        this routine.</span>
-<span class="sd">        plugin_outputs (:obj:`list` of :obj:`str`): Outine that for this</span>
-<span class="sd">        routine.</span>
-
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">_protected</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;updates&#39;</span><span class="p">]</span>
-    <span class="n">_required</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;run&#39;</span><span class="p">]</span>
-
-    <span class="n">plugin_name</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">plugin_nets</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">plugin_inputs</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">plugin_outputs</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">plugin_optional_inputs</span> <span class="o">=</span> <span class="p">[]</span>
-
-<div class="viewcode-block" id="RoutinePlugin.add_image"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.RoutinePlugin.add_image">[docs]</a>    <span class="k">def</span> <span class="nf">add_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Adds image for visualization.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            *args: TODO</span>
-<span class="sd">            **kwargs: TODO</span>
-
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_viz</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="RoutinePlugin.add_histogram"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.RoutinePlugin.add_histogram">[docs]</a>    <span class="k">def</span> <span class="nf">add_histogram</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Adds histogram for visualizaiton.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            *args: TODO</span>
-<span class="sd">            **kwargs: TODO</span>
-
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_viz</span><span class="o">.</span><span class="n">add_histogram</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="RoutinePlugin.add_scatter"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.RoutinePlugin.add_scatter">[docs]</a>    <span class="k">def</span> <span class="nf">add_scatter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Adds a scatter plot to visualization.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            *args: TODO</span>
-<span class="sd">            **kwargs: TODO</span>
-
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_viz</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
-
-
-<div class="viewcode-block" id="BuildPlugin"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.BuildPlugin">[docs]</a><span class="k">class</span> <span class="nc">BuildPlugin</span><span class="p">(</span><span class="n">BuildPluginBase</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;Plugin for custom build routines.</span>
-
-<span class="sd">    Attributes:</span>
-<span class="sd">        plugin_name (str): Name of the plugin.</span>
-<span class="sd">        plugin_nets (:obj:`list` of :obj:`str`): Networks that will be used for this build.</span>
-<span class="sd">        nets (:obj:`Handler` of :obj:`nn.Module`):</span>
-
-<span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">_protected</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">_required</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;build&#39;</span><span class="p">]</span>
-
-    <span class="n">plugin_name</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">plugin_nets</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">nets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nets</span>
-
-<div class="viewcode-block" id="BuildPlugin.get_dims"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.BuildPlugin.get_dims">[docs]</a>    <span class="k">def</span> <span class="nf">get_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">queries</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Gets dimensions of inputs.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            *queries: TODO</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            TODO</span>
-
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="o">*</span><span class="n">queries</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="BuildPlugin.add_noise"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.BuildPlugin.add_noise">[docs]</a>    <span class="k">def</span> <span class="nf">add_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Adds a noise variable to the model.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            key (str): Name of the noise variable.</span>
-<span class="sd">            dist (str): Noise distribution.</span>
-<span class="sd">            size (int): Size of the noise.</span>
-<span class="sd">            **kwargs: keyword arguments for noise distribution.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">add_noise</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="n">dist</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
-
-
 <div class="viewcode-block" id="ModelPlugin"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin">[docs]</a><span class="k">class</span> <span class="nc">ModelPlugin</span><span class="p">(</span><span class="n">ModelPluginBase</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;Module plugin.</span>
 
@@ -402,70 +319,169 @@
     <span class="n">_required</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">_optional</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;setup&#39;</span><span class="p">]</span>
 
-    <span class="n">plugin_name</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">data_defaults</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">train_defaults</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">optimizer_defaults</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">defaults</span> <span class="o">=</span> <span class="p">{}</span>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">routines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_routines</span>
+<div class="viewcode-block" id="ModelPlugin.build"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Builds the neural networks.</span>
 
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">builds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_builds</span>
-
-    <span class="k">def</span> <span class="nf">_add_routine_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">routine</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Adds a routine</span>
+<span class="sd">        The the model is to build something, this needs to be overridden.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            routine: Routine plugin instance.</span>
+<span class="sd">            *args: Inputs to be passed to the function.</span>
+<span class="sd">            **kwargs: Hyperparameters to be passed to the function</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s1">&#39;`build` is not implemented for model class </span><span class="si">{}</span><span class="s1">&#39;</span>
+            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.routine"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Derives losses and results.</span>
+
+<span class="sd">            The the model is to train something, this needs to be</span>
+<span class="sd">            overridden.</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                *args: Inputs to be passed to the function.</span>
+<span class="sd">                **kwargs: Hyperparameters to be passed to the function</span>
+
+<span class="sd">            &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s1">&#39;`routine` is not implemented for model class </span><span class="si">{}</span><span class="s1">&#39;</span>
+            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.visualize"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Visualizes.</span>
+
+<span class="sd">            The the model is to visualize something, this needs to be</span>
+<span class="sd">            overridden.</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                *args: Inputs to be passed to the function.</span>
+<span class="sd">                **kwargs: Hyperparameters to be passed to the function</span>
+
+<span class="sd">            &#39;&#39;&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s1">&#39;`visualize` is not implemented for model class</span><span class="si">{}</span><span class="s1">&#39;</span>
+            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.train_step"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.train_step">[docs]</a>    <span class="k">def</span> <span class="nf">train_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Makes a training step.</span>
+
+<span class="sd">        This can be overridden to change the behavior at each training step.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routine</span><span class="p">(</span><span class="n">auto_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.eval_step"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.eval_step">[docs]</a>    <span class="k">def</span> <span class="nf">eval_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Makes an evaluation step.</span>
+
+<span class="sd">        This can be overridden to change the behavior of each evaluation step.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routine</span><span class="p">(</span><span class="n">auto_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.optimizer_step"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.optimizer_step">[docs]</a>    <span class="k">def</span> <span class="nf">optimizer_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Makes a step of the optimizers for which losses are defined.</span>
+
+<span class="sd">        This can be overridden to change the behavior of the optimizer.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">keys</span><span class="p">):</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">retain_graph</span><span class="o">=</span><span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)))</span>
+            <span class="c1">#  TODO(Devon): Is this a good idea?</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+
+            <span class="n">optimizer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">optimizer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.train_loop"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.train_loop">[docs]</a>    <span class="k">def</span> <span class="nf">train_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;The training loop.</span>
+
+<span class="sd">        This can be overridden to change the behavior of the training loop.</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
 
-        <span class="k">if</span> <span class="n">routine</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-            <span class="k">return</span> <span class="n">routine</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">train_step</span><span class="p">()</span>
 
-        <span class="n">name</span> <span class="o">=</span> <span class="n">routine</span><span class="o">.</span><span class="n">plugin_name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">routines</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">routine</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="k">pass</span></div>
 
-        <span class="k">return</span> <span class="n">name</span>
+<div class="viewcode-block" id="ModelPlugin.eval_loop"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.eval_loop">[docs]</a>    <span class="k">def</span> <span class="nf">eval_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;The evaluation loop.</span>
 
-<div class="viewcode-block" id="ModelPlugin.add_train_procedure"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.add_train_procedure">[docs]</a>    <span class="k">def</span> <span class="nf">add_train_procedure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">routines</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;train&#39;</span><span class="p">,</span>
-                            <span class="n">updates_per_routine</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Adds a training procedure.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            *routines: TODO</span>
-<span class="sd">            mode (str): Data mode on which the procedure will be run.</span>
-<span class="sd">            updates_per_routine (:obj:`list` of :obj:`int`) Dictionary</span>
-<span class="sd">            of updates for each routine.</span>
+<span class="sd">        This can be overridden to change the behavior of the evaluation loop.</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">updates_per_routine</span> <span class="o">=</span> <span class="n">updates_per_routine</span> <span class="ow">or</span> <span class="p">[</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">routines</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">routines</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">updates_per_routine</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;Number of routines must match number of updates.&#39;</span><span class="p">)</span>
-        <span class="n">routine_names</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">routine</span> <span class="ow">in</span> <span class="n">routines</span><span class="p">:</span>
-            <span class="n">routine_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_routine_name</span><span class="p">(</span><span class="n">routine</span><span class="p">))</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_train_procedures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-            <span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">routine_names</span><span class="p">,</span> <span class="n">updates_per_routine</span><span class="p">))</span></div>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">eval_step</span><span class="p">()</span>
 
-<div class="viewcode-block" id="ModelPlugin.add_eval_procedure"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.add_eval_procedure">[docs]</a>    <span class="k">def</span> <span class="nf">add_eval_procedure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">routines</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;Adds a evaluation procedure.</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.get_dims"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.get_dims">[docs]</a>    <span class="k">def</span> <span class="nf">get_dims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">queries</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Gets dimensions of inputs.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            *routines: TODO</span>
-<span class="sd">            mode (str): Data mode on which the procedure will be run.</span>
+<span class="sd">            *queries: Variables to get dimensions of .</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dimensions of the variables.</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="n">routine_names</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">routine</span> <span class="ow">in</span> <span class="n">routines</span><span class="p">:</span>
-            <span class="n">routine_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_routine_name</span><span class="p">(</span><span class="n">routine</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="o">*</span><span class="n">queries</span><span class="p">)</span></div>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_eval_procedures</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">mode</span><span class="p">,</span> <span class="n">routine_names</span><span class="p">))</span></div></div>
+<div class="viewcode-block" id="ModelPlugin.add_noise"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.add_noise">[docs]</a>    <span class="k">def</span> <span class="nf">add_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Adds a noise variable to the model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            key (str): Name of the noise variable.</span>
+<span class="sd">            dist (str): Noise distribution.</span>
+<span class="sd">            size (int): Size of the noise.</span>
+<span class="sd">            **kwargs: keyword arguments for noise distribution.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">add_noise</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="n">dist</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.add_image"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.add_image">[docs]</a>    <span class="k">def</span> <span class="nf">add_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Adds image for visualization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: TODO</span>
+<span class="sd">            **kwargs: TODO</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_viz</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.add_histogram"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.add_histogram">[docs]</a>    <span class="k">def</span> <span class="nf">add_histogram</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Adds histogram for visualizaiton.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: TODO</span>
+<span class="sd">            **kwargs: TODO</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_viz</span><span class="o">.</span><span class="n">add_histogram</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelPlugin.add_scatter"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.add_scatter">[docs]</a>    <span class="k">def</span> <span class="nf">add_scatter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Adds a scatter plot to visualization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: TODO</span>
+<span class="sd">            **kwargs: TODO</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_viz</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="register_plugin"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.register_plugin">[docs]</a><span class="k">def</span> <span class="nf">register_plugin</span><span class="p">(</span><span class="n">plugin</span><span class="p">):</span>
@@ -479,7 +495,7 @@
 <span class="sd">    &#39;&#39;&#39;</span>
 
     <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">ModelPlugin</span><span class="p">):</span>
-        <span class="n">register_model</span><span class="p">(</span><span class="n">plugin</span><span class="p">())</span>
+        <span class="n">register_model</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">plugin</span><span class="p">,</span> <span class="n">DatasetPlugin</span><span class="p">):</span>
         <span class="n">register_data</span><span class="p">(</span><span class="n">plugin</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
