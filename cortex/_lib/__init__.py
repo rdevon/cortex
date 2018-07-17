@@ -6,7 +6,8 @@ import copy
 import logging
 import pprint
 
-from . import data, config, exp, optimizer, log_utils, models
+import cortex._lib.data as data
+from . import config, exp, optimizer, log_utils, models
 from .parsing import default_args, parse_args, update_args
 from .viz import init as viz_init
 from .utils import print_section
