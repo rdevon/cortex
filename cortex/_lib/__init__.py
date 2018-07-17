@@ -6,7 +6,7 @@ import copy
 import logging
 import pprint
 
-from . import config, exp, optimizer, log_utils, models
+from . import data, config, exp, optimizer, log_utils, models
 from .parsing import default_args, parse_args, update_args
 from .viz import init as viz_init
 from .utils import print_section
@@ -56,11 +56,10 @@ def setup_experiment(args, model=None):
 
     viz_init(config.CONFIG.viz)
 
-
     if args.reload and not args.load_models:
         exp.reload(model, args.reload, args.reloads, args.name,
                    args.out_path, args.clean, config.CONFIG)
-    else:    
+    else:
         exp.NAME = args.name or model_name
         exp.INFO['name'] = exp.NAME
         exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME, clean=args.clean)
@@ -100,9 +99,9 @@ def setup_experiment(args, model=None):
     data.setup(**exp.ARGS['data'])
 
     print_section('NETWORKS')
-    
+
     if args.reload and not args.load_models:
-        pass        
+        pass
     else:
         model.build()
 
@@ -110,7 +109,7 @@ def setup_experiment(args, model=None):
         d = torch.load(args.load_models)
         for k in args.reloads:
             model.nets[k].load_state_dict(d['nets'][k].state_dict())
-        
+
     print_section('OPTIMIZER')
     optimizer.setup(model, **exp.ARGS['optimizer'])
 

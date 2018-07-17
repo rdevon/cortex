@@ -50,6 +50,7 @@ def configure_from_yaml(config_file=None):
         ARGS.train.update(**d.get('train', {}))
         ARGS.data.update(**d.get('data', {}))
 
+
 def reload(model, exp_file, reloads, name, out_path, clean, config):
     global ARGS, INFO, NAME, OUT_DIRS, SUMMARY
 
@@ -71,7 +72,7 @@ def reload(model, exp_file, reloads, name, out_path, clean, config):
     INFO.update(**info)
     NAME = name
     SUMMARY.update(**summary)
-    
+
     update_args(ARGS, args)
 
     for k in d['nets'].keys():

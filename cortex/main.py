@@ -5,7 +5,7 @@
 
 import logging
 
-from cortex._lib import (config, data, exp, optimizer, setup_cortex,
+from cortex._lib import (config, exp, setup_cortex,
                          setup_experiment, train)
 from cortex._lib.utils import print_section
 
