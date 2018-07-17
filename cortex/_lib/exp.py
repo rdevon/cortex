@@ -190,10 +190,10 @@ def setup_device(device):
     global DEVICE
     if torch.cuda.is_available():
         if device < torch.cuda.device_count():
-            logger.info('Using GPU ' + str(device))
+            logger.info('Using GPU {}'.format(device))
             DEVICE = torch.device(device)
         else:
-            logger.info('GPU ' + str(device) + ' doesn\'t exists. Using CPU')
+            logger.info('GPU {} doesn\'t exists. Using CPU'.format(device))
     else:
         logger.info('Using CPU')
 
