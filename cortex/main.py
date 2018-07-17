@@ -45,7 +45,7 @@ def run(model=None):
             else:
                 model.build()
                 if args.load_models:
-                    d = torch.load(args.load_models)
+                    d = torch.load(args.load_models, map_location='cpu')
                     for k in args.reloads:
                         model.nets[k].load_state_dict(d['nets'][k].state_dict())
 
