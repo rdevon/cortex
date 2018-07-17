@@ -50,28 +50,8 @@ def configure_from_yaml(config_file=None):
         ARGS.train.update(**d.get('train', {}))
         ARGS.data.update(**d.get('data', {}))
 
-
-def setup_new(name, out_path, clean, config, model_file, reloads):
-    global NAME, INFO
-
-    NAME = name
-    INFO['name'] = name
-    setup_out_dir(out_path, config.out_path, name, clean=clean)
-
-    if model_file:
-        d = torch.load(model_file)
-        reloads = reloads or d['builds'].keys()
-        for k in reloads:
-            reload_models(**{k: d['builds'][k]})
-            if isinstance(d['builds'][k], list):
-                for m in d['builds'][k]:
-                    m.to(DEVICE)
-            else:
-                d['builds'][k] = d['builds'][k].to(DEVICE)
-
-
-def reload(exp_file, reloads, name, out_path, clean, config):
-    global ARGS, INFO, MODEL_PARAMS_RELOAD, NAME, OUT_DIRS, SUMMARY
+def reload(model, exp_file, reloads, name, out_path, clean, config):
+    global ARGS, INFO, NAME, OUT_DIRS, SUMMARY
 
     if not path.isfile(exp_file):
         raise ValueError('Cannot find {}'.format(exp_file))
@@ -79,7 +59,8 @@ def reload(exp_file, reloads, name, out_path, clean, config):
     logger.info('Reloading from {} and creating backup'.format(exp_file))
     copyfile(exp_file, exp_file + '.bak')
 
-    d = torch.load(exp_file)
+    d = torch.load(exp_file, map_location='cpu')
+    
     info = d['info']
     if not name:
         name = info['name']
@@ -90,17 +71,11 @@ def reload(exp_file, reloads, name, out_path, clean, config):
     INFO.update(**info)
     NAME = name
     SUMMARY.update(**summary)
+    
+    update_args(ARGS, args)
 
-    update_args(args)
-
-    reloads = reloads or d['builds'].keys()
-    for k in reloads:
-        reload_models(**{k: d['builds'][k]})
-        if isinstance(d['builds'][k], list):
-            for m in d['builds'][k]:
-                m.to(DEVICE)
-        else:
-            d['builds'][k] = d['builds'][k].to(DEVICE)
+    for k in d['nets'].keys():
+        model.nets[k] = d['nets'][k]
 
     if name:
         NAME = name

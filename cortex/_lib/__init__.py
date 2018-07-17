@@ -6,9 +6,12 @@ import copy
 import logging
 import pprint
 
-from . import config, exp, log_utils, models
+from . import config, exp, optimizer, log_utils, models
 from .parsing import default_args, parse_args, update_args
 from .viz import init as viz_init
+from .utils import print_section
+
+import torch
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -53,13 +56,14 @@ def setup_experiment(args, model=None):
 
     viz_init(config.CONFIG.viz)
 
+
     if args.reload and not args.load_models:
-        exp.reload(args.reload, args.reloads, args.name,
+        exp.reload(model, args.reload, args.reloads, args.name,
                    args.out_path, args.clean, config.CONFIG)
-    else:
-        name = args.name or model_name
-        exp.setup_new(name, args.out_path, args.clean, config.CONFIG,
-                      args.load_models, args.reloads)
+    else:    
+        exp.NAME = args.name or model_name
+        exp.INFO['name'] = exp.NAME
+        exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME, clean=args.clean)
 
     exp.configure_from_yaml(config_file=args.config_file)
 
@@ -91,5 +95,23 @@ def setup_experiment(args, model=None):
     for k, v in exp.ARGS.items():
         logger.info('Ultimate {} arguments: \n{}'
                     .format(k, pprint.pformat(v)))
+
+    print_section('DATA')
+    data.setup(**exp.ARGS['data'])
+
+    print_section('NETWORKS')
+    
+    if args.reload and not args.load_models:
+        pass        
+    else:
+        model.build()
+
+    if args.load_models:
+        d = torch.load(args.load_models)
+        for k in args.reloads:
+            model.nets[k].load_state_dict(d['nets'][k].state_dict())
+        
+    print_section('OPTIMIZER')
+    optimizer.setup(model, **exp.ARGS['optimizer'])
 
     return model

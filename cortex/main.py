@@ -32,18 +32,8 @@ def run(model=None):
             exit(0)
         else:
             config.set_config()
-
             print_section('EXPERIMENT')
             model = setup_experiment(args, model=model)
-
-            print_section('DATA')
-            data.setup(**exp.ARGS['data'])
-
-            print_section('NETWORKS')
-            model.build()
-
-            print_section('OPTIMIZER')
-            optimizer.setup(model, **exp.ARGS['optimizer'])
 
     except KeyboardInterrupt:
         print('Cancelled')
