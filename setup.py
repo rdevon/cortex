@@ -16,6 +16,6 @@ setup(name='cortex',
           'torchvision', 'visdom', 'pyyaml'],
       entry_points={
           'console_scripts': [
-              'cortex=cortex.main:main']
+              'cortex=cortex.main:run']
       },
       zip_safe=False)

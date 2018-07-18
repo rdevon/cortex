@@ -16,7 +16,7 @@ _PLUGINS = {}
 
 
 def setup(source: str=None, batch_size=64, n_workers: int=4,
-          skip_last_batch: bool=False, DataLoader=None,
+          skip_last_batch: bool=False, inputs=dict(),
           copy_to_local: bool=False, data_args={}, shuffle: bool=True):
     """
     Dataset entrypoint.
@@ -28,7 +28,7 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
         n_workers: Number of workers for DataLoader class.
         skip_last_batch: Whether to skip the last batch if the size
             is smaller than batch_size.
-        DataLoader: Optional user-defined DataLoader.
+        inputs: Dictionary of input mappings.
         copy_to_local: Copy the data to a local path.
         data_args: Arguments for dataset plugin.
         shuffle: Shuffle the dataset.
@@ -42,6 +42,7 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
         sources = source
 
     DATA_HANDLER.set_batch_size(batch_size, skip_last_batch=skip_last_batch)
+    DATA_HANDLER.set_inputs(**inputs)
 
     if sources:
         for source in sources:
@@ -52,7 +53,7 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
 
             plugin.handle(source, copy_to_local=copy_to_local, **data_args)
             DATA_HANDLER.add_dataset(source, plugin, n_workers=n_workers,
-                                     shuffle=shuffle, DataLoader=DataLoader)
+                                     shuffle=shuffle)
     else:
         raise ValueError('No source provided. Use `--d.source`')
 

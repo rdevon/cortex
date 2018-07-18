@@ -1,1 +1,1 @@
-__all__ = ['CelebA', 'torchvision_datasets']
+__all__ = ['CelebA', 'imagenet', 'torchvision_datasets']

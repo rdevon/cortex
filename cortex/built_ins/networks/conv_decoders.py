@@ -52,13 +52,18 @@ class MNISTDeConv(nn.Module):
         self.models = models
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
-        nonlinearity_args = nonlinearity_args or {}
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
         x = self.models(x)
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
 
 
 class SimpleConvDecoder(nn.Module):
-    def __init__(self, shape, dim_in=None, initial_layer=None, dim_h=64, nonlinearity='ReLU',
+    def __init__(self, shape, dim_in=None, initial_layer=None, dim_h=64,
+                 nonlinearity='ReLU', output_nonlinearity=None,
                  f_size=4, stride=2, pad=1, n_steps=3, **layer_args):
         super(SimpleConvDecoder, self).__init__()
         models = nn.Sequential()
@@ -66,6 +71,7 @@ class SimpleConvDecoder(nn.Module):
         dim_h_ = dim_h
 
         nonlinearity = get_nonlinearity(nonlinearity)
+        self.output_nonlinearity = output_nonlinearity
 
         logger.debug('Input shape: {}'.format(shape))
         dim_x_, dim_y_, dim_out_ = shape
@@ -139,5 +145,10 @@ class SimpleConvDecoder(nn.Module):
             dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
         x = self.models(x)
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)

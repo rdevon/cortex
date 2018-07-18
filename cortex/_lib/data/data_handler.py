@@ -26,10 +26,14 @@ class DataHandler(object):
         self.iterator = {}
         self.pbar = None
         self.u = 0
+        self.inputs = dict()
 
     def set_batch_size(self, batch_size, skip_last_batch=False):
         self.batch_size = batch_size
         self.skip_last_batch = skip_last_batch
+
+    def set_inputs(self, **kwargs):
+        self.inputs.update(**kwargs)
 
     def add_dataset(self, source, dataset_entrypoint,
                     n_workers=4, shuffle=True, DataLoader=None):
@@ -125,6 +129,7 @@ class DataHandler(object):
         if self.batch is None:
             raise RuntimeError('Batch not set')
 
+        item = self.inputs.get(item, item)
         if item not in self.batch.keys():
             raise KeyError('Data with label `{}` not found. Available: {}'
                            .format(item, tuple(self.batch.keys())))
