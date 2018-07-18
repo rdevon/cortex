@@ -11,8 +11,6 @@ from .SpectralNormLayer import SNConv2d, SNLinear
 from .modules import View
 from .utils import (apply_nonlinearity, finish_layer_1d, finish_layer_2d,
                     get_nonlinearity)
-from cortex.plugins import ModelPlugin
-from cortex.built_ins.models.utils import update_encoder_args, update_decoder_args, ms_ssim
 
 logger = logging.getLogger('cortex.arch' + __name__)
 
@@ -23,6 +21,7 @@ def infer_conv_size(w, k, s, p):
 
 
 class SimpleNet(nn.Module):
+
     def __init__(self):
         super(SimpleNet, self).__init__()
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
@@ -42,8 +41,14 @@ class SimpleNet(nn.Module):
 
 
 class MNISTConv(nn.Module):
-    def __init__(self, shape, dim_out=1, dim_h=64, batch_norm=True,
-                 layer_norm=False, nonlinearity='ReLU',
+
+    def __init__(self,
+                 shape,
+                 dim_out=1,
+                 dim_h=64,
+                 batch_norm=True,
+                 layer_norm=False,
+                 nonlinearity='ReLU',
                  output_nonlinearity=None,
                  spectral_norm=False):
         super(MNISTConv, self).__init__()
@@ -95,11 +100,21 @@ class MNISTConv(nn.Module):
 
 
 class SimpleConvEncoder(nn.Module):
-    def __init__(self, shape, dim_out=None, dim_h=64,
-                 fully_connected_layers=None, nonlinearity='ReLU',
-                 output_nonlinearity=None, f_size=4,
-                 stride=2, pad=1, min_dim=4, n_steps=None,
-                 spectral_norm=False, **layer_args):
+
+    def __init__(self,
+                 shape,
+                 dim_out=None,
+                 dim_h=64,
+                 fully_connected_layers=None,
+                 nonlinearity='ReLU',
+                 output_nonlinearity=None,
+                 f_size=4,
+                 stride=2,
+                 pad=1,
+                 min_dim=4,
+                 n_steps=None,
+                 spectral_norm=False,
+                 **layer_args):
         super(SimpleConvEncoder, self).__init__()
 
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
@@ -131,7 +146,12 @@ class SimpleConvEncoder(nn.Module):
                 name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
             finish_layer_2d(
-                models, name, dim_x, dim_y, dim_out, nonlinearity=nonlinearity,
+                models,
+                name,
+                dim_x,
+                dim_y,
+                dim_out,
+                nonlinearity=nonlinearity,
                 **layer_args)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
@@ -144,8 +164,8 @@ class SimpleConvEncoder(nn.Module):
             dim_out = dim_h
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
             models.add_module(name, Linear(dim_in, dim_out))
-            finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity,
-                            **layer_args)
+            finish_layer_1d(
+                models, name, dim_out, nonlinearity=nonlinearity, **layer_args)
 
         if dim_out_:
             name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
@@ -169,8 +189,8 @@ class SimpleConvEncoder(nn.Module):
         else:
             px, py = p
 
-        return infer_conv_size(
-            dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)
+        return infer_conv_size(dim_x, kx, sx, px), infer_conv_size(
+            dim_y, ky, sy, py)
 
     def forward(self, x, nonlinearity=None, **nonlinearity_args):
         if nonlinearity is None:
@@ -182,51 +202,3 @@ class SimpleConvEncoder(nn.Module):
         x = x.view(x.size()[0], x.size()[1])
 
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
-
-
-class ImageEncoder(ModelPlugin):
-
-    def build(self,
-              dim_out,
-              encoder_type: str = 'convnet',
-              encoder_args=dict(fully_connected_layers=1028)):
-        x_shape = self.get_dims('x', 'y', 'c')
-        Encoder, encoder_args = update_encoder_args(
-            x_shape, model_type=encoder_type, encoder_args=encoder_args)
-        encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
-        self.nets.encoder = encoder
-
-    def encode(self, inputs, **kwargs):
-        return self.nets.encoder(inputs, **kwargs)
-
-    def visualize(self, inputs, targets):
-        Z = self.encode(inputs)
-        if targets is not None:
-            targets = targets.data
-        self.add_scatter(Z.data, labels=targets, name='latent values')
-
-
-class ImageDecoder(ModelPlugin):
-
-    def build(self,
-              dim_in,
-              decoder_type: str = 'convnet',
-              decoder_args=dict(output_nonlinearity='tanh')):
-        x_shape = self.get_dims('x', 'y', 'c')
-        Decoder, decoder_args = update_decoder_args(
-            x_shape, model_type=decoder_type, decoder_args=decoder_args)
-        decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
-        self.nets.decoder = decoder
-
-    def routine(self, inputs, Z, decoder_crit=F.mse_loss):
-        X = self.decode(Z)
-        self.losses.decoder = decoder_crit(X, inputs) / inputs.size(0)
-        msssim = ms_ssim(inputs, X)
-        self.results.ms_ssim = msssim.item()
-
-    def decode(self, Z):
-        return self.nets.decoder(Z)
-
-    def visualize(self, Z):
-        gen = self.decode(Z)
-        self.add_image(gen, name='generated')
