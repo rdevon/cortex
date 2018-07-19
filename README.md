@@ -1,8 +1,8 @@
 # Warning
 Cortex is under heavy development, and should not be used (and issues should not be raised) unless you know what you are doing (i.e., you are a developer for this project).  
-# Cortex2.0  
-[![Build Status](https://travis-ci.com/joeljpoulin/cortex2.0.svg?branch=setup-pytest)](https://travis-ci.com/joeljpoulin/cortex2.0)  
-  
+# Cortex2.0 
+ 
+[![Build Status](https://travis-ci.com/joeljpoulin/cortex2.0.svg?branch=setup-pytest)](https://travis-ci.com/joeljpoulin/cortex2.0) ![Documentation Status](//readthedocs.org/projects/cortex20-fork/badge/?version=docs)
 A machine learning library for PyTorch.
     
 ## Installation
@@ -34,9 +34,6 @@ The first thing to do is to set up the config.yaml. This file is user-specific (
 $rm -rf ~/.cortex.yml
 $cortex setup
 ```
-
-
-
 
 
 ##### Configuration File Example
@@ -78,6 +75,34 @@ To run an experiment.
 ```
 cortex GAN --d.source CIFAR10 --d.copy_to_local
 ```
+
+Develop
+=======
+
+Documentation
+-------------
+Make sure that the cortex package is installed and configured.
+
+### Generate API documentation
+
+    $ cd docs
+    $ sphinx-apidoc -f -o source ../cortex
+
+### Verify Documentation Formatting
+
+    $ cd docs/source
+    $ doc8 -v
+
+### Building Documentation
+
+    $ cd docs
+    $ make html
+
+### Serving Documentation Locally
+
+    $ cd docs/build/html
+    $ python -m http.server 8000 --bind 127.0.0.1
+
 
 # Customize Cortex2.0 
 Cortex is meant to be an API-minimal library for runnning machine learning experiments that use gradient descent and backprop (though in principle should extend beyond this). As such, the actual models as implemented usually only require using one method from a `data_handler` object. Otherwise, as an illustration of how to get cortex working for your models, first look at:  
