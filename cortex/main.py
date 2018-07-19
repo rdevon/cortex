@@ -58,3 +58,4 @@ def run(model=None):
         exit(0)
 
     train.main_loop(model, **exp.ARGS['train'])
+    viz_process.terminate()
