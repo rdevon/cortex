@@ -17,6 +17,7 @@ __author_email__ = 'erroneus@gmail.com'
 
 
 logger = logging.getLogger('cortex')
+viz_process = None
 
 
 def run(model=None):
