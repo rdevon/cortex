@@ -56,7 +56,15 @@ def bad_values(d):
             if v_:
                 failed[k] = v_
         else:
-            if isinstance(v, torch.Tensor):
+            if isinstance(v, (list, tuple)):
+                v_ = []
+                for v__ in v:
+                    if isinstance(v__, torch.Tensor):
+                        v_.append(v__.item())
+                    else:
+                        v_.append(v__)
+                v_ = np.array(v_).sum()
+            elif isinstance(v, torch.Tensor):
                 v_ = v.item()
             else:
                 v_ = v

@@ -23,7 +23,7 @@ class MINE(ALIDiscriminator):
                                     penalty_amount='mine_penalty_amount'))
         self.penalty = GradientPenalty(contract=contract)
 
-    def routine(self, X, Z, X_m, Z_m, mine_measure='JSD'):
+    def routine(self, X, X_m, Z, Z_m, U, mine_measure='JSD'):
         '''
 
         Args:
@@ -34,7 +34,6 @@ class MINE(ALIDiscriminator):
         '''
 
         super().routine(X, X_m, Z, Z_m, measure=mine_measure)
-        self.penalty.routine((X, Z))
 
 
 class GAN_MINE(GAN):

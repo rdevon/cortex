@@ -15,7 +15,6 @@ from cortex.built_ins.networks.fully_connected import FullyConnectedNet
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class ALIDiscriminatorModule(nn.Module):
@@ -29,15 +28,18 @@ class ALIDiscriminatorModule(nn.Module):
         self.topnet = topnet
 
     def forward(self, x, z, nonlinearity=None):
-        w = F.relu(self.x_encoder(x))
+        w = self.x_encoder(x)
+
+        if len(w.size()) == 4:
+            w = w.view(-1, w.size(1) * w.size(2) * w.size(3))
 
         if self.z_encoder is None:
-            v = torch.cat([w, z], 1)
+            v = z
         else:
-            u = F.relu(self.z_encoder(z))
-            v = torch.cat([w, u], 1)
+            v = self.z_encoder(z)
+        v = torch.cat([v, w], dim=1)
+        y = self.topnet(v)
 
-        y = self.topnet(v, nonlinearity=nonlinearity)
         return y
 
 
@@ -94,7 +96,9 @@ class ALIDiscriminator(ModelPlugin):
             z_encoder = None
 
         if z_encoder is not None:
-            dim_in = 2 * dim_int
+            z_encoder_out = list(
+                z_encoder.models[-1].parameters())[-1].size()[0]
+            dim_in = dim_int + z_encoder_out
         else:
             dim_in = dim_int + dim_z
 

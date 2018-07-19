@@ -29,6 +29,7 @@ def build_transforms(normalize=True, center_crop=None, image_size=None,
 
     transform_.append(transforms.ToTensor())
 
-    transform_.append(transforms.Normalize(*normalize))
+    if normalize:
+        transform_.append(transforms.Normalize(*normalize))
     transform = transforms.Compose(transform_)
     return transform

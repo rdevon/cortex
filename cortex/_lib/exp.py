@@ -104,6 +104,10 @@ def save(model, prefix=''):
                 d_[k] = v
         return d_
 
+    for net in model.nets.values():
+        if hasattr(net, 'states'):
+            net.states.clear()
+
     state = dict(
         nets=dict(model.nets),
         info=INFO,

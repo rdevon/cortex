@@ -15,17 +15,16 @@ def get_nonlinearity(nonlinearity=None):
     elif callable(nonlinearity):
         if nonlinearity == nn.LeakyReLU:
             nonlinearity = nonlinearity(0.02, inplace=True)
-        else:
-            nonlinearity = nonlinearity()
     elif hasattr(nn, nonlinearity):
         nonlinearity = getattr(nn, nonlinearity)
         if nonlinearity == 'LeakyReLU':
             nonlinearity = nonlinearity(0.02, inplace=True)
         else:
             nonlinearity = nonlinearity()
+    elif hasattr(nn.functional, nonlinearity):
+        nonlinearity = getattr(nn.functional, nonlinearity)
     else:
         raise ValueError(nonlinearity)
-
     return nonlinearity
 
 
@@ -44,6 +43,7 @@ def finish_layer_2d(models, name, dim_x, dim_y, dim_out,
         models.add_module(name + '_bn', nn.BatchNorm2d(dim_out))
 
     if nonlinearity:
+        nonlinearity = get_nonlinearity(nonlinearity)
         models.add_module(
             '{}_{}'.format(name, nonlinearity.__class__.__name__),
             nonlinearity)
@@ -64,6 +64,7 @@ def finish_layer_1d(models, name, dim_out,
         models.add_module(name + '_bn', nn.BatchNorm1d(dim_out))
 
     if nonlinearity:
+        nonlinearity = get_nonlinearity(nonlinearity)
         models.add_module(
             '{}_{}'.format(name, nonlinearity.__class__.__name__),
             nonlinearity)
@@ -71,10 +72,10 @@ def finish_layer_1d(models, name, dim_out,
 
 def apply_nonlinearity(x, nonlinearity, **nonlinearity_args):
     if nonlinearity:
+        if isinstance(nonlinearity, str):
+            nonlinearity = get_nonlinearity(nonlinearity)
         if callable(nonlinearity):
             x = nonlinearity(x, **nonlinearity_args)
-        elif hasattr(nn.functional, nonlinearity):
-            x = getattr(nn.functional, nonlinearity)(x, **nonlinearity_args)
         else:
-            raise ValueError()
+            raise ValueError(nonlinearity, type(nonlinearity))
     return x

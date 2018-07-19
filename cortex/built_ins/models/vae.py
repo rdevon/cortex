@@ -58,10 +58,8 @@ class ImageEncoder(ModelPlugin):
 
     '''
 
-    def build(self,
-              encoder_type: str = 'convnet',
-              dim_out: int = None,
-              encoder_args=dict(fully_connected_layers=1028)):
+    def build(self, encoder_type: str='convnet', dim_out: int=None,
+              encoder_args=dict(fully_connected_layers=1024)):
         '''
 
         Args:
@@ -141,7 +139,6 @@ class VAE(ModelPlugin):
     "Auto-encoding variational bayes." arXiv preprint arXiv:1312.6114 (2013).
 
     '''
-    plugin_name = 'VAE'
 
     defaults = dict(
         data=dict(
@@ -152,12 +149,11 @@ class VAE(ModelPlugin):
     def __init__(self):
         super().__init__()
 
-        encoder_contract = dict(kwargs=dict(dim_out='dim_encoder_out'))
-        self.encoder = ImageEncoder(contract=encoder_contract)
+        self.encoder = ImageEncoder()
         decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
         self.decoder = ImageDecoder(contract=decoder_contract)
 
-    def build(self, dim_z=64, dim_encoder_out=1028):
+    def build(self, dim_z=64, dim_encoder_out=1024):
         '''
 
         Args:

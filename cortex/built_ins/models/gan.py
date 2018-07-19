@@ -135,7 +135,7 @@ class GradientPenalty(ModelPlugin):
         gradient = autograd.grad(outputs=output, inputs=inp,
                                  grad_outputs=torch.ones_like(output),
                                  create_graph=True, retain_graph=True,
-                                 only_inputs=True)[0]
+                                 only_inputs=True, allow_unused=True)[0]
         return gradient
 
     def contractive_penalty(self, network, input, penalty_amount=0.5):
