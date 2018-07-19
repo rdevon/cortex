@@ -118,6 +118,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
                 network, device_ids=range(
                     torch.cuda.device_count()))
 
+    model._reset_epoch()
     model.data.reset(make_pbar=False, mode='test')
     model.train_step(_init=True)
 

@@ -6,6 +6,7 @@ import logging
 from os import path
 import shutil
 
+import torch
 from torch.utils.data import Dataset
 
 from cortex._lib.config import CONFIG, _config_name

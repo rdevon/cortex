@@ -222,20 +222,30 @@ class LossHandler(Handler):
     _type = torch.Tensor
     _get_error_string = 'Loss `{}` not found. You must add it as a dict entry'
 
-    def __init__(self, nets, *args, add_values=False, **kwargs):
+    def __init__(self, nets, *args, method='append', **kwargs):
         self._nets = nets
-        self._add_values = add_values
+        if method not in ('append', 'overwrite', 'add'):
+            raise ValueError(method)
+        self._method = method
         super().__init__(*args, **kwargs)
 
     def _check_keyvalue(self, k, v):
-        super()._check_keyvalue(k, v)
+        if isinstance(v, (list, tuple)):
+            for v_ in v:
+                super()._check_keyvalue(k, v_)
+            if len(v_.size()) > 0:
+                raise ValueError(
+                    'Loss must be a scalar. Got {}'.format(v_.size()))
+        else:
+            super()._check_keyvalue(k, v)
+            if len(v.size()) > 0:
+                raise ValueError(
+                    'Loss must be a scalar. Got {}'.format(v.size()))
+
         if k not in self._nets:
             raise AttributeError(
                 'Keyword `{}` not in the model_handler. Found: {}.'.format(
                     k, tuple(self._nets.keys())))
-
-        if len(v.size()) > 0:
-            raise ValueError('Loss must be a scalar. Got {}'.format(v.size()))
 
         return True
 
@@ -244,19 +254,11 @@ class LossHandler(Handler):
 
         if self._locked:
             raise KeyError('Handler is locked.')
-
-        if self._add_values and hasattr(self, key):
-            self.__dict__[key] += value
-        else:
-            self.__dict__[key] = value
+        self.__dict__[key] = value
 
     def __setattr__(self, key, value):
         if key.startswith('_'):
             return super().__setattr__(key, value)
 
         self._check_keyvalue(key, value)
-
-        if self._add_values and hasattr(self, key):
-            super().__setattr__(key, value + getattr(self, key))
-        else:
-            super().__setattr__(key, value)
+        super().__setattr__(key, value)

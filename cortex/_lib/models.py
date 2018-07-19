@@ -127,6 +127,7 @@ class ModelPluginBase(metaclass=PluginType):
         self._contract = None
         self._train = False
         self._models = []
+        self.name = self.__class__.__name__
 
         if contract:
             contract = self._check_contract(contract)
@@ -142,19 +143,22 @@ class ModelPluginBase(metaclass=PluginType):
             self._losses = aliased(self._all_losses)
             self._epoch_losses = aliased(self._all_epoch_losses)
 
-        self.build = self._wrap(self.build)
+        self.wrap_functions()
+
+        self._results = prefixed(
+            self._all_results, prefix=self.name)
+        self._epoch_results = prefixed(
+            self._all_epoch_results, prefix=self.name)
+        self._epoch_times = self._all_epoch_times
+
+    def wrap_functions(self):
         self._wrap_routine()
         self.visualize = self._wrap(self.visualize)
         self.train_step = self._wrap_step(self.train_step)
         self.eval_step = self._wrap_step(self.eval_step, train=False)
         self.train_loop = self._wrap_loop(self.train_loop, train=True)
         self.eval_loop = self._wrap_loop(self.eval_loop, train=False)
-
-        self._results = prefixed(
-            self._all_results, prefix=self.__class__.__name__)
-        self._epoch_results = prefixed(
-            self._all_epoch_results, prefix=self.__class__.__name__)
-        self._epoch_times = self._all_epoch_times
+        self.build = self._wrap(self.build)
 
     @classmethod
     def _reset_class(cls):
@@ -276,7 +280,7 @@ class ModelPluginBase(metaclass=PluginType):
                               for k, v in kwargs.items() if v is not None)
                 help = dict((model._contract['kwargs'].get(k, k), v)
                             for k, v in help.items())
-            print(model, kwargs)
+
             for k, v in kwargs.items():
                 if k not in self.kwargs or self.kwargs[k] is None:
                     self.kwargs[k] = copy.deepcopy(v)
@@ -284,6 +288,12 @@ class ModelPluginBase(metaclass=PluginType):
                 if k not in self.help:
                     self.help[k] = help[k]
             model._kwargs = self._kwargs
+            model.name = key
+
+            model._results = prefixed(
+                model._all_results, prefix=model.name)
+            model._epoch_results = prefixed(
+                model._all_epoch_results, prefix=model.name)
             self._models.append(model)
 
         super().__setattr__(key, value)
@@ -412,9 +422,12 @@ class ModelPluginBase(metaclass=PluginType):
                 training_nets = []
 
                 for k, v in losses_after.items():
-                    if k not in losses_before:
-                        training_nets.append(k)
-                    elif v != losses_before[k]:
+                    try:
+                        if k not in losses_before:
+                            training_nets.append(k)
+                        elif v != losses_before[k]:
+                            training_nets.append(k)
+                    except TypeError:
                         training_nets.append(k)
                 self._training_nets[fid] = training_nets
                 for k in training_nets:
@@ -441,8 +454,13 @@ class ModelPluginBase(metaclass=PluginType):
 
             update_dict_of_lists(self._epoch_results, **self.results)
             update_dict_of_lists(self._epoch_times,
-                                 **{self.__class__.__name__: end - start})
-            losses = dict((k, v.item()) for k, v in self.losses.items())
+                                 **{self.name: end - start})
+            losses = dict()
+            for k, v in self.losses.items():
+                if isinstance(v, (tuple, list)):
+                    losses[k] = sum([v_.item() for v_ in v])
+                else:
+                    losses[k] = v.item()
             update_dict_of_lists(self._epoch_losses, **losses)
 
             return output
@@ -499,9 +517,7 @@ class ModelPluginBase(metaclass=PluginType):
 
         def wrapped(epoch, data_mode=data_mode):
             self._reset_epoch()
-            self.data.reset(data_mode,
-                            string=epoch_str.format(epoch))
-
+            self.data.reset(data_mode, string=epoch_str.format(epoch))
             fn()
 
             results = self._all_epoch_results

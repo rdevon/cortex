@@ -65,15 +65,12 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             download=True)
         return train_set, test_set
 
-    def handle(
-            self,
-            source,
-            copy_to_local=False,
-            normalize=True,
-            **transform_args):
+    def handle(self, source, copy_to_local=False, normalize=True,
+               train_samples=None, test_samples=None, **transform_args):
 
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
+
         torchvision_path = self.get_path('torchvision')
         if not os.path.isdir(torchvision_path):
             os.mkdir(torchvision_path)
@@ -84,12 +81,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             data_path = self.copy_to_local_path(data_path)
 
         if normalize and isinstance(normalize, bool):
-            if source in [
-                'MNIST',
-                'dSprites',
-                'Fashion-MNIST',
-                'EMNIST',
-                    'PhotoTour']:
+            if source in ['MNIST', 'dSprites', 'Fashion-MNIST', 'EMNIST',
+                          'PhotoTour']:
                 normalize = [(0.5,), (0.5,)]
                 scale = (0, 1)
             else:
@@ -109,6 +102,12 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             handler = self._handle
 
         train_set, test_set = handler(Dataset, data_path, transform=transform)
+        if train_samples is not None:
+            train_set.train_data = train_set.train_data[:train_samples]
+            train_set.train_labels = train_set.train_labels[:train_samples]
+        if test_samples is not None:
+            test_set.test_data = test_set.test_data[:test_samples]
+            test_set.test_labels = test_set.test_labels[:test_samples]
 
         if source == 'SVHN':
             dim_c, dim_x, dim_y = train_set.data.shape[1:]
