@@ -6,9 +6,8 @@ packages = [
     'cortex.built_ins.networks', 'cortex.built_ins.transforms']
 
 install_requirements = [
-    'imageio', 'matplotlib', 'progressbar2', 'scipy',
-    'sklearn', 'visdom', 'pyyaml', 'pathlib',
-    'sphinxcontrib-napoleon', 'nibabel'
+    'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn', 'visdom',
+    'pyyaml', 'pathlib', 'sphinxcontrib-napoleon', 'nibabel'
 ]
 
 setup(name='cortex',
