@@ -13,7 +13,7 @@ def build_transforms(normalize=True, center_crop=None, image_size=None,
     if random_resize_crop:
         transform_.append(transforms.RandomResizedCrop(random_resize_crop))
     elif random_crop:
-        transform_.append(transforms.RandomSizedCrop(random_crop))
+        transform_.append(transforms.RandomCrop(random_crop))
     elif center_crop:
         transform_.append(transforms.CenterCrop(center_crop))
     elif random_sized_crop:

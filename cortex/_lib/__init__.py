@@ -54,12 +54,12 @@ def setup_experiment(args, model=None):
     viz_init(config.CONFIG.viz)
 
     if args.reload and not args.load_models:
-        exp.reload(args.reload, args.reloads, args.name,
+        exp.reload(model, args.reload, args.reloads, args.name,
                    args.out_path, args.clean, config.CONFIG)
     else:
-        name = args.name or model_name
-        exp.setup_new(name, args.out_path, args.clean, config.CONFIG,
-                      args.load_models, args.reloads)
+        exp.NAME = args.name or model_name
+        exp.INFO['name'] = exp.NAME
+        exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME, clean=args.clean)
 
     exp.configure_from_yaml(config_file=args.config_file)
 

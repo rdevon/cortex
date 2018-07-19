@@ -9,6 +9,7 @@ from cortex._lib import (config, data, exp, optimizer, setup_cortex,
                          setup_experiment, train)
 from cortex._lib.utils import print_section
 
+import torch
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -32,7 +33,6 @@ def run(model=None):
             exit(0)
         else:
             config.set_config()
-
             print_section('EXPERIMENT')
             model = setup_experiment(args, model=model)
 
@@ -40,7 +40,14 @@ def run(model=None):
             data.setup(**exp.ARGS['data'])
 
             print_section('NETWORKS')
-            model.build()
+            if args.reload and not args.load_models:
+                pass
+            else:
+                model.build()
+                if args.load_models:
+                    d = torch.load(args.load_models, map_location='cpu')
+                    for k in args.reloads:
+                        model.nets[k].load_state_dict(d['nets'][k].state_dict())
 
             print_section('OPTIMIZER')
             optimizer.setup(model, **exp.ARGS['optimizer'])

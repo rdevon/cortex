@@ -1,14 +1,12 @@
 '''Simple Variational Autoencoder model.
 '''
 
-from cortex.plugins import register_plugin, ModelPlugin
+from cortex.plugins import ModelPlugin, register_plugin
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-
-from .utils import update_encoder_args, update_decoder_args, ms_ssim
-
+from cortex.built_ins.models.utils import update_encoder_args, update_decoder_args, ms_ssim
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
 __author_email__ = 'erroneus@gmail.com'
@@ -40,8 +38,8 @@ class VAENetwork(nn.Module):
 
     def reparametrize(self, mu, std):
         if self.training:
-            esp = Variable(std.data.new(std.size()).normal_(),
-                           requires_grad=False).cuda()
+            esp = Variable(
+                std.data.new(std.size()).normal_(), requires_grad=False).cuda()
             return mu + std * esp
         else:
             return mu
@@ -71,9 +69,8 @@ class ImageEncoder(ModelPlugin):
 
         '''
         x_shape = self.get_dims('x', 'y', 'c')
-        Encoder, encoder_args = update_encoder_args(x_shape,
-                                                    model_type=encoder_type,
-                                                    encoder_args=encoder_args)
+        Encoder, encoder_args = update_encoder_args(
+            x_shape, model_type=encoder_type, encoder_args=encoder_args)
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.nets.encoder = encoder
 
@@ -92,7 +89,9 @@ class ImageDecoder(ModelPlugin):
 
     '''
 
-    def build(self, decoder_type: str='convnet', dim_in: int=64,
+    def build(self,
+              decoder_type: str = 'convnet',
+              dim_in: int = 64,
               decoder_args=dict(output_nonlinearity='tanh')):
         '''
 
@@ -103,9 +102,9 @@ class ImageDecoder(ModelPlugin):
 
         '''
         x_shape = self.get_dims('x', 'y', 'c')
-        Decoder, decoder_args = update_decoder_args(x_shape,
-                                                    model_type=decoder_type,
-                                                    decoder_args=decoder_args)
+        Decoder, decoder_args = update_decoder_args(
+            x_shape, model_type=decoder_type, decoder_args=decoder_args)
+        decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.nets.decoder = decoder
 
@@ -114,7 +113,8 @@ class ImageDecoder(ModelPlugin):
 
         Args:
             decoder_crit: Criterion for the decoder.
-
+        x = self.encoder(x)
+        x = self.decoder(x)
         '''
 
         X = self.decode(Z)
@@ -141,11 +141,10 @@ class VAE(ModelPlugin):
     '''
 
     defaults = dict(
-        data=dict(batch_size=dict(train=64, test=640),
-                  inputs=dict(inputs='images')),
+        data=dict(
+            batch_size=dict(train=64, test=640), inputs=dict(inputs='images')),
         optimizer=dict(optimizer='Adam', learning_rate=1e-4),
-        train=dict(save_on_lowest='losses.vae')
-    )
+        train=dict(save_on_lowest='losses.vae'))
 
     def __init__(self):
         super().__init__()
@@ -169,8 +168,7 @@ class VAE(ModelPlugin):
         self.add_noise('Z', dist='normal', size=dim_z)
         encoder = self.nets.encoder
         decoder = self.nets.decoder
-        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out,
-                         dim_z=dim_z)
+        vae = VAENetwork(encoder, decoder, dim_out=dim_encoder_out, dim_z=dim_z)
         self.nets.vae = vae
 
     def routine(self, inputs, targets, Z, vae_criterion=F.mse_loss,
@@ -188,8 +186,8 @@ class VAE(ModelPlugin):
 
         r_loss = vae_criterion(
             outputs, inputs, size_average=False) / inputs.size(0)
-        kl = (0.5 * (vae.std ** 2 + vae.mu ** 2 - 2. *
-                     torch.log(vae.std) - 1.).sum(1).mean())
+        kl = (0.5 * (vae.std**2 + vae.mu**2 - 2. * torch.log(vae.std) -
+                     1.).sum(1).mean())
 
         msssim = ms_ssim(inputs, outputs)
 

@@ -12,7 +12,6 @@ from .modules import View
 from .base_network import BaseNet
 from .utils import finish_layer_2d
 
-
 logger = logging.getLogger('cortex.arch' + __name__)
 
 
@@ -22,6 +21,7 @@ def infer_conv_size(w, k, s, p):
 
 
 class SimpleNet(nn.Module):
+
     def __init__(self):
         super(SimpleNet, self).__init__()
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
