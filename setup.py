@@ -1,10 +1,14 @@
-
 from setuptools import setup
 
 packages = [
     'cortex', 'cortex._lib', 'cortex.built_ins', 'cortex._lib.data',
     'cortex.built_ins.datasets', 'cortex.built_ins.models',
     'cortex.built_ins.networks', 'cortex.built_ins.transforms']
+
+install_requirements = [
+    'imageio', 'torch', 'imageio', 'matplotlib', 'progressbar2', 'scipy',
+    'sklearn', 'torchvision', 'visdom', 'pyyaml', 'pathlib'
+]
 
 setup(name='cortex',
       version='0.11',
