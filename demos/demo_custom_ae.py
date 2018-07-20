@@ -15,7 +15,6 @@ class Autoencoder(nn.Module):
         return decoded
 
 class AE(ModelPlugin):
-    plugin_name = 'AE'
     defaults = dict(
         data=dict(
             batch_size=dict(train=64, test=64), inputs=dict(inputs='images')),

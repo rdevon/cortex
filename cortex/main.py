@@ -58,5 +58,3 @@ def run(model=None):
         exit(0)
 
     train.main_loop(model, **exp.ARGS['train'])
-    if viz_process is not None:
-        viz_process.terminate()
