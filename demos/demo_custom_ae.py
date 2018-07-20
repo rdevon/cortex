@@ -3,6 +3,7 @@ from cortex.main import run
 import torch.nn.functional as F
 from torch import nn
 
+
 class Autoencoder(nn.Module):
     def __init__(self, encoder, decoder):
         super(Autoencoder, self).__init__()
@@ -13,6 +14,7 @@ class Autoencoder(nn.Module):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
         return decoded
+
 
 class AE(ModelPlugin):
     defaults = dict(
