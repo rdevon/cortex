@@ -11,6 +11,7 @@ from cortex._lib.utils import print_section
 
 import torch
 
+
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
