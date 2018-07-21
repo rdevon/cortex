@@ -362,7 +362,7 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
-        def _fetch_kwargs():
+        def _fetch_kwargs(**kwargs_):
             if self._contract is not None:
                 kwarg_dict = self._contract['kwargs']
             else:
@@ -372,7 +372,10 @@ class ModelPluginBase(metaclass=PluginType):
             kwargs = dict()
             for k in kwarg_keys:
                 key = kwarg_dict.get(k, k)
-                value = self.kwargs[key]
+                try:
+                    value = self.kwargs[key]
+                except KeyError:
+                    value = kwargs_.get(key)
                 kwargs[k] = value
 
             return kwargs
@@ -392,8 +395,12 @@ class ModelPluginBase(metaclass=PluginType):
             return inputs
 
         def wrapped(*args, auto_input=False, **kwargs):
-            kwargs_ = _fetch_kwargs()
-            kwargs.update(kwargs_)
+            kwargs_ = _fetch_kwargs(**kwargs)
+            for k, v in kwargs_.items():
+                if v is not None:
+                    kwargs[k] = v
+                elif v is None and k not in kwargs:
+                    kwargs[k] = v
 
             if auto_input:
                 args = _fetch_inputs()
@@ -479,6 +486,8 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
+        fn = self._wrap(fn)
+
         def wrapped(*args, _init=False, **kwargs):
             if train and not _init:
                 self._set_train()
@@ -557,3 +566,7 @@ class ModelPluginBase(metaclass=PluginType):
                 'Bad values found (quitting): {} \n All:{}'.format(
                     bads, self.losses))
             exit(0)
+
+    def reload_nets(self, nets_to_reload):
+        if nets_to_reload:
+            self.nets._handler.load(**nets_to_reload)

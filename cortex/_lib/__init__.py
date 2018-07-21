@@ -6,7 +6,7 @@ import copy
 import logging
 import pprint
 
-from . import config, exp, log_utils, models
+from . import config, exp, log_utils, models, optimizer
 from .parsing import default_args, parse_args, update_args
 from .viz import init as viz_init
 
@@ -53,13 +53,39 @@ def setup_experiment(args, model=None):
 
     viz_init(config.CONFIG.viz)
 
-    if args.reload and not args.load_models:
-        exp.reload(model, args.reload, args.reloads, args.name,
-                   args.out_path, args.clean, config.CONFIG)
+    reload_nets = None
+    if args.reload:
+        d = exp.reload_model(args.reload)
+
+        exp.INFO.update(**d['info'])
+        exp.NAME = exp.INFO['name']
+        exp.SUMMARY.update(**d['summary'])
+        update_args(exp.ARGS, d['args'])
+
+        if args.name:
+            exp.INFO['name'] = exp.NAME
+        if args.out_path or args.name:
+            exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
+                              clean=args.clean)
+        else:
+            exp.OUT_DIRS.update(**d['out_dirs'])
+
+        reload_nets = d['nets']
+
     else:
+        if args.load_networks:
+            d = exp.reload_model(args.load_networks)
+            keys = args.networks_to_reload or d['nets']
+            for key in keys:
+                if key not in d['nets']:
+                    raise KeyError('Model {} has no network called {}'
+                                   .format(args.load_networks, key))
+            reload_nets = dict((k, d['nets'][k]) for k in keys)
+
         exp.NAME = args.name or model_name
         exp.INFO['name'] = exp.NAME
-        exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME, clean=args.clean)
+        exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
+                          clean=args.clean)
 
     exp.configure_from_yaml(config_file=args.config_file)
 
@@ -92,4 +118,6 @@ def setup_experiment(args, model=None):
         logger.info('Ultimate {} arguments: \n{}'
                     .format(k, pprint.pformat(v)))
 
-    return model
+
+
+    return model, reload_nets

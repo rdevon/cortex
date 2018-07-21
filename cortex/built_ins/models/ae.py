@@ -1,6 +1,10 @@
-from cortex.plugins import ModelPlugin
-from cortex.main import run
+'''Module for autoencoder model.
+
+'''
+
 import torch.nn.functional as F
+
+from cortex.plugins import ModelPlugin
 from cortex.built_ins.models.image_coders import ImageEncoder, ImageDecoder
 from cortex.built_ins.networks.ae_network import AENetwork
 
@@ -18,15 +22,20 @@ class AE(ModelPlugin):
         self.encoder = ImageEncoder()
         self.decoder = ImageDecoder()
 
-    def build(self, dim_z=64, dim_encoder_out=64):
-        self.encoder.build(dim_encoder_out)
-        self.decoder.build(dim_z)
+    def build(self, dim_z=64):
+        self.encoder.build(dim_out=dim_z)
+        self.decoder.build(dim_in=dim_z)
         encoder = self.nets.encoder
         decoder = self.nets.decoder
         ae = AENetwork(encoder, decoder)
         self.nets.ae = ae
 
     def routine(self, inputs, targets, ae_criterion=F.mse_loss):
+        '''
+
+        Args:
+            ae_criterion: Criterion for the autoencoder.
+        '''
         ae = self.nets.ae
         outputs = ae(inputs)
         r_loss = ae_criterion(
@@ -38,8 +47,3 @@ class AE(ModelPlugin):
         outputs = ae(inputs)
         self.add_image(outputs, name='reconstruction')
         self.add_image(inputs, name='ground truth')
-
-
-if __name__ == '__main__':
-    autoencoder = AE()
-    run(model=autoencoder)

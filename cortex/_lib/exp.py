@@ -51,45 +51,24 @@ def configure_from_yaml(config_file=None):
         ARGS.data.update(**d.get('data', {}))
 
 
-def reload(model, exp_file, reloads, name, out_path, clean, config):
-    global ARGS, INFO, NAME, OUT_DIRS, SUMMARY
+def reload_model(model_to_reload):
+    if not path.isfile(model_to_reload):
+        raise ValueError('Cannot find {}'.format(model_to_reload))
 
-    if not path.isfile(exp_file):
-        raise ValueError('Cannot find {}'.format(exp_file))
+    logger.info('Reloading from {} and creating backup'.format(model_to_reload))
+    copyfile(model_to_reload, model_to_reload + '.bak')
 
-    logger.info('Reloading from {} and creating backup'.format(exp_file))
-    copyfile(exp_file, exp_file + '.bak')
-
-    d = torch.load(exp_file, map_location='cpu')
-
-    info = d['info']
-    if not name:
-        name = info['name']
-    summary = d['summary']
-    args = d['args']
-    out_dirs = d['out_dirs']
-
-    INFO.update(**info)
-    NAME = name
-    SUMMARY.update(**summary)
-
-    update_args(ARGS, args)
-
-    for k in d['nets'].keys():
-        model.nets[k] = d['nets'][k]
-
-    if name:
-        NAME = name
-        INFO['name'] = name
-        setup_out_dir(out_path, config.out_path, name, clean=clean)
-
-    out_path = path.dirname(path.dirname(exp_file))
-    out_dirs = dict((k, path.join(out_path, path.basename(v)))
-                    for k, v in out_dirs.items())
-    OUT_DIRS.update(**out_dirs)
+    return torch.load(model_to_reload, map_location='cpu')
 
 
 def save(model, prefix=''):
+    '''Saves a model.
+
+    Args:
+        model: Model to save.
+        prefix: Prefix for the save file.
+
+    '''
     prefix = _file_string(prefix)
     binary_dir = OUT_DIRS.get('binary_dir', None)
     if binary_dir is None:
@@ -176,15 +155,3 @@ def setup_device(device):
             logger.info('GPU {} doesn\'t exists. Using CPU'.format(device))
     else:
         logger.info('Using CPU')
-
-
-def reload_models(**reload_models):
-    global MODEL_HANDLER
-    if MODEL_HANDLER is None:
-        raise RuntimeError(
-            'MODEL_HANDLER not set. `reload_models` should only be used after '
-            '`models.setup_models` has been called.')
-    for k, v in reload_models.items():
-        logger.info('Reloading model {}'.format(k))
-        logger.debug(v)
-        MODEL_HANDLER[k] = v
