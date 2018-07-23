@@ -41,13 +41,11 @@ def setup_experiment(args, model=None):
 
     '''
     exp.setup_device(args.device)
-
     if model is None:
         model_name = args.command
         model = models.get_model(model_name)
     else:
         model_name = model.__class__.__name__
-
     experiment_args = copy.deepcopy(default_args)
     update_args(experiment_args, exp.ARGS)
     viz_init(config.CONFIG.viz)
@@ -92,3 +90,4 @@ def setup_experiment(args, model=None):
                     .format(k, pprint.pformat(v)))
 
     return model
+

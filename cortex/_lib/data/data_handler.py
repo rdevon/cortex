@@ -128,7 +128,6 @@ class DataHandler(object):
     def __getitem__(self, item):
         if self.batch is None:
             raise RuntimeError('Batch not set')
-
         item = self.inputs.get(item, item)
         if item not in self.batch.keys():
             raise KeyError('Data with label `{}` not found. Available: {}'

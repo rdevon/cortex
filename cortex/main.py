@@ -36,10 +36,9 @@ def run(model=None):
             config.set_config()
             print_section('EXPERIMENT')
             model = setup_experiment(args, model=model)
-
             print_section('DATA')
+            import ipdb; ipdb.set_trace()
             data.setup(**exp.ARGS['data'])
-
             print_section('NETWORKS')
             if args.reload and not args.load_models:
                 pass
@@ -58,3 +57,4 @@ def run(model=None):
         exit(0)
 
     train.main_loop(model, **exp.ARGS['train'])
+
