@@ -29,10 +29,12 @@ class ImageFolder(DatasetPlugin):
         if normalize and isinstance(normalize, bool):
             normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 
-        transform = build_transforms(normalize=normalize, **transform_args)
+        train_transform = build_transforms(
+            normalize=normalize, **transform_args)
+        test_transform = build_transforms(normalize=normalize)
 
-        train_set = Dataset(root=train_path, transform=transform)
-        test_set = Dataset(root=test_path, transform=transform)
+        train_set = Dataset(root=train_path, transform=train_transform)
+        test_set = Dataset(root=test_path, transform=test_transform)
         input_names = ['images', 'targets']
 
         dim_c, dim_x, dim_y = train_set[0][0].size()

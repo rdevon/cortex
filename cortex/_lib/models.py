@@ -394,10 +394,13 @@ class ModelPluginBase(metaclass=PluginType):
                 inputs.append(value)
             return inputs
 
-        def wrapped(*args, auto_input=False, **kwargs):
-            kwargs_ = _fetch_kwargs(**kwargs)
+        def wrapped(*args, auto_input=False, **kwargs_):
+            kwargs = _fetch_kwargs(**kwargs_)
             for k, v in kwargs_.items():
-                if v is not None:
+                if isinstance(v, dict) and (k in kwargs and
+                                            isinstance(kwargs[k], dict)):
+                    kwargs[k].update(**v)
+                elif v is not None:
                     kwargs[k] = v
                 elif v is None and k not in kwargs:
                     kwargs[k] = v
