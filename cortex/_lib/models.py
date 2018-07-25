@@ -287,7 +287,7 @@ class ModelPluginBase(metaclass=PluginType):
             for k, v in help.items():
                 if k not in self.help:
                     self.help[k] = help[k]
-            model._kwargs = self._kwargs
+            model._set_kwargs(self._kwargs)
             model.name = key
 
             model._results = prefixed(
@@ -297,6 +297,11 @@ class ModelPluginBase(metaclass=PluginType):
             self._models.append(model)
 
         super().__setattr__(key, value)
+
+    def _set_kwargs(self, kwargs):
+        self._kwargs = kwargs
+        for model in self._models:
+            model._set_kwargs(kwargs)
 
     def _check_contract(self, contract):
         '''Checks the compatability of the contract.
@@ -404,7 +409,6 @@ class ModelPluginBase(metaclass=PluginType):
                     kwargs[k] = v
                 elif v is None and k not in kwargs:
                     kwargs[k] = v
-
             if auto_input:
                 args = _fetch_inputs()
             return fn(*args, **kwargs)
