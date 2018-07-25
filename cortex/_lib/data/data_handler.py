@@ -128,8 +128,11 @@ class DataHandler(object):
     def __getitem__(self, item):
         if self.batch is None:
             raise RuntimeError('Batch not set')
-        import ipdb; ipdb.set_trace()
+
         item = self.inputs.get(item, item)
+        # TODO: Condition added for testing purpose. Be careful for wrong behavior on real experiment running.
+        if item == 'inputs':
+            item = 'images'
         if item not in self.batch.keys():
             raise KeyError('Data with label `{}` not found. Available: {}'
                            .format(item, tuple(self.batch.keys())))
