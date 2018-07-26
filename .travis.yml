@@ -7,5 +7,5 @@ install:
   - "bash travis-output.sh"
   - "pip install flake8"
 script:
-  - "flake8 ."
+  - "flake8 --ignore=C901"
   - "pytest"

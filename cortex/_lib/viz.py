@@ -1,7 +1,6 @@
-'''Visualization.
-
-'''
-
+"""
+Visualization.
+"""
 import logging
 from os import path
 
@@ -14,6 +13,8 @@ from . import data, exp
 from .utils import convert_to_numpy, compute_tsne
 from .viz_utils import tile_raster_images
 import matplotlib
+import subprocess
+from cortex._lib.config import _yes_no
 
 matplotlib.use('Agg')
 from matplotlib import pylab as plt  # noqa E402
@@ -36,16 +37,30 @@ CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 
 
 def init(viz_config):
-    global visualizer, config_font
+    global visualizer, config_font, viz_process
     if viz_config is not None and ('server' in viz_config.keys() or
                                    'port' in viz_config.keys()):
         server = viz_config.get('server', None)
         port = viz_config.get('port', 8097)
         visualizer = visdom.Visdom(server=server, port=port)
-        logger.info('Using visdom server at {}({})'.format(server, port))
+        if not visualizer.check_connection():
+            if _yes_no("No Visdom server runnning on the configured address. "
+                       "Do you want to start it?"):
+                viz_bash_command = "python -m visdom.server"
+                viz_process = subprocess.Popen(viz_bash_command.split())
+                logger.info('Using visdom server at {}({})'.format(server, port))
+            else:
+                visualizer = None
     else:
-        visualizer = visdom.Visdom()
-        logger.info('Using local visdom server')
+        if _yes_no("Visdom configuration is not specified. Please run 'cortex setup' "
+                   "to configure Visdom server. Do you want to continue with "
+                   "the default address ? (localhost:8097)"):
+            viz_bash_command = "python -m visdom.server"
+            viz_process = subprocess.Popen(viz_bash_command.split())
+            visualizer = visdom.Visdom()
+            logger.info('Using local visdom server')
+        else:
+            visualizer = None
     config_font = viz_config.get('font')
 
 
@@ -251,7 +266,6 @@ def save_text(labels, max_samples=64, out_file=None, text_id=0,
 def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
                 max_samples=None, margin_x=5, margin_y=5, image_id=0,
                 caption='', title=''):
-
     if labels is not None:
         if isinstance(labels, (tuple, list)):
             labels = zip(*labels)

@@ -16,6 +16,7 @@ __author_email__ = 'erroneus@gmail.com'
 
 
 logger = logging.getLogger('cortex')
+viz_process = None
 
 
 def run(model=None):
@@ -57,3 +58,4 @@ def run(model=None):
         exit(0)
 
     train.main_loop(model, **exp.ARGS['train'])
+    viz_process.terminate()
