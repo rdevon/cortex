@@ -189,7 +189,7 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
     best = None
 
     try:
-        # TODO: Condition added for testing purposes. Be careful for wrong behavior on real experiment running.
+        # TODO: Condition added for testing purposes.
         if not isinstance(epochs, int):
             epochs = epochs['epochs']
         for e in range(epochs):

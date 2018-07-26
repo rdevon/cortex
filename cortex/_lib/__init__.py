@@ -90,4 +90,3 @@ def setup_experiment(args, model=None):
                     .format(k, pprint.pformat(v)))
 
     return model
-

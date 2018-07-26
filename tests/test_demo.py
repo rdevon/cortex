@@ -1,9 +1,8 @@
 from cortex.built_ins.models.classifier import ImageClassification
-from cortex._lib import (config, data, optimizer, setup_experiment, train, setup_cortex, exp)
+from cortex._lib import (config, data, optimizer, setup_experiment, train, exp)
 from cortex._lib.utils import print_section
 from torch.nn import CrossEntropyLoss
 from argparse import Namespace
-import torch
 
 args = Namespace(
     classifier_args={'dropout': 0.2},
@@ -46,7 +45,6 @@ args = Namespace(
         'train.test_mode': 'test',
         'train.train_mode': 'train'
     })
-
 args_data = {
     'source': 'CIFAR10',
     'batch_size': 128,
@@ -60,7 +58,7 @@ args_data = {
     'shuffle': True
 }
 args_train = {
-    'epochs': 1,
+    'epochs': 0,
     'archive_every': 10,
     'quit_on_bad_values': True,
     'save_on_best': 'losses.classifier',
@@ -71,7 +69,6 @@ args_train = {
     'test_mode': 'test',
     'eval_only': False
 }
-
 args_optimizer = {
     'optimizer': 'Adam',
     'learning_rate': 0.001,
@@ -81,9 +78,9 @@ args_optimizer = {
     'model_optimizer_options': {}
 }
 
-def test_argparsing():
+
+def test_experiment():
     model = ImageClassification()
-    print(model.defaults)
     # args = setup_cortex(model=model)
     config.set_config()
     print_section('EXPERIMENT')

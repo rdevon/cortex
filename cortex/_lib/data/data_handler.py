@@ -130,7 +130,7 @@ class DataHandler(object):
             raise RuntimeError('Batch not set')
 
         item = self.inputs.get(item, item)
-        # TODO: Condition added for testing purpose. Be careful for wrong behavior on real experiment running.
+        # TODO: Condition added for testing purpose.
         if item == 'inputs':
             item = 'images'
         if item not in self.batch.keys():
