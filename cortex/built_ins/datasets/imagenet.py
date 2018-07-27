@@ -35,7 +35,7 @@ class ImageFolder(DatasetPlugin):
 
         train_set = Dataset(root=train_path, transform=train_transform)
         test_set = Dataset(root=test_path, transform=test_transform)
-        input_names = ['images', 'targets']
+        input_names = ['images', 'targets', 'index']
 
         dim_c, dim_x, dim_y = train_set[0][0].size()
         dim_l = len(train_set.classes)
