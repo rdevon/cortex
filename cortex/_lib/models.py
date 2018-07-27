@@ -6,7 +6,7 @@ import copy
 import logging
 import time
 
-from . import data, optimizer
+from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_inputs, parse_kwargs
 from .handlers import (aliased, prefixed, NetworkHandler, LossHandler,
                        ResultsHandler)
@@ -527,13 +527,13 @@ class ModelPluginBase(metaclass=PluginType):
         data_mode = 'train' if train else 'test'
 
         if train:
-            epoch_str = 'Training (epoch {}): '
+            epoch_str = 'Training {} (epoch {}): '
         else:
-            epoch_str = 'Evaluating (epoch {}): '
+            epoch_str = 'Evaluating {} (epoch {}): '
 
         def wrapped(epoch, data_mode=data_mode):
             self._reset_epoch()
-            self.data.reset(data_mode, string=epoch_str.format(epoch))
+            self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch))
             fn()
 
             results = self._all_epoch_results
