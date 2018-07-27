@@ -188,8 +188,8 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
         exit(0)
     best = None
 
-    try:
-        for e in range(epochs):
+    for e in range(epochs):
+        try:
             epoch = exp.INFO['epoch']
 
             start_time = time.time()
@@ -249,29 +249,29 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
 
             exp.INFO['epoch'] += 1
 
-    except KeyboardInterrupt:
-        kill = False
-        while True:
-            try:
-                response = input('Keyboard interrupt. Kill? (Y/N) '
-                                 '(or ^c again)')
-            except KeyboardInterrupt:
-                kill = True
-                break
-            response = response.lower()
-            if response == 'y':
-                kill = True
-                break
-            elif response == 'n':
-                print('Cancelling interrupt. Starting epoch over.')
-                break
-            else:
-                print('Unknown response')
+        except KeyboardInterrupt:
+            def stop_training_query():
+                while True:
+                    try:
+                        response = input('Keyboard interrupt. Kill? (Y/N) '
+                                         '(or ^c again)')
+                    except KeyboardInterrupt:
+                        return True
+                    response = response.lower()
+                    if response == 'y':
+                        return True
+                    elif response == 'n':
+                        print('Cancelling interrupt. Starting epoch over.')
+                        return False
+                    else:
+                        print('Unknown response')
 
-        if kill:
-            print('Training interrupted')
-            exp.save(model, prefix='interrupted')
-            sys.exit(0)
+            kill = stop_training_query()
+
+            if kill:
+                print('Training interrupted')
+                exp.save(model, prefix='interrupted')
+                sys.exit(0)
 
     logger.info('Successfully completed training')
     exp.save(model, prefix='final')

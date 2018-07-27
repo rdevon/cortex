@@ -68,7 +68,7 @@ class SimpleClassifier(ModelPlugin):
                        name='gt_pred')
 
 
-class SimpleAttributeClassifier(ModelPlugin):
+class SimpleAttributeClassifier(SimpleClassifier):
     '''Build a simple feed-forward classifier.
 
         '''
@@ -92,33 +92,37 @@ class SimpleAttributeClassifier(ModelPlugin):
         classifier = FullyConnectedNet(dim_in, dim_out=dim_a, **classifier_args)
         self.nets.classifier = classifier
 
-    def routine(self, inputs, targets, criterion=nn.CrossEntropyLoss()):
+    def routine(self, inputs, attributes, criterion=nn.CrossEntropyLoss()):
         '''
 
         Args:
             criterion: Classifier criterion.
 
         '''
-
         classifier = self.nets.classifier
 
-        outputs = classifier(inputs)
-        predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
-
-        loss = criterion(outputs, targets)
-        correct = 100. * predicted.eq(
-            targets.data).cpu().sum() / targets.size(0)
+        outputs = classifier(inputs, nonlinearity='sigmoid')
+        predicted = (outputs.data >= 0.5).float()
+        loss = F.binary_cross_entropy(outputs, attributes)
+        correct = 100. * predicted.eq(attributes.data).cpu().sum(0) / attributes.size(0)
 
         self.losses.classifier = loss
-        self.results.accuracy = correct
+        self.results.accuracy = correct.float().mean()
 
     def predict(self, inputs):
         classifier = self.nets.classifier
 
         outputs = classifier(inputs)
-        predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
+        predicted = (F.sigmoid(outputs).data >= 0.5).float()
 
         return predicted
+
+    def visualize(self, images, inputs, attributes):
+        predicted = self.predict(inputs)
+        correct = 100. * predicted.eq(attributes.data).cpu()
+        self.add_image(images.data, labels=(attributes.data, predicted.data),
+                       name='gt_pred')
+        #self.add_histogram(correct, name='Correct')
 
 
 class ImageClassification(SimpleClassifier):
@@ -159,4 +163,43 @@ class ImageClassification(SimpleClassifier):
         self.nets.classifier = classifier
 
 
+class ImageAttributeClassification(SimpleAttributeClassifier):
+    '''Basic image classifier.
+
+    Classifies images using standard convnets.
+
+    '''
+
+    defaults = dict(
+        data=dict(batch_size=128, inputs=dict(inputs='images')),
+        optimizer=dict(optimizer='Adam', learning_rate=1e-3),
+        train=dict(epochs=200, save_on_best='losses.classifier'))
+
+    def build(self, classifier_type='convnet',
+              classifier_args=dict(dropout=0.2), Encoder=None):
+        '''Builds a simple image classifier.
+
+        Args:
+            classifier_type (str): Network type for the classifier.
+            classifier_args: Classifier arguments. Can include dropout,
+            batch_norm, layer_norm, etc.
+
+        '''
+
+        classifier_args = classifier_args or {}
+
+        shape = self.get_dims('x', 'y', 'c')
+        dim_a = self.get_dims('attributes')
+
+        Encoder_, args = update_encoder_args(
+            shape, model_type=classifier_type, encoder_args=classifier_args)
+        Encoder = Encoder or Encoder_
+
+        args.update(**classifier_args)
+
+        classifier = Encoder(shape, dim_out=dim_a, **args)
+        self.nets.classifier = classifier
+
+
 register_plugin(ImageClassification)
+register_plugin(ImageAttributeClassification)

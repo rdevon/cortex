@@ -46,7 +46,7 @@ class CelebAPlugin(DatasetPlugin):
         else:
             train_set, test_set = self.make_split(data_path, split, Dataset,
                                                   transform)
-        input_names = ['images', 'attributes']
+        input_names = ['images', 'labels', 'attributes']
 
         dim_c, dim_x, dim_y = train_set[0][0].size()
         dim_l = len(train_set.classes)
@@ -105,7 +105,7 @@ class CelebA(torchvision.datasets.ImageFolder):
             elif i == 1:
                 self.attribute_names = line
             else:
-                attr = (np.array(line[1:]).astype('int8') + 1) / 2
+                attr = ((np.array(line[1:]).astype('int8') + 1) / 2).astype('float32')
                 self.attributes.append(attr)
 
         super(CelebA, self).__init__(root, transform, target_transform)
