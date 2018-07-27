@@ -19,8 +19,8 @@ class AE(ModelPlugin):
         self.decoder = ImageDecoder()
 
     def build(self, dim_z=64, dim_encoder_out=64):
-        self.encoder.build(dim_encoder_out)
-        self.decoder.build(dim_z)
+        self.encoder.build(dim_out=dim_encoder_out)
+        self.decoder.build(dim_in=dim_z)
         encoder = self.nets.encoder
         decoder = self.nets.decoder
         ae = AENetwork(encoder, decoder)
