@@ -11,7 +11,7 @@ from cortex.built_ins.datasets.utils import build_transforms
 
 
 class ImageFolder(DatasetPlugin):
-    sources = ['tiny-imagenet-200']
+    sources = ['tiny-imagenet-200', 'imagenet']
 
     def handle(self, source, copy_to_local=False, normalize=True,
                **transform_args):
