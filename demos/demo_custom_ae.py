@@ -3,6 +3,7 @@ from cortex.main import run
 import torch.nn.functional as F
 from torch import nn
 
+
 class Autoencoder(nn.Module):
     def __init__(self, encoder, decoder):
         super(Autoencoder, self).__init__()
