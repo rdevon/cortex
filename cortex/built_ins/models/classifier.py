@@ -113,7 +113,9 @@ class SimpleAttributeClassifier(SimpleClassifier):
         correct = 100. * predicted.eq(attributes.data).cpu().sum(0) / attributes.size(0)
 
         self.losses.classifier = loss
-        self.results.accuracy = correct.float().mean()
+        self.results.accuracy = dict(mean=correct.float().mean(),
+                                     max=correct.max(),
+                                     min=correct.min())
 
     def predict(self, inputs):
         classifier = self.nets.classifier
@@ -126,8 +128,8 @@ class SimpleAttributeClassifier(SimpleClassifier):
     def visualize(self, images, inputs, attributes):
         predicted = self.predict(inputs)
         correct = 100. * predicted.eq(attributes.data).cpu()
-        self.add_image(images.data, labels=(attributes.data, predicted.data),
-                       name='gt_pred')
+        #self.add_image(images.data, labels=(attributes.data, predicted.data),
+        #               name='gt_pred')
         #self.add_histogram(correct, name='Correct')
 
 
