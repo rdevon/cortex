@@ -64,7 +64,7 @@ class CelebAPlugin(DatasetPlugin):
     def make_split(self, data_path, split, Dataset, transform):
         train_set = Dataset(root=data_path, transform=transform,
                             download=True, split=split)
-        test_set = Dataset(root=data_path, transform=transform, split=1-split)
+        test_set = Dataset(root=data_path, transform=transform, split=split-1)
         return train_set, test_set
 
 
