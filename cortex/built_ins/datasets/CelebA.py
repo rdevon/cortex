@@ -109,7 +109,6 @@ class CelebA(torchvision.datasets.ImageFolder):
                 self.attributes.append(attr)
 
         super(CelebA, self).__init__(root, transform, target_transform)
-
         if split:
             if split > 0:
                 self.imgs = self.imgs[:int(split * len(self))]
@@ -119,6 +118,9 @@ class CelebA(torchvision.datasets.ImageFolder):
                 self.imgs = self.imgs[int(split * len(self)) - 1:]
                 self.attributes = self.attributes[
                                   int(split * len(self.attributes)) - 1:]
+
+    def __len__(self):
+        return len(self.imgs)
 
     def download(self):
         """
