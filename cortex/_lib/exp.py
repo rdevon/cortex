@@ -9,8 +9,8 @@ import os
 from os import path
 from shutil import copyfile, rmtree
 import yaml
-
 import torch
+import re
 
 from .log_utils import set_file_logger
 from .parsing import update_args
@@ -91,6 +91,7 @@ def reload(model, exp_file, reloads, name, out_path, clean, config):
 
 def save(model, prefix=''):
     prefix = _file_string(prefix)
+    prefix = re.sub(r'\([^)]*\)', '', prefix)
     binary_dir = OUT_DIRS.get('binary_dir', None)
     if binary_dir is None:
         return
