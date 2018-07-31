@@ -37,15 +37,13 @@ These are as follows:
 -  vis: visdom specific arguments.
 -  | out\_path: Out path for experiment outputs
 
-Configuration
-~~~~~~~~~~~~~
 
 Usage
 '''''
 
    cortex --help
 
-Arguments
+Built-ins
 '''''''''
 
 :setup:
@@ -91,3 +89,22 @@ To run an experiment.
 ::
 
     cortex GAN --d.source CIFAR10 --d.copy_to_local
+
+Custom models
+'''''''''''''
+
+It is possible to run experiments with custom models made with Pytorch under the Cortex framework. For doing so, the model has to
+be added to the demos folder under the root of the project. You can have a look to the given demo autoencoder and classifier already
+implemented. The main difference is that, rather than registering the plugins, the run function of main.py has to be called. For example,
+
+::
+
+    if __name__ == '__main__':
+    classifier = MyClassifier()
+    run(model=classifier)
+
+To run an experiment with a custom model.
+
+::
+
+    python my_model.py --d.source <Dataset> --d.copy_to_local
