@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 import torchvision
+from torchvision.transforms import transforms
 
 from cortex.plugins import DatasetPlugin, register_plugin
 from .utils import build_transforms
@@ -49,6 +50,32 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             data_path,
             split='test',
             transform=transform,
+            download=True)
+        return train_set, test_set
+
+    def _handle_STL(self, Dataset, data_path, transform=None):
+        normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(64),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        test_transform = transforms.Compose([
+            transforms.Resize(64),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_set = Dataset(
+            data_path,
+            split='train+unlabeled',
+            transform=train_transform,
+            download=True
+        )
+        test_set = Dataset(
+            data_path,
+            split='test',
+            transform=test_transform,
             download=True)
         return train_set, test_set
 
@@ -98,6 +125,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             handler = self._handle_LSUN
         elif source == 'SVHN':
             handler = self._handle_SVHN
+        elif source == 'STL10':
+            handler = self._handle_STL
         else:
             handler = self._handle
 
@@ -109,15 +138,19 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             test_set.test_data = test_set.test_data[:test_samples]
             test_set.test_labels = test_set.test_labels[:test_samples]
 
-        if source == 'SVHN':
-            dim_c, dim_x, dim_y = train_set.data.shape[1:]
-            dim_l = len(np.unique(train_set.labels))
-
+        if source in ('SVHN', 'STL10'):
+            dim_c, dim_x, dim_y = train_set[0][0].size()
+            uniques = np.unique(train_set.labels).tolist()
+            try:
+                uniques.remove(-1)
+            except ValueError:
+                pass
+            dim_l = len(uniques)
         else:
             if len(train_set.train_data.shape) == 4:
-                dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
+                dim_c, dim_x, dim_y = train_set[0][0].size()
             else:
-                dim_x, dim_y = tuple(train_set.train_data.shape)[1:]
+                dim_x, dim_y = train_set[0][0].size()
                 dim_c = 1
 
             labels = train_set.train_labels

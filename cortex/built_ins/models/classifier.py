@@ -34,25 +34,31 @@ class SimpleClassifier(ModelPlugin):
         classifier = FullyConnectedNet(dim_in, dim_out=dim_l, **classifier_args)
         self.nets.classifier = classifier
 
-    def routine(self, inputs, targets, criterion=nn.CrossEntropyLoss()):
+    def routine(self, inputs, targets,
+                criterion=nn.CrossEntropyLoss(reduce=False)):
         '''
 
         Args:
             criterion: Classifier criterion.
 
         '''
-
         classifier = self.nets.classifier
 
         outputs = classifier(inputs)
         predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
 
-        loss = criterion(outputs, targets)
-        correct = 100. * predicted.eq(
-            targets.data).cpu().sum() / targets.size(0)
+        unlabeled = targets.eq(-1).long()
+        losses = criterion(outputs, (1 - unlabeled) * targets)
+        labeled = 1. - unlabeled.float()
+        loss = (losses * labeled).sum() / labeled.sum()
 
-        self.losses.classifier = loss
-        self.results.accuracy = correct
+        if labeled.sum() > 0:
+            correct = 100. * (labeled * predicted.eq(
+                targets.data).float()).cpu().sum() / labeled.cpu().sum()
+            self.results.accuracy = correct
+            self.losses.classifier = loss
+
+        self.results.perc_labeled = labeled.mean()
 
     def predict(self, inputs):
         classifier = self.nets.classifier

@@ -48,8 +48,9 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
         for source in sources:
             plugin = _PLUGINS.get(source, None)
             if plugin is None:
-                raise KeyError('Dataset plugin for `{}` not found'
-                               .format(source))
+                raise KeyError('Dataset plugin for `{}` not found.'
+                               ' Available: {}'
+                               .format(source, tuple(_PLUGINS.keys())))
 
             plugin.handle(source, copy_to_local=copy_to_local, **data_args)
             DATA_HANDLER.add_dataset(source, plugin, n_workers=n_workers,
