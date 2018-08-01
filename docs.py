@@ -13,7 +13,7 @@ for filename in files_after_generation:
 folders = [folder for folder in os.listdir('./docs/html') if os.path.isdir(os.path.join('./docs/html', folder))]
 folders_to_remove = []
 for folder in folders:
-    if folder[0] == "_":
+    if folder[0] != "_":
         folders_to_remove.append(folder)
 for folder_to_remove in folders_to_remove:
     folder_to_remove = "./docs/html/" + folder_to_remove
