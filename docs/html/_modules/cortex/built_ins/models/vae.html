@@ -148,12 +148,11 @@
 <span></span><span class="sd">&#39;&#39;&#39;Simple Variational Autoencoder model.</span>
 <span class="sd">&#39;&#39;&#39;</span>
 
-<span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">ModelPlugin</span>
+<span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">ModelPlugin</span><span class="p">,</span> <span class="n">register_plugin</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
-<span class="kn">from</span> <span class="nn">cortex.main</span> <span class="k">import</span> <span class="n">run</span>
 <span class="kn">from</span> <span class="nn">cortex.built_ins.models.utils</span> <span class="k">import</span> <span class="n">update_encoder_args</span><span class="p">,</span> <span class="n">update_decoder_args</span><span class="p">,</span> <span class="n">ms_ssim</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;R Devon Hjelm and Samuel Lavoie&#39;</span>
@@ -186,8 +185,8 @@
 
 <div class="viewcode-block" id="VAENetwork.reparametrize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAENetwork.reparametrize">[docs]</a>    <span class="k">def</span> <span class="nf">reparametrize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">std</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training</span><span class="p">:</span>
-            <span class="n">esp</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">std</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">std</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">.</span><span class="n">normal_</span><span class="p">(),</span>
-                           <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="n">esp</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span>
+                <span class="n">std</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">std</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">.</span><span class="n">normal_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">std</span> <span class="o">*</span> <span class="n">esp</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">mu</span></div>
@@ -206,8 +205,8 @@
 
 <span class="sd">    &#39;&#39;&#39;</span>
 
-<div class="viewcode-block" id="ImageEncoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageEncoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;convnet&#39;</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-              <span class="n">encoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">fully_connected_layers</span><span class="o">=</span><span class="mi">1028</span><span class="p">)):</span>
+<div class="viewcode-block" id="ImageEncoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageEncoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder_type</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;convnet&#39;</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">encoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">fully_connected_layers</span><span class="o">=</span><span class="mi">1024</span><span class="p">)):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 
 <span class="sd">        Args:</span>
@@ -217,9 +216,8 @@
 
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="n">Encoder</span><span class="p">,</span> <span class="n">encoder_args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span>
-                                                    <span class="n">model_type</span><span class="o">=</span><span class="n">encoder_type</span><span class="p">,</span>
-                                                    <span class="n">encoder_args</span><span class="o">=</span><span class="n">encoder_args</span><span class="p">)</span>
+        <span class="n">Encoder</span><span class="p">,</span> <span class="n">encoder_args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span>
+            <span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">encoder_type</span><span class="p">,</span> <span class="n">encoder_args</span><span class="o">=</span><span class="n">encoder_args</span><span class="p">)</span>
         <span class="n">encoder</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_out</span><span class="p">,</span> <span class="o">**</span><span class="n">encoder_args</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">encoder</span></div>
 
@@ -238,7 +236,9 @@
 
 <span class="sd">    &#39;&#39;&#39;</span>
 
-<div class="viewcode-block" id="ImageDecoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageDecoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">decoder_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;convnet&#39;</span><span class="p">,</span> <span class="n">dim_in</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+<div class="viewcode-block" id="ImageDecoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageDecoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+              <span class="n">decoder_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;convnet&#39;</span><span class="p">,</span>
+              <span class="n">dim_in</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
               <span class="n">decoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">output_nonlinearity</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">)):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 
@@ -249,9 +249,8 @@
 
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="n">Decoder</span><span class="p">,</span> <span class="n">decoder_args</span> <span class="o">=</span> <span class="n">update_decoder_args</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span>
-                                                    <span class="n">model_type</span><span class="o">=</span><span class="n">decoder_type</span><span class="p">,</span>
-                                                    <span class="n">decoder_args</span><span class="o">=</span><span class="n">decoder_args</span><span class="p">)</span>
+        <span class="n">Decoder</span><span class="p">,</span> <span class="n">decoder_args</span> <span class="o">=</span> <span class="n">update_decoder_args</span><span class="p">(</span>
+            <span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">decoder_type</span><span class="p">,</span> <span class="n">decoder_args</span><span class="o">=</span><span class="n">decoder_args</span><span class="p">)</span>
         <span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="n">dim_in</span><span class="p">,</span> <span class="o">**</span><span class="n">decoder_args</span><span class="p">)</span>
         <span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="n">dim_in</span><span class="p">,</span> <span class="o">**</span><span class="n">decoder_args</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder</span></div>
@@ -287,24 +286,21 @@
 <span class="sd">    &quot;Auto-encoding variational bayes.&quot; arXiv preprint arXiv:1312.6114 (2013).</span>
 
 <span class="sd">    &#39;&#39;&#39;</span>
-    <span class="n">plugin_name</span> <span class="o">=</span> <span class="s1">&#39;VAE&#39;</span>
 
     <span class="n">defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
-        <span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">train</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="mi">640</span><span class="p">),</span>
-                  <span class="n">inputs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="s1">&#39;images&#39;</span><span class="p">)),</span>
+        <span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">train</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="mi">640</span><span class="p">),</span> <span class="n">inputs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="s1">&#39;images&#39;</span><span class="p">)),</span>
         <span class="n">optimizer</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">),</span>
-        <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">save_on_lowest</span><span class="o">=</span><span class="s1">&#39;losses.vae&#39;</span><span class="p">)</span>
-    <span class="p">)</span>
+        <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">save_on_lowest</span><span class="o">=</span><span class="s1">&#39;losses.vae&#39;</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
-        <span class="n">encoder_contract</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_out</span><span class="o">=</span><span class="s1">&#39;dim_encoder_out&#39;</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">ImageEncoder</span><span class="p">(</span><span class="n">contract</span><span class="o">=</span><span class="n">encoder_contract</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">ImageEncoder</span><span class="p">()</span>
         <span class="n">decoder_contract</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_in</span><span class="o">=</span><span class="s1">&#39;dim_z&#39;</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">ImageDecoder</span><span class="p">(</span><span class="n">contract</span><span class="o">=</span><span class="n">decoder_contract</span><span class="p">)</span>
 
-<div class="viewcode-block" id="VAE.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAE.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">dim_encoder_out</span><span class="o">=</span><span class="mi">1028</span><span class="p">):</span>
+<div class="viewcode-block" id="VAE.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAE.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">dim_encoder_out</span><span class="o">=</span><span class="mi">1024</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 
 <span class="sd">        Args:</span>
@@ -319,8 +315,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">add_noise</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="s1">&#39;normal&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
         <span class="n">encoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span>
         <span class="n">decoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span>
-        <span class="n">vae</span> <span class="o">=</span> <span class="n">VAENetwork</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">decoder</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_encoder_out</span><span class="p">,</span>
-                         <span class="n">dim_z</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
+        <span class="n">vae</span> <span class="o">=</span> <span class="n">VAENetwork</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">decoder</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_encoder_out</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">vae</span> <span class="o">=</span> <span class="n">vae</span></div>
 
 <div class="viewcode-block" id="VAE.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.vae.VAE.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">vae_criterion</span><span class="o">=</span><span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">,</span>
@@ -338,8 +333,8 @@
 
         <span class="n">r_loss</span> <span class="o">=</span> <span class="n">vae_criterion</span><span class="p">(</span>
             <span class="n">outputs</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">size_average</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">kl</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">vae</span><span class="o">.</span><span class="n">std</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">vae</span><span class="o">.</span><span class="n">mu</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="mf">2.</span> <span class="o">*</span>
-                     <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">vae</span><span class="o">.</span><span class="n">std</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+        <span class="n">kl</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">vae</span><span class="o">.</span><span class="n">std</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">vae</span><span class="o">.</span><span class="n">mu</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">vae</span><span class="o">.</span><span class="n">std</span><span class="p">)</span> <span class="o">-</span>
+                     <span class="mf">1.</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
 
         <span class="n">msssim</span> <span class="o">=</span> <span class="n">ms_ssim</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">)</span>
 
@@ -357,9 +352,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">vae</span><span class="o">.</span><span class="n">mu</span><span class="o">.</span><span class="n">data</span><span class="p">)</span></div></div>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="n">classifier</span> <span class="o">=</span> <span class="n">VAE</span><span class="p">()</span>
-    <span class="n">run</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">classifier</span><span class="p">)</span>
+<span class="n">register_plugin</span><span class="p">(</span><span class="n">VAE</span><span class="p">)</span>
 </pre></div>
 
            </div>

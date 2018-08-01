@@ -89,7 +89,6 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cortex.html#cortex-config-module">cortex.config module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex.main">cortex.main module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex.plugins">cortex.plugins module</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex">Module contents</a></li>
@@ -183,7 +182,8 @@
 <dl class="method">
 <dt id="cortex.built_ins.datasets.CelebA.CelebA.download">
 <code class="descname">download</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebA.download"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebA.download" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns:</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.CelebA.CelebA.filename">
@@ -204,7 +204,22 @@
 <dl class="method">
 <dt id="cortex.built_ins.datasets.CelebA.CelebAPlugin.handle">
 <code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebAPlugin.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebAPlugin.handle" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>source</strong> – </li>
+<li><strong>copy_to_local</strong> – </li>
+<li><strong>normalize</strong> – </li>
+<li><strong>**transform_args</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.CelebA.CelebAPlugin.sources">
@@ -227,7 +242,22 @@
 <dl class="method">
 <dt id="cortex.built_ins.datasets.imagenet.ImageFolder.handle">
 <code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/imagenet.html#ImageFolder.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.imagenet.ImageFolder.handle" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>source</strong> – </li>
+<li><strong>copy_to_local</strong> – </li>
+<li><strong>normalize</strong> – </li>
+<li><strong>**transform_args</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.imagenet.ImageFolder.sources">
@@ -310,19 +340,50 @@ files corresponding to class 0 and class 1 respectively</div></blockquote>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.nii_dataload.ImageFolder.maskData">
 <code class="descname">maskData</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/nii_dataload.html#ImageFolder.maskData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.nii_dataload.ImageFolder.maskData" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> – </td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 </dd></dl>
 
 <dl class="function">
 <dt id="cortex.built_ins.datasets.nii_dataload.make_dataset">
 <code class="descclassname">cortex.built_ins.datasets.nii_dataload.</code><code class="descname">make_dataset</code><span class="sig-paren">(</span><em>dir</em>, <em>patterns=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/nii_dataload.html#make_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.nii_dataload.make_dataset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dir</strong> – </li>
+<li><strong>patterns</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 <dl class="function">
 <dt id="cortex.built_ins.datasets.nii_dataload.nii_loader">
 <code class="descclassname">cortex.built_ins.datasets.nii_dataload.</code><code class="descname">nii_loader</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/nii_dataload.html#nii_loader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.nii_dataload.nii_loader" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> – </td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 </div>
 <div class="section" id="module-cortex.built_ins.datasets.torchvision_datasets">
@@ -335,7 +396,22 @@ files corresponding to class 0 and class 1 respectively</div></blockquote>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.handle">
 <code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/torchvision_datasets.html#TorchvisionDatasetPlugin.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.handle" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>source</strong> – </li>
+<li><strong>copy_to_local</strong> – </li>
+<li><strong>normalize</strong> – </li>
+<li><strong>**transform_args</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.sources">
@@ -381,12 +457,22 @@ Research Report A-2002-6</p>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.A_set.check_exists">
 <code class="descname">check_exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#A_set.check_exists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.A_set.check_exists" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns:</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.A_set.files">
 <code class="descname">files</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#A_set.files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.A_set.files" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num</strong> – </td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.toysets.A_set.sync_files">
@@ -465,12 +551,22 @@ IEEE Trans. on Pattern Analysis and Machine Intelligence, 28 (11),
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.DIM_set.check_exists">
 <code class="descname">check_exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#DIM_set.check_exists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.DIM_set.check_exists" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns:</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.DIM_set.files">
 <code class="descname">files</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#DIM_set.files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.DIM_set.files" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dim</strong> – </td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.toysets.DIM_set.sync_files">
@@ -538,12 +634,16 @@ Recognition Merida, Mexico, LNCS 10029, 207-217, November 2016.</p>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.G2.check_exists">
 <code class="descname">check_exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#G2.check_exists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.G2.check_exists" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns:</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.G2.prepare">
 <code class="descname">prepare</code><span class="sig-paren">(</span><em>dim</em>, <em>sd</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#G2.prepare"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.G2.prepare" title="Permalink to this definition">¶</a></dt>
-<dd><p>Make torch Tensors from g2-<cite>dim</cite>-<cite>sd</cite> and infer labels.</p>
+<dd><p>Make torch Tensors from g2-<cite>dim</cite>-<cite>sd</cite> and infer labels.
+:param dim:
+:param sd:</p>
+<p>Returns:</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -619,12 +719,15 @@ Pattern Recognition, 39 (5), 761-765, May 2006.</p>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.S_set.check_exists">
 <code class="descname">check_exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#S_set.check_exists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.S_set.check_exists" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns:</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.S_set.files">
 <code class="descname">files</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#S_set.files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.S_set.files" title="Permalink to this definition">¶</a></dt>
-<dd><p>Make torch Tensors from ‘s{num}.txt’ and fetch labels.</p>
+<dd><p>Make torch Tensors from ‘s{num}.txt’ and fetch labels.
+:param num:</p>
+<p>Returns:</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -670,12 +773,14 @@ August 2016.</p>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.Unbalance.check_exists">
 <code class="descname">check_exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#Unbalance.check_exists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.Unbalance.check_exists" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns:</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="cortex.built_ins.datasets.toysets.Unbalance.files">
 <code class="descname">files</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/toysets.html#Unbalance.files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.toysets.Unbalance.files" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns:</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.toysets.Unbalance.sync_files">
@@ -713,7 +818,26 @@ August 2016.</p>
 <dl class="function">
 <dt id="cortex.built_ins.datasets.utils.build_transforms">
 <code class="descclassname">cortex.built_ins.datasets.utils.</code><code class="descname">build_transforms</code><span class="sig-paren">(</span><em>normalize=True</em>, <em>center_crop=None</em>, <em>image_size=None</em>, <em>random_crop=None</em>, <em>flip=None</em>, <em>random_resize_crop=None</em>, <em>random_sized_crop=None</em>, <em>use_sobel=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/utils.html#build_transforms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.utils.build_transforms" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>normalize</strong> – </li>
+<li><strong>center_crop</strong> – </li>
+<li><strong>image_size</strong> – </li>
+<li><strong>random_crop</strong> – </li>
+<li><strong>flip</strong> – </li>
+<li><strong>random_resize_crop</strong> – </li>
+<li><strong>random_sized_crop</strong> – </li>
+<li><strong>use_sobel</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Returns:</p>
+</dd></dl>
 
 </div>
 <div class="section" id="module-cortex.built_ins.datasets">

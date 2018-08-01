@@ -11,14 +11,6 @@ Subpackages
 Submodules
 ----------
 
-cortex.config module
---------------------
-
-.. automodule:: cortex.config
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 cortex.main module
 ------------------
 

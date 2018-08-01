@@ -12,6 +12,14 @@ cortex.built\_ins.models.adversarial\_autoencoder module
     :undoc-members:
     :show-inheritance:
 
+cortex.built\_ins.models.ae module
+----------------------------------
+
+.. automodule:: cortex.built_ins.models.ae
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 cortex.built\_ins.models.ali module
 -----------------------------------
 
@@ -40,6 +48,14 @@ cortex.built\_ins.models.gan module
 -----------------------------------
 
 .. automodule:: cortex.built_ins.models.gan
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+cortex.built\_ins.models.image\_coders module
+---------------------------------------------
+
+.. automodule:: cortex.built_ins.models.image_coders
     :members:
     :undoc-members:
     :show-inheritance:

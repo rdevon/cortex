@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>cortex.built_ins.networks.fully_connected &mdash; Cortex2.0  documentation</title>
+  <title>cortex.built_ins.networks.ae_network &mdash; Cortex2.0  documentation</title>
   
 
   
@@ -129,7 +129,7 @@
         
           <li><a href="../../../index.html">Module code</a> &raquo;</li>
         
-      <li>cortex.built_ins.networks.fully_connected</li>
+      <li>cortex.built_ins.networks.ae_network</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -144,33 +144,20 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <h1>Source code for cortex.built_ins.networks.fully_connected</h1><div class="highlight"><pre>
-<span></span><span class="sd">&#39;&#39;&#39;Simple dense network encoders</span>
-
-<span class="sd">&#39;&#39;&#39;</span>
-
-<span class="kn">import</span> <span class="nn">logging</span>
-
-<span class="kn">from</span> <span class="nn">.base_network</span> <span class="k">import</span> <span class="n">BaseNet</span>
+  <h1>Source code for cortex.built_ins.networks.ae_network</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;cortex.arch&#39;</span> <span class="o">+</span> <span class="vm">__name__</span><span class="p">)</span>
+<div class="viewcode-block" id="AENetwork"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.ae_network.AENetwork">[docs]</a><span class="k">class</span> <span class="nc">AENetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="n">decoder</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AENetwork</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder</span>
 
-
-<div class="viewcode-block" id="FullyConnectedNet"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.fully_connected.FullyConnectedNet">[docs]</a><span class="k">class</span> <span class="nc">FullyConnectedNet</span><span class="p">(</span><span class="n">BaseNet</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">dim_ex</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;ReLU&#39;</span><span class="p">,</span> <span class="n">n_levels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="o">**</span><span class="n">layer_args</span><span class="p">):</span>
-
-        <span class="nb">super</span><span class="p">(</span><span class="n">FullyConnectedNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="n">output_nonlinearity</span><span class="p">)</span>
-
-        <span class="n">dim_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_h</span><span class="p">(</span><span class="n">dim_h</span><span class="p">,</span> <span class="n">n_levels</span><span class="o">=</span><span class="n">n_levels</span><span class="p">)</span>
-
-        <span class="n">dim_in</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_linear_layers</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_h</span><span class="p">,</span> <span class="n">dim_ex</span><span class="o">=</span><span class="n">dim_ex</span><span class="p">,</span>
-                                        <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">add_output_layer</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">)</span></div>
+<div class="viewcode-block" id="AENetwork.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.ae_network.AENetwork.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">encoded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">decoded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">decoded</span></div></div>
 </pre></div>
 
            </div>

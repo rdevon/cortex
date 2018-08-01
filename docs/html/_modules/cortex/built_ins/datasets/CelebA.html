@@ -145,10 +145,9 @@
            <div itemprop="articleBody">
             
   <h1>Source code for cortex.built_ins.datasets.CelebA</h1><div class="highlight"><pre>
-<span></span><span class="sd">&#39;&#39;&#39;Handler for CelebA.</span>
-
-<span class="sd">&#39;&#39;&#39;</span>
-
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Handler for CelebA.</span>
+<span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os</span>
 
 <span class="kn">import</span> <span class="nn">torchvision</span>
@@ -162,6 +161,17 @@
 
 <div class="viewcode-block" id="CelebAPlugin.handle"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebAPlugin.handle">[docs]</a>    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">copy_to_local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            source:</span>
+<span class="sd">            copy_to_local:</span>
+<span class="sd">            normalize:</span>
+<span class="sd">            **transform_args:</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">Dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_indexing</span><span class="p">(</span><span class="n">CelebA</span><span class="p">)</span>
         <span class="n">data_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
 
@@ -194,6 +204,7 @@
 
 
 <div class="viewcode-block" id="CelebA"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebA">[docs]</a><span class="k">class</span> <span class="nc">CelebA</span><span class="p">(</span><span class="n">torchvision</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">ImageFolder</span><span class="p">):</span>
+
     <span class="n">url</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;https://www.dropbox.com/sh/8oqt9vytwxb3s4r/&#39;</span>
            <span class="s1">&#39;AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1&#39;</span><span class="p">)</span>
     <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;img_align_celeba.zip&quot;</span>
@@ -214,6 +225,11 @@
         <span class="nb">super</span><span class="p">(</span><span class="n">CelebA</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">target_transform</span><span class="p">)</span>
 
 <div class="viewcode-block" id="CelebA.download"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebA.download">[docs]</a>    <span class="k">def</span> <span class="nf">download</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Returns:</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">import</span> <span class="nn">errno</span>
         <span class="kn">import</span> <span class="nn">zipfile</span>
         <span class="kn">from</span> <span class="nn">six.moves</span> <span class="k">import</span> <span class="n">urllib</span>

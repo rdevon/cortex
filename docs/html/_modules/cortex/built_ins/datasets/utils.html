@@ -145,9 +145,9 @@
            <div itemprop="articleBody">
             
   <h1>Source code for cortex.built_ins.datasets.utils</h1><div class="highlight"><pre>
-<span></span><span class="sd">&#39;&#39;&#39;Extra functions for build-in datasets</span>
-
-<span class="sd">&#39;&#39;&#39;</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Extra functions for build-in datasets</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">torchvision.transforms</span> <span class="k">as</span> <span class="nn">transforms</span>
 
@@ -155,12 +155,27 @@
 <div class="viewcode-block" id="build_transforms"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.utils.build_transforms">[docs]</a><span class="k">def</span> <span class="nf">build_transforms</span><span class="p">(</span><span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">center_crop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                      <span class="n">random_crop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">flip</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">random_resize_crop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                      <span class="n">random_sized_crop</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_sobel</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        normalize:</span>
+<span class="sd">        center_crop:</span>
+<span class="sd">        image_size:</span>
+<span class="sd">        random_crop:</span>
+<span class="sd">        flip:</span>
+<span class="sd">        random_resize_crop:</span>
+<span class="sd">        random_sized_crop:</span>
+<span class="sd">        use_sobel:</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">transform_</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">if</span> <span class="n">random_resize_crop</span><span class="p">:</span>
         <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">RandomResizedCrop</span><span class="p">(</span><span class="n">random_resize_crop</span><span class="p">))</span>
     <span class="k">elif</span> <span class="n">random_crop</span><span class="p">:</span>
-        <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">RandomSizedCrop</span><span class="p">(</span><span class="n">random_crop</span><span class="p">))</span>
+        <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">RandomCrop</span><span class="p">(</span><span class="n">random_crop</span><span class="p">))</span>
     <span class="k">elif</span> <span class="n">center_crop</span><span class="p">:</span>
         <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">CenterCrop</span><span class="p">(</span><span class="n">center_crop</span><span class="p">))</span>
     <span class="k">elif</span> <span class="n">random_sized_crop</span><span class="p">:</span>
@@ -176,7 +191,8 @@
 
     <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">())</span>
 
-    <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="o">*</span><span class="n">normalize</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+        <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="o">*</span><span class="n">normalize</span><span class="p">))</span>
     <span class="n">transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">(</span><span class="n">transform_</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">transform</span></div>
 </pre></div>

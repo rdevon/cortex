@@ -83,12 +83,12 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#visdom-server">Visdom Server</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#experiment-configuration">Experiment Configuration</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#configuration-file-example">Configuration File Example</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#usage-example">Usage Example</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration-file-example">Configuration File Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#built-ins">Built-ins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#options">Options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage-example">Usage Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-models">Custom models</a></li>
 </ul>
 </li>
 </ul>
@@ -163,26 +163,16 @@
 <h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="visdom-server">
-<h3>Visdom Server<a class="headerlink" href="#visdom-server" title="Permalink to this headline">¶</a></h3>
-<p>Start a Visdom server and look for server address in the output. By
-default, the server’s address is <code class="docutils literal notranslate"><span class="pre">http://localhost:8097</span></code>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$python -m visdom.server
-</pre></div>
-</div>
-</div>
-<div class="section" id="experiment-configuration">
-<h3>Experiment Configuration<a class="headerlink" href="#experiment-configuration" title="Permalink to this headline">¶</a></h3>
 <p>The first thing to do is to set up the config.yaml. This file is
 user-specific (it got tracked at some point, so I need to fix this), and
 will tell cortex everything user-specific regarding data locations,
 visualation, and outputs.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$rm -rf ~/.cortex.yml
-$cortex setup
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ rm -rf ~/.cortex.yml
+$ cortex setup
 </pre></div>
 </div>
 <div class="section" id="configuration-file-example">
-<h4>Configuration File Example<a class="headerlink" href="#configuration-file-example" title="Permalink to this headline">¶</a></h4>
+<h3>Configuration File Example<a class="headerlink" href="#configuration-file-example" title="Permalink to this headline">¶</a></h3>
 <p>Located at <code class="docutils literal notranslate"><span class="pre">~/.cortex.yml</span></code></p>
 <div class="code python highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">torchvision_data_path</span><span class="p">:</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">milatmp1</span><span class="o">/</span><span class="n">hjelmdev</span><span class="o">/</span><span class="n">data</span><span class="o">/</span>
 <span class="n">data_paths</span><span class="p">:</span> <span class="p">{</span>
@@ -204,35 +194,112 @@ text) are planned in the near-future.</p>
 </li>
 <li><div class="first line-block">
 <div class="line">out_path: Out path for experiment outputs</div>
-<div class="line">### Usage ##### Help</div>
 </div>
-<p>cortex –help ##### Options</p>
 </li>
 </ul>
-<p>There are many command-line options in cortex:</p>
-<ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">-n</span></code> Name of experiment. Experiment is saved in /</li>
-<li><code class="docutils literal notranslate"><span class="pre">-S</span></code> data Source (from torchvision or user-specified in
-config.yaml)</li>
-<li><code class="docutils literal notranslate"><span class="pre">-r</span></code> Reload model (takes the .t7 file as the argument)</li>
-<li><code class="docutils literal notranslate"><span class="pre">-a</span></code> Arguments. This is a <code class="docutils literal notranslate"><span class="pre">,</span></code>-delimited string. For instance, to
-increase the training epochs on the above example and use sgd, this
-should work:
-<code class="docutils literal notranslate"><span class="pre">-a</span> <span class="pre">train.epochs=5000,optimizer.optimizer=sgd</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">-c</span></code> Config (For yamls of arguments, doesn’t appear to be working
-right now)</li>
-<li><code class="docutils literal notranslate"><span class="pre">-k</span></code> Klean an experiment directory</li>
-<li><code class="docutils literal notranslate"><span class="pre">-v</span></code> Verbosity of logger</li>
-<li><code class="docutils literal notranslate"><span class="pre">-o</span></code> Out path (overrides <code class="docutils literal notranslate"><span class="pre">config.yaml</span></code>)</li>
-<li><code class="docutils literal notranslate"><span class="pre">-t</span></code> Test mode (for evaluation purposes)</li>
-</ul>
+</div>
+<div class="section" id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div>cortex –help</div></blockquote>
+</div>
+<div class="section" id="built-ins">
+<h3>Built-ins<a class="headerlink" href="#built-ins" title="Permalink to this headline">¶</a></h3>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">setup:</th><td class="field-body">Setup cortex configuration.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">GAN:</th><td class="field-body">Generative adversarial network.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">VAE:</th><td class="field-body">Variational autoencoder.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">AdversarialAutoencoder:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body">Adversarial Autoencoder.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">ALI:</th><td class="field-body">Adversarially learned inference.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">ImageClassification:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body">Basic image classifier.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">GAN_MINE:</th><td class="field-body">GAN + MINE.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="options">
+<h3>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h3>
+<table class="docutils option-list" frame="void" rules="none">
+<col class="option" />
+<col class="description" />
+<tbody valign="top">
+<tr><td class="option-group">
+<kbd><span class="option">-h</span>, <span class="option">--help</span></kbd></td>
+<td>show this help message and exit</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-o <var>OUT_PATH</var></span>, <span class="option">--out_path <var>OUT_PATH</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Output path directory. All model results will go
+here. If a new directory, a new one will be
+created, as long as parent exists.</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-n <var>NAME</var></span>, <span class="option">--name <var>NAME</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Name of the experiment. If given, base name of
+output directory will be <cite>–name</cite>. If not given,
+name will be the base name of the <cite>–out_path</cite></td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-r <var>RELOAD</var></span>, <span class="option">--reload <var>RELOAD</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Path to model to reload.</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-M <var>LOAD_MODELS</var></span>, <span class="option">--load_models <var>LOAD_MODELS</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Path to model to reload. Does not load args, info,
+etc</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-m <var>META</var></span>, <span class="option">--meta <var>META</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>TODO</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-c <var>CONFIG_FILE</var></span>, <span class="option">--config_file <var>CONFIG_FILE</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Configuration yaml file. See <cite>exps/</cite> for examples</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">-k</span>, <span class="option">--clean</span></kbd></td>
+<td>Cleans the output directory. This cannot be undone!</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-v <var>VERBOSITY</var></span>, <span class="option">--verbosity <var>VERBOSITY</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>Verbosity of the logging. (0, 1, 2)</td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">-d <var>DEVICE</var></span>, <span class="option">--device <var>DEVICE</var></span></kbd></td>
+</tr>
+<tr><td>&#160;</td><td>TODO</td></tr>
+</tbody>
+</table>
 </div>
 <div class="section" id="usage-example">
-<h4>Usage Example<a class="headerlink" href="#usage-example" title="Permalink to this headline">¶</a></h4>
+<h3>Usage Example<a class="headerlink" href="#usage-example" title="Permalink to this headline">¶</a></h3>
 <p>To run an experiment.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cortex</span> <span class="n">GAN</span> <span class="o">--</span><span class="n">d</span><span class="o">.</span><span class="n">source</span> <span class="n">CIFAR10</span> <span class="o">--</span><span class="n">d</span><span class="o">.</span><span class="n">copy_to_local</span>
 </pre></div>
 </div>
+</div>
+<div class="section" id="custom-models">
+<h3>Custom models<a class="headerlink" href="#custom-models" title="Permalink to this headline">¶</a></h3>
+<p>It is possible to run experiments with custom models made with Pytorch under the Cortex framework. For doing so, the model has to
+be added to the demos folder under the root of the project. You can have a look to the given demo autoencoder and classifier already
+implemented. The main difference is that, rather than registering the plugins, the run function of main.py has to be called. For example,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="n">classifier</span> <span class="o">=</span> <span class="n">MyClassifier</span><span class="p">()</span>
+<span class="n">run</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">classifier</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To run an experiment with a custom model.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">my_model</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">d</span><span class="o">.</span><span class="n">source</span> <span class="o">&lt;</span><span class="n">Dataset</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">d</span><span class="o">.</span><span class="n">copy_to_local</span>
+</pre></div>
 </div>
 </div>
 </div>

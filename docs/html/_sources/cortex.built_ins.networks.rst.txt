@@ -12,6 +12,22 @@ cortex.built\_ins.networks.SpectralNormLayer module
     :undoc-members:
     :show-inheritance:
 
+cortex.built\_ins.networks.ae\_network module
+---------------------------------------------
+
+.. automodule:: cortex.built_ins.networks.ae_network
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+cortex.built\_ins.networks.base\_network module
+-----------------------------------------------
+
+.. automodule:: cortex.built_ins.networks.base_network
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 cortex.built\_ins.networks.conv\_decoders module
 ------------------------------------------------
 

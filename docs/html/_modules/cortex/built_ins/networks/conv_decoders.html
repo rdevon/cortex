@@ -154,8 +154,8 @@
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 
 <span class="kn">from</span> <span class="nn">.modules</span> <span class="k">import</span> <span class="n">View</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">apply_nonlinearity</span><span class="p">,</span> <span class="n">get_nonlinearity</span><span class="p">,</span> <span class="n">finish_layer_1d</span><span class="p">,</span>
-                    <span class="n">finish_layer_2d</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">.base_network</span> <span class="k">import</span> <span class="n">BaseNet</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">finish_layer_2d</span>
 
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;cortex.models&#39;</span> <span class="o">+</span> <span class="vm">__name__</span><span class="p">)</span>
@@ -166,60 +166,14 @@
     <span class="k">return</span> <span class="n">x</span></div>
 
 
-<div class="viewcode-block" id="MNISTDeConv"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.conv_decoders.MNISTDeConv">[docs]</a><span class="k">class</span> <span class="nc">MNISTDeConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">layer_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">MNISTDeConv</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="n">models</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
-
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense1&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="mi">1024</span><span class="p">))</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense1_relu&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">())</span>
-        <span class="k">if</span> <span class="n">layer_norm</span><span class="p">:</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense1_ln&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="mi">1024</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">batch_norm</span><span class="p">:</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense1_bn&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm1d</span><span class="p">(</span><span class="mi">1024</span><span class="p">))</span>
-
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense2&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="n">dim_h</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span><span class="p">))</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense2_relu&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">())</span>
-        <span class="k">if</span> <span class="n">layer_norm</span><span class="p">:</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense2_ln&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dim_h</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">batch_norm</span><span class="p">:</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;dense2_bn&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm1d</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dim_h</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span><span class="p">))</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;view&#39;</span><span class="p">,</span> <span class="n">View</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">dim_h</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
-
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;deconv1&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span>
-            <span class="mi">2</span> <span class="o">*</span> <span class="n">dim_h</span><span class="p">,</span> <span class="n">dim_h</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;deconv1_relu&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">())</span>
-        <span class="k">if</span> <span class="n">layer_norm</span><span class="p">:</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;deconv1_ln&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="n">dim_h</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="n">batch_norm</span><span class="p">:</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;deconv1_bn&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm2d</span><span class="p">(</span><span class="n">dim_h</span><span class="p">))</span>
-
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;deconv2&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span><span class="n">dim_h</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">models</span>
-
-<div class="viewcode-block" id="MNISTDeConv.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.conv_decoders.MNISTDeConv.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">nonlinearity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">nonlinearity</span><span class="p">:</span>
-            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">apply_nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span></div></div>
-
-
-<div class="viewcode-block" id="SimpleConvDecoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.conv_decoders.SimpleConvDecoder">[docs]</a><span class="k">class</span> <span class="nc">SimpleConvDecoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="SimpleConvDecoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.conv_decoders.SimpleConvDecoder">[docs]</a><span class="k">class</span> <span class="nc">SimpleConvDecoder</span><span class="p">(</span><span class="n">BaseNet</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">initial_layer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
                  <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;ReLU&#39;</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">f_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SimpleConvDecoder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="n">models</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimpleConvDecoder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="n">output_nonlinearity</span><span class="p">)</span>
 
         <span class="n">dim_h_</span> <span class="o">=</span> <span class="n">dim_h</span>
-
-        <span class="n">nonlinearity</span> <span class="o">=</span> <span class="n">get_nonlinearity</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span> <span class="o">=</span> <span class="n">output_nonlinearity</span>
-
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Input shape: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shape</span><span class="p">))</span>
         <span class="n">dim_x_</span><span class="p">,</span> <span class="n">dim_y_</span><span class="p">,</span> <span class="n">dim_out_</span> <span class="o">=</span> <span class="n">shape</span>
 
@@ -236,19 +190,19 @@
                 <span class="n">dim_h</span> <span class="o">*=</span> <span class="mi">2</span>
 
         <span class="n">dim_out</span> <span class="o">=</span> <span class="n">dim_x</span> <span class="o">*</span> <span class="n">dim_y</span> <span class="o">*</span> <span class="n">dim_h</span>
-        <span class="k">if</span> <span class="n">initial_layer</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;initial_(</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">initial_layer</span><span class="p">)</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">initial_layer</span><span class="p">))</span>
-            <span class="n">finish_layer_1d</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">initial_layer</span><span class="p">,</span>
-                            <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
-            <span class="n">dim_in</span> <span class="o">=</span> <span class="n">initial_layer</span>
 
-        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;first_(</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">)_0&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">)</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">))</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;_reshape&#39;</span><span class="p">,</span> <span class="n">View</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_h</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">initial_layer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dim_h_</span> <span class="o">=</span> <span class="p">[</span><span class="n">initial_layer</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dim_h_</span> <span class="o">=</span> <span class="p">[</span><span class="n">dim_out</span><span class="p">]</span>
 
-        <span class="n">finish_layer_2d</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">dim_h</span><span class="p">,</span>
-                        <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_linear_layers</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_h_</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;reshape&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">View</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_h</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">))</span>
+
+        <span class="n">finish_layer_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">dim_h</span><span class="p">,</span>
+                        <span class="n">nonlinearity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layer_nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
         <span class="n">dim_out</span> <span class="o">=</span> <span class="n">dim_h</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
@@ -260,17 +214,15 @@
                 <span class="n">dim_out</span> <span class="o">=</span> <span class="n">dim_in</span> <span class="o">//</span> <span class="mi">2</span>
 
             <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;tconv_(</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">)_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span>
                 <span class="n">name</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span> <span class="n">f_size</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="n">pad</span><span class="p">,</span>
                                          <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 
-            <span class="n">finish_layer_2d</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span>
-                            <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
+            <span class="n">finish_layer_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span>
+                            <span class="n">nonlinearity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">layer_nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
 
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span>
             <span class="n">dim_out</span><span class="p">,</span> <span class="n">dim_out_</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">models</span>
 
 <div class="viewcode-block" id="SimpleConvDecoder.next_size"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.conv_decoders.SimpleConvDecoder.next_size">[docs]</a>    <span class="k">def</span> <span class="nf">next_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
@@ -289,16 +241,7 @@
             <span class="n">px</span><span class="p">,</span> <span class="n">py</span> <span class="o">=</span> <span class="n">p</span>
 
         <span class="k">return</span> <span class="n">infer_conv_size</span><span class="p">(</span>
-            <span class="n">dim_x</span><span class="p">,</span> <span class="n">kx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">px</span><span class="p">),</span> <span class="n">infer_conv_size</span><span class="p">(</span><span class="n">dim_y</span><span class="p">,</span> <span class="n">ky</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">py</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="SimpleConvDecoder.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.conv_decoders.SimpleConvDecoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">nonlinearity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">nonlinearity</span><span class="p">:</span>
-            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">apply_nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span></div></div>
+            <span class="n">dim_x</span><span class="p">,</span> <span class="n">kx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">px</span><span class="p">),</span> <span class="n">infer_conv_size</span><span class="p">(</span><span class="n">dim_y</span><span class="p">,</span> <span class="n">ky</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">py</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>
