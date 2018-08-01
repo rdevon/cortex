@@ -29,7 +29,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         'STL10',
         'SVHN']
 
-    def _handle_LSUN(self, Dataset, data_path, transform=None):
+    def _handle_LSUN(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
             data_path,
             classes=['bedroom_train'],
@@ -40,7 +40,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             transform=transform)
         return train_set, test_set
 
-    def _handle_SVHN(self, Dataset, data_path, transform=None):
+    def _handle_SVHN(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
             data_path,
             split='train',
@@ -53,7 +53,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             download=True)
         return train_set, test_set
 
-    def _handle_STL(self, Dataset, data_path, transform=None):
+    def _handle_STL(self, Dataset, data_path, transform=None,
+                    labeled_only=False):
         normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         train_transform = transforms.Compose([
             transforms.RandomResizedCrop(64),
@@ -66,9 +67,13 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             transforms.ToTensor(),
             normalize,
         ])
+        if labeled_only:
+            split = 'train'
+        else:
+            split = 'train+unlabeled'
         train_set = Dataset(
             data_path,
-            split='train+unlabeled',
+            split=split,
             transform=train_transform,
             download=True
         )
@@ -79,7 +84,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             download=True)
         return train_set, test_set
 
-    def _handle(self, Dataset, data_path, transform=None):
+    def _handle(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
             data_path,
             train=True,
@@ -93,7 +98,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         return train_set, test_set
 
     def handle(self, source, copy_to_local=False, normalize=True,
-               train_samples=None, test_samples=None, **transform_args):
+               train_samples=None, test_samples=None,
+               labeled_only=False, **transform_args):
 
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
@@ -130,7 +136,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         else:
             handler = self._handle
 
-        train_set, test_set = handler(Dataset, data_path, transform=transform)
+        train_set, test_set = handler(Dataset, data_path, transform=transform,
+                                      labeled_only=labeled_only)
         if train_samples is not None:
             train_set.train_data = train_set.train_data[:train_samples]
             train_set.train_labels = train_set.train_labels[:train_samples]
