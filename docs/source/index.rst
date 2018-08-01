@@ -11,6 +11,7 @@ Welcome to Cortex2.0
    getting_started
    modules
    develop
+   developer_start_guide
 
 
 
