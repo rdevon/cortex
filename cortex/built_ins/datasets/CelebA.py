@@ -7,6 +7,7 @@ import os
 
 import numpy as np
 import torchvision
+from torchvision.transforms import transforms
 
 from cortex.plugins import DatasetPlugin, register_plugin
 from cortex.built_ins.datasets.utils import build_transforms
@@ -16,7 +17,7 @@ class CelebAPlugin(DatasetPlugin):
     sources = ['CelebA']
 
     def handle(self, source, copy_to_local=False, normalize=True,
-               split=None, **transform_args):
+               split=None, classification_mode=False, **transform_args):
         """
 
         Args:
@@ -37,15 +38,31 @@ class CelebAPlugin(DatasetPlugin):
         if normalize and isinstance(normalize, bool):
             normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
 
-        transform = build_transforms(normalize=normalize, **transform_args)
+        if classification_mode:
+            train_transform = transforms.Compose([
+                transforms.RandomResizedCrop(64),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(*normalize),
+            ])
+            test_transform = transforms.Compose([
+                transforms.Resize(64),
+                transforms.CenterCrop(64),
+                transforms.ToTensor(),
+                transforms.Normalize(*normalize),
+            ])
+        else:
+            train_transform = build_transforms(normalize=normalize,
+                                               **transform_args)
+            test_transform = train_transform
 
         if split is None:
-            train_set = Dataset(root=data_path, transform=transform,
+            train_set = Dataset(root=data_path, transform=train_transform,
                                 download=True)
-            test_set = Dataset(root=data_path, transform=transform)
+            test_set = Dataset(root=data_path, transform=test_transform)
         else:
-            train_set, test_set = self.make_split(data_path, split, Dataset,
-                                                  transform)
+            train_set, test_set = self.make_split(
+                data_path, split, Dataset, train_transform, test_transform)
         input_names = ['images', 'labels', 'attributes']
 
         dim_c, dim_x, dim_y = train_set[0][0].size()
@@ -53,7 +70,6 @@ class CelebAPlugin(DatasetPlugin):
         dim_a = train_set.attributes[0].shape[0]
 
         dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l, attributes=dim_a)
-
         self.add_dataset('train', train_set)
         self.add_dataset('test', test_set)
         self.set_input_names(input_names)
@@ -61,10 +77,12 @@ class CelebAPlugin(DatasetPlugin):
 
         self.set_scale((-1, 1))
 
-    def make_split(self, data_path, split, Dataset, transform):
-        train_set = Dataset(root=data_path, transform=transform,
+    def make_split(self, data_path, split, Dataset, train_transform,
+                   test_transform):
+        train_set = Dataset(root=data_path, transform=train_transform,
                             download=True, split=split)
-        test_set = Dataset(root=data_path, transform=transform, split=split-1)
+        test_set = Dataset(root=data_path, transform=test_transform,
+                           split=split-1)
         return train_set, test_set
 
 
@@ -111,13 +129,15 @@ class CelebA(torchvision.datasets.ImageFolder):
         super(CelebA, self).__init__(root, transform, target_transform)
         if split:
             if split > 0:
-                self.imgs = self.imgs[:int(split * len(self))]
-                self.attributes = self.attributes[
-                                  :int(split * len(self.attributes))]
+                index = int(split * len(self))
+                self.imgs = self.imgs[:index]
+                self.attributes = self.attributes[:index]
+                self.samples = self.samples[:index]
             else:
-                self.imgs = self.imgs[int(split * len(self)) - 1:]
-                self.attributes = self.attributes[
-                                  int(split * len(self.attributes)) - 1:]
+                index = int(split * len(self)) - 1
+                self.imgs = self.imgs[index:]
+                self.attributes = self.attributes[index:]
+                self.samples = self.samples[index:]
 
     def __len__(self):
         return len(self.imgs)

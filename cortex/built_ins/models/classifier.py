@@ -98,18 +98,12 @@ class SimpleAttributeClassifier(SimpleClassifier):
         classifier = FullyConnectedNet(dim_in, dim_out=dim_a, **classifier_args)
         self.nets.classifier = classifier
 
-    def routine(self, inputs, attributes, criterion=nn.CrossEntropyLoss()):
-        '''
-
-        Args:
-            criterion: Classifier criterion.
-
-        '''
+    def routine(self, inputs, attributes):
         classifier = self.nets.classifier
-
         outputs = classifier(inputs, nonlinearity='sigmoid')
+        loss = torch.nn.BCELoss()(outputs, attributes)
+
         predicted = (outputs.data >= 0.5).float()
-        loss = F.binary_cross_entropy(outputs, attributes)
         correct = 100. * predicted.eq(attributes.data).cpu().sum(0) / attributes.size(0)
 
         self.losses.classifier = loss
@@ -119,18 +113,13 @@ class SimpleAttributeClassifier(SimpleClassifier):
 
     def predict(self, inputs):
         classifier = self.nets.classifier
-
         outputs = classifier(inputs)
         predicted = (F.sigmoid(outputs).data >= 0.5).float()
 
         return predicted
 
-    def visualize(self, images, inputs, attributes):
-        predicted = self.predict(inputs)
-        correct = 100. * predicted.eq(attributes.data).cpu()
-        #self.add_image(images.data, labels=(attributes.data, predicted.data),
-        #               name='gt_pred')
-        #self.add_histogram(correct, name='Correct')
+    def visualize(self, images, inputs):
+        self.add_image(images.data, name='gt_pred')
 
 
 class ImageClassification(SimpleClassifier):
