@@ -50,7 +50,6 @@ def setup_experiment(args, model=None):
 
     experiment_args = copy.deepcopy(default_args)
     update_args(experiment_args, exp.ARGS)
-
     viz_init(config.CONFIG.viz)
 
     if args.reload and not args.load_models:

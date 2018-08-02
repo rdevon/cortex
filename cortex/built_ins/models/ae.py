@@ -1,12 +1,18 @@
-from cortex.plugins import ModelPlugin
-from cortex.main import run
+'''Simple Variational Autoencoder model.
+'''
+
+from cortex.plugins import ModelPlugin, register_plugin
 import torch.nn.functional as F
 from cortex.built_ins.models.image_coders import ImageEncoder, ImageDecoder
 from cortex.built_ins.networks.ae_network import AENetwork
 
 
 class AE(ModelPlugin):
-    plugin_name = 'AE'
+    '''Simple autoencder.
+
+        A generative model trained.
+
+    '''
     defaults = dict(
         data=dict(
             batch_size=dict(train=64, test=64), inputs=dict(inputs='images')),
@@ -19,6 +25,7 @@ class AE(ModelPlugin):
         self.decoder = ImageDecoder()
 
     def build(self, dim_z=64, dim_encoder_out=64):
+
         self.encoder.build(dim_encoder_out)
         self.decoder.build(dim_z)
         encoder = self.nets.encoder
@@ -27,6 +34,12 @@ class AE(ModelPlugin):
         self.nets.ae = ae
 
     def routine(self, inputs, targets, ae_criterion=F.mse_loss):
+        '''
+
+        Args:
+            ae_criterion: Reconstruction criterion.
+
+        '''
         ae = self.nets.ae
         outputs = ae(inputs)
         r_loss = ae_criterion(
@@ -40,6 +53,4 @@ class AE(ModelPlugin):
         self.add_image(inputs, name='ground truth')
 
 
-if __name__ == '__main__':
-    autoencoder = AE()
-    run(model=autoencoder)
+register_plugin(AE)
