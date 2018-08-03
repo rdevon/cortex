@@ -90,6 +90,8 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
     # Set the optimizer options
     if len(optimizer_options) == 0:
         optimizer_options = 'default'
+        if not isinstance(optimizer, str):
+            optimizer = 'Adam'
     if optimizer_options == 'default'\
             and optimizer in _optimizer_defaults.keys():
         optimizer_options = _optimizer_defaults[optimizer]

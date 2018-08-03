@@ -28,7 +28,6 @@ def run(model=None):
 
     try:
         args = setup_cortex(model=model)
-
         if args.command == 'setup':
             # Performs setup only.
             config.setup()
@@ -37,10 +36,8 @@ def run(model=None):
             config.set_config()
             print_section('EXPERIMENT')
             model = setup_experiment(args, model=model)
-
             print_section('DATA')
             data.setup(**exp.ARGS['data'])
-
             print_section('NETWORKS')
             if args.reload and not args.load_models:
                 pass

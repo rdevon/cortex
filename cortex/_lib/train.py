@@ -191,11 +191,12 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
     best = None
 
     try:
+        # TODO: Condition added for testing purposes.
+        if not isinstance(epochs, int):
+            epochs = epochs['epochs']
         for e in range(epochs):
             epoch = exp.INFO['epoch']
-
             start_time = time.time()
-
             # TRAINING
             train_results_ = train_epoch(
                 model, epoch, quit_on_bad_values, eval_during_train,

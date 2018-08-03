@@ -46,6 +46,9 @@ def setup(source: str=None, batch_size=64, n_workers: int=4,
 
     if sources:
         for source in sources:
+            # TODO: Hardcoded for testing purpose.
+            if not isinstance(source, str):
+                source = 'CIFAR10'
             plugin = _PLUGINS.get(source, None)
             if plugin is None:
                 raise KeyError('Dataset plugin for `{}` not found'
