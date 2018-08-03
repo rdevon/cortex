@@ -15,7 +15,7 @@ class ImageFolder(DatasetPlugin):
     sources = ['tiny-imagenet-200', 'imagenet']
 
     def handle(self, source, copy_to_local=False, normalize=True,
-               full_imagenet=False, **transform_args):
+               **transform_args):
 
         Dataset = self.make_indexing(torchvision.datasets.ImageFolder)
         data_path = self.get_path(source)
@@ -28,9 +28,10 @@ class ImageFolder(DatasetPlugin):
             test_path = self.copy_to_local_path(test_path)
 
         if normalize and isinstance(normalize, bool):
-            normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
+            normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                             std=[0.229, 0.224, 0.225])
 
-        if full_imagenet:
+        if source == 'imagenet':
             normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
             train_transform = transforms.Compose([
@@ -53,7 +54,17 @@ class ImageFolder(DatasetPlugin):
         test_set = Dataset(root=test_path, transform=test_transform)
         input_names = ['images', 'targets', 'index']
 
-        dim_c, dim_x, dim_y = train_set[1][0].size()
+        dim_c, dim_x, dim_y = train_set[0][0].size()
+
+        print('Computing min / max...')
+
+        img_min = 1000
+        img_max = -1000
+        for i in range(1000):
+            img = train_set[i][0]
+            img_min = min(img.min(), img_min)
+            img_max = max(img.max(), img_max)
+
         dim_l = len(train_set.classes)
 
         dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l)
@@ -63,7 +74,8 @@ class ImageFolder(DatasetPlugin):
         self.set_input_names(input_names)
         self.set_dims(**dims)
 
-        self.set_scale((-1, 1))
+        self.set_scale((img_min, img_max))
+        print('Finished loading dataset')
 
 
 register_data(ImageFolder)
