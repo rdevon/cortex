@@ -33,7 +33,7 @@ def setup_cortex(model=None):
     return args
 
 
-def setup_experiment(args, model=None):
+def setup_experiment(args, model=None, testmode=False):
     '''Sets up the experiment
 
     Args:
@@ -48,8 +48,8 @@ def setup_experiment(args, model=None):
         model_name = model.__class__.__name__
     experiment_args = copy.deepcopy(default_args)
     update_args(experiment_args, exp.ARGS)
-    viz_init(config.CONFIG.viz)
-
+    if not testmode:
+        viz_init(config.CONFIG.viz)
     if args.reload and not args.load_models:
         exp.reload(model, args.reload, args.reloads, args.name,
                    args.out_path, args.clean, config.CONFIG)
