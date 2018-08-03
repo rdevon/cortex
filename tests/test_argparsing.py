@@ -1,19 +1,11 @@
 from cortex._lib import (config, setup_experiment, exp)
 from argparse import Namespace
-from cortex.plugins import ModelPlugin
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from cortex.built_ins.models.utils import update_encoder_args
+from cortex.built_ins.models.classifier import ImageClassification
 
 
-class ClassifierDefaults(ModelPlugin):
-    '''Basic image classifier.
-
-    Classifies images using standard convnets.
-
-    '''
-
+class ClassifierDefaults(ImageClassification):
     defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
         optimizer=dict(optimizer='Adam', learning_rate=1e-3),
@@ -23,68 +15,18 @@ class ClassifierDefaults(ModelPlugin):
     def build(self,
               classifier_type='convnet',
               classifier_args=dict(dropout=0.2)):
-        '''Builds a simple image classifier.
-
-        Args:
-            classifier_type (str): Network type for the classifier.
-            classifier_args: Classifier arguments. Can include dropout,
-            batch_norm, layer_norm, etc.
-
-        '''
 
         classifier_args = classifier_args or {}
-
         shape = self.get_dims('x', 'y', 'c')
         dim_l = self.get_dims('labels')
-
         Encoder, args = update_encoder_args(
             shape, model_type=classifier_type, encoder_args=classifier_args)
-
         args.update(**classifier_args)
-
         classifier = Encoder(shape, dim_out=dim_l, **args)
         self.nets.classifier = classifier
 
-    def routine(self, inputs, targets, criterion=nn.BCELoss()):
-        '''
 
-        Args:
-            criterion: Classifier criterion.
-
-        '''
-
-        classifier = self.nets.classifier
-
-        outputs = classifier(inputs)
-        predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
-
-        loss = criterion(outputs, targets)
-        correct = 100. * predicted.eq(
-            targets.data).cpu().sum() / targets.size(0)
-
-        self.losses.classifier = loss
-        self.results.accuracy = correct
-
-    def predict(self, inputs):
-        classifier = self.nets.classifier
-
-        outputs = classifier(inputs)
-        predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
-
-        return predicted
-
-    def visualize(self, images, inputs, targets):
-        predicted = self.predict(inputs)
-        self.add_image(
-            images.data, labels=(targets.data, predicted.data), name='gt_pred')
-
-
-class ClassifierBCELoss(ModelPlugin):
-    '''Basic image classifier.
-
-    Classifies images using standard convnets.
-
-    '''
+class ClassifierBCELoss(ImageClassification):
 
     defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
@@ -96,14 +38,6 @@ class ClassifierBCELoss(ModelPlugin):
     def build(self,
               classifier_type='convnet',
               classifier_args=dict(dropout=0.2)):
-        '''Builds a simple image classifier.
-
-        Args:
-            classifier_type (str): Network type for the classifier.
-            classifier_args: Classifier arguments. Can include dropout,
-            batch_norm, layer_norm, etc.
-
-        '''
 
         classifier_args = classifier_args or {}
 
@@ -117,39 +51,6 @@ class ClassifierBCELoss(ModelPlugin):
 
         classifier = Encoder(shape, dim_out=dim_l, **args)
         self.nets.classifier = classifier
-
-    def routine(self, inputs, targets, criterion=nn.CrossEntropyLoss()):
-        '''
-
-        Args:
-            criterion: Classifier criterion.
-
-        '''
-
-        classifier = self.nets.classifier
-
-        outputs = classifier(inputs)
-        predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
-        # We are using the local variable criterion.
-        loss = criterion(outputs, targets)
-        correct = 100. * predicted.eq(
-            targets.data).cpu().sum() / targets.size(0)
-
-        self.losses.classifier = loss
-        self.results.accuracy = correct
-
-    def predict(self, inputs):
-        classifier = self.nets.classifier
-
-        outputs = classifier(inputs)
-        predicted = torch.max(F.log_softmax(outputs, dim=1).data, 1)[1]
-
-        return predicted
-
-    def visualize(self, images, inputs, targets):
-        predicted = self.predict(inputs)
-        self.add_image(
-            images.data, labels=(targets.data, predicted.data), name='gt_pred')
 
 
 # NOTE: exp.ARGS is being populated inside setup_experiment() call
