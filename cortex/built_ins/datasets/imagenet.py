@@ -15,7 +15,7 @@ class ImageFolder(DatasetPlugin):
     sources = ['tiny-imagenet-200', 'imagenet']
 
     def handle(self, source, copy_to_local=False, normalize=True,
-               **transform_args):
+               tanh_normalization=False, **transform_args):
 
         Dataset = self.make_indexing(torchvision.datasets.ImageFolder)
         data_path = self.get_path(source)
@@ -28,8 +28,12 @@ class ImageFolder(DatasetPlugin):
             test_path = self.copy_to_local_path(test_path)
 
         if normalize and isinstance(normalize, bool):
-            normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                             std=[0.229, 0.224, 0.225])
+            if tanh_normalization:
+                normalize = transforms.Normalize((0.5, 0.5, 0.5),
+                                                 (0.5, 0.5, 0.5))
+            else:
+                normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                 std=[0.229, 0.224, 0.225])
 
         if source == 'imagenet':
             normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
