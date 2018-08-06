@@ -13,7 +13,6 @@ import yaml
 import torch
 
 from .log_utils import set_file_logger
-from .parsing import update_args
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'

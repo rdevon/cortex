@@ -156,6 +156,38 @@ def align_summaries(d_train, d_test):
                             (max_len - len(v_test[k_]))
 
 
+def save_best(model, train_results, best, save_on_best, save_on_lowest):
+    flattened_results = {}
+    for k, v in train_results.items():
+        if isinstance(v, dict):
+            for k_, v_ in v.items():
+                flattened_results[k + '.' + k_] = v_
+        else:
+            flattened_results[k] = v
+    if save_on_best in flattened_results:
+        # TODO(Devon) This needs to be fixed.
+        # when train_for is set, result keys vary per epoch
+        # if save_on_best not in flattened_results:
+        #    raise ValueError('`save_on_best` key `{}` not found.
+        #  Available: {}'.format(
+        #        save_on_best, tuple(flattened_results.keys())))
+        current = flattened_results[save_on_best]
+        if not best:
+            found_best = True
+        elif save_on_lowest:
+            found_best = current < best
+        else:
+            found_best = current > best
+        if found_best:
+            best = current
+            print(
+                '\nFound best {} (train): {}'.format(
+                    save_on_best, best))
+            exp.save(model, prefix='best_' + save_on_best)
+
+        return best
+
+
 def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
               save_on_best=None, save_on_lowest=None, save_on_highest=None,
               eval_during_train=True, train_mode='train', test_mode='test',
@@ -202,33 +234,8 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
             if save_on_best or save_on_highest or save_on_lowest:
-                flattened_results = {}
-                for k, v in train_results_.items():
-                    if isinstance(v, dict):
-                        for k_, v_ in v.items():
-                            flattened_results[k + '.' + k_] = v_
-                    else:
-                        flattened_results[k] = v
-                if save_on_best in flattened_results:
-                    # TODO(Devon) This needs to be fixed.
-                    # when train_for is set, result keys vary per epoch
-                    # if save_on_best not in flattened_results:
-                    #    raise ValueError('`save_on_best` key `{}` not found.
-                    #  Available: {}'.format(
-                    #        save_on_best, tuple(flattened_results.keys())))
-                    current = flattened_results[save_on_best]
-                    if not best:
-                        found_best = True
-                    elif save_on_lowest:
-                        found_best = current < best
-                    else:
-                        found_best = current > best
-                    if found_best:
-                        best = current
-                        print(
-                            '\nFound best {} (train): {}'.format(
-                                save_on_best, best))
-                        exp.save(model, prefix='best_' + save_on_best)
+                best = save_best(model, train_results_, best, save_on_best,
+                                 save_on_lowest)
 
             # TESTING
             test_results_ = test_epoch(model, epoch, data_mode=test_mode)

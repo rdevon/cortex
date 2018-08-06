@@ -6,7 +6,7 @@ import copy
 import logging
 import pprint
 
-from . import config, exp, log_utils, models, optimizer
+from . import config, exp, log_utils, models
 from .parsing import default_args, parse_args, update_args
 from .viz import init as viz_init
 
@@ -117,7 +117,5 @@ def setup_experiment(args, model=None):
     for k, v in exp.ARGS.items():
         logger.info('Ultimate {} arguments: \n{}'
                     .format(k, pprint.pformat(v)))
-
-
 
     return model, reload_nets

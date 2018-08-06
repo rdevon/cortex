@@ -82,7 +82,7 @@ class CelebAPlugin(DatasetPlugin):
         train_set = Dataset(root=data_path, transform=train_transform,
                             download=True, split=split)
         test_set = Dataset(root=data_path, transform=test_transform,
-                           split=split-1)
+                           split=split - 1)
         return train_set, test_set
 
 
@@ -93,8 +93,8 @@ class CelebA(torchvision.datasets.ImageFolder):
 
     url = ('https://www.dropbox.com/sh/8oqt9vytwxb3s4r/'
            'AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1')
-    attr_url =('https://www.dropbox.com/s/auexdy98c6g7y25/'
-               'list_attr_celeba.zip?dl=1')
+    attr_url = ('https://www.dropbox.com/s/auexdy98c6g7y25/'
+                'list_attr_celeba.zip?dl=1')
     filename = 'img_align_celeba.zip'
     attr_filename = 'list_attr_celeba.zip'
 
