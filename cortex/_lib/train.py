@@ -208,7 +208,9 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
 
     '''
     info = pprint.pformat(exp.ARGS)
-    viz.visualizer.text(info, env=exp.NAME, win='info')
+
+    if (viz.visualizer):
+        viz.visualizer.text(info, env=exp.NAME, win='info')
     total_time = 0.
     if eval_only:
         test_results, test_std = test_epoch(
@@ -248,9 +250,10 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
             total_time += epoch_time
             display_results(train_results_, test_results_, e, epochs,
                             epoch_time, total_time)
-            plot()
-            model.viz.show()
-            model.viz.clear()
+            if (viz.visualizer):
+                plot()
+                model.viz.show()
+                model.viz.clear()
             if (archive_every and epoch % archive_every == 0):
                 exp.save(model, prefix=epoch)
 
