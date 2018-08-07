@@ -1,7 +1,7 @@
-from cortex._lib import (config, setup_experiment, exp)
+from cortex._lib import (config, setup_experiment, exp, parsing)
 from cortex.built_ins.models.utils import update_encoder_args
 from cortex.built_ins.models.classifier import ImageClassification
-from .args_mock import args
+from tests.args_mock import args
 
 
 class ClassifierModified(ImageClassification):
@@ -39,18 +39,17 @@ def test_static_override_parameters():
     expected_type = 'resnet'
     classifier_resnet = ClassifierModified()
     config.set_config()
-    classifier_resnet = setup_experiment(args, model=classifier_resnet)
+    classifier_resnet = setup_experiment(args, model=classifier_resnet, testmode=True)
     assert exp.ARGS['model']['classifier_type'] == expected_type
 
 
 def test_nested_arguments():
-    # expected_classifier_args = {'dropout': 0.2, 'dim_h': 100}
-    # model = ClassifierModified()
-    # model.build(classifier_args=dict(dim_h=100))
-    # # model.defaults['classifier_args'] = dict(dim_h=100)
-    # config.set_config()
-    # model = setup_experiment(args, model=model, testmode=True)
-    # print(exp.ARGS)
-    # assert model.defaults['classifier_args'] == {'dropout': 0.2, 'dim_h': 100}
-    # assert model.defaults['classifier_args'] == {'dropout': 0.2, 'dim_h': 100}
-
+    expected_classifier_args = {'dropout': 0.2, 'dim_h': 100}
+    model = ClassifierModified()
+    expected_type = 'resnet'
+    args.__dict__['classifier_type'] = expected_type
+    config.set_config()
+    model = setup_experiment(args, model=model, testmode=True)
+    parsing.update_args(args, exp.ARGS)
+    print(exp.ARGS)
+    assert 1 == 0
