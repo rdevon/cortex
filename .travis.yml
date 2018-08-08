@@ -3,6 +3,7 @@ python:
   - "3.6"
 before_install:
   - "pip install sphinxcontrib-napoleon"
+  - "python travis-config.py"
 install:
   - "bash travis-output.sh"
   - "pip install flake8"
