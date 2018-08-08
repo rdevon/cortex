@@ -16,6 +16,7 @@ args = Namespace(
     reload=None,
     reloads=None,
     verbosity=1,
+    load_networks=False,
     **{
         'data.batch_size': 128,
         'data.copy_to_local': True,
