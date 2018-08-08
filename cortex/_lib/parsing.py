@@ -93,7 +93,7 @@ _protected_args = ['arch', 'out_path', 'name', 'reload',
 logger = logging.getLogger('cortex.parsing')
 
 
-def make_argument_parser():
+def make_argument_parser() -> argparse.ArgumentParser:
     '''Generic experiment parser.
 
     Generic parser takes the experiment yaml as the main argument, but has some

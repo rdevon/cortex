@@ -23,6 +23,7 @@ class SimpleClassifier(ModelPlugin):
         train=dict(epochs=200, save_on_best='losses.classifier'))
 
     def build(self, dim_in: int=None, classifier_args=dict(dim_h=[200, 200])):
+
         '''
 
         Args:
@@ -132,7 +133,8 @@ class ImageClassification(SimpleClassifier):
     defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
         optimizer=dict(optimizer='Adam', learning_rate=1e-3),
-        train=dict(epochs=200, save_on_best='losses.classifier'))
+        train=dict(epochs=200, save_on_best='losses.classifier'),
+        classifier_args=dict(dropout=0.2))
 
     def build(self, classifier_type='convnet',
               classifier_args=dict(dropout=0.2), Encoder=None):
@@ -144,7 +146,6 @@ class ImageClassification(SimpleClassifier):
             batch_norm, layer_norm, etc.
 
         '''
-
         classifier_args = classifier_args or {}
 
         shape = self.get_dims('x', 'y', 'c')

@@ -33,7 +33,7 @@ def setup_cortex(model=None):
     return args
 
 
-def setup_experiment(args, model=None):
+def setup_experiment(args, model=None, testmode=False):
     '''Sets up the experiment
 
     Args:
@@ -41,17 +41,15 @@ def setup_experiment(args, model=None):
 
     '''
     exp.setup_device(args.device)
-
     if model is None:
         model_name = args.command
         model = models.get_model(model_name)
     else:
         model_name = model.__class__.__name__
-
     experiment_args = copy.deepcopy(default_args)
     update_args(experiment_args, exp.ARGS)
-    viz_init(config.CONFIG.viz)
-
+    if not testmode:
+        viz_init(config.CONFIG.viz)
     reload_nets = None
     if args.reload:
         d = exp.reload_model(args.reload)
@@ -70,7 +68,6 @@ def setup_experiment(args, model=None):
             exp.OUT_DIRS.update(**d['out_dirs'])
 
         reload_nets = d['nets']
-
     else:
         if args.load_networks:
             d = exp.reload_model(args.load_networks)

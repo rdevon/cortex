@@ -25,7 +25,6 @@ def run(model=None):
 
     try:
         args = setup_cortex(model=model)
-
         if args.command == 'setup':
             # Performs setup only.
             config.setup()
@@ -34,14 +33,11 @@ def run(model=None):
             config.set_config()
             print_section('EXPERIMENT')
             model, reload_nets = setup_experiment(args, model=model)
-
             print_section('DATA')
             data.setup(**exp.ARGS['data'])
-
             print_section('MODEL')
             model.reload_nets(reload_nets)
             model.build()
-
             print_section('OPTIMIZER')
             optimizer.setup(model, **exp.ARGS['optimizer'])
 
