@@ -49,8 +49,7 @@ def setup_experiment(args, model=None, testmode=False):
     experiment_args = copy.deepcopy(default_args)
     update_args(experiment_args, exp.ARGS)
     if not testmode:
-      viz_init(config.CONFIG.viz)
-
+        viz_init(config.CONFIG.viz)
     reload_nets = None
     if args.reload:
         d = exp.reload_model(args.reload)
