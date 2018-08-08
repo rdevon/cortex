@@ -93,7 +93,7 @@ _protected_args = ['arch', 'out_path', 'name', 'reload',
 logger = logging.getLogger('cortex.parsing')
 
 
-def make_argument_parser():
+def make_argument_parser() -> argparse.ArgumentParser:
     '''Generic experiment parser.
 
     Generic parser takes the experiment yaml as the main argument, but has some
@@ -123,8 +123,9 @@ def make_argument_parser():
               ' name will be the base name of the `--out_path`'))
     parser.add_argument('-r', '--reload', type=str, default=None,
                         help=('Path to model to reload.'))
-    parser.add_argument('-R', '--reloads', type=str, nargs='+', default=None)
-    parser.add_argument('-M', '--load_models',
+    parser.add_argument('-R', '--networks_to_reload', type=str, nargs='+',
+                        default=None)
+    parser.add_argument('-L', '--load_networks',
                         type=str, default=None,
                         help=('Path to model to reload. Does not load args,'
                               ' info, etc'))

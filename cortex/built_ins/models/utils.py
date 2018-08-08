@@ -99,7 +99,6 @@ convnet_encoder_args_ = dict(dim_h=64, batch_norm=True, n_steps=3)
 
 def update_encoder_args(x_shape, model_type='convnet', encoder_args=None):
     encoder_args = encoder_args or {}
-
     if model_type == 'resnet':
         from cortex.built_ins.networks.resnets import ResEncoder as Encoder
         encoder_args_ = {k: v for k, v in resnet_encoder_args_.items()}

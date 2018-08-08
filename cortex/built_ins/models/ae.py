@@ -1,32 +1,51 @@
-from cortex.plugins import ModelPlugin
-from cortex.main import run
+'''Module for autoencoder model.
+
+'''
+
 import torch.nn.functional as F
+
+from cortex.plugins import ModelPlugin, register_plugin
 from cortex.built_ins.models.image_coders import ImageEncoder, ImageDecoder
 from cortex.built_ins.networks.ae_network import AENetwork
 
 
-class AE(ModelPlugin):
-    plugin_name = 'AE'
+class Autoencoder(ModelPlugin):
+    '''Simple autoencder model.
+
+        Trains a noiseless autoencoder of image data.
+
+    '''
     defaults = dict(
         data=dict(
             batch_size=dict(train=64, test=64), inputs=dict(inputs='images')),
         optimizer=dict(optimizer='Adam', learning_rate=1e-4),
         train=dict(save_on_lowest='losses.ae'))
 
-    def __init__(self):
+    def __init__(self, Encoder=None, Decoder=None):
         super().__init__()
-        self.encoder = ImageEncoder()
-        self.decoder = ImageDecoder()
+        if Encoder is None:
+            Encoder = ImageEncoder
+        if Decoder is None:
+            Decoder = ImageDecoder
+        self.encoder = Encoder()
+        self.decoder = Decoder()
 
-    def build(self, dim_z=64, dim_encoder_out=64):
-        self.encoder.build(dim_encoder_out)
-        self.decoder.build(dim_z)
+    def build(self, dim_z=64):
+        self.encoder.build(dim_out=dim_z)
+        self.decoder.build(dim_in=dim_z)
+
         encoder = self.nets.encoder
         decoder = self.nets.decoder
         ae = AENetwork(encoder, decoder)
         self.nets.ae = ae
 
     def routine(self, inputs, targets, ae_criterion=F.mse_loss):
+        '''
+
+        Args:
+            ae_criterion: Criterion for the autoencoder.
+
+        '''
         ae = self.nets.ae
         outputs = ae(inputs)
         r_loss = ae_criterion(
@@ -40,6 +59,4 @@ class AE(ModelPlugin):
         self.add_image(inputs, name='ground truth')
 
 
-if __name__ == '__main__':
-    autoencoder = AE()
-    run(model=autoencoder)
+register_plugin(Autoencoder)

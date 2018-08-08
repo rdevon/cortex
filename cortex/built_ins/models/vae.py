@@ -36,6 +36,11 @@ class VAENetwork(nn.Module):
         self.logvar = None
         self.latent = None
 
+    def encode(self, inputs, **kwargs):
+        encoded = self.encoder(inputs, **kwargs)
+        encoded = F.relu(encoded)
+        return self.mu_net(encoded)
+
     def reparametrize(self, mu, std):
         if self.training:
             esp = Variable(
