@@ -156,6 +156,38 @@ def align_summaries(d_train, d_test):
                             (max_len - len(v_test[k_]))
 
 
+def save_best(model, train_results, best, save_on_best, save_on_lowest):
+    flattened_results = {}
+    for k, v in train_results.items():
+        if isinstance(v, dict):
+            for k_, v_ in v.items():
+                flattened_results[k + '.' + k_] = v_
+        else:
+            flattened_results[k] = v
+    if save_on_best in flattened_results:
+        # TODO(Devon) This needs to be fixed.
+        # when train_for is set, result keys vary per epoch
+        # if save_on_best not in flattened_results:
+        #    raise ValueError('`save_on_best` key `{}` not found.
+        #  Available: {}'.format(
+        #        save_on_best, tuple(flattened_results.keys())))
+        current = flattened_results[save_on_best]
+        if not best:
+            found_best = True
+        elif save_on_lowest:
+            found_best = current < best
+        else:
+            found_best = current > best
+        if found_best:
+            best = current
+            print(
+                '\nFound best {} (train): {}'.format(
+                    save_on_best, best))
+            exp.save(model, prefix='best_' + save_on_best)
+
+        return best
+
+
 def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
               save_on_best=None, save_on_lowest=None, save_on_highest=None,
               eval_during_train=True, train_mode='train', test_mode='test',
@@ -189,12 +221,10 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
         display_results(test_results, test_std, 'Evaluation', None, None, None)
         exit(0)
     best = None
-
-    try:
-        # TODO: Condition added for testing purposes.
-        if not isinstance(epochs, int):
+    if not isinstance(epochs, int):
             epochs = epochs['epochs']
-        for e in range(epochs):
+    for e in range(epochs):
+        try:
             epoch = exp.INFO['epoch']
             start_time = time.time()
             # TRAINING
@@ -205,33 +235,8 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
             if save_on_best or save_on_highest or save_on_lowest:
-                flattened_results = {}
-                for k, v in train_results_.items():
-                    if isinstance(v, dict):
-                        for k_, v_ in v.items():
-                            flattened_results[k + '.' + k_] = v_
-                    else:
-                        flattened_results[k] = v
-                if save_on_best in flattened_results:
-                    # TODO(Devon) This needs to be fixed.
-                    # when train_for is set, result keys vary per epoch
-                    # if save_on_best not in flattened_results:
-                    #    raise ValueError('`save_on_best` key `{}` not found.
-                    #  Available: {}'.format(
-                    #        save_on_best, tuple(flattened_results.keys())))
-                    current = flattened_results[save_on_best]
-                    if not best:
-                        found_best = True
-                    elif save_on_lowest:
-                        found_best = current < best
-                    else:
-                        found_best = current > best
-                    if found_best:
-                        best = current
-                        print(
-                            '\nFound best {} (train): {}'.format(
-                                save_on_best, best))
-                        exp.save(model, prefix='best_' + save_on_best)
+                best = save_best(model, train_results_, best, save_on_best,
+                                 save_on_lowest)
 
             # TESTING
             test_results_ = test_epoch(model, epoch, data_mode=test_mode)
@@ -253,29 +258,29 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
 
             exp.INFO['epoch'] += 1
 
-    except KeyboardInterrupt:
-        kill = False
-        while True:
-            try:
-                response = input('Keyboard interrupt. Kill? (Y/N) '
-                                 '(or ^c again)')
-            except KeyboardInterrupt:
-                kill = True
-                break
-            response = response.lower()
-            if response == 'y':
-                kill = True
-                break
-            elif response == 'n':
-                print('Cancelling interrupt. Starting epoch over.')
-                break
-            else:
-                print('Unknown response')
+        except KeyboardInterrupt:
+            def stop_training_query():
+                while True:
+                    try:
+                        response = input('Keyboard interrupt. Kill? (Y/N) '
+                                         '(or ^c again)')
+                    except KeyboardInterrupt:
+                        return True
+                    response = response.lower()
+                    if response == 'y':
+                        return True
+                    elif response == 'n':
+                        print('Cancelling interrupt. Starting epoch over.')
+                        return False
+                    else:
+                        print('Unknown response')
 
-        if kill:
-            print('Training interrupted')
-            exp.save(model, prefix='interrupted')
-            sys.exit(0)
+            kill = stop_training_query()
+
+            if kill:
+                print('Training interrupted')
+                exp.save(model, prefix='interrupted')
+                sys.exit(0)
 
     logger.info('Successfully completed training')
     exp.save(model, prefix='final')

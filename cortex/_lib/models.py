@@ -6,7 +6,7 @@ import copy
 import logging
 import time
 
-from . import data, optimizer
+from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_inputs, parse_kwargs
 from .handlers import (aliased, prefixed, NetworkHandler, LossHandler,
                        ResultsHandler)
@@ -287,7 +287,7 @@ class ModelPluginBase(metaclass=PluginType):
             for k, v in help.items():
                 if k not in self.help:
                     self.help[k] = help[k]
-            model._kwargs = self._kwargs
+            model._set_kwargs(self._kwargs)
             model.name = key
 
             model._results = prefixed(
@@ -297,6 +297,11 @@ class ModelPluginBase(metaclass=PluginType):
             self._models.append(model)
 
         super().__setattr__(key, value)
+
+    def _set_kwargs(self, kwargs):
+        self._kwargs = kwargs
+        for model in self._models:
+            model._set_kwargs(kwargs)
 
     def _check_contract(self, contract):
         '''Checks the compatability of the contract.
@@ -362,7 +367,7 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
-        def _fetch_kwargs():
+        def _fetch_kwargs(**kwargs_):
             if self._contract is not None:
                 kwarg_dict = self._contract['kwargs']
             else:
@@ -372,7 +377,10 @@ class ModelPluginBase(metaclass=PluginType):
             kwargs = dict()
             for k in kwarg_keys:
                 key = kwarg_dict.get(k, k)
-                value = self.kwargs[key]
+                try:
+                    value = self.kwargs[key]
+                except KeyError:
+                    value = kwargs_.get(key)
                 kwargs[k] = value
 
             return kwargs
@@ -391,10 +399,16 @@ class ModelPluginBase(metaclass=PluginType):
                 inputs.append(value)
             return inputs
 
-        def wrapped(*args, auto_input=False, **kwargs):
-            kwargs_ = _fetch_kwargs()
-            kwargs.update(kwargs_)
-
+        def wrapped(*args, auto_input=False, **kwargs_):
+            kwargs = _fetch_kwargs(**kwargs_)
+            for k, v in kwargs_.items():
+                if isinstance(v, dict) and (k in kwargs and
+                                            isinstance(kwargs[k], dict)):
+                    kwargs[k].update(**v)
+                elif v is not None:
+                    kwargs[k] = v
+                elif v is None and k not in kwargs:
+                    kwargs[k] = v
             if auto_input:
                 args = _fetch_inputs()
             return fn(*args, **kwargs)
@@ -479,6 +493,8 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
+        fn = self._wrap(fn)
+
         def wrapped(*args, _init=False, **kwargs):
             if train and not _init:
                 self._set_train()
@@ -511,13 +527,13 @@ class ModelPluginBase(metaclass=PluginType):
         data_mode = 'train' if train else 'test'
 
         if train:
-            epoch_str = 'Training (epoch {}): '
+            epoch_str = 'Training {} (epoch {}): '
         else:
-            epoch_str = 'Evaluating (epoch {}): '
+            epoch_str = 'Evaluating {} (epoch {}): '
 
         def wrapped(epoch, data_mode=data_mode):
             self._reset_epoch()
-            self.data.reset(data_mode, string=epoch_str.format(epoch))
+            self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch))
             fn()
 
             results = self._all_epoch_results
@@ -557,3 +573,7 @@ class ModelPluginBase(metaclass=PluginType):
                 'Bad values found (quitting): {} \n All:{}'.format(
                     bads, self.losses))
             exit(0)
+
+    def reload_nets(self, nets_to_reload):
+        if nets_to_reload:
+            self.nets._handler.load(**nets_to_reload)

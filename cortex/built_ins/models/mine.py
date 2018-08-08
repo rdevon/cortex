@@ -23,7 +23,7 @@ class MINE(ALIDiscriminator):
                                     penalty_amount='mine_penalty_amount'))
         self.penalty = GradientPenalty(contract=contract)
 
-    def routine(self, X, X_m, Z, Z_m, U, mine_measure='JSD'):
+    def routine(self, X, X_m, Z, Z_m, mine_measure='JSD'):
         '''
 
         Args:
