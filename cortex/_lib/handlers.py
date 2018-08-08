@@ -94,7 +94,10 @@ class AliasedHandler(Handler):
 
     def __getattr__(self, item):
         if item.startswith('_'):
-            return super().__setattr__(item)
+            try:
+                return super().__getitem__(item)
+            except KeyError:
+                return getattr(self._handler, item)
         item = self._aliases.get(item, item)
         return self._handler.__getitem__(item)
 
@@ -210,6 +213,49 @@ class NetworkHandler(Handler):
     _get_error_string = 'Model `{}` not found. You must add ' \
                         'it in `build_models` (as a dict entry).' \
                         ' Found: {}'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._loaded = dict()
+
+    def load(self, **kwargs):
+        self._loaded.update(**kwargs)
+        self.update(**kwargs)
+
+    def __setitem__(self, key, value):
+        self._check_keyvalue(key, value)
+
+        if self._locked:
+            raise KeyError('Handler is locked.')
+
+        if not self._allow_overwrite and hasattr(self, key):
+            if key in self._loaded:
+                self.__dict__[key] = value
+                loaded = self._loaded[key]
+                self.__dict__[key].load_state_dict(loaded.state_dict())
+            else:
+                raise KeyError('Overwriting keys not allowed.')
+        else:
+            self.__dict__[key] = value
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            return MutableMapping.__setattr__(self, key, value)
+
+        self._check_keyvalue(key, value)
+
+        if self._locked:
+            raise KeyError('Handler is locked.')
+
+        if not self._allow_overwrite and hasattr(self, key):
+            if key in self._loaded:
+                MutableMapping.__setattr__(self, key, value)
+                loaded = self._loaded[key]
+                self.__dict__[key].load_state_dict(loaded.state_dict())
+            else:
+                raise KeyError('Overwriting keys not allowed.')
+        else:
+            MutableMapping.__setattr__(self, key, value)
 
 
 ResultsHandler = Handler

@@ -130,6 +130,9 @@ class DataHandler(object):
             raise RuntimeError('Batch not set')
 
         item = self.inputs.get(item, item)
+        # TODO: Condition added for testing purpose.
+        if item == 'inputs':
+            item = 'images'
         if item not in self.batch.keys():
             raise KeyError('Data with label `{}` not found. Available: {}'
                            .format(item, tuple(self.batch.keys())))

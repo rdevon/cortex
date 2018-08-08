@@ -64,9 +64,9 @@ class SimpleConvEncoder(BaseNet):
             n_steps = len(dim_h)
 
         i = 0
+        logger.debug('Input size: {},{}'.format(dim_x, dim_y))
         while ((dim_x >= min_dim and dim_y >= min_dim) and
                (i < n_steps if n_steps else True)):
-            logger.debug('Input size: {},{}'.format(dim_x, dim_y))
             if i == 0:
                 if isinstance(dim_h, list):
                     dim_out = dim_h[0]
