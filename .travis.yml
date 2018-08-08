@@ -2,6 +2,7 @@ language: python
 python:
   - "3.6"
 before_install:
+  - "pip install yaml"
   - "pip install sphinxcontrib-napoleon"
   - "python travis-config.py"
 install:
