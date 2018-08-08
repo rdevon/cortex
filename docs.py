@@ -10,7 +10,10 @@ for filename in files_before_generation:
         files_after_generation.remove(filename)
 for filename in files_after_generation:
     subprocess.call(["rm", "-f", filename])
-folders = [folder for folder in os.listdir('./docs/html') if os.path.isdir(os.path.join('./docs/html', folder))]
+folders = [
+    folder for folder in os.listdir('./docs/html')
+    if os.path.isdir(os.path.join('./docs/html', folder))
+]
 folders_to_remove = []
 for folder in folders:
     if folder[0] != "_":
