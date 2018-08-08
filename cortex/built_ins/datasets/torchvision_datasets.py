@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 import torchvision
+from torchvision.transforms import transforms
 
 from cortex.plugins import DatasetPlugin, register_plugin
 from .utils import build_transforms
@@ -28,17 +29,9 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         'STL10',
         'SVHN']
 
-    def _handle_LSUN(self, Dataset, data_path, transform=None):
-        """
 
-        Args:
-            Dataset:
-            data_path:
-            transform:
+    def _handle_LSUN(self, Dataset, data_path, transform=None, **kwargs):
 
-        Returns:
-
-        """
         train_set = Dataset(
             data_path,
             classes=['bedroom_train'],
@@ -49,17 +42,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             transform=transform)
         return train_set, test_set
 
-    def _handle_SVHN(self, Dataset, data_path, transform=None):
-        """
-
-        Args:
-            Dataset:
-            data_path:
-            transform:
-
-        Returns:
-
-        """
+    def _handle_SVHN(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
             data_path,
             split='train',
@@ -72,17 +55,38 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             download=True)
         return train_set, test_set
 
-    def _handle(self, Dataset, data_path, transform=None):
-        """
+    def _handle_STL(self, Dataset, data_path, transform=None,
+                    labeled_only=False):
+        normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(64),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        test_transform = transforms.Compose([
+            transforms.Resize(64),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        if labeled_only:
+            split = 'train'
+        else:
+            split = 'train+unlabeled'
+        train_set = Dataset(
+            data_path,
+            split=split,
+            transform=train_transform,
+            download=True
+        )
+        test_set = Dataset(
+            data_path,
+            split='test',
+            transform=test_transform,
+            download=True)
+        return train_set, test_set
 
-        Args:
-            Dataset:
-            data_path:
-            transform:
-
-        Returns:
-
-        """
+    def _handle(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
             data_path,
             train=True,
@@ -95,23 +99,10 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             download=True)
         return train_set, test_set
 
-    def handle(
-            self,
-            source,
-            copy_to_local=False,
-            normalize=True,
-            **transform_args):
-        """
+    def handle(self, source, copy_to_local=False, normalize=True,
+               train_samples=None, test_samples=None,
+               labeled_only=False, **transform_args):
 
-        Args:
-            source:
-            copy_to_local:
-            normalize:
-            **transform_args:
-
-        Returns:
-
-        """
 
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
@@ -143,10 +134,13 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             handler = self._handle_LSUN
         elif source == 'SVHN':
             handler = self._handle_SVHN
+        elif source == 'STL10':
+            handler = self._handle_STL
         else:
             handler = self._handle
 
-        train_set, test_set = handler(Dataset, data_path, transform=transform)
+        train_set, test_set = handler(Dataset, data_path, transform=transform,
+                                      labeled_only=labeled_only)
         if train_samples is not None:
             train_set.train_data = train_set.train_data[:train_samples]
             train_set.train_labels = train_set.train_labels[:train_samples]
@@ -154,15 +148,19 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             test_set.test_data = test_set.test_data[:test_samples]
             test_set.test_labels = test_set.test_labels[:test_samples]
 
-        if source == 'SVHN':
-            dim_c, dim_x, dim_y = train_set.data.shape[1:]
-            dim_l = len(np.unique(train_set.labels))
-
+        if source in ('SVHN', 'STL10'):
+            dim_c, dim_x, dim_y = train_set[0][0].size()
+            uniques = np.unique(train_set.labels).tolist()
+            try:
+                uniques.remove(-1)
+            except ValueError:
+                pass
+            dim_l = len(uniques)
         else:
             if len(train_set.train_data.shape) == 4:
-                dim_x, dim_y, dim_c = tuple(train_set.train_data.shape)[1:]
+                dim_c, dim_x, dim_y = train_set[0][0].size()
             else:
-                dim_x, dim_y = tuple(train_set.train_data.shape)[1:]
+                dim_x, dim_y = train_set[0][0].size()
                 dim_c = 1
 
             labels = train_set.train_labels

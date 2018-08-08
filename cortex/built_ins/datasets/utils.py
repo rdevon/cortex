@@ -45,6 +45,9 @@ def build_transforms(normalize=True, center_crop=None, image_size=None,
     transform_.append(transforms.ToTensor())
 
     if normalize:
-        transform_.append(transforms.Normalize(*normalize))
+        if isinstance(normalize, transforms.Normalize):
+            transform_.append(normalize)
+        else:
+            transform_.append(transforms.Normalize(*normalize))
     transform = transforms.Compose(transform_)
     return transform

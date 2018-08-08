@@ -6,12 +6,14 @@ import torch.nn.functional as F
 class ImageEncoder(ModelPlugin):
 
     def build(self,
-              dim_out,
+              dim_out=None,
               encoder_type: str = 'convnet',
-              encoder_args=dict(fully_connected_layers=1028)):
+              encoder_args=dict(fully_connected_layers=1028),
+              Encoder=None):
         x_shape = self.get_dims('x', 'y', 'c')
-        Encoder, encoder_args = update_encoder_args(
+        Encoder_, encoder_args = update_encoder_args(
             x_shape, model_type=encoder_type, encoder_args=encoder_args)
+        Encoder = Encoder or Encoder_
         encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
         self.nets.encoder = encoder
 
@@ -28,12 +30,14 @@ class ImageEncoder(ModelPlugin):
 class ImageDecoder(ModelPlugin):
 
     def build(self,
-              dim_in,
+              dim_in=None,
               decoder_type: str = 'convnet',
-              decoder_args=dict(output_nonlinearity='tanh')):
+              decoder_args=dict(output_nonlinearity='tanh'),
+              Decoder=None):
         x_shape = self.get_dims('x', 'y', 'c')
-        Decoder, decoder_args = update_decoder_args(
+        Decoder_, decoder_args = update_decoder_args(
             x_shape, model_type=decoder_type, decoder_args=decoder_args)
+        Decoder = Decoder or Decoder_
         decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
         self.nets.decoder = decoder
 
