@@ -123,7 +123,6 @@ def _check_dir(query, default, required=False):
                                       .format(p))
                 if create_path:
                     pathlib.Path(p).mkdir(parents=True, exist_ok=True)
-                    import pdb; pdb.set_trace()
                     return p
 
 
