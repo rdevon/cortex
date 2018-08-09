@@ -133,8 +133,7 @@ class ImageClassification(SimpleClassifier):
     defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
         optimizer=dict(optimizer='Adam', learning_rate=1e-3),
-        train=dict(epochs=200, save_on_best='losses.classifier'),
-        classifier_args=dict(dropout=0.2))
+        train=dict(epochs=200, save_on_best='losses.classifier'))
 
     def build(self, classifier_type='convnet',
               classifier_args=dict(dropout=0.2), Encoder=None):
