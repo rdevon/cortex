@@ -29,7 +29,8 @@ def test_apply_nonlinearity():
     nonlinear = 'tanh'
 
     expected_output = torch.nn.functional.tanh(input)
-    applied_nonlinearity = apply_nonlinearity(input, nonlinear, **nonlinearity_args)
+    applied_nonlinearity = apply_nonlinearity(input, nonlinear,
+                                              **nonlinearity_args)
 
     assert torch.equal(expected_output, applied_nonlinearity)
 
@@ -43,11 +44,13 @@ def test_finish_layer_1d():
     name = 'linear_(64/4096)'
     dim_out = 4096
 
-    model = nn.Sequential(OrderedDict([
-        ('linear_(64/4096)', nn.Linear(in_features=64, out_features=4096, bias=True))
-    ]))
+    model = nn.Sequential(
+        OrderedDict([('linear_(64/4096)',
+                      nn.Linear(in_features=64, out_features=4096,
+                                bias=True))]))
 
-    finish_layer_1d(model, name, dim_out, dropout, layer_norm, batch_norm, nonlinearity)
+    finish_layer_1d(model, name, dim_out, dropout, layer_norm, batch_norm,
+                    nonlinearity)
 
     assert isinstance(model[0], torch.nn.modules.linear.Linear)
     assert isinstance(model[1], torch.nn.modules.batchnorm.BatchNorm1d)
@@ -69,14 +72,15 @@ def test_finish_layer_2d():
     nonlinear_relu_layer = nn.ReLU()
     view = View()
 
-    model = nn.Sequential(OrderedDict([
-        ('linear_(64/4096)', nn.Linear(in_features=64, out_features=4096, bias=True)),
-        ('linear_(64/4096)_bn', batch_norm_1d_layer),
-        ('linear_(64/4096)_ReLU', nonlinear_relu_layer),
-        ('reshape', view)
-    ]))
+    model = nn.Sequential(
+        OrderedDict([('linear_(64/4096)',
+                      nn.Linear(in_features=64, out_features=4096, bias=True)),
+                     ('linear_(64/4096)_bn', batch_norm_1d_layer),
+                     ('linear_(64/4096)_ReLU',
+                      nonlinear_relu_layer), ('reshape', view)]))
 
-    finish_layer_2d(model, name, dim_x, dim_y, dim_out, dropout, layer_norm, batch_norm, nonlinearity)
+    finish_layer_2d(model, name, dim_x, dim_y, dim_out, dropout, layer_norm,
+                    batch_norm, nonlinearity)
 
     assert isinstance(model[4], torch.nn.modules.batchnorm.BatchNorm2d)
     assert isinstance(model[5], torch.nn.modules.activation.ReLU)
