@@ -5,6 +5,7 @@ This is not necessary to use cortex: these are just convenience networks.
 '''
 
 import torch.nn as nn
+import torch
 
 from .utils import apply_nonlinearity, get_nonlinearity, finish_layer_1d
 
@@ -25,7 +26,7 @@ class BaseNet(nn.Module):
         self.output_nonlinearity = output_nonlinearity
         self.layer_nonlinearity = get_nonlinearity(nonlinearity)
 
-    def forward(self, x, nonlinearity=None, **nonlinearity_args):
+    def forward(self, x: torch.Tensor, nonlinearity: str=None, **nonlinearity_args: dict) -> torch.Tensor:
         self.states = []
         if nonlinearity is None:
             nonlinearity = self.output_nonlinearity
@@ -51,6 +52,7 @@ class BaseNet(nn.Module):
 
     def add_linear_layers(self, dim_in, dim_h, dim_ex=None, Linear=None,
                           **layer_args):
+
         Linear = Linear or nn.Linear
 
         if dim_h is None or len(dim_h) == 0:
