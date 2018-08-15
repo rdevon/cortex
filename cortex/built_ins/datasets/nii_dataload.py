@@ -42,6 +42,15 @@ IMG_EXTENSIONS = ['.nii', '.nii.gz', '.img', '.hdr', '.img.gz', '.hdr.gz']
 
 
 def make_dataset(dir, patterns=None):
+    """
+
+    Args:
+        dir:
+        patterns:
+
+    Returns:
+
+    """
     images = []
 
     dir = os.path.expanduser(dir)
@@ -68,6 +77,14 @@ def make_dataset(dir, patterns=None):
 
 
 def nii_loader(path):
+    """
+
+    Args:
+        path:
+
+    Returns:
+
+    """
     img = nib.load(path)
     data = img.get_data()
     # hdr = img.header
@@ -106,6 +123,15 @@ class ImageFolder(data.Dataset):
         self.mask = mask
 
     def maskData(self, data):
+        """
+
+        Args:
+            data:
+
+        Returns:
+
+        """
+
         msk = nib.load(self.mask)
         mskD = msk.get_data()
         if not np.all(np.bitwise_or(mskD == 0, mskD == 1)):
