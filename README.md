@@ -59,8 +59,10 @@ Where:
     GAN                                           Generative adversarial network.
     VAE                                           Variational autoencder.
     AdversarialAutoencoder                        Adversarial Autoencoder
+    Autoencoder                                   Simple autoencder model.
     ALI                                           Adversarially learned inference.
     ImageClassification                           Basic image classifier.
+    ImageAttributeClassification                  Basic image classifier.
     GAN_MINE                                      GAN + MINE.
 
  ##### Options  

@@ -111,14 +111,14 @@ class GradientPenalty(ModelPlugin):
 
     def routine(self, inputs, penalty_type: str='contractive',
                 penalty_amount: float=0.5):
-        '''
+        """
 
         Args:
             penalty_type: Gradient penalty type for the discriminator.
                 {contractive}
             penalty_amount: Amount of gradient penalty for the discriminator.
 
-        '''
+        """
         if penalty_type == 'contractive':
             penalty = self.contractive_penalty(
                 self.nets.network, inputs, penalty_amount=penalty_amount)
@@ -186,13 +186,13 @@ class GradientPenalty(ModelPlugin):
 class Discriminator(ModelPlugin):
 
     def build(self, discriminator_type: str='convnet', discriminator_args={}):
-        '''
+        """
 
         Args:
             discriminator_type: Discriminator network type.
             discriminator_args: Discriminator network arguments.
 
-        '''
+        """
         x_shape = self.get_dims('x', 'y', 'c')
         Encoder, discriminator_args = update_encoder_args(
             x_shape, model_type=discriminator_type,
@@ -201,14 +201,14 @@ class Discriminator(ModelPlugin):
         self.nets.discriminator = discriminator
 
     def routine(self, real, fake, measure: str='GAN'):
-        '''
+        """
 
         Args:
             measure: GAN measure.
                 {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared
                 Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}
 
-        '''
+        """
 
         X_P = real
         X_Q = fake
@@ -242,19 +242,20 @@ class Discriminator(ModelPlugin):
 
 
 class SimpleDiscriminator(Discriminator):
-    '''Discriminator for 1d vectors.
+    """
+    Discriminator for 1d vectors.
 
-    '''
+    """
 
     def build(self, dim_in: int=None, discriminator_args=dict(dim_h=[200, 200])):
-        '''
+        """
 
         Args:
             dim_in (int): Input size
             dim_out (int): Output size
             classifier_args: Extra arguments for building the classifier
 
-        '''
+        """
         discriminator = FullyConnectedNet(dim_in, dim_out=1,
                                           **discriminator_args)
         self.nets.discriminator = discriminator
@@ -264,7 +265,7 @@ class Generator(ModelPlugin):
 
     def build(self, dim_z=64, generator_type: str='convnet',
               generator_args=dict(output_nonlinearity='tanh')):
-        '''
+        """
 
         Args:
             generator_noise_type: Type of input noise for the generator.
@@ -272,7 +273,7 @@ class Generator(ModelPlugin):
             generator_type: Generator network type.
             generator_args: Generator network arguments.
 
-        '''
+        """
         x_shape = self.get_dims('x', 'y', 'c')
 
         Decoder, generator_args = update_decoder_args(
@@ -282,13 +283,13 @@ class Generator(ModelPlugin):
         self.nets.generator = generator
 
     def routine(self, Z, measure: str=None, loss_type: str='non-saturating'):
-        '''
+        """
 
         Args:
             loss_type: Generator loss type.
                 {non-saturating, minimax, boundary-seek}
 
-        '''
+        """
         discriminator = self.nets.discriminator
         generator = self.nets.generator
 
@@ -311,11 +312,10 @@ class Generator(ModelPlugin):
 
 
 class GAN(ModelPlugin):
-    '''Generative adversarial network.
-
-    A generative adversarial network on images.
-
-    '''
+    """
+        Generative adversarial network.
+        A generative adversarial network on images.
+    """
 
     defaults = dict(
         data=dict(batch_size=dict(train=64, test=64),
@@ -332,12 +332,12 @@ class GAN(ModelPlugin):
         self.generator = Generator()
 
     def build(self, noise_type='normal', dim_z=64):
-        '''
+        """
 
         Args:
             noise_type: Distribution of input noise for generator.
 
-        '''
+        """
         self.add_noise('Z', dist=noise_type, size=dim_z)
         self.add_noise('E', dist='uniform', size=1)
 
@@ -345,13 +345,13 @@ class GAN(ModelPlugin):
         self.discriminator.build()
 
     def train_step(self, generator_updates=1, discriminator_updates=1):
-        '''
+        """
 
         Args:
             generator_updates: Number of generator updates per step.
             discriminator_updates: Number of discriminator updates per step.
 
-        '''
+        """
 
         for _ in range(discriminator_updates):
             self.data.next()
