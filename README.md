@@ -1,7 +1,7 @@
 
 # Warning  
 Cortex is under heavy development, and should not be used (and issues should not be raised) unless you know what you are doing (i.e., you are a developer for this project).    
-# Cortex2.0   
+# Cortex   
  [![Build Status](https://travis-ci.com/joeljpoulin/cortex2.0.svg?branch=setup-pytest)](https://travis-ci.com/rdevon/cortex) 
  
 Cortex is a wrapper around Pytorch that makes training models more convenient.
