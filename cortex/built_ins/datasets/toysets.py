@@ -109,7 +109,11 @@ class _SmallDataset(data.TensorDataset):
             super().__init__(data, target)
 
     def download(self):
-        """Download, and unzip in the correct location."""
+        """
+        Download, and unzip in the correct location.
+        Returns:
+
+        """
         import urllib
         import zipfile
 
@@ -141,7 +145,14 @@ class _SmallDataset(data.TensorDataset):
         print('Done!')
 
     def prepare(self, *select):
-        """Make torch Tensors from data and label files."""
+        """
+
+        Args:
+            *select:
+
+        Returns:
+
+        """
         datafile, labelfile = self.files(*select)
         data_filepath = os.path.join(self.root, datafile)
         label_filepath = os.path.join(self.root, labelfile)
@@ -162,9 +173,22 @@ class _SmallDataset(data.TensorDataset):
         return data, target
 
     def files(self, *select):
+        """
+
+        Args:
+            *select:
+
+        Returns:
+
+        """
         return '', ''
 
     def check_exists(self):
+        """
+
+        Returns:
+
+        """
         return True
 
 
@@ -224,7 +248,15 @@ class G2(_SmallDataset):
     urls = ["http://cs.joensuu.fi/sipu/datasets/g2-txt.zip"]
 
     def prepare(self, dim, sd):
-        """Make torch Tensors from g2-`dim`-`sd` and infer labels."""
+        """
+        Make torch Tensors from g2-`dim`-`sd` and infer labels.
+        Args:
+            dim:
+            sd:
+
+        Returns:
+
+        """
         filename = 'g2-{}-{}.txt'.format(dim, sd)
         data = []
         target = []
@@ -242,6 +274,11 @@ class G2(_SmallDataset):
         return data, target
 
     def check_exists(self):
+        """
+
+        Returns:
+
+        """
         return os.path.exists(os.path.join(self.root, 'g2-1-10.txt'))
 
 
@@ -273,7 +310,14 @@ class S_set(_SmallDataset):
     sync_files = 5
 
     def files(self, num):
-        """Make torch Tensors from 's{num}.txt' and fetch labels."""
+        """
+        Make torch Tensors from 's{num}.txt' and fetch labels.
+        Args:
+            num:
+
+        Returns:
+
+        """
         return 's{}.txt'.format(num), 's{}-label.pa'.format(num)
 
     def check_exists(self):
@@ -311,9 +355,22 @@ class A_set(_SmallDataset):
     sync_files = 4
 
     def files(self, num):
+        """
+
+        Args:
+            num:
+
+        Returns:
+
+        """
         return 'a{}.txt'.format(num), 'a{}-ga.pa'.format(num)
 
     def check_exists(self):
+        """
+
+        Returns:
+
+        """
         return os.path.exists(os.path.join(self.root, 'a1.txt'))
 
 
@@ -351,9 +408,22 @@ class DIM_set(_SmallDataset):
     sync_files = 5
 
     def files(self, dim):
+        """
+
+        Args:
+            dim:
+
+        Returns:
+
+        """
         return 'dim{:03d}.txt'.format(dim), 'dim{:03d}.pa'.format(dim)
 
     def check_exists(self):
+        """
+
+        Returns:
+
+        """
         return os.path.exists(os.path.join(self.root, 'dim032.txt'))
 
 
@@ -379,9 +449,19 @@ class Unbalance(_SmallDataset):
     sync_files = 4
 
     def files(self):
+        """
+
+        Returns:
+
+        """
         return 'unbalance.txt', 'unbalance-gt.pa'
 
     def check_exists(self):
+        """
+
+        Returns:
+
+        """
         data, labels = self.files()
         return os.path.exists(os.path.join(self.root, data)) and\
             os.path.exists(os.path.join(self.root, labels))
@@ -391,7 +471,11 @@ class _Shapes(_SmallDataset):
     """Wrap shapes datasets from the website."""
 
     def prepare(self):
-        """Make torch Tensors from data and label files."""
+        """
+        Make torch Tensors from data and label files.
+        Returns:
+
+        """
         datafile = self.urls[0].rpartition('/')[2]
         data_filepath = os.path.join(self.root, datafile)
         data = []
@@ -412,6 +496,11 @@ class _Shapes(_SmallDataset):
         return data, target
 
     def check_exists(self):
+        """
+
+        Returns:
+
+        """
         datafile = self.urls[0].rpartition('/')[2]
         return os.path.exists(os.path.join(self.root, datafile))
 

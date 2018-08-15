@@ -14,46 +14,29 @@ from .utils import build_transforms
 
 class TorchvisionDatasetPlugin(DatasetPlugin):
     sources = [
-        'CIFAR10',
-        'CIFAR100',
-        'CocoCaptions',
-        'CocoDetection',
-        'FakeData',
-        'FashionMNIST',
-        'ImageFolder',
-        'LSUN',
-        'LSUNClass',
-        'MNIST',
-        'PhotoTour',
-        'SEMEION',
-        'STL10',
-        'SVHN']
+        'CIFAR10', 'CIFAR100', 'CocoCaptions', 'CocoDetection', 'FakeData',
+        'FashionMNIST', 'ImageFolder', 'LSUN', 'LSUNClass', 'MNIST',
+        'PhotoTour', 'SEMEION', 'STL10', 'SVHN'
+    ]
 
     def _handle_LSUN(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
-            data_path,
-            classes=['bedroom_train'],
-            transform=transform)
+            data_path, classes=['bedroom_train'], transform=transform)
         test_set = Dataset(
-            data_path,
-            classes=['bedroom_test'],
-            transform=transform)
+            data_path, classes=['bedroom_test'], transform=transform)
         return train_set, test_set
 
     def _handle_SVHN(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
-            data_path,
-            split='train',
-            transform=transform,
-            download=True)
+            data_path, split='train', transform=transform, download=True)
         test_set = Dataset(
-            data_path,
-            split='test',
-            transform=transform,
-            download=True)
+            data_path, split='test', transform=transform, download=True)
         return train_set, test_set
 
-    def _handle_STL(self, Dataset, data_path, transform=None,
+    def _handle_STL(self,
+                    Dataset,
+                    data_path,
+                    transform=None,
                     labeled_only=False):
         normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         train_transform = transforms.Compose([
@@ -72,34 +55,26 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         else:
             split = 'train+unlabeled'
         train_set = Dataset(
-            data_path,
-            split=split,
-            transform=train_transform,
-            download=True
-        )
+            data_path, split=split, transform=train_transform, download=True)
         test_set = Dataset(
-            data_path,
-            split='test',
-            transform=test_transform,
-            download=True)
+            data_path, split='test', transform=test_transform, download=True)
         return train_set, test_set
 
     def _handle(self, Dataset, data_path, transform=None, **kwargs):
         train_set = Dataset(
-            data_path,
-            train=True,
-            transform=transform,
-            download=True)
+            data_path, train=True, transform=transform, download=True)
         test_set = Dataset(
-            data_path,
-            train=False,
-            transform=transform,
-            download=True)
+            data_path, train=False, transform=transform, download=True)
         return train_set, test_set
 
-    def handle(self, source, copy_to_local=False, normalize=True,
-               train_samples=None, test_samples=None,
-               labeled_only=False, **transform_args):
+    def handle(self,
+               source,
+               copy_to_local=False,
+               normalize=True,
+               train_samples=None,
+               test_samples=None,
+               labeled_only=False,
+               **transform_args):
 
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
@@ -114,8 +89,9 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             data_path = self.copy_to_local_path(data_path)
 
         if normalize and isinstance(normalize, bool):
-            if source in ['MNIST', 'dSprites', 'Fashion-MNIST', 'EMNIST',
-                          'PhotoTour']:
+            if source in [
+                    'MNIST', 'dSprites', 'Fashion-MNIST', 'EMNIST', 'PhotoTour'
+            ]:
                 normalize = [(0.5,), (0.5,)]
                 scale = (0, 1)
             else:
@@ -136,8 +112,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         else:
             handler = self._handle
 
-        train_set, test_set = handler(Dataset, data_path, transform=transform,
-                                      labeled_only=labeled_only)
+        train_set, test_set = handler(
+            Dataset, data_path, transform=transform, labeled_only=labeled_only)
         if train_samples is not None:
             train_set.train_data = train_set.train_data[:train_samples]
             train_set.train_labels = train_set.train_labels[:train_samples]

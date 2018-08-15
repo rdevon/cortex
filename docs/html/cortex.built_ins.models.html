@@ -1,0 +1,1562 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>cortex.built_ins.models package &mdash; Cortex2.0  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="cortex.built_ins.networks package" href="cortex.built_ins.networks.html" />
+    <link rel="prev" title="cortex.built_ins.datasets package" href="cortex.built_ins.datasets.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Cortex2.0
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">cortex</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="cortex.html">cortex package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="cortex.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="cortex.built_ins.html">cortex.built_ins package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="cortex.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex.main">cortex.main module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex.plugins">cortex.plugins module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cortex.html#module-cortex">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="develop.html">Develop</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Cortex2.0</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="modules.html">cortex</a> &raquo;</li>
+        
+          <li><a href="cortex.html">cortex package</a> &raquo;</li>
+        
+          <li><a href="cortex.built_ins.html">cortex.built_ins package</a> &raquo;</li>
+        
+      <li>cortex.built_ins.models package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/cortex.built_ins.models.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="cortex-built-ins-models-package">
+<h1>cortex.built_ins.models package<a class="headerlink" href="#cortex-built-ins-models-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-cortex.built_ins.models.adversarial_autoencoder">
+<span id="cortex-built-ins-models-adversarial-autoencoder-module"></span><h2>cortex.built_ins.models.adversarial_autoencoder module<a class="headerlink" href="#module-cortex.built_ins.models.adversarial_autoencoder" title="Permalink to this headline">¶</a></h2>
+<p>Adversarial autoencoder</p>
+<dl class="class">
+<dt id="cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.adversarial_autoencoder.</code><code class="descname">AdversarialAutoencoder</code><a class="reference internal" href="_modules/cortex/built_ins/models/adversarial_autoencoder.html#AdversarialAutoencoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<p>Adversarial Autoencoder</p>
+<p>Autoencoder with a GAN loss on the latent space.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>noise_type='normal'</em>, <em>dim_z=64</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/adversarial_autoencoder.html#AdversarialAutoencoder.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>noise_type</strong> – Prior noise distribution.</li>
+<li><strong>dim_z</strong> – Dimensionality of latent space.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.defaults">
+<code class="descname">defaults</code><em class="property"> = {'data': {'batch_size': {'train': 64, 'test': 640}, 'inputs': {'inputs': 'images'}}, 'optimizer': {'optimizer': 'Adam', 'learning_rate': 0.0001}, 'train': {'epochs': 500, 'archive_every': 10}}</em><a class="headerlink" href="#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.eval_step">
+<code class="descname">eval_step</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/adversarial_autoencoder.html#AdversarialAutoencoder.eval_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.eval_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an evaluation step.</p>
+<p>This can be overridden to change the behavior of each evaluation step.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>Z</em>, <em>encoder_loss_type='non-saturating'</em>, <em>measure=None</em>, <em>beta=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/adversarial_autoencoder.html#AdversarialAutoencoder.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>encoder_loss_type</strong> – Adversarial loss type for the encoder.</li>
+<li><strong>beta</strong> – Amount of adversarial loss for the encoder.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.train_step">
+<code class="descname">train_step</code><span class="sig-paren">(</span><em>n_discriminator_updates=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/adversarial_autoencoder.html#AdversarialAutoencoder.train_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.train_step" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n_discriminator_updates</strong> – Number of discriminator updates per step.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>inputs</em>, <em>Z</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/adversarial_autoencoder.html#AdversarialAutoencoder.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models.ae">
+<span id="cortex-built-ins-models-ae-module"></span><h2>cortex.built_ins.models.ae module<a class="headerlink" href="#module-cortex.built_ins.models.ae" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cortex.built_ins.models.ae.AE">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.ae.</code><code class="descname">AE</code><a class="reference internal" href="_modules/cortex/built_ins/models/ae.html#AE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ae.AE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.ae.AE.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_z=64</em>, <em>dim_encoder_out=64</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ae.html#AE.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ae.AE.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds the neural networks.</p>
+<p>The the model is to build something, this needs to be overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.ae.AE.defaults">
+<code class="descname">defaults</code><em class="property"> = {'data': {'batch_size': {'train': 64, 'test': 64}, 'inputs': {'inputs': 'images'}}, 'optimizer': {'optimizer': 'Adam', 'learning_rate': 0.0001}, 'train': {'save_on_lowest': 'losses.ae'}}</em><a class="headerlink" href="#cortex.built_ins.models.ae.AE.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.ae.AE.plugin_name">
+<code class="descname">plugin_name</code><em class="property"> = 'AE'</em><a class="headerlink" href="#cortex.built_ins.models.ae.AE.plugin_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ae.AE.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em>, <em>ae_criterion=&lt;function mse_loss&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ae.html#AE.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ae.AE.routine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Derives losses and results.</p>
+<p>The the model is to train something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ae.AE.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ae.html#AE.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ae.AE.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models.ali">
+<span id="cortex-built-ins-models-ali-module"></span><h2>cortex.built_ins.models.ali module<a class="headerlink" href="#module-cortex.built_ins.models.ali" title="Permalink to this headline">¶</a></h2>
+<p>Adversarially learned inference and Bi-GAN</p>
+<p>Currently noise encoder is not implemented.</p>
+<dl class="class">
+<dt id="cortex.built_ins.models.ali.ALI">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.ali.</code><code class="descname">ALI</code><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALI"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<p>Adversarially learned inference.</p>
+<p>a.k.a. BiGAN
+.. note:: Currently noisy encoder not supported.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALI.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_z=None</em>, <em>dim_int=None</em>, <em>use_z_encoder=False</em>, <em>z_encoder_args={'batch_norm': True</em>, <em>'dim_h': 256}</em>, <em>noise_type='normal'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALI.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALI.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>use_z_encoder</strong> – Use a neural network for Z pathway in discriminator.</li>
+<li><strong>z_encoder_args</strong> – Arguments for the Z pathway encoder.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.ali.ALI.defaults">
+<code class="descname">defaults</code><em class="property"> = {'data': {'batch_size': {'train': 64, 'test': 640}, 'inputs': {'inputs': 'images'}}, 'optimizer': {'optimizer': 'Adam', 'learning_rate': 0.0001}, 'train': {'epochs': 500, 'save_on_lowest': 'losses.generator'}}</em><a class="headerlink" href="#cortex.built_ins.models.ali.ALI.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALI.eval_step">
+<code class="descname">eval_step</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALI.eval_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALI.eval_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an evaluation step.</p>
+<p>This can be overridden to change the behavior of each evaluation step.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALI.train_step">
+<code class="descname">train_step</code><span class="sig-paren">(</span><em>discriminator_updates=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALI.train_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALI.train_step" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>generator_updates</strong> – Number of generator updates per step.</li>
+<li><strong>discriminator_updates</strong> – Number of discriminator updates per step.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALI.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>inputs</em>, <em>Z</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALI.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALI.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.ali.ALIDiscriminator">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.ali.</code><code class="descname">ALIDiscriminator</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALIDiscriminator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALIDiscriminator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALIDiscriminator.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>topnet_args={'batch_norm': False</em>, <em>'dim_h': [512</em>, <em>128]}</em>, <em>dim_int=256</em>, <em>dim_z=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALIDiscriminator.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALIDiscriminator.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>topnet_args</strong> – Keyword arguments for the top network.</li>
+<li><strong>dim_int</strong> – Intermediate layer size for discriminator.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALIDiscriminator.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>X_real</em>, <em>X_fake</em>, <em>Z_real</em>, <em>Z_fake</em>, <em>measure='GAN'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALIDiscriminator.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALIDiscriminator.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>measure</strong> – GAN measure.
+{GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2
+(squared Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALIDiscriminator.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>X_P</em>, <em>X_Q</em>, <em>Z_P</em>, <em>Z_Q</em>, <em>measure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALIDiscriminator.score"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALIDiscriminator.score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALIDiscriminator.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>X_real</em>, <em>X_fake</em>, <em>Z_real</em>, <em>Z_fake</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALIDiscriminator.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALIDiscriminator.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.ali.ALIDiscriminatorModule">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.ali.</code><code class="descname">ALIDiscriminatorModule</code><span class="sig-paren">(</span><em>x_encoder</em>, <em>z_encoder</em>, <em>topnet</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALIDiscriminatorModule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALIDiscriminatorModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>ALI discriminator model.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.ALIDiscriminatorModule.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em>, <em>z</em>, <em>nonlinearity=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#ALIDiscriminatorModule.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.ALIDiscriminatorModule.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.ali.BidirectionalModel">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.ali.</code><code class="descname">BidirectionalModel</code><span class="sig-paren">(</span><em>discriminator</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#BidirectionalModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.BidirectionalModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.BidirectionalModel.build">
+<code class="descname">build</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#BidirectionalModel.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.BidirectionalModel.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds the neural networks.</p>
+<p>The the model is to build something, this needs to be overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.BidirectionalModel.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>Z</em>, <em>measure=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#BidirectionalModel.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.BidirectionalModel.routine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Derives losses and results.</p>
+<p>The the model is to train something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.ali.BidirectionalModel.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/ali.html#BidirectionalModel.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.ali.BidirectionalModel.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models.classifier">
+<span id="cortex-built-ins-models-classifier-module"></span><h2>cortex.built_ins.models.classifier module<a class="headerlink" href="#module-cortex.built_ins.models.classifier" title="Permalink to this headline">¶</a></h2>
+<p>Simple classifier model</p>
+<dl class="class">
+<dt id="cortex.built_ins.models.classifier.ImageClassification">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.classifier.</code><code class="descname">ImageClassification</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/classifier.html#ImageClassification"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.classifier.ImageClassification" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cortex.built_ins.models.classifier.SimpleClassifier" title="cortex.built_ins.models.classifier.SimpleClassifier"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.built_ins.models.classifier.SimpleClassifier</span></code></a></p>
+<p>Basic image classifier.</p>
+<p>Classifies images using standard convnets.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.classifier.ImageClassification.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>classifier_type='convnet'</em>, <em>classifier_args={'dropout': 0.2}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/classifier.html#ImageClassification.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.classifier.ImageClassification.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds a simple image classifier.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>classifier_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Network type for the classifier.</li>
+<li><strong>classifier_args</strong> – Classifier arguments. Can include dropout,</li>
+<li><strong>layer_norm</strong><strong>, </strong><strong>etc.</strong> (<em>batch_norm</em><em>,</em>) – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.classifier.ImageClassification.defaults">
+<code class="descname">defaults</code><em class="property"> = {'data': {'batch_size': 128, 'inputs': {'inputs': 'images'}}, 'optimizer': {'optimizer': 'Adam', 'learning_rate': 0.001}, 'train': {'epochs': 200, 'save_on_best': 'losses.classifier'}}</em><a class="headerlink" href="#cortex.built_ins.models.classifier.ImageClassification.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.classifier.SimpleClassifier">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.classifier.</code><code class="descname">SimpleClassifier</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/classifier.html#SimpleClassifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.classifier.SimpleClassifier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<p>Build a simple feed-forward classifier.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.classifier.SimpleClassifier.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_in: int = None</em>, <em>classifier_args={'dim_h': [200</em>, <em>200]}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/classifier.html#SimpleClassifier.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.classifier.SimpleClassifier.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dim_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Input size</li>
+<li><strong>dim_out</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Output size</li>
+<li><strong>dim_h</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.7)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list</span></code></a> of <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">int</span></code></a>) – Hidden layer sizes</li>
+<li><strong>classifier_args</strong> – Extra arguments for building the classifier</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.classifier.SimpleClassifier.defaults">
+<code class="descname">defaults</code><em class="property"> = {'data': {'batch_size': 128}, 'optimizer': {'optimizer': 'Adam', 'learning_rate': 0.0001}, 'train': {'epochs': 200, 'save_on_best': 'losses.classifier'}}</em><a class="headerlink" href="#cortex.built_ins.models.classifier.SimpleClassifier.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.classifier.SimpleClassifier.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>inputs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/classifier.html#SimpleClassifier.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.classifier.SimpleClassifier.predict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.classifier.SimpleClassifier.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em>, <em>criterion=CrossEntropyLoss()</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/classifier.html#SimpleClassifier.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.classifier.SimpleClassifier.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>criterion</strong> – Classifier criterion.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.classifier.SimpleClassifier.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>images</em>, <em>inputs</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/classifier.html#SimpleClassifier.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.classifier.SimpleClassifier.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cortex-built-ins-models-discrete-gan-module">
+<h2>cortex.built_ins.models.discrete_gan module<a class="headerlink" href="#cortex-built-ins-models-discrete-gan-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-cortex.built_ins.models.gan">
+<span id="cortex-built-ins-models-gan-module"></span><h2>cortex.built_ins.models.gan module<a class="headerlink" href="#module-cortex.built_ins.models.gan" title="Permalink to this headline">¶</a></h2>
+<p>Generative adversarial networks with various objectives and penalties.</p>
+<dl class="class">
+<dt id="cortex.built_ins.models.gan.Discriminator">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">Discriminator</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Discriminator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Discriminator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Discriminator.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>discriminator_type: str = 'convnet'</em>, <em>discriminator_args={}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Discriminator.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Discriminator.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>discriminator_type</strong> – Discriminator network type.</li>
+<li><strong>discriminator_args</strong> – Discriminator network arguments.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Discriminator.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>real</em>, <em>fake</em>, <em>measure: str = 'GAN'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Discriminator.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Discriminator.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>measure</strong> – GAN measure.
+{GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2 (squared
+Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Discriminator.score">
+<code class="descname">score</code><span class="sig-paren">(</span><em>X_P</em>, <em>X_Q</em>, <em>measure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Discriminator.score"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Discriminator.score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Discriminator.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>real</em>, <em>fake</em>, <em>measure=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Discriminator.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Discriminator.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.gan.GAN">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">GAN</code><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GAN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GAN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<p>Generative adversarial network.</p>
+<p>A generative adversarial network on images.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.GAN.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>noise_type='normal'</em>, <em>dim_z=64</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GAN.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GAN.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>noise_type</strong> – Distribution of input noise for generator.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.gan.GAN.defaults">
+<code class="descname">defaults</code><em class="property"> = {'data': {'batch_size': {'train': 64, 'test': 64}, 'inputs': {'inputs': 'images'}}, 'train': {'save_on_lowest': 'losses.gan'}}</em><a class="headerlink" href="#cortex.built_ins.models.gan.GAN.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.GAN.eval_step">
+<code class="descname">eval_step</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GAN.eval_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GAN.eval_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an evaluation step.</p>
+<p>This can be overridden to change the behavior of each evaluation step.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.GAN.train_step">
+<code class="descname">train_step</code><span class="sig-paren">(</span><em>generator_updates=1</em>, <em>discriminator_updates=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GAN.train_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GAN.train_step" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>generator_updates</strong> – Number of generator updates per step.</li>
+<li><strong>discriminator_updates</strong> – Number of discriminator updates per step.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.GAN.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>images</em>, <em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GAN.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GAN.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.gan.Generator">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">Generator</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Generator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Generator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Generator.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_z=64</em>, <em>generator_type: str = 'convnet'</em>, <em>generator_args={'output_nonlinearity': 'tanh'}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Generator.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Generator.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>generator_noise_type</strong> – Type of input noise for the generator.</li>
+<li><strong>dim_z</strong> – Input noise dimension for generator.</li>
+<li><strong>generator_type</strong> – Generator network type.</li>
+<li><strong>generator_args</strong> – Generator network arguments.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Generator.generate">
+<code class="descname">generate</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Generator.generate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Generator.generate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Generator.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>Z</em>, <em>measure: str = None</em>, <em>loss_type: str = 'non-saturating'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Generator.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Generator.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>loss_type</strong> – Generator loss type.
+{non-saturating, minimax, boundary-seek}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.Generator.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#Generator.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.Generator.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.gan.GradientPenalty">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">GradientPenalty</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GradientPenalty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GradientPenalty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.GradientPenalty.contractive_penalty">
+<code class="descname">contractive_penalty</code><span class="sig-paren">(</span><em>network</em>, <em>input</em>, <em>penalty_amount=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GradientPenalty.contractive_penalty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GradientPenalty.contractive_penalty" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.GradientPenalty.interpolate_penalty">
+<code class="descname">interpolate_penalty</code><span class="sig-paren">(</span><em>network</em>, <em>input</em>, <em>penalty_amount=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GradientPenalty.interpolate_penalty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GradientPenalty.interpolate_penalty" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.GradientPenalty.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>penalty_type: str = 'contractive'</em>, <em>penalty_amount: float = 0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#GradientPenalty.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.GradientPenalty.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>penalty_type</strong> – Gradient penalty type for the discriminator.
+{contractive}</li>
+<li><strong>penalty_amount</strong> – Amount of gradient penalty for the discriminator.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.gan.SimpleDiscriminator">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">SimpleDiscriminator</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#SimpleDiscriminator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.SimpleDiscriminator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cortex.built_ins.models.gan.Discriminator" title="cortex.built_ins.models.gan.Discriminator"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.built_ins.models.gan.Discriminator</span></code></a></p>
+<p>Discriminator for 1d vectors.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.gan.SimpleDiscriminator.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_in: int = None</em>, <em>discriminator_args={'dim_h': [200</em>, <em>200]}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#SimpleDiscriminator.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.SimpleDiscriminator.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dim_in</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Input size</li>
+<li><strong>dim_out</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Output size</li>
+<li><strong>classifier_args</strong> – Extra arguments for building the classifier</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.gan.generator_loss">
+<code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">generator_loss</code><span class="sig-paren">(</span><em>q_samples</em>, <em>measure</em>, <em>loss_type=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#generator_loss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.generator_loss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.gan.get_boundary">
+<code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">get_boundary</code><span class="sig-paren">(</span><em>samples</em>, <em>measure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#get_boundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.get_boundary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.gan.get_negative_expectation">
+<code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">get_negative_expectation</code><span class="sig-paren">(</span><em>q_samples</em>, <em>measure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#get_negative_expectation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.get_negative_expectation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.gan.get_positive_expectation">
+<code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">get_positive_expectation</code><span class="sig-paren">(</span><em>p_samples</em>, <em>measure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#get_positive_expectation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.get_positive_expectation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.gan.get_weight">
+<code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">get_weight</code><span class="sig-paren">(</span><em>samples</em>, <em>measure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#get_weight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.get_weight" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.gan.raise_measure_error">
+<code class="descclassname">cortex.built_ins.models.gan.</code><code class="descname">raise_measure_error</code><span class="sig-paren">(</span><em>measure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/gan.html#raise_measure_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.gan.raise_measure_error" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models.image_coders">
+<span id="cortex-built-ins-models-image-coders-module"></span><h2>cortex.built_ins.models.image_coders module<a class="headerlink" href="#module-cortex.built_ins.models.image_coders" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="cortex.built_ins.models.image_coders.ImageDecoder">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.image_coders.</code><code class="descname">ImageDecoder</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageDecoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageDecoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.image_coders.ImageDecoder.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_in</em>, <em>decoder_type: str = 'convnet'</em>, <em>decoder_args={'output_nonlinearity': 'tanh'}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageDecoder.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageDecoder.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds the neural networks.</p>
+<p>The the model is to build something, this needs to be overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.image_coders.ImageDecoder.decode">
+<code class="descname">decode</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageDecoder.decode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageDecoder.decode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.image_coders.ImageDecoder.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>Z</em>, <em>decoder_crit=&lt;function mse_loss&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageDecoder.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageDecoder.routine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Derives losses and results.</p>
+<p>The the model is to train something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.image_coders.ImageDecoder.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageDecoder.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageDecoder.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.image_coders.ImageEncoder">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.image_coders.</code><code class="descname">ImageEncoder</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageEncoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<dl class="method">
+<dt id="cortex.built_ins.models.image_coders.ImageEncoder.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_out</em>, <em>encoder_type: str = 'convnet'</em>, <em>encoder_args={'fully_connected_layers': 1028}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageEncoder.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageEncoder.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds the neural networks.</p>
+<p>The the model is to build something, this needs to be overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.image_coders.ImageEncoder.encode">
+<code class="descname">encode</code><span class="sig-paren">(</span><em>inputs</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageEncoder.encode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageEncoder.encode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.image_coders.ImageEncoder.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/image_coders.html#ImageEncoder.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.image_coders.ImageEncoder.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models.mine">
+<span id="cortex-built-ins-models-mine-module"></span><h2>cortex.built_ins.models.mine module<a class="headerlink" href="#module-cortex.built_ins.models.mine" title="Permalink to this headline">¶</a></h2>
+<p>Mutual information neural estimation</p>
+<dl class="class">
+<dt id="cortex.built_ins.models.mine.GAN_MINE">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.mine.</code><code class="descname">GAN_MINE</code><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#GAN_MINE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.GAN_MINE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cortex.built_ins.models.gan.GAN" title="cortex.built_ins.models.gan.GAN"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.built_ins.models.gan.GAN</span></code></a></p>
+<p>GAN + MINE.</p>
+<p>A generative adversarial network trained with MI maximization.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.mine.GAN_MINE.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>noise_type='normal'</em>, <em>dim_z=64</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#GAN_MINE.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.GAN_MINE.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Args:
+noise_type: Distribution of input noise for generator.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.mine.GAN_MINE.eval_step">
+<code class="descname">eval_step</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#GAN_MINE.eval_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.GAN_MINE.eval_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes an evaluation step.</p>
+<p>This can be overridden to change the behavior of each evaluation step.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.mine.GAN_MINE.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>Z</em>, <em>Z_m</em>, <em>mine_measure=None</em>, <em>beta=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#GAN_MINE.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.GAN_MINE.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>beta</strong> – Factor for mutual information maximization for generator.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.mine.GAN_MINE.train_step">
+<code class="descname">train_step</code><span class="sig-paren">(</span><em>mine_updates=1</em>, <em>discriminator_updates=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#GAN_MINE.train_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.GAN_MINE.train_step" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mine_updates</strong> – Number of MINE updates per step.</li>
+<li><strong>discriminator_updates</strong> – Number of discriminator updates per step.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.mine.GAN_MINE.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>images</em>, <em>Z</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#GAN_MINE.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.GAN_MINE.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.mine.MINE">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.mine.</code><code class="descname">MINE</code><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#MINE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.MINE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cortex.built_ins.models.ali.ALIDiscriminator" title="cortex.built_ins.models.ali.ALIDiscriminator"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.built_ins.models.ali.ALIDiscriminator</span></code></a></p>
+<p>Mutual information neural estimation (MINE).</p>
+<p>Estimates mutual information of two random variables.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.mine.MINE.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>X</em>, <em>X_m</em>, <em>Z</em>, <em>Z_m</em>, <em>U</em>, <em>mine_measure='JSD'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/mine.html#MINE.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.mine.MINE.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mine_measure</strong> – MINE measure.
+{GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2
+(squared Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models.utils">
+<span id="cortex-built-ins-models-utils-module"></span><h2>cortex.built_ins.models.utils module<a class="headerlink" href="#module-cortex.built_ins.models.utils" title="Permalink to this headline">¶</a></h2>
+<p>Model misc utilities.</p>
+<dl class="function">
+<dt id="cortex.built_ins.models.utils.cross_correlation">
+<code class="descclassname">cortex.built_ins.models.utils.</code><code class="descname">cross_correlation</code><span class="sig-paren">(</span><em>X</em>, <em>remove_diagonal=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/utils.html#cross_correlation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.utils.cross_correlation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.utils.log_sum_exp">
+<code class="descclassname">cortex.built_ins.models.utils.</code><code class="descname">log_sum_exp</code><span class="sig-paren">(</span><em>x</em>, <em>axis=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/utils.html#log_sum_exp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.utils.log_sum_exp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.utils.ms_ssim">
+<code class="descclassname">cortex.built_ins.models.utils.</code><code class="descname">ms_ssim</code><span class="sig-paren">(</span><em>X_a</em>, <em>X_b</em>, <em>window_size=11</em>, <em>size_average=True</em>, <em>C1=0.0001</em>, <em>C2=0.0009</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/utils.html#ms_ssim"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.utils.ms_ssim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Taken from Po-Hsun-Su/pytorch-ssim</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.utils.perform_svc">
+<code class="descclassname">cortex.built_ins.models.utils.</code><code class="descname">perform_svc</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>clf=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/utils.html#perform_svc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.utils.perform_svc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.utils.to_one_hot">
+<code class="descclassname">cortex.built_ins.models.utils.</code><code class="descname">to_one_hot</code><span class="sig-paren">(</span><em>y</em>, <em>K</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/utils.html#to_one_hot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.utils.to_one_hot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.utils.update_decoder_args">
+<code class="descclassname">cortex.built_ins.models.utils.</code><code class="descname">update_decoder_args</code><span class="sig-paren">(</span><em>x_shape</em>, <em>model_type='convnet'</em>, <em>decoder_args=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/utils.html#update_decoder_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.utils.update_decoder_args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="cortex.built_ins.models.utils.update_encoder_args">
+<code class="descclassname">cortex.built_ins.models.utils.</code><code class="descname">update_encoder_args</code><span class="sig-paren">(</span><em>x_shape</em>, <em>model_type='convnet'</em>, <em>encoder_args=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/utils.html#update_encoder_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.utils.update_encoder_args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models.vae">
+<span id="cortex-built-ins-models-vae-module"></span><h2>cortex.built_ins.models.vae module<a class="headerlink" href="#module-cortex.built_ins.models.vae" title="Permalink to this headline">¶</a></h2>
+<p>Simple Variational Autoencoder model.</p>
+<dl class="class">
+<dt id="cortex.built_ins.models.vae.ImageDecoder">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.vae.</code><code class="descname">ImageDecoder</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageDecoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageDecoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<p>Builds a simple image encoder.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.ImageDecoder.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>decoder_type: str = 'convnet'</em>, <em>dim_in: int = 64</em>, <em>decoder_args={'output_nonlinearity': 'tanh'}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageDecoder.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageDecoder.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>decoder_type</strong> – Decoder model type.</li>
+<li><strong>dim_in</strong> – Input size.</li>
+<li><strong>decoder_args</strong> – Arguments for the decoder.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.ImageDecoder.decode">
+<code class="descname">decode</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageDecoder.decode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageDecoder.decode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.ImageDecoder.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>Z</em>, <em>decoder_crit=&lt;function mse_loss&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageDecoder.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageDecoder.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>decoder_crit</strong> – Criterion for the decoder.</td>
+</tr>
+</tbody>
+</table>
+<p>x = self.encoder(x)
+x = self.decoder(x)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.ImageDecoder.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>Z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageDecoder.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageDecoder.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.vae.ImageEncoder">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.vae.</code><code class="descname">ImageEncoder</code><span class="sig-paren">(</span><em>contract=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageEncoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<p>Builds a simple image encoder.</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.ImageEncoder.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>encoder_type: str = 'convnet'</em>, <em>dim_out: int = None</em>, <em>encoder_args={'fully_connected_layers': 1024}</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageEncoder.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageEncoder.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>encoder_type</strong> – Encoder model type.</li>
+<li><strong>dim_out</strong> – Output size.</li>
+<li><strong>encoder_args</strong> – Arguments for encoder build.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.ImageEncoder.encode">
+<code class="descname">encode</code><span class="sig-paren">(</span><em>inputs</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageEncoder.encode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageEncoder.encode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.ImageEncoder.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#ImageEncoder.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.ImageEncoder.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.vae.VAE">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.vae.</code><code class="descname">VAE</code><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#VAE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.VAE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.ModelPlugin" title="cortex.plugins.ModelPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.ModelPlugin</span></code></a></p>
+<p>Variational autoencder.</p>
+<p>A generative model trained using the variational lower-bound to the
+log-likelihood.
+See: Kingma, Diederik P., and Max Welling.
+“Auto-encoding variational bayes.” arXiv preprint arXiv:1312.6114 (2013).</p>
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.VAE.build">
+<code class="descname">build</code><span class="sig-paren">(</span><em>dim_z=64</em>, <em>dim_encoder_out=1024</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#VAE.build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.VAE.build" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dim_z</strong> – Latent dimension.</li>
+<li><strong>dim_encoder_out</strong> – Dimension of the final layer of the decoder before
+decoding to mu and log sigma.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAE.defaults">
+<code class="descname">defaults</code><em class="property"> = {'data': {'batch_size': {'train': 64, 'test': 640}, 'inputs': {'inputs': 'images'}}, 'optimizer': {'optimizer': 'Adam', 'learning_rate': 0.0001}, 'train': {'save_on_lowest': 'losses.vae'}}</em><a class="headerlink" href="#cortex.built_ins.models.vae.VAE.defaults" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.VAE.routine">
+<code class="descname">routine</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em>, <em>Z</em>, <em>vae_criterion=&lt;function mse_loss&gt;</em>, <em>beta_kld=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#VAE.routine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.VAE.routine" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>vae_criterion</strong> – Reconstruction criterion.</li>
+<li><strong>beta_kld</strong> – Beta scaling for KL term in lower-bound.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.VAE.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><em>inputs</em>, <em>targets</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#VAE.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.VAE.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualizes.</p>
+<p>The the model is to visualize something, this needs to be
+overridden.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>*args</strong> – Inputs to be passed to the function.</li>
+<li><strong>**kwargs</strong> – Hyperparameters to be passed to the function</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="cortex.built_ins.models.vae.VAENetwork">
+<em class="property">class </em><code class="descclassname">cortex.built_ins.models.vae.</code><code class="descname">VAENetwork</code><span class="sig-paren">(</span><em>encoder</em>, <em>decoder</em>, <em>dim_out=None</em>, <em>dim_z=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#VAENetwork"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
+<p>VAE model.</p>
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAENetwork.encoder">
+<code class="descname">encoder</code><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.encoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encoder network.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAENetwork.mu_net">
+<code class="descname">mu_net</code><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.mu_net" title="Permalink to this definition">¶</a></dt>
+<dd><p>Single layer network for caculating mean.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAENetwork.logvar_net">
+<code class="descname">logvar_net</code><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.logvar_net" title="Permalink to this definition">¶</a></dt>
+<dd><p>Single layer network for calculating log variance.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAENetwork.decoder">
+<code class="descname">decoder</code><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.decoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decoder network.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAENetwork.mu">
+<code class="descname">mu</code><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.mu" title="Permalink to this definition">¶</a></dt>
+<dd><p>The mean after encoding.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAENetwork.logvar">
+<code class="descname">logvar</code><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.logvar" title="Permalink to this definition">¶</a></dt>
+<dd><p>The log variance after encoding.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.models.vae.VAENetwork.latent">
+<code class="descname">latent</code><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.latent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The latent state (Z).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.VAENetwork.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em>, <em>nonlinearity=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#VAENetwork.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.models.vae.VAENetwork.reparametrize">
+<code class="descname">reparametrize</code><span class="sig-paren">(</span><em>mu</em>, <em>std</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/models/vae.html#VAENetwork.reparametrize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.models.vae.VAENetwork.reparametrize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-cortex.built_ins.models">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-cortex.built_ins.models" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="cortex.built_ins.networks.html" class="btn btn-neutral float-right" title="cortex.built_ins.networks package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="cortex.built_ins.datasets.html" class="btn btn-neutral" title="cortex.built_ins.datasets package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, MILA.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

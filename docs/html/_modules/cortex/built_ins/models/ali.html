@@ -1,0 +1,456 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>cortex.built_ins.models.ali &mdash; Cortex2.0  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+
+  
+  <script src="../../../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../../../index.html" class="icon icon-home"> Cortex2.0
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">Cortex2.0</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../../index.html">Module code</a> &raquo;</li>
+        
+      <li>cortex.built_ins.models.ali</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for cortex.built_ins.models.ali</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;Adversarially learned inference and Bi-GAN</span>
+
+<span class="sd">Currently noise encoder is not implemented.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;R Devon Hjelm and Samuel Lavoie&#39;</span>
+<span class="n">__author_email__</span> <span class="o">=</span> <span class="s1">&#39;erroneus@gmail.com&#39;</span>
+
+<span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">register_plugin</span><span class="p">,</span> <span class="n">ModelPlugin</span>
+<span class="kn">from</span> <span class="nn">cortex.built_ins.models.gan</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">get_positive_expectation</span><span class="p">,</span> <span class="n">get_negative_expectation</span><span class="p">,</span> <span class="n">GradientPenalty</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">cortex.built_ins.models.vae</span> <span class="k">import</span> <span class="n">ImageDecoder</span><span class="p">,</span> <span class="n">ImageEncoder</span>
+<span class="kn">from</span> <span class="nn">cortex.built_ins.networks.fully_connected</span> <span class="k">import</span> <span class="n">FullyConnectedNet</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+
+
+<div class="viewcode-block" id="ALIDiscriminatorModule"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminatorModule">[docs]</a><span class="k">class</span> <span class="nc">ALIDiscriminatorModule</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;ALI discriminator model.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_encoder</span><span class="p">,</span> <span class="n">z_encoder</span><span class="p">,</span> <span class="n">topnet</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ALIDiscriminatorModule</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_encoder</span> <span class="o">=</span> <span class="n">x_encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_encoder</span> <span class="o">=</span> <span class="n">z_encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">topnet</span> <span class="o">=</span> <span class="n">topnet</span>
+
+<div class="viewcode-block" id="ALIDiscriminatorModule.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminatorModule.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">size</span><span class="p">())</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">w</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_encoder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">z</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">z_encoder</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">topnet</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">y</span></div></div>
+
+
+<div class="viewcode-block" id="BidirectionalModel"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.BidirectionalModel">[docs]</a><span class="k">class</span> <span class="nc">BidirectionalModel</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span> <span class="o">=</span> <span class="n">discriminator</span>
+
+        <span class="n">encoder_contract</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_out</span><span class="o">=</span><span class="s1">&#39;dim_z&#39;</span><span class="p">))</span>
+        <span class="n">decoder_contract</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_in</span><span class="o">=</span><span class="s1">&#39;dim_z&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">ImageDecoder</span><span class="p">(</span><span class="n">contract</span><span class="o">=</span><span class="n">decoder_contract</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">ImageEncoder</span><span class="p">(</span><span class="n">contract</span><span class="o">=</span><span class="n">encoder_contract</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BidirectionalModel.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.BidirectionalModel.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">build</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="BidirectionalModel.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.BidirectionalModel.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">measure</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">decoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span>
+        <span class="n">encoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span>
+
+        <span class="n">X_P</span><span class="p">,</span> <span class="n">Z_Q</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">Z</span>
+
+        <span class="n">X_Q</span> <span class="o">=</span> <span class="n">decoder</span><span class="p">(</span><span class="n">Z_Q</span><span class="p">)</span>
+        <span class="n">Z_P</span> <span class="o">=</span> <span class="n">encoder</span><span class="p">(</span><span class="n">X_P</span><span class="p">)</span>
+
+        <span class="n">E_pos</span><span class="p">,</span> <span class="n">E_neg</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="o">.</span><span class="n">score</span><span class="p">(</span>
+            <span class="n">X_P</span><span class="p">,</span> <span class="n">X_Q</span><span class="p">,</span> <span class="n">Z_P</span><span class="p">,</span> <span class="n">Z_Q</span><span class="p">,</span> <span class="n">measure</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="o">-</span><span class="n">E_neg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">E_pos</span></div>
+
+<div class="viewcode-block" id="BidirectionalModel.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.BidirectionalModel.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">auto_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">auto_input</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ALIDiscriminator"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminator">[docs]</a><span class="k">class</span> <span class="nc">ALIDiscriminator</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ALIDiscriminator.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminator.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topnet_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="p">[</span><span class="mi">512</span><span class="p">,</span> <span class="mi">128</span><span class="p">],</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+              <span class="n">dim_int</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            topnet_args: Keyword arguments for the top network.</span>
+<span class="sd">            dim_int: Intermediate layer size for discriminator.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">x_encoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">x_encoder</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">z_encoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">z_encoder</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">z_encoder</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">z_encoder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">z_encoder_out</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                <span class="n">z_encoder</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parameters</span><span class="p">())[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">dim_in</span> <span class="o">=</span> <span class="n">dim_int</span> <span class="o">+</span> <span class="n">z_encoder_out</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dim_in</span> <span class="o">=</span> <span class="n">dim_int</span> <span class="o">+</span> <span class="n">dim_z</span>
+
+        <span class="n">topnet</span> <span class="o">=</span> <span class="n">FullyConnectedNet</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">topnet_args</span><span class="p">)</span>
+
+        <span class="n">discriminator</span> <span class="o">=</span> <span class="n">ALIDiscriminatorModule</span><span class="p">(</span><span class="n">x_encoder</span><span class="p">,</span> <span class="n">z_encoder</span><span class="p">,</span> <span class="n">topnet</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">discriminator</span> <span class="o">=</span> <span class="n">discriminator</span></div>
+
+<div class="viewcode-block" id="ALIDiscriminator.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminator.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_real</span><span class="p">,</span> <span class="n">X_fake</span><span class="p">,</span> <span class="n">Z_real</span><span class="p">,</span> <span class="n">Z_fake</span><span class="p">,</span> <span class="n">measure</span><span class="o">=</span><span class="s1">&#39;GAN&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            measure: GAN measure.</span>
+<span class="sd">                {GAN, JSD, KL, RKL (reverse KL), X2 (Chi^2), H2</span>
+<span class="sd">                (squared Hellinger), DV (Donsker Varahdan KL), W1 (IPM)}</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">X_P</span><span class="p">,</span> <span class="n">Z_P</span> <span class="o">=</span> <span class="n">X_real</span><span class="p">,</span> <span class="n">Z_real</span>
+        <span class="n">X_Q</span><span class="p">,</span> <span class="n">Z_Q</span> <span class="o">=</span> <span class="n">X_fake</span><span class="p">,</span> <span class="n">Z_fake</span>
+
+        <span class="n">E_pos</span><span class="p">,</span> <span class="n">E_neg</span><span class="p">,</span> <span class="n">P_samples</span><span class="p">,</span> <span class="n">Q_samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">score</span><span class="p">(</span>
+            <span class="n">X_P</span><span class="p">,</span> <span class="n">X_Q</span><span class="p">,</span> <span class="n">Z_P</span><span class="p">,</span> <span class="n">Z_Q</span><span class="p">,</span> <span class="n">measure</span><span class="p">)</span>
+        <span class="n">difference</span> <span class="o">=</span> <span class="n">E_pos</span> <span class="o">-</span> <span class="n">E_neg</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">discriminator</span> <span class="o">=</span> <span class="o">-</span><span class="n">difference</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">Scores</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">Ep</span><span class="o">=</span><span class="n">P_samples</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                                        <span class="n">Eq</span><span class="o">=</span><span class="n">Q_samples</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> distance&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">measure</span><span class="p">)]</span> <span class="o">=</span> <span class="n">difference</span><span class="o">.</span><span class="n">item</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ALIDiscriminator.score"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminator.score">[docs]</a>    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_P</span><span class="p">,</span> <span class="n">X_Q</span><span class="p">,</span> <span class="n">Z_P</span><span class="p">,</span> <span class="n">Z_Q</span><span class="p">,</span> <span class="n">measure</span><span class="p">):</span>
+        <span class="n">discriminator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">discriminator</span>
+
+        <span class="n">P_samples</span> <span class="o">=</span> <span class="n">discriminator</span><span class="p">(</span><span class="n">X_P</span><span class="p">,</span> <span class="n">Z_P</span><span class="p">)</span>
+        <span class="n">Q_samples</span> <span class="o">=</span> <span class="n">discriminator</span><span class="p">(</span><span class="n">X_Q</span><span class="p">,</span> <span class="n">Z_Q</span><span class="p">)</span>
+
+        <span class="n">E_pos</span> <span class="o">=</span> <span class="n">get_positive_expectation</span><span class="p">(</span><span class="n">P_samples</span><span class="p">,</span> <span class="n">measure</span><span class="p">)</span>
+        <span class="n">E_neg</span> <span class="o">=</span> <span class="n">get_negative_expectation</span><span class="p">(</span><span class="n">Q_samples</span><span class="p">,</span> <span class="n">measure</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">E_pos</span><span class="p">,</span> <span class="n">E_neg</span><span class="p">,</span> <span class="n">P_samples</span><span class="p">,</span> <span class="n">Q_samples</span></div>
+
+<div class="viewcode-block" id="ALIDiscriminator.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminator.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_real</span><span class="p">,</span> <span class="n">X_fake</span><span class="p">,</span> <span class="n">Z_real</span><span class="p">,</span> <span class="n">Z_fake</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+        <span class="n">discriminator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">discriminator</span>
+
+        <span class="n">X_P</span><span class="p">,</span> <span class="n">Z_P</span> <span class="o">=</span> <span class="n">X_real</span><span class="p">,</span> <span class="n">Z_real</span>
+        <span class="n">X_Q</span><span class="p">,</span> <span class="n">Z_Q</span> <span class="o">=</span> <span class="n">X_fake</span><span class="p">,</span> <span class="n">Z_fake</span>
+
+        <span class="n">P_samples</span> <span class="o">=</span> <span class="n">discriminator</span><span class="p">(</span><span class="n">X_P</span><span class="p">,</span> <span class="n">Z_P</span><span class="p">)</span>
+        <span class="n">Q_samples</span> <span class="o">=</span> <span class="n">discriminator</span><span class="p">(</span><span class="n">X_Q</span><span class="p">,</span> <span class="n">Z_Q</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_histogram</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">fake</span><span class="o">=</span><span class="n">Q_samples</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                <span class="n">real</span><span class="o">=</span><span class="n">P_samples</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">),</span>
+                           <span class="n">name</span><span class="o">=</span><span class="s1">&#39;discriminator output&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span><span class="n">Z_P</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">targets</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;latent values&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ALI"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI">[docs]</a><span class="k">class</span> <span class="nc">ALI</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Adversarially learned inference.</span>
+
+<span class="sd">    a.k.a. BiGAN</span>
+<span class="sd">    Note:</span>
+<span class="sd">        Currently noisy encoder not supported.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">train</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="mi">640</span><span class="p">),</span>
+                  <span class="n">inputs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="s1">&#39;images&#39;</span><span class="p">)),</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">),</span>
+        <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">epochs</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">save_on_lowest</span><span class="o">=</span><span class="s1">&#39;losses.generator&#39;</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span> <span class="o">=</span> <span class="n">ALIDiscriminator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span> <span class="o">=</span> <span class="n">BidirectionalModel</span><span class="p">(</span>
+            <span class="n">discriminator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="p">)</span>
+
+        <span class="n">encoder_contract</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">nets</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">encoder</span><span class="o">=</span><span class="s1">&#39;x_encoder&#39;</span><span class="p">),</span>
+                                <span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_out</span><span class="o">=</span><span class="s1">&#39;dim_int&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">ImageEncoder</span><span class="p">(</span><span class="n">contract</span><span class="o">=</span><span class="n">encoder_contract</span><span class="p">)</span>
+
+        <span class="n">penalty_contract</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">nets</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">network</span><span class="o">=</span><span class="s1">&#39;discriminator&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">=</span> <span class="n">GradientPenalty</span><span class="p">(</span><span class="n">contract</span><span class="o">=</span><span class="n">penalty_contract</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ALI.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dim_int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_z_encoder</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">z_encoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+              <span class="n">noise_type</span><span class="o">=</span><span class="s1">&#39;normal&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            use_z_encoder: Use a neural network for Z pathway in discriminator.</span>
+<span class="sd">            z_encoder_args: Arguments for the Z pathway encoder.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_noise</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="n">noise_type</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">use_z_encoder</span><span class="p">:</span>
+            <span class="n">encoder</span> <span class="o">=</span> <span class="n">FullyConnectedNet</span><span class="p">(</span><span class="n">dim_z</span><span class="p">,</span> <span class="n">dim_int</span><span class="p">,</span> <span class="o">**</span><span class="n">z_encoder_args</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">z_encoder</span> <span class="o">=</span> <span class="n">encoder</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">build</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ALI.train_step"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI.train_step">[docs]</a>    <span class="k">def</span> <span class="nf">train_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">discriminator_updates</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            generator_updates: Number of generator updates per step.</span>
+<span class="sd">            discriminator_updates: Number of discriminator updates per step.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">discriminator_updates</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">Z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">(</span><span class="s1">&#39;inputs&#39;</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">)</span>
+
+            <span class="n">generated</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+            <span class="n">inferred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="o">.</span><span class="n">routine</span><span class="p">(</span>
+                <span class="n">inputs</span><span class="p">,</span> <span class="n">generated</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">inferred</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">Z</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="o">.</span><span class="n">routine</span><span class="p">((</span><span class="n">inputs</span><span class="p">,</span> <span class="n">inferred</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">train_step</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ALI.eval_step"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI.eval_step">[docs]</a>    <span class="k">def</span> <span class="nf">eval_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="n">inputs</span><span class="p">,</span> <span class="n">Z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">(</span><span class="s1">&#39;inputs&#39;</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">)</span>
+
+        <span class="n">generated</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="n">inferred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="o">.</span><span class="n">routine</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">generated</span><span class="p">,</span> <span class="n">inferred</span><span class="p">,</span> <span class="n">Z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">eval_step</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ALI.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+        <span class="n">generated</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span>
+        <span class="n">inferred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bidirectional_model</span><span class="o">.</span><span class="n">visualize</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">generated</span><span class="p">,</span> <span class="n">inferred</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span></div></div>
+
+
+<span class="n">register_plugin</span><span class="p">(</span><span class="n">ALI</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, MILA.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../../../',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
