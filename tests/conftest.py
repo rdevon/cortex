@@ -182,9 +182,3 @@ def model_with_submodel(model_class_with_submodel, data_class):
     model.kwargs.update(**kwargs)
 
     return model
-
-@pytest.fixture
-def base_net_model():
-    from cortex.built_ins.networks.base_network import BaseNet
-    base_net = BaseNet()
-

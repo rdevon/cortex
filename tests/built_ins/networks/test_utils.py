@@ -6,16 +6,12 @@ import torch
 from cortex.built_ins.networks.modules import View
 
 
-def test_get_nonlinearity():
-    sigmoid = 'sigmoid'
-    tanh = 'tanh'
-    relu = 'ReLU'
-    leakyrelu = 'LeakyReLU'
+def test_get_nonlinearity(nonlinearity):
 
-    relu = get_nonlinearity(relu)
-    tanh = get_nonlinearity(tanh)
-    leakyrelu = get_nonlinearity(leakyrelu)
-    sigmoid = get_nonlinearity(sigmoid)
+    relu = get_nonlinearity(nonlinearity['relu'])
+    tanh = get_nonlinearity(nonlinearity['tanh'])
+    leakyrelu = get_nonlinearity(nonlinearity['leakyrelu'])
+    sigmoid = get_nonlinearity(nonlinearity['sigmoid'])
 
     assert callable(sigmoid)
     assert callable(tanh)
@@ -23,24 +19,22 @@ def test_get_nonlinearity():
     assert isinstance(leakyrelu, nn.modules.activation.LeakyReLU)
 
 
-def test_apply_nonlinearity():
-    input = torch.Tensor([1., 2., 3.])
+def test_apply_nonlinearity(simple_tensor):
     nonlinearity_args = {}
     nonlinear = 'tanh'
 
-    expected_output = torch.nn.functional.tanh(input)
-    applied_nonlinearity = apply_nonlinearity(input, nonlinear,
+    expected_output = torch.nn.functional.tanh(simple_tensor)
+    applied_nonlinearity = apply_nonlinearity(simple_tensor, nonlinear,
                                               **nonlinearity_args)
 
     assert torch.equal(expected_output, applied_nonlinearity)
 
 
-def test_finish_layer_1d():
+def test_finish_layer_1d(nonlinearity):
     # Test settings for a GAN
     layer_norm = False
     batch_norm = True
     dropout = False
-    nonlinearity = 'ReLU'
     name = 'linear_(64/4096)'
     dim_out = 4096
 
@@ -50,7 +44,7 @@ def test_finish_layer_1d():
                                 bias=True))]))
 
     finish_layer_1d(model, name, dim_out, dropout, layer_norm, batch_norm,
-                    nonlinearity)
+                    nonlinearity['relu'])
 
     assert isinstance(model[0], torch.nn.modules.linear.Linear)
     assert isinstance(model[1], torch.nn.modules.batchnorm.BatchNorm1d)
