@@ -265,6 +265,7 @@ def classifier_modified():
 
     return ClassifierModified()
 
+
 @pytest.fixture
 def base_net_model():
     from cortex.built_ins.networks.base_network import BaseNet
