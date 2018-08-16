@@ -14,6 +14,16 @@ def update_nested_dicts(from_d, to_d):
 
 
 def test_command_override_static(args):
+    """
+
+    Args:
+        args: Namespace
+
+    Returns: True if passing a command line arg, the exp.ARGS is
+             changing the value from default for the command line
+             one.
+
+    """
     expected_type = 'resnet'
     args.__dict__['classifier_type'] = expected_type
     classifier_defaults = ImageClassification()
@@ -25,6 +35,16 @@ def test_command_override_static(args):
 
 
 def test_static_override_parameters(args, classifier_modified):
+    """
+
+    Args:
+        args: Namespace
+        classifier_modified: ClassifierModified
+
+    Returns: True if default attribute is overriding
+             parameters values.
+
+    """
     expected_type = 'convnet'
     config.set_config()
     classifier_modified = setup_experiment(
@@ -33,6 +53,16 @@ def test_static_override_parameters(args, classifier_modified):
 
 
 def test_update_nested_dicts(args, classifier_modified):
+    """
+
+    Args:
+        args: Namespace
+        classifier_modified: ClassifierModified
+
+    Returns: True if a dict. arg. is being updated to a
+             nested dict. (not overridden).
+
+    """
     expected_classifier_args_before_update = {'dropout': 0.2}
     expected_classifier_args_after_update = {'dropout': 0.2, 'dim_h': 100}
     args_for_update = {
@@ -58,6 +88,15 @@ def test_update_nested_dicts(args, classifier_modified):
 
 
 def test_update_args(args, classifier_modified):
+    """
+
+    Args:
+        args: Namespace
+        classifier_modified: ClassifierModified
+
+    Returns: True if exp.ARGS is updated adequately.
+
+    """
     expected_classifier_args_before_update = {'dropout': 0.2, 'dim_h': 100}
     expected_classifier_args_after_update = {'dropout': 0.1, 'dim_h': 100}
     args_for_update = {
