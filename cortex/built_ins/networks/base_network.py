@@ -54,12 +54,11 @@ class BaseNet(nn.Module):
         return dim_h
 
     def add_linear_layers(self,
-                          dim_in,
-                          dim_h,
+                          dim_in: int,
+                          dim_h: list,
                           dim_ex=None,
                           Linear=None,
                           **layer_args):
-
         Linear = Linear or nn.Linear
 
         if dim_h is None or len(dim_h) == 0:

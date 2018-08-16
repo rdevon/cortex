@@ -31,3 +31,23 @@ def test_forward_base_net(base_net_model, simple_tensor):
     base_dimension = simple_tensor.dim()
     output = base_net_model.forward(simple_tensor)
     assert output.dim() == base_dimension
+
+def test_add_linear_layers(base_net_model):
+    """
+
+    Args:
+        base_net_model: BaseNet
+
+    Returns: True if giving no hidden layers, it returns the dimension
+             of the input.
+
+    """
+    # Test settings based on ImageClassification.
+    dim_in = 4096
+    dim_h = []
+    dim_ex = None
+    Linear = None
+    layer_args = dict(batch_norm=True, dropout=0.2)
+    output = base_net_model.add_linear_layers(dim_in, dim_h, dim_ex, Linear, **layer_args)
+    assert output == dim_in
+
