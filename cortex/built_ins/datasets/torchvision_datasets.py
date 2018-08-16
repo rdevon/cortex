@@ -54,16 +54,28 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         return train_set, test_set
 
     def _handle_STL(self, Dataset, data_path, transform=None,
-                    labeled_only=False):
+                    labeled_only=False, stl_center_crop=False,
+                    stl_resize_only=False):
         normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+
+        if stl_center_crop:
+            tr_trans = transforms.CenterCrop(64)
+            te_trans = transforms.CenterCrop(64)
+        elif stl_resize_only:
+            tr_trans = transforms.Resize(64)
+            te_trans = transforms.Resize(64)
+        else:
+            tr_trans = transforms.RandomResizedCrop(64)
+            te_trans = transforms.CenterCrop(64)
+
         train_transform = transforms.Compose([
-            transforms.RandomResizedCrop(64),
+            tr_trans,
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
         ])
         test_transform = transforms.Compose([
-            transforms.Resize(64),
+            te_trans,
             transforms.ToTensor(),
             normalize,
         ])
@@ -99,7 +111,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
 
     def handle(self, source, copy_to_local=False, normalize=True,
                train_samples=None, test_samples=None,
-               labeled_only=False, **transform_args):
+               labeled_only=False, stl_center_crop=False,
+               stl_resize_only=False, **transform_args):
 
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
@@ -137,7 +150,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             handler = self._handle
 
         train_set, test_set = handler(Dataset, data_path, transform=transform,
-                                      labeled_only=labeled_only)
+                                      labeled_only=labeled_only, stl_center_crop=stl_center_crop,
+                                      stl_resize_only=stl_resize_only)
         if train_samples is not None:
             train_set.train_data = train_set.train_data[:train_samples]
             train_set.train_labels = train_set.train_labels[:train_samples]
