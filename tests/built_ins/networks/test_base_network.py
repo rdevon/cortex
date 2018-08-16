@@ -32,6 +32,7 @@ def test_forward_base_net(base_net_model, simple_tensor):
     output = base_net_model.forward(simple_tensor)
     assert output.dim() == base_dimension
 
+
 def test_add_linear_layers(base_net_model):
     """
 
@@ -51,3 +52,25 @@ def test_add_linear_layers(base_net_model):
     output = base_net_model.add_linear_layers(dim_in, dim_h, dim_ex, Linear, **layer_args)
     assert output == dim_in
 
+
+def test_add_output_layer(base_net_model):
+    """
+
+    Args:
+        base_net_model: BasetNet
+
+    Returns: True if model's models contains an output layer of
+             a Linear module.
+
+    """
+    dim_in = 4096
+    dim_out = 10
+
+    expected_name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'out')
+
+    base_net_model.add_output_layer(dim_in, dim_out)
+    layers = list(base_net_model.models._modules.items())
+
+    assert layers[0][0] == expected_name
+    assert isinstance(layers[0][1], nn.modules.linear.Linear)
+    assert layers[0][1].in_features == dim_in and layers[0][1].out_features == dim_out
