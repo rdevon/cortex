@@ -17,6 +17,7 @@ def test_base_net(base_net_model):
 
 
 def test_forward_base_net(base_net_model, simple_tensor):
+
     """
 
     Args:
