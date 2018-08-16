@@ -40,7 +40,7 @@ def test_add_linear_layers(base_net_model):
         base_net_model: BaseNet
 
     Returns: True if giving no hidden layers, it returns the dimension
-             of the input.
+             of the input (ImageClassification).
 
     """
     # Test settings based on ImageClassification.

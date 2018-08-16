@@ -80,6 +80,7 @@ class BaseNet(nn.Module):
         return dim_out
 
     def add_output_layer(self, dim_in, dim_out, Linear=None):
+
         Linear = Linear or nn.Linear
         if dim_out is not None:
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'out')
