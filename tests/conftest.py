@@ -282,3 +282,27 @@ def simple_tensor():
 def nonlinearity():
     return dict(
         sigmoid='sigmoid', tanh='tanh', relu='ReLU', leakyrelu='LeakyReLU')
+
+
+@pytest.fixture
+def simple_classifier():
+    from cortex.built_ins.models.classifier import SimpleClassifier
+    return SimpleClassifier()
+
+
+@pytest.fixture
+def simple_attribute_classifier():
+    from cortex.built_ins.models.classifier import SimpleAttributeClassifier
+    return SimpleAttributeClassifier()
+
+
+@pytest.fixture
+def image_classification():
+    from cortex.built_ins.models.classifier import ImageClassification
+    return ImageClassification()
+
+
+@pytest.fixture
+def image_attribute_classification():
+    from cortex.built_ins.models.classifier import ImageAttributeClassification
+    return ImageAttributeClassification()
