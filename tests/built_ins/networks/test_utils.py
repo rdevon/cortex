@@ -7,6 +7,14 @@ from cortex.built_ins.networks.modules import View
 
 
 def test_get_nonlinearity(nonlinearity):
+    """
+
+    Args:
+        nonlinearity: dict
+
+    Returns: True if right instance of activation function is returned.
+
+    """
 
     relu = get_nonlinearity(nonlinearity['relu'])
     tanh = get_nonlinearity(nonlinearity['tanh'])
@@ -20,6 +28,14 @@ def test_get_nonlinearity(nonlinearity):
 
 
 def test_apply_nonlinearity(simple_tensor):
+    """
+
+    Args:
+        simple_tensor: torch.Tensor
+
+    Returns: True if the right Pytorch function is called.
+
+    """
     nonlinearity_args = {}
     nonlinear = 'tanh'
 
@@ -31,6 +47,14 @@ def test_apply_nonlinearity(simple_tensor):
 
 
 def test_finish_layer_1d(nonlinearity):
+    """
+
+    Args:
+        nonlinearity: dict
+
+    Returns: True if right GAN layers are being added.
+
+    """
     # Test settings for a GAN
     layer_norm = False
     batch_norm = True
@@ -53,6 +77,11 @@ def test_finish_layer_1d(nonlinearity):
 
 
 def test_finish_layer_2d():
+    """
+
+    Returns: True if right GAN layers are being added.
+
+    """
     # Test settings for a GAN
     dim_x = 4
     dim_y = 4
