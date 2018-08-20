@@ -75,7 +75,6 @@ def register(plugin):
 
 class DatasetPluginBase():
     def __init__(self):
-
         if len(self.sources) == 0:
             raise ValueError('No sources found for dataset entry point.')
 

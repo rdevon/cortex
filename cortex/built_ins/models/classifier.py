@@ -16,7 +16,6 @@ class SimpleClassifier(ModelPlugin):
     '''Build a simple feed-forward classifier.
 
     '''
-
     defaults = dict(
         data=dict(batch_size=128),
         optimizer=dict(optimizer='Adam', learning_rate=1e-4),
@@ -24,7 +23,6 @@ class SimpleClassifier(ModelPlugin):
         classifier_args=dict(dropout=0.2))
 
     def build(self, dim_in: int=None, classifier_args=dict(dim_h=[200, 200])):
-
         '''
 
         Args:

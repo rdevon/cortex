@@ -33,6 +33,7 @@ class DatasetPlugin(DatasetPluginBase):
     sources = []
 
     def copy_to_local_path(self, from_path: str) -> str:
+
         ''' Copies data to a local path.
 
         Path is set in the .cortex.yml file. This can be set up through
