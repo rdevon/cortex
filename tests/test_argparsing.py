@@ -4,6 +4,10 @@ from cortex._lib.parsing import update_args
 
 
 def update_nested_dicts(from_d, to_d):
+    """
+    Copied from _lib/__init__::setup_experiment
+
+    """
     for k, v in from_d.items():
         if (k in to_d) and isinstance(to_d[k], dict):
             if not isinstance(v, dict):
@@ -17,7 +21,7 @@ def test_command_override_static(args):
     """
 
     Args:
-        args: Namespace
+        args(@pytest.fixture): Namespace
 
     Asserts: True if passing a command line arg, the exp.ARGS is
              changing the value from default for the command line
@@ -38,8 +42,8 @@ def test_static_override_parameters(args, classifier_modified):
     """
 
     Args:
-        args: Namespace
-        classifier_modified: ClassifierModified
+        args(@pytest.fixture): Namespace
+        classifier_modified(@pytest.fixture): ClassifierModified
 
     Asserts: True if default attribute is overriding
              parameters values.
@@ -56,8 +60,8 @@ def test_update_nested_dicts(args, classifier_modified):
     """
 
     Args:
-        args: Namespace
-        classifier_modified: ClassifierModified
+        args(@pytest.fixture): Namespace
+        classifier_modified(@pytest.fixture): ClassifierModified
 
     Asserts: True if a dict. arg. is being updated to a
              nested dict. (not overridden).
@@ -91,8 +95,8 @@ def test_update_args(args, classifier_modified):
     """
 
     Args:
-        args: Namespace
-        classifier_modified: ClassifierModified
+        args(@pytest.fixture): Namespace
+        classifier_modified(@pytest.fixture): ClassifierModified
 
     Asserts: True if exp.ARGS is updated adequately.
 

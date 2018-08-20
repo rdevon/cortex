@@ -5,7 +5,7 @@ def test_base_net(base_net_model):
     """
 
     Args:
-        base_net_model: BaseNet
+        base_net_model(@pytest.fixture): BaseNet
 
     Asserts: True if BaseNet has an empty nn.Sequential models attribute
              && a default nn.ReLU activation function.
@@ -21,8 +21,8 @@ def test_forward_base_net(base_net_model, simple_tensor):
     """
 
     Args:
-        base_net_model: BaseNet
-        simple_tensor: torch.Tensor
+        base_net_model(@pytest.fixture): BaseNet
+        simple_tensor(@pytest.fixture): torch.Tensor
 
     Asserts: True if the dimension of the output equals the dimension of
              the input.
@@ -37,7 +37,7 @@ def test_add_linear_layers(base_net_model):
     """
 
     Args:
-        base_net_model: BaseNet
+        base_net_model(@pytest.fixture): BaseNet
 
     Asserts: True if giving no hidden layers, it returns the dimension
              of the input (ImageClassification).
@@ -57,7 +57,7 @@ def test_add_output_layer(base_net_model):
     """
 
     Args:
-        base_net_model: BasetNet
+        base_net_model(@pytest.fixture): BasetNet
 
     Asserts: True if model's models contains an output layer of
              a Linear module.
