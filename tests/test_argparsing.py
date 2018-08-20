@@ -19,7 +19,7 @@ def test_command_override_static(args):
     Args:
         args: Namespace
 
-    Returns: True if passing a command line arg, the exp.ARGS is
+    Asserts: True if passing a command line arg, the exp.ARGS is
              changing the value from default for the command line
              one.
 
@@ -41,7 +41,7 @@ def test_static_override_parameters(args, classifier_modified):
         args: Namespace
         classifier_modified: ClassifierModified
 
-    Returns: True if default attribute is overriding
+    Asserts: True if default attribute is overriding
              parameters values.
 
     """
@@ -59,7 +59,7 @@ def test_update_nested_dicts(args, classifier_modified):
         args: Namespace
         classifier_modified: ClassifierModified
 
-    Returns: True if a dict. arg. is being updated to a
+    Asserts: True if a dict. arg. is being updated to a
              nested dict. (not overridden).
 
     """
@@ -94,7 +94,7 @@ def test_update_args(args, classifier_modified):
         args: Namespace
         classifier_modified: ClassifierModified
 
-    Returns: True if exp.ARGS is updated adequately.
+    Asserts: True if exp.ARGS is updated adequately.
 
     """
     expected_classifier_args_before_update = {'dropout': 0.2, 'dim_h': 100}

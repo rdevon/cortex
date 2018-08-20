@@ -13,7 +13,7 @@ def test_get_nonlinearity(nonlinearity):
     Args:
         nonlinearity: dict
 
-    Returns: True if right instance of activation function is returned.
+    Asserts: True if right instance of activation function is returned.
 
     """
 
@@ -35,7 +35,7 @@ def test_apply_nonlinearity(simple_tensor):
     Args:
         simple_tensor: torch.Tensor
 
-    Returns: True if the right Pytorch function is called.
+    Asserts: True if the right Pytorch function is called.
 
     """
 
@@ -56,7 +56,7 @@ def test_finish_layer_1d(nonlinearity):
     Args:
         nonlinearity: dict
 
-    Returns: True if right GAN layers are being added.
+    Asserts: True if right GAN layers are being added.
 
     """
 
@@ -85,7 +85,7 @@ def test_finish_layer_2d():
 
     """
 
-    Returns: True if right GAN layers are being added.
+    Asserts: True if right GAN layers are being added.
 
     """
 

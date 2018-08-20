@@ -5,7 +5,7 @@ from torch import nn
 def test_fully_connected_build():
     """
 
-    Returns: True if a the FullyConnectedNet has correct layers and
+    Asserts: True if a the FullyConnectedNet has correct layers and
              attributes.
 
     """

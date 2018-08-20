@@ -6,7 +6,7 @@ from cortex.built_ins.networks.modules import View
 def test_simple_conv_encoder_init():
     """
 
-    Returns: True is the layers are of the right type and
+    Asserts: True is the layers are of the right type and
             the parameters are correct
 
     """
@@ -116,7 +116,7 @@ def test_simple_conv_encoder_init():
 def test_simple_net_init():
     """
 
-    Returns: True if SimpleNet is being initialize with right default
+    Asserts:  True if SimpleNet is being initialize with right default
              layers and parameters.
 
     """
