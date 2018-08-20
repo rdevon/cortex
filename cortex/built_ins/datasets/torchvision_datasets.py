@@ -66,7 +66,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             te_trans = transforms.Resize(64)
         else:
             tr_trans = transforms.RandomResizedCrop(64)
-            te_trans = transforms.CenterCrop(64)
+            te_trans = transforms.Resize(64)
 
         train_transform = transforms.Compose([
             tr_trans,
@@ -150,7 +150,8 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             handler = self._handle
 
         train_set, test_set = handler(Dataset, data_path, transform=transform,
-                                      labeled_only=labeled_only, stl_center_crop=stl_center_crop,
+                                      labeled_only=labeled_only,
+                                      stl_center_crop=stl_center_crop,
                                       stl_resize_only=stl_resize_only)
         if train_samples is not None:
             train_set.train_data = train_set.train_data[:train_samples]

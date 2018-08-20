@@ -4,11 +4,12 @@
 import logging
 
 import torch.nn as nn
+
+from .base_network import BaseNet
+from .modules import View
 from .utils import (apply_nonlinearity, finish_layer_1d,
                     finish_layer_2d, get_nonlinearity)
 from .SpectralNormLayer import SNConv2d, SNLinear
-
-# from .densenet import nn.LayerNorm
 
 
 logger = logging.getLogger('cortex.models' + __name__)
@@ -157,15 +158,6 @@ class ResBlock(nn.Module):
         return x + x_
 
 
-class View(nn.Module):
-    def __init__(self, *shape):
-        super(View, self).__init__()
-        self.shape = shape
-
-    def forward(self, input):
-        return input.view(*self.shape)
-
-
 class ResDecoder(nn.Module):
     def __init__(self, shape, dim_in=None, f_size=3, dim_h=64, n_steps=3,
                  nonlinearity='ReLU', output_nonlinearity=None, **layer_args):
@@ -226,29 +218,28 @@ class ResDecoder(nn.Module):
         return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
 
 
-class ResEncoder(nn.Module):
+class ResEncoder(BaseNet):
     def __init__(self, shape, dim_out=None, dim_h=64,
                  fully_connected_layers=None,
                  f_size=3, n_steps=3, nonlinearity='ReLU',
                  output_nonlinearity=None, spectral_norm=False, **layer_args):
-        super(ResEncoder, self).__init__()
-
-        models = nn.Sequential()
-        nonlinearity = get_nonlinearity(nonlinearity)
-        self.output_nonlinearity = output_nonlinearity
+        super(ResEncoder, self).__init__(
+            nonlinearity=nonlinearity, output_nonlinearity=output_nonlinearity)
 
         Conv2d = SNConv2d if spectral_norm else nn.Conv2d
         Linear = SNLinear if spectral_norm else nn.Linear
 
         dim_out_ = dim_out
         fully_connected_layers = fully_connected_layers or []
+        if isinstance(fully_connected_layers, int):
+            fully_connected_layers = [fully_connected_layers]
 
         logger.debug('Input shape: {}'.format(shape))
         dim_x, dim_y, dim_in = shape
         dim_out = dim_h
 
         name = 'conv_({}/{})_0'.format(dim_in, dim_out)
-        models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1,
+        self.models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1,
                                        bias=False))
 
         dim_out = dim_h
@@ -260,34 +251,19 @@ class ResEncoder(nn.Module):
             resblock = ResBlock(dim_in, dim_out, dim_x, dim_y, f_size,
                                 resample='down', name=name,
                                 spectral_norm=spectral_norm, **layer_args)
-            models.add_module(name, resblock)
+            self.models.add_module(name, resblock)
 
             dim_x //= 2
             dim_y //= 2
 
+        dim_out__ = dim_out
         dim_out = dim_x * dim_y * dim_out
-        models.add_module('final_reshape', View(-1, dim_out))
+        self.models.add_module('final_reshape', View(-1, dim_out))
 
-        for dim_h in fully_connected_layers:
-            dim_in = dim_out
-            dim_out = dim_h
-            name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'final')
-            models.add_module(name, Linear(dim_in, dim_out))
-            finish_layer_1d(models, name, dim_out, nonlinearity=nonlinearity,
-                            **layer_args)
+        self.models.add_module('final_reshape_{}x{}x{}to{}'
+                               .format(dim_x, dim_y, dim_out__, dim_out),
+                               View(-1, dim_out))
 
-        if dim_out_:
-            name = 'linear_({}/{})_{}'.format(dim_out, dim_out_, 'out')
-            models.add_module(name, Linear(dim_out, dim_out_))
-
-        self.models = models
-
-    def forward(self, x, nonlinearity=None, **nonlinearity_args):
-        if nonlinearity is None:
-            nonlinearity = self.output_nonlinearity
-        elif not nonlinearity:
-            nonlinearity = None
-
-        x = self.models(x)
-
-        return apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
+        dim_out = self.add_linear_layers(dim_out, fully_connected_layers,
+                                         Linear=Linear, **layer_args)
+        self.add_output_layer(dim_out, dim_out_, Linear=Linear)

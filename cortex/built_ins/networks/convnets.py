@@ -45,7 +45,7 @@ class SimpleConvEncoder(BaseNet):
                  fully_connected_layers=None, nonlinearity='ReLU',
                  output_nonlinearity=None, f_size=4,
                  stride=2, pad=1, min_dim=4, n_steps=None,
-                 spectral_norm=False, **layer_args):
+                 spectral_norm=False, last_conv_nonlinearity=True, **layer_args):
         super(SimpleConvEncoder, self).__init__(
             nonlinearity=nonlinearity, output_nonlinearity=output_nonlinearity)
 
@@ -78,6 +78,10 @@ class SimpleConvEncoder(BaseNet):
                     dim_out = dim_h[i]
                 else:
                     dim_out = dim_in * 2
+            conv_args = dict((k, v) for k, v in layer_args.items())
+            if not last_conv_nonlinearity:
+                conv_args['nonlinearity'] = False
+
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             self.models.add_module(
                 name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
