@@ -119,6 +119,5 @@ class SimpleConvEncoder(BaseNet):
             px, py = (p, p)
         else:
             px, py = p
-
         return infer_conv_size(
             dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)

@@ -1,35 +1,21 @@
-from cortex.built_ins.networks.convnets import SimpleConvEncoder, SimpleNet
+from cortex.built_ins.networks.convnets import SimpleNet, infer_conv_size
 from torch import nn
 from cortex.built_ins.networks.modules import View
 
 
-def test_simple_conv_encoder_init():
+def test_simple_conv_encoder_init(simple_conv_encoder_image_classification):
     """
+    Args:
+        simple_conv_encoder_image_classification (@pytest.fixture): SimpleConvEncoder
 
     Asserts: True is the layers are of the right type and
-            the parameters are correct
+             the parameters are correct
 
     """
     # Settings from ImageClassification experiment.
-    shape = [32, 32, 3]
-    dim_out = 10
-    dim_h = 64
-    fully_connected_layers = None
-    nonlinearity = 'ReLU'
-    output_nonlinearity = None
-    f_size = 4
-    stride = 2
-    pad = 1
-    min_dim = 4
-    n_steps = 3
-    spectral_norm = False
-    layer_args = {'batch_norm': True, 'dropout': 0.2}
 
-    simple_conv_encoder = SimpleConvEncoder(
-        shape, dim_out, dim_h, fully_connected_layers, nonlinearity,
-        output_nonlinearity, f_size, stride, pad, min_dim, n_steps,
-        spectral_norm, **layer_args)
-    layers = list(simple_conv_encoder.models._modules.items())
+    layers = list(
+        simple_conv_encoder_image_classification.models._modules.items())
 
     # (conv_(3/64)_1): Conv2d(3, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
     assert isinstance(layers[0][1],
@@ -111,6 +97,43 @@ def test_simple_conv_encoder_init():
                       nn.Linear) and layers[13][0] == 'linear_(4096/10)_out'
     assert layers[13][1].in_features == 4096 and layers[13][1].out_features == 10
     assert layers[13][1].bias is not None
+
+
+def test_simple_conv_encoder_next_size(
+        simple_conv_encoder_image_classification):
+    """
+
+    Args:
+        simple_conv_encoder_image_classification (@pytest.fixture): SimpleConvEncoder
+
+    Asserts: True if result is a tuple of adequate values.
+
+    """
+    dim_x = 32
+    dim_y = 32
+    k = 4
+    s = 2
+    p = 1
+    output = simple_conv_encoder_image_classification.next_size(
+        dim_x, dim_y, k, s, p)
+    expected_value = infer_conv_size(dim_x, k, s, p)
+    assert isinstance(output, tuple)
+    assert output[0] == expected_value and output[1] == expected_value
+
+
+def test_infer_conv_size():
+    """
+
+    Asserts: True if output is result of the math formula
+            (w - k + 2 * p) // s + 1
+
+    """
+    w = 32
+    k = 4
+    s = 2
+    p = 1
+    output = infer_conv_size(w, k, s, p)
+    assert output == (w - k + 2 * p) // s + 1
 
 
 def test_simple_net_init():

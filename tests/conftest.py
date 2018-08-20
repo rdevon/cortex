@@ -306,3 +306,26 @@ def image_classification():
 def image_attribute_classification():
     from cortex.built_ins.models.classifier import ImageAttributeClassification
     return ImageAttributeClassification()
+
+
+@pytest.fixture
+def simple_conv_encoder_image_classification():
+    from cortex.built_ins.networks.convnets import SimpleConvEncoder
+    shape = [32, 32, 3]
+    dim_out = 10
+    dim_h = 64
+    fully_connected_layers = None
+    nonlinearity = 'ReLU'
+    output_nonlinearity = None
+    f_size = 4
+    stride = 2
+    pad = 1
+    min_dim = 4
+    n_steps = 3
+    spectral_norm = False
+    layer_args = {'batch_norm': True, 'dropout': 0.2}
+
+    return SimpleConvEncoder(
+        shape, dim_out, dim_h, fully_connected_layers, nonlinearity,
+        output_nonlinearity, f_size, stride, pad, min_dim, n_steps,
+        spectral_norm, **layer_args)
