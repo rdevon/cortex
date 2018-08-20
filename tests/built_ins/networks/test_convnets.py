@@ -1,4 +1,4 @@
-from cortex.built_ins.networks.convnets import SimpleConvEncoder
+from cortex.built_ins.networks.convnets import SimpleConvEncoder, SimpleNet
 from torch import nn
 from cortex.built_ins.networks.modules import View
 
@@ -111,3 +111,28 @@ def test_simple_conv_encoder_init():
                       nn.Linear) and layers[13][0] == 'linear_(4096/10)_out'
     assert layers[13][1].in_features == 4096 and layers[13][1].out_features == 10
     assert layers[13][1].bias is not None
+
+
+def test_simple_net_init():
+    """
+
+    Returns: True if SimpleNet is being initialize with right default
+             layers and parameters.
+
+    """
+    simple_net = SimpleNet()
+    assert isinstance(simple_net.conv1, nn.Conv2d)
+    assert simple_net.conv1.in_channels == 1
+    assert simple_net.conv1.out_channels == 10
+    assert simple_net.conv1.kernel_size == (5, 5)
+    assert isinstance(simple_net.conv2, nn.Conv2d)
+    assert simple_net.conv2.in_channels == 10
+    assert simple_net.conv2.out_channels == 20
+    assert simple_net.conv2.kernel_size == (5, 5)
+    assert isinstance(simple_net.conv2_drop, nn.Dropout2d)
+    assert isinstance(simple_net.fc1, nn.Linear)
+    assert simple_net.fc1.in_features == 320
+    assert simple_net.fc1.out_features == 50
+    assert isinstance(simple_net.fc2, nn.Linear)
+    assert simple_net.fc2.in_features == 50
+    assert simple_net.fc2.out_features == 10
