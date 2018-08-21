@@ -279,6 +279,12 @@ def simple_tensor():
 
 
 @pytest.fixture
+def simple_tensor_conv2d():
+    import torch
+    return torch.randn(128, 3, 32, 32)
+
+
+@pytest.fixture
 def nonlinearity():
     return dict(
         sigmoid='sigmoid', tanh='tanh', relu='ReLU', leakyrelu='LeakyReLU')
@@ -325,7 +331,6 @@ def simple_conv_encoder_image_classification():
     spectral_norm = False
     layer_args = {'batch_norm': True, 'dropout': 0.2}
 
-    return SimpleConvEncoder(
-        shape, dim_out, dim_h, fully_connected_layers, nonlinearity,
-        output_nonlinearity, f_size, stride, pad, min_dim, n_steps,
-        spectral_norm, **layer_args)
+    return SimpleConvEncoder(shape, dim_out, dim_h, fully_connected_layers,
+                             nonlinearity, output_nonlinearity, f_size, stride,
+                             pad, min_dim, n_steps, spectral_norm, **layer_args)

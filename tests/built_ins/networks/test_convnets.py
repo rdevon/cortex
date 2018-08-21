@@ -1,6 +1,7 @@
 from cortex.built_ins.networks.convnets import SimpleNet, infer_conv_size
 from torch import nn
 from cortex.built_ins.networks.modules import View
+import torch
 
 
 def test_simple_conv_encoder_init(simple_conv_encoder_image_classification):
@@ -159,3 +160,23 @@ def test_simple_net_init():
     assert isinstance(simple_net.fc2, nn.Linear)
     assert simple_net.fc2.in_features == 50
     assert simple_net.fc2.out_features == 10
+
+
+def test_simple_conv_encoder_forward(simple_conv_encoder_image_classification,
+                                     simple_tensor_conv2d):
+    """
+
+    Args:
+        simple_conv_encoder_image_classification (@pytest.fixture): SimpleConvEncoder
+        simple_tensor_conv2d (@pytest.fixture): torch.Tensor
+
+    Asserts: True if the output's dimension is equal to the input's one.
+
+    """
+    input_dim = simple_tensor_conv2d.dim()
+    output = simple_conv_encoder_image_classification.forward(
+        simple_tensor_conv2d)
+    output_dim = output.dim()
+    equivalent = torch.equal(simple_tensor_conv2d, output)
+    assert input_dim == output_dim
+    assert equivalent is False
