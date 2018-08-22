@@ -38,18 +38,6 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
                     stl_resize_only=False, stl_no_resize=False):
         normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 
-        if stl_center_crop:
-            tr_trans = transforms.CenterCrop(64)
-            te_trans = transforms.CenterCrop(64)
-        elif stl_resize_only:
-            tr_trans = transforms.Resize(64)
-            te_trans = transforms.Resize(64)
-        elif stl_no_resize:
-            pass
-        else:
-            tr_trans = transforms.RandomResizedCrop(64)
-            te_trans = transforms.Resize(64)
-
         if stl_no_resize:
             train_transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
@@ -61,6 +49,18 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
                 normalize,
             ])
         else:
+            if stl_center_crop:
+                tr_trans = transforms.CenterCrop(64)
+                te_trans = transforms.CenterCrop(64)
+            elif stl_resize_only:
+                tr_trans = transforms.Resize(64)
+                te_trans = transforms.Resize(64)
+            elif stl_no_resize:
+                pass
+            else:
+                tr_trans = transforms.RandomResizedCrop(64)
+                te_trans = transforms.Resize(64)
+
             train_transform = transforms.Compose([
                 tr_trans,
                 transforms.RandomHorizontalFlip(),
