@@ -190,11 +190,11 @@ def test_simple_conv_encoder_forward(simple_conv_encoder_image_classification,
              and that element-wise, the values have changed.
 
     """
-    # input_dim = simple_tensor_conv2d.dim()
+    input_dim = simple_tensor_conv2d.dim()
     output = simple_conv_encoder_image_classification.forward(
         simple_tensor_conv2d)
-    # output_dim = output.dim()
+    output_dim = output.dim()
     equivalent = torch.equal(simple_tensor_conv2d, output)
-    # TODO: Test is failing on this assertion.
-    # assert input_dim == output_dim
-    assert equivalent is False
+    assert input_dim == 4
+    assert output_dim == 2
+    assert not equivalent
