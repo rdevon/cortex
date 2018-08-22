@@ -82,6 +82,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html">Custom demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#a-walkthrough-a-custom-classifier">A walkthrough a custom classifier:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#defining-losses-and-results">Defining losses and results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#visualization">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#putting-it-together">Putting it together</a></li>
 </ul>
 
             
@@ -163,19 +168,17 @@
     <span class="sd">&#39;&#39;&#39;Build a simple feed-forward classifier.</span>
 
 <span class="sd">    &#39;&#39;&#39;</span>
-
     <span class="n">defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
         <span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">),</span>
         <span class="n">optimizer</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">),</span>
-        <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">epochs</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">save_on_best</span><span class="o">=</span><span class="s1">&#39;losses.classifier&#39;</span><span class="p">))</span>
+        <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">epochs</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">save_on_best</span><span class="o">=</span><span class="s1">&#39;losses.classifier&#39;</span><span class="p">),</span>
+        <span class="n">classifier_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">))</span>
 
 <div class="viewcode-block" id="SimpleClassifier.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_in</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">classifier_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">])):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            dim_in (int): Input size</span>
-<span class="sd">            dim_out (int): Output size</span>
-<span class="sd">            dim_h (:obj:`list` of :obj:`int`): Hidden layer sizes</span>
 <span class="sd">            classifier_args: Extra arguments for building the classifier</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
@@ -183,25 +186,31 @@
         <span class="n">classifier</span> <span class="o">=</span> <span class="n">FullyConnectedNet</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_l</span><span class="p">,</span> <span class="o">**</span><span class="n">classifier_args</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">classifier</span></div>
 
-<div class="viewcode-block" id="SimpleClassifier.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">criterion</span><span class="o">=</span><span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()):</span>
+<div class="viewcode-block" id="SimpleClassifier.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span>
+                <span class="n">criterion</span><span class="o">=</span><span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">(</span><span class="n">reduce</span><span class="o">=</span><span class="kc">False</span><span class="p">)):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            criterion: Classifier criterion.</span>
 
 <span class="sd">        &#39;&#39;&#39;</span>
-
         <span class="n">classifier</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span>
 
         <span class="n">outputs</span> <span class="o">=</span> <span class="n">classifier</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
         <span class="n">predicted</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
 
-        <span class="n">loss</span> <span class="o">=</span> <span class="n">criterion</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
-        <span class="n">correct</span> <span class="o">=</span> <span class="mf">100.</span> <span class="o">*</span> <span class="n">predicted</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span>
-            <span class="n">targets</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">targets</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">unlabeled</span> <span class="o">=</span> <span class="n">targets</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>
+        <span class="n">losses</span> <span class="o">=</span> <span class="n">criterion</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">unlabeled</span><span class="p">)</span> <span class="o">*</span> <span class="n">targets</span><span class="p">)</span>
+        <span class="n">labeled</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">unlabeled</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="p">(</span><span class="n">losses</span> <span class="o">*</span> <span class="n">labeled</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">labeled</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">loss</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">correct</span></div>
+        <span class="k">if</span> <span class="n">labeled</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">correct</span> <span class="o">=</span> <span class="mf">100.</span> <span class="o">*</span> <span class="p">(</span><span class="n">labeled</span> <span class="o">*</span> <span class="n">predicted</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span>
+                <span class="n">targets</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">())</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">labeled</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">correct</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">loss</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">perc_labeled</span> <span class="o">=</span> <span class="n">labeled</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="SimpleClassifier.predict"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
         <span class="n">classifier</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span>
@@ -217,6 +226,54 @@
                        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;gt_pred&#39;</span><span class="p">)</span></div></div>
 
 
+<div class="viewcode-block" id="SimpleAttributeClassifier"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier">[docs]</a><span class="k">class</span> <span class="nc">SimpleAttributeClassifier</span><span class="p">(</span><span class="n">SimpleClassifier</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Build a simple feed-forward classifier.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+
+    <span class="n">defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">),</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">),</span>
+        <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">epochs</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">save_on_best</span><span class="o">=</span><span class="s1">&#39;losses.classifier&#39;</span><span class="p">))</span>
+
+<div class="viewcode-block" id="SimpleAttributeClassifier.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_in</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">classifier_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dim_h</span><span class="o">=</span><span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">])):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dim_in (int): Input size</span>
+<span class="sd">            dim_out (int): Output size</span>
+<span class="sd">            dim_h (:obj:`list` of :obj:`int`): Hidden layer sizes</span>
+<span class="sd">            classifier_args: Extra arguments for building the classifier</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">dim_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;attributes&#39;</span><span class="p">)</span>
+        <span class="n">classifier</span> <span class="o">=</span> <span class="n">FullyConnectedNet</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_a</span><span class="p">,</span> <span class="o">**</span><span class="n">classifier_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">classifier</span></div>
+
+<div class="viewcode-block" id="SimpleAttributeClassifier.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">attributes</span><span class="p">):</span>
+        <span class="n">classifier</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">classifier</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;sigmoid&#39;</span><span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">BCELoss</span><span class="p">()(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">attributes</span><span class="p">)</span>
+
+        <span class="n">predicted</span> <span class="o">=</span> <span class="p">(</span><span class="n">outputs</span><span class="o">.</span><span class="n">data</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+        <span class="n">correct</span> <span class="o">=</span> <span class="mf">100.</span> <span class="o">*</span> <span class="n">predicted</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">attributes</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">attributes</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">loss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">accuracy</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="n">correct</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                                     <span class="nb">max</span><span class="o">=</span><span class="n">correct</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                                     <span class="nb">min</span><span class="o">=</span><span class="n">correct</span><span class="o">.</span><span class="n">min</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="SimpleAttributeClassifier.predict"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="n">classifier</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">classifier</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">predicted</span> <span class="o">=</span> <span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span><span class="o">.</span><span class="n">data</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">predicted</span></div>
+
+<div class="viewcode-block" id="SimpleAttributeClassifier.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">images</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;gt_pred&#39;</span><span class="p">)</span></div></div>
+
+
 <div class="viewcode-block" id="ImageClassification"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageClassification">[docs]</a><span class="k">class</span> <span class="nc">ImageClassification</span><span class="p">(</span><span class="n">SimpleClassifier</span><span class="p">):</span>
     <span class="sd">&#39;&#39;&#39;Basic image classifier.</span>
 
@@ -230,7 +287,44 @@
         <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">epochs</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">save_on_best</span><span class="o">=</span><span class="s1">&#39;losses.classifier&#39;</span><span class="p">))</span>
 
 <div class="viewcode-block" id="ImageClassification.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageClassification.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">classifier_type</span><span class="o">=</span><span class="s1">&#39;convnet&#39;</span><span class="p">,</span>
-              <span class="n">classifier_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)):</span>
+              <span class="n">classifier_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">),</span> <span class="n">Encoder</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Builds a simple image classifier.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            classifier_type (str): Network type for the classifier.</span>
+<span class="sd">            classifier_args: Classifier arguments. Can include dropout,</span>
+<span class="sd">            batch_norm, layer_norm, etc.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">classifier_args</span> <span class="o">=</span> <span class="n">classifier_args</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
+        <span class="n">dim_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;labels&#39;</span><span class="p">)</span>
+
+        <span class="n">Encoder_</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span>
+            <span class="n">shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">classifier_type</span><span class="p">,</span> <span class="n">encoder_args</span><span class="o">=</span><span class="n">classifier_args</span><span class="p">)</span>
+        <span class="n">Encoder</span> <span class="o">=</span> <span class="n">Encoder</span> <span class="ow">or</span> <span class="n">Encoder_</span>
+
+        <span class="n">args</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">classifier_args</span><span class="p">)</span>
+
+        <span class="n">classifier</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_l</span><span class="p">,</span> <span class="o">**</span><span class="n">args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">classifier</span></div></div>
+
+
+<div class="viewcode-block" id="ImageAttributeClassification"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageAttributeClassification">[docs]</a><span class="k">class</span> <span class="nc">ImageAttributeClassification</span><span class="p">(</span><span class="n">SimpleAttributeClassifier</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Basic image classifier.</span>
+
+<span class="sd">    Classifies images using standard convnets.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="n">defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="s1">&#39;images&#39;</span><span class="p">)),</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">),</span>
+        <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">epochs</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">save_on_best</span><span class="o">=</span><span class="s1">&#39;losses.classifier&#39;</span><span class="p">))</span>
+
+<div class="viewcode-block" id="ImageAttributeClassification.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageAttributeClassification.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">classifier_type</span><span class="o">=</span><span class="s1">&#39;convnet&#39;</span><span class="p">,</span>
+              <span class="n">classifier_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">),</span> <span class="n">Encoder</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Builds a simple image classifier.</span>
 
 <span class="sd">        Args:</span>
@@ -243,18 +337,20 @@
         <span class="n">classifier_args</span> <span class="o">=</span> <span class="n">classifier_args</span> <span class="ow">or</span> <span class="p">{}</span>
 
         <span class="n">shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="n">dim_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;labels&#39;</span><span class="p">)</span>
+        <span class="n">dim_a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;attributes&#39;</span><span class="p">)</span>
 
-        <span class="n">Encoder</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span>
+        <span class="n">Encoder_</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span>
             <span class="n">shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">classifier_type</span><span class="p">,</span> <span class="n">encoder_args</span><span class="o">=</span><span class="n">classifier_args</span><span class="p">)</span>
+        <span class="n">Encoder</span> <span class="o">=</span> <span class="n">Encoder</span> <span class="ow">or</span> <span class="n">Encoder_</span>
 
         <span class="n">args</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">classifier_args</span><span class="p">)</span>
 
-        <span class="n">classifier</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_l</span><span class="p">,</span> <span class="o">**</span><span class="n">args</span><span class="p">)</span>
+        <span class="n">classifier</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_a</span><span class="p">,</span> <span class="o">**</span><span class="n">args</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">classifier</span></div></div>
 
 
 <span class="n">register_plugin</span><span class="p">(</span><span class="n">ImageClassification</span><span class="p">)</span>
+<span class="n">register_plugin</span><span class="p">(</span><span class="n">ImageAttributeClassification</span><span class="p">)</span>
 </pre></div>
 
            </div>

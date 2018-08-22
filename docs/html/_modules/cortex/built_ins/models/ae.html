@@ -82,6 +82,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html">Custom demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#a-walkthrough-a-custom-classifier">A walkthrough a custom classifier:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#defining-losses-and-results">Defining losses and results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#visualization">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#putting-it-together">Putting it together</a></li>
 </ul>
 
             
@@ -145,51 +150,68 @@
            <div itemprop="articleBody">
             
   <h1>Source code for cortex.built_ins.models.ae</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">ModelPlugin</span>
-<span class="kn">from</span> <span class="nn">cortex.main</span> <span class="k">import</span> <span class="n">run</span>
+<span></span><span class="sd">&#39;&#39;&#39;Module for autoencoder model.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+
+<span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">ModelPlugin</span><span class="p">,</span> <span class="n">register_plugin</span>
 <span class="kn">from</span> <span class="nn">cortex.built_ins.models.image_coders</span> <span class="k">import</span> <span class="n">ImageEncoder</span><span class="p">,</span> <span class="n">ImageDecoder</span>
 <span class="kn">from</span> <span class="nn">cortex.built_ins.networks.ae_network</span> <span class="k">import</span> <span class="n">AENetwork</span>
 
 
-<div class="viewcode-block" id="AE"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.AE">[docs]</a><span class="k">class</span> <span class="nc">AE</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
-    <span class="n">plugin_name</span> <span class="o">=</span> <span class="s1">&#39;AE&#39;</span>
+<div class="viewcode-block" id="Autoencoder"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder">[docs]</a><span class="k">class</span> <span class="nc">Autoencoder</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Simple autoencder model.</span>
+
+<span class="sd">        Trains a noiseless autoencoder of image data.</span>
+
+<span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">defaults</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
         <span class="n">data</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
             <span class="n">batch_size</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">train</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="mi">64</span><span class="p">),</span> <span class="n">inputs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="s1">&#39;images&#39;</span><span class="p">)),</span>
         <span class="n">optimizer</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">),</span>
         <span class="n">train</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">save_on_lowest</span><span class="o">=</span><span class="s1">&#39;losses.ae&#39;</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Encoder</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Decoder</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">ImageEncoder</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">ImageDecoder</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">Encoder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Encoder</span> <span class="o">=</span> <span class="n">ImageEncoder</span>
+        <span class="k">if</span> <span class="n">Decoder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Decoder</span> <span class="o">=</span> <span class="n">ImageDecoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">()</span>
 
-<div class="viewcode-block" id="AE.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">dim_encoder_out</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">dim_encoder_out</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">dim_z</span><span class="p">)</span>
+<div class="viewcode-block" id="Autoencoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim_z</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">dim_out</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">dim_in</span><span class="o">=</span><span class="n">dim_z</span><span class="p">)</span>
+
         <span class="n">encoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span>
         <span class="n">decoder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span>
         <span class="n">ae</span> <span class="o">=</span> <span class="n">AENetwork</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">ae</span> <span class="o">=</span> <span class="n">ae</span></div>
 
-<div class="viewcode-block" id="AE.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">ae_criterion</span><span class="o">=</span><span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">):</span>
+<div class="viewcode-block" id="Autoencoder.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">ae_criterion</span><span class="o">=</span><span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ae_criterion: Criterion for the autoencoder.</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">ae</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">ae</span>
         <span class="n">outputs</span> <span class="o">=</span> <span class="n">ae</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
         <span class="n">r_loss</span> <span class="o">=</span> <span class="n">ae_criterion</span><span class="p">(</span>
             <span class="n">outputs</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">size_average</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">losses</span><span class="o">.</span><span class="n">ae</span> <span class="o">=</span> <span class="n">r_loss</span></div>
 
-<div class="viewcode-block" id="AE.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+<div class="viewcode-block" id="Autoencoder.visualize"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
         <span class="n">ae</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">ae</span>
         <span class="n">outputs</span> <span class="o">=</span> <span class="n">ae</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;reconstruction&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;ground truth&#39;</span><span class="p">)</span></div></div>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="n">autoencoder</span> <span class="o">=</span> <span class="n">AE</span><span class="p">()</span>
-    <span class="n">run</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">autoencoder</span><span class="p">)</span>
+<span class="n">register_plugin</span><span class="p">(</span><span class="n">Autoencoder</span><span class="p">)</span>
 </pre></div>
 
            </div>

@@ -82,6 +82,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html">Custom demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#a-walkthrough-a-custom-classifier">A walkthrough a custom classifier:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#defining-losses-and-results">Defining losses and results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#visualization">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#putting-it-together">Putting it together</a></li>
 </ul>
 
             
@@ -152,27 +157,17 @@
 <span class="kn">from</span> <span class="nn">os</span> <span class="k">import</span> <span class="n">path</span>
 
 <span class="kn">import</span> <span class="nn">torchvision</span>
+<span class="kn">from</span> <span class="nn">torchvision.transforms</span> <span class="k">import</span> <span class="n">transforms</span>
 
 <span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">DatasetPlugin</span><span class="p">,</span> <span class="n">register_data</span>
 <span class="kn">from</span> <span class="nn">cortex.built_ins.datasets.utils</span> <span class="k">import</span> <span class="n">build_transforms</span>
 
 
 <div class="viewcode-block" id="ImageFolder"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.imagenet.ImageFolder">[docs]</a><span class="k">class</span> <span class="nc">ImageFolder</span><span class="p">(</span><span class="n">DatasetPlugin</span><span class="p">):</span>
-    <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tiny-imagenet-200&#39;</span><span class="p">]</span>
+    <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tiny-imagenet-200&#39;</span><span class="p">,</span> <span class="s1">&#39;imagenet&#39;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="ImageFolder.handle"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.imagenet.ImageFolder.handle">[docs]</a>    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">copy_to_local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-               <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            source:</span>
-<span class="sd">            copy_to_local:</span>
-<span class="sd">            normalize:</span>
-<span class="sd">            **transform_args:</span>
-
-<span class="sd">        Returns:</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
+               <span class="n">tanh_normalization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
 
         <span class="n">Dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_indexing</span><span class="p">(</span><span class="n">torchvision</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">ImageFolder</span><span class="p">)</span>
         <span class="n">data_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
@@ -185,15 +180,47 @@
             <span class="n">test_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy_to_local_path</span><span class="p">(</span><span class="n">test_path</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">normalize</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normalize</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
-            <span class="n">normalize</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">tanh_normalization</span><span class="p">:</span>
+                <span class="n">normalize</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+                                                 <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">normalize</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="p">[</span><span class="mf">0.485</span><span class="p">,</span> <span class="mf">0.456</span><span class="p">,</span> <span class="mf">0.406</span><span class="p">],</span>
+                                                 <span class="n">std</span><span class="o">=</span><span class="p">[</span><span class="mf">0.229</span><span class="p">,</span> <span class="mf">0.224</span><span class="p">,</span> <span class="mf">0.225</span><span class="p">])</span>
 
-        <span class="n">transform</span> <span class="o">=</span> <span class="n">build_transforms</span><span class="p">(</span><span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span> <span class="o">**</span><span class="n">transform_args</span><span class="p">)</span>
-
-        <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">train_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
-        <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">test_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
-        <span class="n">input_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;images&#39;</span><span class="p">,</span> <span class="s1">&#39;targets&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="o">==</span> <span class="s1">&#39;imagenet&#39;</span><span class="p">:</span>
+            <span class="n">normalize</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="p">[</span><span class="mf">0.485</span><span class="p">,</span> <span class="mf">0.456</span><span class="p">,</span> <span class="mf">0.406</span><span class="p">],</span>
+                                             <span class="n">std</span><span class="o">=</span><span class="p">[</span><span class="mf">0.229</span><span class="p">,</span> <span class="mf">0.224</span><span class="p">,</span> <span class="mf">0.225</span><span class="p">])</span>
+            <span class="n">train_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">RandomResizedCrop</span><span class="p">(</span><span class="mi">224</span><span class="p">),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">RandomHorizontalFlip</span><span class="p">(),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">normalize</span><span class="p">,</span>
+            <span class="p">])</span>
+            <span class="n">test_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">CenterCrop</span><span class="p">(</span><span class="mi">224</span><span class="p">),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">normalize</span><span class="p">,</span>
+            <span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">train_transform</span> <span class="o">=</span> <span class="n">build_transforms</span><span class="p">(</span>
+                <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span> <span class="o">**</span><span class="n">transform_args</span><span class="p">)</span>
+            <span class="n">test_transform</span> <span class="o">=</span> <span class="n">build_transforms</span><span class="p">(</span><span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">)</span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">train_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">train_transform</span><span class="p">)</span>
+        <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">test_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">test_transform</span><span class="p">)</span>
+        <span class="n">input_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;images&#39;</span><span class="p">,</span> <span class="s1">&#39;targets&#39;</span><span class="p">,</span> <span class="s1">&#39;index&#39;</span><span class="p">]</span>
 
         <span class="n">dim_c</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Computing min / max...&#39;</span><span class="p">)</span>
+
+        <span class="n">img_min</span> <span class="o">=</span> <span class="mi">1000</span>
+        <span class="n">img_max</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1000</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">):</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">img_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">img_min</span><span class="p">)</span>
+            <span class="n">img_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">img_max</span><span class="p">)</span>
+
         <span class="n">dim_l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span>
 
         <span class="n">dims</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">dim_x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">dim_y</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">dim_c</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">dim_l</span><span class="p">)</span>
@@ -203,7 +230,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_input_names</span><span class="p">(</span><span class="n">input_names</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_dims</span><span class="p">(</span><span class="o">**</span><span class="n">dims</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_scale</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></div></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_scale</span><span class="p">((</span><span class="n">img_min</span><span class="p">,</span> <span class="n">img_max</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Finished loading dataset&#39;</span><span class="p">)</span></div></div>
 
 
 <span class="n">register_data</span><span class="p">(</span><span class="n">ImageFolder</span><span class="p">)</span>
