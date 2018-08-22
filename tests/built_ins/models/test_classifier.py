@@ -1,5 +1,9 @@
 from cortex.built_ins.models.classifier import ImageClassification
+<<<<<<< HEAD
 from cortex._lib import (data, exp)
+=======
+from cortex._lib import (data, exp, setup_experiment)
+>>>>>>> Adds basic build test for ImageClassification.
 
 
 def test_image_classification(args):
@@ -16,7 +20,6 @@ def test_image_classification(args):
     """
     image_classification = ImageClassification()
     data.setup(**exp.ARGS['data'])
-
     expected_defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
         optimizer=dict(optimizer='Adam', learning_rate=1e-3),
