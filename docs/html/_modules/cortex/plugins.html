@@ -180,6 +180,7 @@
     <span class="n">sources</span> <span class="o">=</span> <span class="p">[]</span>
 
 <div class="viewcode-block" id="DatasetPlugin.copy_to_local_path"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.DatasetPlugin.copy_to_local_path">[docs]</a>    <span class="k">def</span> <span class="nf">copy_to_local_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+
         <span class="sd">&#39;&#39;&#39; Copies data to a local path.</span>
 
 <span class="sd">        Path is set in the .cortex.yml file. This can be set up through</span>
@@ -360,9 +361,7 @@
 <span class="sd">                **kwargs: Hyperparameters to be passed to the function</span>
 
 <span class="sd">            &#39;&#39;&#39;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-            <span class="s1">&#39;`visualize` is not implemented for model class</span><span class="si">{}</span><span class="s1">&#39;</span>
-            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span></div>
+        <span class="k">pass</span></div>
 
 <div class="viewcode-block" id="ModelPlugin.train_step"><a class="viewcode-back" href="../../cortex.html#cortex.plugins.ModelPlugin.train_step">[docs]</a>    <span class="k">def</span> <span class="nf">train_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;Makes a training step.</span>

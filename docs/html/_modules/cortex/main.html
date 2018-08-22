@@ -156,8 +156,6 @@
                          <span class="n">setup_experiment</span><span class="p">,</span> <span class="n">train</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">cortex._lib.utils</span> <span class="k">import</span> <span class="n">print_section</span>
 
-<span class="kn">import</span> <span class="nn">torch</span>
-
 <span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;R Devon Hjelm&#39;</span>
 <span class="n">__author_email__</span> <span class="o">=</span> <span class="s1">&#39;erroneus@gmail.com&#39;</span>
 
@@ -174,7 +172,6 @@
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">args</span> <span class="o">=</span> <span class="n">setup_cortex</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">command</span> <span class="o">==</span> <span class="s1">&#39;setup&#39;</span><span class="p">:</span>
             <span class="c1"># Performs setup only.</span>
             <span class="n">config</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
@@ -182,21 +179,12 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">config</span><span class="o">.</span><span class="n">set_config</span><span class="p">()</span>
             <span class="n">print_section</span><span class="p">(</span><span class="s1">&#39;EXPERIMENT&#39;</span><span class="p">)</span>
-            <span class="n">model</span> <span class="o">=</span> <span class="n">setup_experiment</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
-
+            <span class="n">model</span><span class="p">,</span> <span class="n">reload_nets</span> <span class="o">=</span> <span class="n">setup_experiment</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
             <span class="n">print_section</span><span class="p">(</span><span class="s1">&#39;DATA&#39;</span><span class="p">)</span>
             <span class="n">data</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="o">**</span><span class="n">exp</span><span class="o">.</span><span class="n">ARGS</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
-
-            <span class="n">print_section</span><span class="p">(</span><span class="s1">&#39;NETWORKS&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">reload</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">load_models</span><span class="p">:</span>
-                <span class="k">pass</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">model</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">load_models</span><span class="p">:</span>
-                    <span class="n">d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">load_models</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">reloads</span><span class="p">:</span>
-                        <span class="n">model</span><span class="o">.</span><span class="n">nets</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;nets&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">state_dict</span><span class="p">())</span>
-
+            <span class="n">print_section</span><span class="p">(</span><span class="s1">&#39;MODEL&#39;</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">reload_nets</span><span class="p">(</span><span class="n">reload_nets</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
             <span class="n">print_section</span><span class="p">(</span><span class="s1">&#39;OPTIMIZER&#39;</span><span class="p">)</span>
             <span class="n">optimizer</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="o">**</span><span class="n">exp</span><span class="o">.</span><span class="n">ARGS</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
 
