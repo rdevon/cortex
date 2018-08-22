@@ -257,12 +257,12 @@ class ResEncoder(BaseNet):
             dim_x //= 2
             dim_y //= 2
 
-        dim_out__ = dim_out
+        final_depth = dim_out
         dim_out = dim_x * dim_y * dim_out
         self.models.add_module('final_reshape', View(-1, dim_out))
 
         self.models.add_module('final_reshape_{}x{}x{}to{}'
-                               .format(dim_x, dim_y, dim_out__, dim_out),
+                               .format(dim_x, dim_y, final_depth, dim_out),
                                View(-1, dim_out))
 
         dim_out = self.add_linear_layers(dim_out, fully_connected_layers,
