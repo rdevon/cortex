@@ -8,7 +8,7 @@ args = Namespace(
     command=None,
     config_file=None,
     criterion=nn.CrossEntropyLoss(),
-    device=0,
+    device=None,
     load_models=None,
     meta=None,
     name=None,
@@ -43,5 +43,5 @@ args = Namespace(
         'train.save_on_highest': None,
         'train.save_on_lowest': None,
         'train.test_mode': 'test',
-        'train.train_mode': 'train'
+        'train.train_mode': 'train',
     })
