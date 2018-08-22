@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from .base_network import BaseNet
 from .modules import View
-from .utils import (apply_nonlinearity, finish_layer_1d,
+from .utils import (apply_nonlinearity,
                     finish_layer_2d, get_nonlinearity)
 from .SpectralNormLayer import SNConv2d, SNLinear
 
@@ -239,8 +239,9 @@ class ResEncoder(BaseNet):
         dim_out = dim_h
 
         name = 'conv_({}/{})_0'.format(dim_in, dim_out)
-        self.models.add_module(name, Conv2d(dim_in, dim_out, f_size, 1, 1,
-                                       bias=False))
+        self.models.add_module(name, Conv2d(dim_in, dim_out,
+                                            f_size, 1, 1,
+                                            bias=False))
 
         dim_out = dim_h
         for i in range(n_steps):

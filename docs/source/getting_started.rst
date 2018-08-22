@@ -4,19 +4,6 @@ Getting Started
 Configuration
 ~~~~~~~~~~~~~
 
-Visdom Server
-^^^^^^^^^^^^^
-
-Start a Visdom server and look for server address in the output. By
-default, the server's address is ``http://localhost:8097``.
-
-::
-
-    $python -m visdom.server
-
-Experiment Configuration
-^^^^^^^^^^^^^^^^^^^^^^^^
-
 The first thing to do is to set up the config.yaml. This file is
 user-specific (it got tracked at some point, so I need to fix this), and
 will tell cortex everything user-specific regarding data locations,
@@ -24,8 +11,8 @@ visualation, and outputs.
 
 ::
 
-    $rm -rf ~/.cortex.yml
-    $cortex setup
+    $ rm -rf ~/.cortex.yml
+    $ cortex setup
 
 Configuration File Example
 ''''''''''''''''''''''''''
@@ -49,26 +36,50 @@ These are as follows:
    text) are planned in the near-future.
 -  vis: visdom specific arguments.
 -  | out\_path: Out path for experiment outputs
-   | ### Usage ##### Help
 
-   cortex --help ##### Options
 
-There are many command-line options in cortex:
+Usage
+'''''
 
--  ``-n`` Name of experiment. Experiment is saved in /
--  ``-S`` data Source (from torchvision or user-specified in
-   config.yaml)
--  ``-r`` Reload model (takes the .t7 file as the argument)
--  ``-a`` Arguments. This is a ``,``-delimited string. For instance, to
-   increase the training epochs on the above example and use sgd, this
-   should work:
-   ``-a train.epochs=5000,optimizer.optimizer=sgd``
--  ``-c`` Config (For yamls of arguments, doesn't appear to be working
-   right now)
--  ``-k`` Klean an experiment directory
--  ``-v`` Verbosity of logger
--  ``-o`` Out path (overrides ``config.yaml``)
--  ``-t`` Test mode (for evaluation purposes)
+   cortex --help
+
+Built-ins
+'''''''''
+
+:setup:
+    Setup cortex configuration.
+
+:GAN: Generative adversarial network.
+:VAE: Variational autoencoder.
+:AdversarialAutoencoder: Adversarial Autoencoder.
+:ALI:  Adversarially learned inference.
+:ImageClassification: Basic image classifier.
+:GAN_MINE: GAN + MINE.
+
+Options
+'''''''
+-h, --help         show this help message and exit
+-o OUT_PATH, --out_path OUT_PATH          Output path directory. All model results will go
+                                                      here. If a new directory, a new one will be
+                                                      created, as long as parent exists.
+-n NAME, --name NAME       Name of the experiment. If given, base name of
+                                                      output directory will be `--name`. If not given,
+                                                      name will be the base name of the `--out_path`
+-r RELOAD, --reload RELOAD     Path to model to reload.
+
+-M LOAD_MODELS, --load_models LOAD_MODELS          Path to model to reload. Does not load args, info,
+                                                      etc
+
+-m META, --meta META                                 TODO
+
+-c CONFIG_FILE, --config_file CONFIG_FILE            Configuration yaml file. See `exps/` for examples
+
+-k, --clean                                           Cleans the output directory. This cannot be undone!
+
+-v VERBOSITY, --verbosity VERBOSITY                 Verbosity of the logging. (0, 1, 2)
+
+-d DEVICE, --device DEVICE                           TODO
+
 
 Usage Example
 '''''''''''''
@@ -78,3 +89,22 @@ To run an experiment.
 ::
 
     cortex GAN --d.source CIFAR10 --d.copy_to_local
+
+Custom models
+'''''''''''''
+
+It is possible to run experiments with custom models made with Pytorch under the Cortex framework. For doing so, the model has to
+be added to the demos folder under the root of the project. You can have a look to the given demo autoencoder and classifier already
+implemented. The main difference is that, rather than registering the plugins, the run function of main.py has to be called. For example,
+
+::
+
+    if __name__ == '__main__':
+    classifier = MyClassifier()
+    run(model=classifier)
+
+To run an experiment with a custom model.
+
+::
+
+    python my_model.py --d.source <Dataset> --d.copy_to_local

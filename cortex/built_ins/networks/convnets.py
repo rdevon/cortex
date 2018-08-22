@@ -85,7 +85,7 @@ class SimpleConvEncoder(BaseNet):
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
 
             last = not((dim_x >= min_dim and dim_y >= min_dim) and
-                    (i < n_steps if n_steps else True))
+                       (i < n_steps if n_steps else True))
 
             if not(last_conv_nonlinearity) and last:
                 conv_args['nonlinearity'] = None
