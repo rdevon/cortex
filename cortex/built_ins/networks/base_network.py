@@ -5,6 +5,7 @@ This is not necessary to use cortex: these are just convenience networks.
 '''
 
 import torch.nn as nn
+import torch
 
 from .utils import apply_nonlinearity, get_nonlinearity, finish_layer_1d
 
@@ -25,7 +26,10 @@ class BaseNet(nn.Module):
         self.output_nonlinearity = output_nonlinearity
         self.layer_nonlinearity = get_nonlinearity(nonlinearity)
 
-    def forward(self, x, nonlinearity=None, **nonlinearity_args):
+    def forward(self,
+                x: torch.Tensor,
+                nonlinearity: str = None,
+                **nonlinearity_args: dict) -> torch.Tensor:
         self.states = []
         if nonlinearity is None:
             nonlinearity = self.output_nonlinearity
@@ -48,7 +52,11 @@ class BaseNet(nn.Module):
 
         return dim_h
 
-    def add_linear_layers(self, dim_in, dim_h, dim_ex=None, Linear=None,
+    def add_linear_layers(self,
+                          dim_in,
+                          dim_h,
+                          dim_ex=None,
+                          Linear=None,
                           **layer_args):
         Linear = Linear or nn.Linear
 
@@ -58,8 +66,12 @@ class BaseNet(nn.Module):
         for dim_out in dim_h:
             name = 'linear_({}/{})'.format(dim_in, dim_out)
             self.models.add_module(name, Linear(dim_in, dim_out))
-            finish_layer_1d(self.models, name, dim_out,
-                            nonlinearity=self.layer_nonlinearity, **layer_args)
+            finish_layer_1d(
+                self.models,
+                name,
+                dim_out,
+                nonlinearity=self.layer_nonlinearity,
+                **layer_args)
             dim_in = dim_out
             if dim_ex is not None:
                 dim_in += dim_ex
@@ -67,6 +79,7 @@ class BaseNet(nn.Module):
         return dim_out
 
     def add_output_layer(self, dim_in, dim_out, Linear=None):
+
         Linear = Linear or nn.Linear
         if dim_out is not None:
             name = 'linear_({}/{})_{}'.format(dim_in, dim_out, 'out')

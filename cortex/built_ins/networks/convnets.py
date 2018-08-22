@@ -80,6 +80,7 @@ class SimpleConvEncoder(BaseNet):
                     dim_out = dim_in * 2
             conv_args = dict((k, v) for k, v in layer_args.items())
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
+
             self.models.add_module(
                 name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
@@ -125,6 +126,5 @@ class SimpleConvEncoder(BaseNet):
             px, py = (p, p)
         else:
             px, py = p
-
         return infer_conv_size(
             dim_x, kx, sx, px), infer_conv_size(dim_y, ky, sy, py)

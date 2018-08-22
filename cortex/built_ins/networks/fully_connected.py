@@ -15,7 +15,6 @@ class FullyConnectedNet(BaseNet):
     def __init__(self, dim_in, dim_out=None, dim_h=64, dim_ex=None,
                  nonlinearity='ReLU', n_levels=None, output_nonlinearity=None,
                  **layer_args):
-
         super(FullyConnectedNet, self).__init__(
             nonlinearity=nonlinearity, output_nonlinearity=output_nonlinearity)
 

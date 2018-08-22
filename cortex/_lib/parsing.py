@@ -51,7 +51,7 @@ def parse_inputs(f):
 
 def parse_docstring(f):
     if f.__doc__ is None:
-        f.__doc__ = 'None\n None'
+        f.__doc__ = 'TODO\n TODO'
     doc = inspect.cleandoc(f.__doc__)
     config = Config()
     google_doc = GoogleDocstring(doc, config)
@@ -64,7 +64,7 @@ def parse_docstring(f):
 
 def parse_header(f):
     if f.__doc__ is None:
-        f.__doc__ = 'None\n None'
+        f.__doc__ = 'TODO\n TODO'
     doc = inspect.cleandoc(f.__doc__)
     config = Config()
     google_doc = GoogleDocstring(doc, config)
