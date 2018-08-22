@@ -5,6 +5,9 @@ from torch import nn
 
 
 class Autoencoder(nn.Module):
+    """
+    Encapsulation of an encoder and a decoder.
+    """
     def __init__(self, encoder, decoder):
         super(Autoencoder, self).__init__()
         self.encoder = encoder
@@ -17,6 +20,9 @@ class Autoencoder(nn.Module):
 
 
 class AE(ModelPlugin):
+    """
+    Autoencoder designed with Pytorch components.
+    """
     defaults = dict(
         data=dict(
             batch_size=dict(train=64, test=64), inputs=dict(inputs='images')),
@@ -27,6 +33,16 @@ class AE(ModelPlugin):
         super().__init__()
 
     def build(self, dim_z=64, dim_encoder_out=64):
+        """
+        Build AE with an encoder and decoder and attribute
+        an Autoencoder to self.nets.
+        Args:
+            dim_z: int
+            dim_encoder_out: in
+
+        Returns: None
+
+        """
         encoder = nn.Sequential(
             nn.Linear(28, 256),
             nn.ReLU(True),
@@ -40,6 +56,16 @@ class AE(ModelPlugin):
         self.nets.ae = Autoencoder(encoder, decoder)
 
     def routine(self, inputs, targets, ae_criterion=F.mse_loss):
+        """
+        Training routine and loss computing.
+        Args:
+            inputs: torch.Tensor
+            targets: torch.Tensor
+            ae_criterion: function
+
+        Returns: None
+
+        """
         encoded = self.nets.ae.encoder(inputs)
         outputs = self.nets.ae.decoder(encoded)
         r_loss = ae_criterion(
@@ -47,6 +73,15 @@ class AE(ModelPlugin):
         self.losses.ae = r_loss
 
     def visualize(self, inputs, targets):
+        """
+        Adding generated images and base images to
+        visualization.
+        Args:
+            inputs: torch.Tensor
+            targets: torch.Tensor
+        Returns: None
+
+        """
         encoded = self.nets.ae.encoder(inputs)
         outputs = self.nets.ae.decoder(encoded)
         self.add_image(outputs, name='reconstruction')
