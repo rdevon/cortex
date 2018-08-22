@@ -16,7 +16,11 @@ def get_nonlinearity(nonlinearity=None):
         if nonlinearity == nn.LeakyReLU:
             nonlinearity = nonlinearity(0.02, inplace=True)
     elif hasattr(nn, nonlinearity):
-        nonlinearity = getattr(nn, nonlinearity)()
+        nonlinearity = getattr(nn, nonlinearity)
+        if nonlinearity == 'LeakyReLU':
+            nonlinearity = nonlinearity(0.02, inplace=True)
+        else:
+            nonlinearity = nonlinearity()
     elif hasattr(nn.functional, nonlinearity):
         nonlinearity = getattr(nn.functional, nonlinearity)
     else:
@@ -73,7 +77,11 @@ def apply_nonlinearity(x, nonlinearity, **nonlinearity_args):
         if callable(nonlinearity):
             if isinstance(nonlinearity, nn.PReLU):
                 nonlinearity.cuda()
-                nonlinearity(x, **nonlinearity_args)
+            try:
+                x = nonlinearity(x, **nonlinearity_args)
+            except RuntimeError:
+                nonlinearity.to('cpu')
+                x = nonlinearity(x, **nonlinearity_args)
         else:
             raise ValueError(nonlinearity, type(nonlinearity))
     return x

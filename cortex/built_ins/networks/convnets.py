@@ -79,13 +79,17 @@ class SimpleConvEncoder(BaseNet):
                 else:
                     dim_out = dim_in * 2
             conv_args = dict((k, v) for k, v in layer_args.items())
-            if not last_conv_nonlinearity:
-                conv_args['nonlinearity'] = False
-
             name = 'conv_({}/{})_{}'.format(dim_in, dim_out, i + 1)
             self.models.add_module(
                 name, Conv2d(dim_in, dim_out, f_size, stride, pad, bias=False))
             dim_x, dim_y = self.next_size(dim_x, dim_y, f_size, stride, pad)
+
+            last = not((dim_x >= min_dim and dim_y >= min_dim) and
+                    (i < n_steps if n_steps else True))
+
+            if not(last_conv_nonlinearity) and last:
+                conv_args['nonlinearity'] = None
+
             finish_layer_2d(
                 self.models, name, dim_x, dim_y, dim_out,
                 nonlinearity=self.layer_nonlinearity, **layer_args)
