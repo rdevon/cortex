@@ -76,7 +76,7 @@ def apply_nonlinearity(x, nonlinearity, **nonlinearity_args):
             nonlinearity = get_nonlinearity(nonlinearity)
         if callable(nonlinearity):
             if isinstance(nonlinearity, nn.PReLU):
-                nonlinearity.cuda()
+                nonlinearity.to(x.device)
             try:
                 x = nonlinearity(x, **nonlinearity_args)
             except RuntimeError:
