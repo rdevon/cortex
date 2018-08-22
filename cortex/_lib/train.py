@@ -64,12 +64,7 @@ def test_epoch(model, epoch, data_mode='test'):
 
     model.data.reset(make_pbar=False, mode='test')
     model.data.next()
-
-    try:
-        model.visualize(auto_input=True)
-    except NotImplementedError:
-        pass
-
+    model.visualize(auto_input=True)
     return results
 
 

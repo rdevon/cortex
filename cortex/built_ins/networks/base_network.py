@@ -39,7 +39,6 @@ class BaseNet(nn.Module):
         for model in self.models:
             x = model(x)
             self.states.append(x)
-
         x = apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
         return x
 
