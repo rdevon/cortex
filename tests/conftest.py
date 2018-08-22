@@ -205,7 +205,7 @@ def args():
         command=None,
         config_file=None,
         criterion=nn.CrossEntropyLoss(),
-        device=0,
+        device='cpu',
         load_models=None,
         meta=None,
         name=None,
