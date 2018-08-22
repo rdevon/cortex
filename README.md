@@ -63,9 +63,13 @@ The first step is to check out cortex from the command line. Simply type:
     GAN                                           Generative adversarial network.
     VAE                                           Variational autoencder.
     AdversarialAutoencoder                        Adversarial Autoencoder
+    Autoencoder                                   Simple autoencder model.
     ALI                                           Adversarially learned inference.
     ImageClassification                           Basic image classifier.
+    ImageAttributeClassification                  Basic image classifier.
     GAN_MINE                                      GAN + MINE.
+
+And many more coming.
 
  ##### Options  
   There are many command-line options in cortex:    
