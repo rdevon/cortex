@@ -75,7 +75,13 @@ def apply_nonlinearity(x, nonlinearity, **nonlinearity_args):
         if isinstance(nonlinearity, str):
             nonlinearity = get_nonlinearity(nonlinearity)
         if callable(nonlinearity):
-            x = nonlinearity(x, **nonlinearity_args)
+            if isinstance(nonlinearity, nn.PReLU):
+                nonlinearity.to(x.device)
+            try:
+                x = nonlinearity(x, **nonlinearity_args)
+            except RuntimeError:
+                nonlinearity.to('cpu')
+                x = nonlinearity(x, **nonlinearity_args)
         else:
             raise ValueError(nonlinearity, type(nonlinearity))
     return x

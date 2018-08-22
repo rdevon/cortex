@@ -20,7 +20,7 @@ def raise_measure_error(measure):
                                                            supported_measures))
 
 
-def get_positive_expectation(p_samples, measure):
+def get_positive_expectation(p_samples, measure, average=True):
     log_2 = math.log(2.)
 
     if measure == 'GAN':
@@ -42,10 +42,13 @@ def get_positive_expectation(p_samples, measure):
     else:
         raise_measure_error(measure)
 
-    return Ep.mean()
+    if average:
+        return Ep.mean()
+    else:
+        return Ep
 
 
-def get_negative_expectation(q_samples, measure):
+def get_negative_expectation(q_samples, measure, average=True):
     log_2 = math.log(2.)
 
     if measure == 'GAN':
@@ -67,7 +70,10 @@ def get_negative_expectation(q_samples, measure):
     else:
         raise_measure_error(measure)
 
-    return Eq.mean()
+    if average:
+        return Eq.mean()
+    else:
+        return Eq
 
 
 def get_boundary(samples, measure):

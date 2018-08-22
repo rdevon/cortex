@@ -395,6 +395,8 @@ class ModelPluginBase(metaclass=PluginType):
             inputs = []
             for k in input_keys:
                 key = input_dict.get(k, k)
+                if key == 'args':
+                    continue
                 value = self.data[key]
                 inputs.append(value)
             return inputs

@@ -10,6 +10,11 @@ import torch
 from cortex.built_ins.networks.fully_connected import FullyConnectedNet
 from cortex.plugins import ModelPlugin
 
+import cortex._lib.exp as exp
+
+
+exp.DEVICE = 'cpu'
+
 
 @pytest.fixture
 def arguments():

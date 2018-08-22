@@ -213,9 +213,7 @@ class ModelPlugin(ModelPluginBase):
                 **kwargs: Hyperparameters to be passed to the function
 
             '''
-        raise NotImplementedError(
-            '`visualize` is not implemented for model class{}'
-            .format(self.__class__.__name__))
+        pass
 
     def train_step(self):
         '''Makes a training step.
