@@ -12,6 +12,7 @@ Welcome to Cortex2.0
    modules
    develop
    developer_start_guide
+   build
 
 
 
