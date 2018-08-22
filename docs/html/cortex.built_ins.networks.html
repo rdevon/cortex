@@ -275,7 +275,7 @@ registered hooks while the latter silently ignores them.</p>
 
 <dl class="method">
 <dt id="cortex.built_ins.networks.base_network.BaseNet.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em>, <em>nonlinearity=None</em>, <em>**nonlinearity_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/base_network.html#BaseNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.base_network.BaseNet.forward" title="Permalink to this definition">¶</a></dt>
+<code class="descname">forward</code><span class="sig-paren">(</span><em>x: torch.Tensor</em>, <em>nonlinearity: str = None</em>, <em>**nonlinearity_args</em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="reference internal" href="_modules/cortex/built_ins/networks/base_network.html#BaseNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.base_network.BaseNet.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines the computation performed at every call.</p>
 <p>Should be overridden by all subclasses.</p>
 <div class="admonition note">
@@ -342,7 +342,7 @@ registered hooks while the latter silently ignores them.</p>
 <p>Convoluational encoders</p>
 <dl class="class">
 <dt id="cortex.built_ins.networks.convnets.SimpleConvEncoder">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">SimpleConvEncoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>fully_connected_layers=None</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>f_size=4</em>, <em>stride=2</em>, <em>pad=1</em>, <em>min_dim=4</em>, <em>n_steps=None</em>, <em>spectral_norm=False</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#SimpleConvEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.SimpleConvEncoder" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.convnets.</code><code class="descname">SimpleConvEncoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>fully_connected_layers=None</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>f_size=4</em>, <em>stride=2</em>, <em>pad=1</em>, <em>min_dim=4</em>, <em>n_steps=None</em>, <em>spectral_norm=False</em>, <em>last_conv_nonlinearity=True</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/convnets.html#SimpleConvEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.convnets.SimpleConvEncoder" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#cortex.built_ins.networks.base_network.BaseNet" title="cortex.built_ins.networks.base_network.BaseNet"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.built_ins.networks.base_network.BaseNet</span></code></a></p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.convnets.SimpleConvEncoder.next_size">
@@ -517,21 +517,7 @@ registered hooks while the latter silently ignores them.</p>
 <dl class="class">
 <dt id="cortex.built_ins.networks.resnets.ResEncoder">
 <em class="property">class </em><code class="descclassname">cortex.built_ins.networks.resnets.</code><code class="descname">ResEncoder</code><span class="sig-paren">(</span><em>shape</em>, <em>dim_out=None</em>, <em>dim_h=64</em>, <em>fully_connected_layers=None</em>, <em>f_size=3</em>, <em>n_steps=3</em>, <em>nonlinearity='ReLU'</em>, <em>output_nonlinearity=None</em>, <em>spectral_norm=False</em>, <em>**layer_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#ResEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.ResEncoder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
-<dl class="method">
-<dt id="cortex.built_ins.networks.resnets.ResEncoder.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>x</em>, <em>nonlinearity=None</em>, <em>**nonlinearity_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#ResEncoder.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.ResEncoder.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
-</dd></dl>
-
+<dd><p>Bases: <a class="reference internal" href="#cortex.built_ins.networks.base_network.BaseNet" title="cortex.built_ins.networks.base_network.BaseNet"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.built_ins.networks.base_network.BaseNet</span></code></a></p>
 </dd></dl>
 
 <dl class="class">
@@ -541,26 +527,6 @@ registered hooks while the latter silently ignores them.</p>
 <dl class="method">
 <dt id="cortex.built_ins.networks.resnets.UpsampleConv.forward">
 <code class="descname">forward</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#UpsampleConv.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.UpsampleConv.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="class">
-<dt id="cortex.built_ins.networks.resnets.View">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.networks.resnets.</code><code class="descname">View</code><span class="sig-paren">(</span><em>*shape</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#View"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.View" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.modules.module.Module</span></code></p>
-<dl class="method">
-<dt id="cortex.built_ins.networks.resnets.View.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>input</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/networks/resnets.html#View.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.networks.resnets.View.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines the computation performed at every call.</p>
 <p>Should be overridden by all subclasses.</p>
 <div class="admonition note">

@@ -222,7 +222,13 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">nonlinearity</span> <span class="o">=</span> <span class="n">get_nonlinearity</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">):</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="n">nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">PReLU</span><span class="p">):</span>
+                <span class="n">nonlinearity</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+                <span class="n">nonlinearity</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">x</span></div>

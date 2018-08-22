@@ -151,11 +151,12 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">apply_nonlinearity</span><span class="p">,</span> <span class="n">finish_layer_1d</span><span class="p">,</span>
+
+<span class="kn">from</span> <span class="nn">.base_network</span> <span class="k">import</span> <span class="n">BaseNet</span>
+<span class="kn">from</span> <span class="nn">.modules</span> <span class="k">import</span> <span class="n">View</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">apply_nonlinearity</span><span class="p">,</span>
                     <span class="n">finish_layer_2d</span><span class="p">,</span> <span class="n">get_nonlinearity</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">.SpectralNormLayer</span> <span class="k">import</span> <span class="n">SNConv2d</span><span class="p">,</span> <span class="n">SNLinear</span>
-
-<span class="c1"># from .densenet import nn.LayerNorm</span>
 
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;cortex.models&#39;</span> <span class="o">+</span> <span class="vm">__name__</span><span class="p">)</span>
@@ -304,15 +305,6 @@
         <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">x_</span></div></div>
 
 
-<div class="viewcode-block" id="View"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.View">[docs]</a><span class="k">class</span> <span class="nc">View</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">shape</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">View</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>
-
-<div class="viewcode-block" id="View.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.View.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">input</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span></div></div>
-
-
 <div class="viewcode-block" id="ResDecoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.ResDecoder">[docs]</a><span class="k">class</span> <span class="nc">ResDecoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">f_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
                  <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;ReLU&#39;</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">):</span>
@@ -373,30 +365,30 @@
         <span class="k">return</span> <span class="n">apply_nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="ResEncoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.ResEncoder">[docs]</a><span class="k">class</span> <span class="nc">ResEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<div class="viewcode-block" id="ResEncoder"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.ResEncoder">[docs]</a><span class="k">class</span> <span class="nc">ResEncoder</span><span class="p">(</span><span class="n">BaseNet</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dim_h</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
                  <span class="n">fully_connected_layers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">f_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="s1">&#39;ReLU&#39;</span><span class="p">,</span>
                  <span class="n">output_nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">spectral_norm</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">ResEncoder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-
-        <span class="n">models</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
-        <span class="n">nonlinearity</span> <span class="o">=</span> <span class="n">get_nonlinearity</span><span class="p">(</span><span class="n">nonlinearity</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span> <span class="o">=</span> <span class="n">output_nonlinearity</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ResEncoder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="n">output_nonlinearity</span><span class="p">)</span>
 
         <span class="n">Conv2d</span> <span class="o">=</span> <span class="n">SNConv2d</span> <span class="k">if</span> <span class="n">spectral_norm</span> <span class="k">else</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span>
         <span class="n">Linear</span> <span class="o">=</span> <span class="n">SNLinear</span> <span class="k">if</span> <span class="n">spectral_norm</span> <span class="k">else</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span>
 
         <span class="n">dim_out_</span> <span class="o">=</span> <span class="n">dim_out</span>
         <span class="n">fully_connected_layers</span> <span class="o">=</span> <span class="n">fully_connected_layers</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fully_connected_layers</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">fully_connected_layers</span> <span class="o">=</span> <span class="p">[</span><span class="n">fully_connected_layers</span><span class="p">]</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Input shape: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shape</span><span class="p">))</span>
         <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">dim_in</span> <span class="o">=</span> <span class="n">shape</span>
         <span class="n">dim_out</span> <span class="o">=</span> <span class="n">dim_h</span>
 
         <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;conv_(</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">)_0&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">)</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">Conv2d</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span> <span class="n">f_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
-                                       <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">Conv2d</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span>
+                                            <span class="n">f_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+                                            <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 
         <span class="n">dim_out</span> <span class="o">=</span> <span class="n">dim_h</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
@@ -407,37 +399,22 @@
             <span class="n">resblock</span> <span class="o">=</span> <span class="n">ResBlock</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">f_size</span><span class="p">,</span>
                                 <span class="n">resample</span><span class="o">=</span><span class="s1">&#39;down&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
                                 <span class="n">spectral_norm</span><span class="o">=</span><span class="n">spectral_norm</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">resblock</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">resblock</span><span class="p">)</span>
 
             <span class="n">dim_x</span> <span class="o">//=</span> <span class="mi">2</span>
             <span class="n">dim_y</span> <span class="o">//=</span> <span class="mi">2</span>
 
+        <span class="n">final_depth</span> <span class="o">=</span> <span class="n">dim_out</span>
         <span class="n">dim_out</span> <span class="o">=</span> <span class="n">dim_x</span> <span class="o">*</span> <span class="n">dim_y</span> <span class="o">*</span> <span class="n">dim_out</span>
-        <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;final_reshape&#39;</span><span class="p">,</span> <span class="n">View</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;final_reshape&#39;</span><span class="p">,</span> <span class="n">View</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">))</span>
 
-        <span class="k">for</span> <span class="n">dim_h</span> <span class="ow">in</span> <span class="n">fully_connected_layers</span><span class="p">:</span>
-            <span class="n">dim_in</span> <span class="o">=</span> <span class="n">dim_out</span>
-            <span class="n">dim_out</span> <span class="o">=</span> <span class="n">dim_h</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;linear_(</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">)_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span> <span class="s1">&#39;final&#39;</span><span class="p">)</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">Linear</span><span class="p">(</span><span class="n">dim_in</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">))</span>
-            <span class="n">finish_layer_1d</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="n">nonlinearity</span><span class="p">,</span>
-                            <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s1">&#39;final_reshape_</span><span class="si">{}</span><span class="s1">x</span><span class="si">{}</span><span class="s1">x</span><span class="si">{}</span><span class="s1">to</span><span class="si">{}</span><span class="s1">&#39;</span>
+                               <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">final_depth</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">),</span>
+                               <span class="n">View</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_out</span><span class="p">))</span>
 
-        <span class="k">if</span> <span class="n">dim_out_</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;linear_(</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">)_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dim_out</span><span class="p">,</span> <span class="n">dim_out_</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">)</span>
-            <span class="n">models</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">Linear</span><span class="p">(</span><span class="n">dim_out</span><span class="p">,</span> <span class="n">dim_out_</span><span class="p">))</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">models</span>
-
-<div class="viewcode-block" id="ResEncoder.forward"><a class="viewcode-back" href="../../../../cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.ResEncoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">nonlinearity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_nonlinearity</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">nonlinearity</span><span class="p">:</span>
-            <span class="n">nonlinearity</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">apply_nonlinearity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nonlinearity</span><span class="p">,</span> <span class="o">**</span><span class="n">nonlinearity_args</span><span class="p">)</span></div></div>
+        <span class="n">dim_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_linear_layers</span><span class="p">(</span><span class="n">dim_out</span><span class="p">,</span> <span class="n">fully_connected_layers</span><span class="p">,</span>
+                                         <span class="n">Linear</span><span class="o">=</span><span class="n">Linear</span><span class="p">,</span> <span class="o">**</span><span class="n">layer_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output_layer</span><span class="p">(</span><span class="n">dim_out</span><span class="p">,</span> <span class="n">dim_out_</span><span class="p">,</span> <span class="n">Linear</span><span class="o">=</span><span class="n">Linear</span><span class="p">)</span></div>
 </pre></div>
 
            </div>
