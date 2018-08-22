@@ -45,12 +45,7 @@ class SimpleConvEncoder(BaseNet):
                  fully_connected_layers=None, nonlinearity='ReLU',
                  output_nonlinearity=None, f_size=4,
                  stride=2, pad=1, min_dim=4, n_steps=None,
-<<<<<<< HEAD
-                 spectral_norm=False, **layer_args):
-
-=======
                  spectral_norm=False, last_conv_nonlinearity=True, **layer_args):
->>>>>>> master
         super(SimpleConvEncoder, self).__init__(
             nonlinearity=nonlinearity, output_nonlinearity=output_nonlinearity)
 
