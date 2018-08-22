@@ -173,9 +173,9 @@ def test_simple_net_forward():
     input = torch.randn(128, 1, 32, 32)
     output = simple_net.forward(input)
     equivalent = torch.equal(input, output)
-    # TODO: Test is failing on this assertion.
-    # assert input.dim()== output.dim()
-    assert equivalent is False
+    assert input.dim() == 4
+    assert output.dim() == 2
+    assert not equivalent
 
 
 def test_simple_conv_encoder_forward(simple_conv_encoder_image_classification,
