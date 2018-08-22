@@ -8,7 +8,7 @@ packages = [
 
 install_requirements = [
     'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn', 'visdom',
-    'pyyaml', 'pathlib', 'sphinxcontrib-napoleon', 'nibabel', 'torch', 'torchvision'
+    'pyyaml', 'pathlib', 'nibabel', 'torch', 'torchvision'
 ]
 
 setup(name='cortex',
