@@ -153,12 +153,14 @@
 <div class="viewcode-block" id="ImageEncoder"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.image_coders.ImageEncoder">[docs]</a><span class="k">class</span> <span class="nc">ImageEncoder</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
 
 <div class="viewcode-block" id="ImageEncoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.image_coders.ImageEncoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-              <span class="n">dim_out</span><span class="p">,</span>
+              <span class="n">dim_out</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
               <span class="n">encoder_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;convnet&#39;</span><span class="p">,</span>
-              <span class="n">encoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">fully_connected_layers</span><span class="o">=</span><span class="mi">1028</span><span class="p">)):</span>
+              <span class="n">encoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">fully_connected_layers</span><span class="o">=</span><span class="mi">1028</span><span class="p">),</span>
+              <span class="n">Encoder</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="n">Encoder</span><span class="p">,</span> <span class="n">encoder_args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span>
+        <span class="n">Encoder_</span><span class="p">,</span> <span class="n">encoder_args</span> <span class="o">=</span> <span class="n">update_encoder_args</span><span class="p">(</span>
             <span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">encoder_type</span><span class="p">,</span> <span class="n">encoder_args</span><span class="o">=</span><span class="n">encoder_args</span><span class="p">)</span>
+        <span class="n">Encoder</span> <span class="o">=</span> <span class="n">Encoder</span> <span class="ow">or</span> <span class="n">Encoder_</span>
         <span class="n">encoder</span> <span class="o">=</span> <span class="n">Encoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_out</span><span class="o">=</span><span class="n">dim_out</span><span class="p">,</span> <span class="o">**</span><span class="n">encoder_args</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">encoder</span></div>
 
@@ -175,12 +177,14 @@
 <div class="viewcode-block" id="ImageDecoder"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.image_coders.ImageDecoder">[docs]</a><span class="k">class</span> <span class="nc">ImageDecoder</span><span class="p">(</span><span class="n">ModelPlugin</span><span class="p">):</span>
 
 <div class="viewcode-block" id="ImageDecoder.build"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.image_coders.ImageDecoder.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-              <span class="n">dim_in</span><span class="p">,</span>
+              <span class="n">dim_in</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
               <span class="n">decoder_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;convnet&#39;</span><span class="p">,</span>
-              <span class="n">decoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">output_nonlinearity</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">)):</span>
+              <span class="n">decoder_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">output_nonlinearity</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">),</span>
+              <span class="n">Decoder</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">x_shape</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_dims</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="n">Decoder</span><span class="p">,</span> <span class="n">decoder_args</span> <span class="o">=</span> <span class="n">update_decoder_args</span><span class="p">(</span>
+        <span class="n">Decoder_</span><span class="p">,</span> <span class="n">decoder_args</span> <span class="o">=</span> <span class="n">update_decoder_args</span><span class="p">(</span>
             <span class="n">x_shape</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="n">decoder_type</span><span class="p">,</span> <span class="n">decoder_args</span><span class="o">=</span><span class="n">decoder_args</span><span class="p">)</span>
+        <span class="n">Decoder</span> <span class="o">=</span> <span class="n">Decoder</span> <span class="ow">or</span> <span class="n">Decoder_</span>
         <span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">x_shape</span><span class="p">,</span> <span class="n">dim_in</span><span class="o">=</span><span class="n">dim_in</span><span class="p">,</span> <span class="o">**</span><span class="n">decoder_args</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder</span></div>
 

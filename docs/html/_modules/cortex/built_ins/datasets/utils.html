@@ -192,7 +192,10 @@
     <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">())</span>
 
     <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
-        <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="o">*</span><span class="n">normalize</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normalize</span><span class="p">,</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">):</span>
+            <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">normalize</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">transform_</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="o">*</span><span class="n">normalize</span><span class="p">))</span>
     <span class="n">transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">(</span><span class="n">transform_</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">transform</span></div>
 </pre></div>

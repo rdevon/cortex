@@ -148,9 +148,13 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Handler for CelebA.</span>
 <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">os</span>
 
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">torchvision</span>
+<span class="kn">from</span> <span class="nn">torchvision.transforms</span> <span class="k">import</span> <span class="n">transforms</span>
 
 <span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">DatasetPlugin</span><span class="p">,</span> <span class="n">register_plugin</span>
 <span class="kn">from</span> <span class="nn">cortex.built_ins.datasets.utils</span> <span class="k">import</span> <span class="n">build_transforms</span>
@@ -160,7 +164,7 @@
     <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;CelebA&#39;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="CelebAPlugin.handle"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebAPlugin.handle">[docs]</a>    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">copy_to_local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-               <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
+               <span class="n">split</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">classification_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">        Args:</span>
@@ -181,23 +185,52 @@
         <span class="k">if</span> <span class="n">normalize</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normalize</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
             <span class="n">normalize</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)]</span>
 
-        <span class="n">transform</span> <span class="o">=</span> <span class="n">build_transforms</span><span class="p">(</span><span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span> <span class="o">**</span><span class="n">transform_args</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">classification_mode</span><span class="p">:</span>
+            <span class="n">train_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">RandomResizedCrop</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">RandomHorizontalFlip</span><span class="p">(),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="o">*</span><span class="n">normalize</span><span class="p">),</span>
+            <span class="p">])</span>
+            <span class="n">test_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">CenterCrop</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="o">*</span><span class="n">normalize</span><span class="p">),</span>
+            <span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">train_transform</span> <span class="o">=</span> <span class="n">build_transforms</span><span class="p">(</span><span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">,</span>
+                                               <span class="o">**</span><span class="n">transform_args</span><span class="p">)</span>
+            <span class="n">test_transform</span> <span class="o">=</span> <span class="n">train_transform</span>
 
-        <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
-        <span class="n">input_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;images&#39;</span><span class="p">,</span> <span class="s1">&#39;targets&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">split</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">train_transform</span><span class="p">,</span>
+                                <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">test_transform</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_split</span><span class="p">(</span>
+                <span class="n">data_path</span><span class="p">,</span> <span class="n">split</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">train_transform</span><span class="p">,</span> <span class="n">test_transform</span><span class="p">)</span>
+        <span class="n">input_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;images&#39;</span><span class="p">,</span> <span class="s1">&#39;labels&#39;</span><span class="p">,</span> <span class="s1">&#39;attributes&#39;</span><span class="p">]</span>
 
         <span class="n">dim_c</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
         <span class="n">dim_l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span>
+        <span class="n">dim_a</span> <span class="o">=</span> <span class="n">train_set</span><span class="o">.</span><span class="n">attributes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="n">dims</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">dim_x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">dim_y</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">dim_c</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">dim_l</span><span class="p">)</span>
-
+        <span class="n">dims</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">dim_x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">dim_y</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">dim_c</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">dim_l</span><span class="p">,</span> <span class="n">attributes</span><span class="o">=</span><span class="n">dim_a</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_dataset</span><span class="p">(</span><span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="n">train_set</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_dataset</span><span class="p">(</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">test_set</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_input_names</span><span class="p">(</span><span class="n">input_names</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_dims</span><span class="p">(</span><span class="o">**</span><span class="n">dims</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_scale</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></div></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_scale</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CelebAPlugin.make_split"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebAPlugin.make_split">[docs]</a>    <span class="k">def</span> <span class="nf">make_split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">split</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">train_transform</span><span class="p">,</span>
+                   <span class="n">test_transform</span><span class="p">):</span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">train_transform</span><span class="p">,</span>
+                            <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split</span><span class="p">)</span>
+        <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">test_transform</span><span class="p">,</span>
+                           <span class="n">split</span><span class="o">=</span><span class="n">split</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span></div></div>
 
 
 <span class="n">register_plugin</span><span class="p">(</span><span class="n">CelebAPlugin</span><span class="p">)</span>
@@ -207,14 +240,18 @@
 
     <span class="n">url</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;https://www.dropbox.com/sh/8oqt9vytwxb3s4r/&#39;</span>
            <span class="s1">&#39;AADIKlz8PR9zr6Y20qbkunrba/Img/img_align_celeba.zip?dl=1&#39;</span><span class="p">)</span>
-    <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;img_align_celeba.zip&quot;</span>
+    <span class="n">attr_url</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;https://www.dropbox.com/s/auexdy98c6g7y25/&#39;</span>
+                <span class="s1">&#39;list_attr_celeba.zip?dl=1&#39;</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="s1">&#39;img_align_celeba.zip&#39;</span>
+    <span class="n">attr_filename</span> <span class="o">=</span> <span class="s1">&#39;list_attr_celeba.zip&#39;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">root</span><span class="p">,</span>
             <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">target_transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+            <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">split</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">transform</span> <span class="o">=</span> <span class="n">transform</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">target_transform</span> <span class="o">=</span> <span class="n">target_transform</span>
@@ -222,7 +259,35 @@
         <span class="k">if</span> <span class="n">download</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">download</span><span class="p">()</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">attr_fpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s1">&#39;attributes&#39;</span><span class="p">,</span> <span class="s1">&#39;list_attr_celeba.txt&#39;</span><span class="p">)</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">attr_fpath</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39; &#39;</span><span class="p">,</span>
+                            <span class="n">skipinitialspace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reader</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attribute_names</span> <span class="o">=</span> <span class="n">line</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">attr</span> <span class="o">=</span> <span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;int8&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+
         <span class="nb">super</span><span class="p">(</span><span class="n">CelebA</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">target_transform</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">split</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">split</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">split</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">imgs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">imgs</span><span class="p">[:</span><span class="n">index</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="p">[:</span><span class="n">index</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[:</span><span class="n">index</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">split</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">imgs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">imgs</span><span class="p">[</span><span class="n">index</span><span class="p">:]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="p">[</span><span class="n">index</span><span class="p">:]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">index</span><span class="p">:]</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">imgs</span><span class="p">)</span>
 
 <div class="viewcode-block" id="CelebA.download"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebA.download">[docs]</a>    <span class="k">def</span> <span class="nf">download</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -236,39 +301,49 @@
 
         <span class="n">root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span>
         <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span>
+        <span class="n">attr_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attr_url</span>
 
         <span class="n">root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
         <span class="n">fpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">attr_fpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">attr_filename</span><span class="p">)</span>
         <span class="n">image_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s1">&#39;images&#39;</span><span class="p">)</span>
+        <span class="n">attribute_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s1">&#39;attributes&#39;</span><span class="p">)</span>
 
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">image_dir</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Dataset exists, not downloading.&#39;</span><span class="p">)</span>
-                <span class="k">return</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span>
-
-        <span class="c1"># downloads file</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">fpath</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using downloaded file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fpath</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">zip_path</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Downloading &#39;</span> <span class="o">+</span> <span class="n">url</span> <span class="o">+</span> <span class="s1">&#39; to &#39;</span> <span class="o">+</span> <span class="n">fpath</span><span class="p">)</span>
-                <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">fpath</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">url</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span>
-                    <span class="n">url</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;https:&#39;</span><span class="p">,</span> <span class="s1">&#39;http:&#39;</span><span class="p">)</span>
-                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Failed download. Trying https -&gt; http instead.&#39;</span>
-                          <span class="s1">&#39; Downloading &#39;</span> <span class="o">+</span> <span class="n">url</span> <span class="o">+</span> <span class="s1">&#39; to &#39;</span> <span class="o">+</span> <span class="n">fpath</span><span class="p">)</span>
-                    <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">fpath</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
+                    <span class="k">return</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span>
 
-        <span class="n">zip_ref</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">fpath</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
-        <span class="n">zip_ref</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">image_dir</span><span class="p">)</span>
-        <span class="n">zip_ref</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div></div>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">zip_path</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using downloaded file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">zip_path</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Downloading &#39;</span> <span class="o">+</span> <span class="n">url</span> <span class="o">+</span> <span class="s1">&#39; to &#39;</span> <span class="o">+</span> <span class="n">zip_path</span><span class="p">)</span>
+                    <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">zip_path</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">url</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span>
+                        <span class="n">url</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;https:&#39;</span><span class="p">,</span> <span class="s1">&#39;http:&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Failed download. Trying https -&gt; http instead.&#39;</span>
+                              <span class="s1">&#39; Downloading &#39;</span> <span class="o">+</span> <span class="n">url</span> <span class="o">+</span> <span class="s1">&#39; to &#39;</span> <span class="o">+</span> <span class="n">zip_path</span><span class="p">)</span>
+                        <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">zip_path</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Unzipping </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">zip_path</span><span class="p">))</span>
+
+            <span class="n">zip_ref</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">zip_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">zip_ref</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span>
+            <span class="n">zip_ref</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="n">get_data</span><span class="p">(</span><span class="n">image_dir</span><span class="p">,</span> <span class="n">fpath</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+        <span class="n">get_data</span><span class="p">(</span><span class="n">attribute_dir</span><span class="p">,</span> <span class="n">attr_fpath</span><span class="p">,</span> <span class="n">attr_url</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="p">[</span><span class="n">index</span><span class="p">],)</span></div>
 </pre></div>
 
            </div>
