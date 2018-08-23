@@ -15,10 +15,7 @@ def test_image_classification(args):
 
     """
     image_classification = ImageClassification()
-    image_classification, reload_nets = setup_experiment(
-        args, model=image_classification)
     data.setup(**exp.ARGS['data'])
-    image_classification.reload_nets(reload_nets)
 
     expected_defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
