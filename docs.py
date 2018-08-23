@@ -35,3 +35,9 @@ for folder_to_remove in folders_to_remove:
 
 doctrees = glob.glob("./docs/doctrees")
 subprocess.call(["rm", "-rf", doctrees[0]])
+
+sources = glob.glob("./docs/html/_sources")
+subprocess.call(["rm", "-rf", sources[0]])
+
+objects = glob.glob("./docs/html/objects.inv")
+subprocess.call(["rm", "-f", objects[0]])
