@@ -2,17 +2,18 @@
 
 '''
 
-
 import logging
 
 from cortex._lib import (config, data, exp, optimizer, setup_cortex,
                          setup_experiment, train)
 from cortex._lib.utils import print_section
 from cortex._lib.viz_server import VizServerSingleton
+from cortex._lib.config import _yes_no
+import visdom
+
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
-
 
 logger = logging.getLogger('cortex')
 
@@ -46,5 +47,15 @@ def run(model=None):
         exit(0)
 
     train.main_loop(model, **exp.ARGS['train'])
-    viz_singleton = VizServerSingleton()
-    viz_singleton.viz_process.terminate()
+    server = config.CONFIG.viz.get('server', None)
+    port = config.CONFIG.viz.get('port', 8097)
+    visualizer = visdom.Visdom(server=server, port=port)
+    if visualizer.check_connection():
+        if _yes_no(
+                "Experiment is finished. Do you want to close Visdom server? "
+                "Warning: closing the server can make you lose data."):
+            viz_singleton = VizServerSingleton()
+            viz_singleton.viz_process.terminate()
+
+
+

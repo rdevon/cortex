@@ -1,4 +1,8 @@
 class VizServerSingleton(object):
+    """
+    Singleton to manage visualisation server
+    opening and closing.
+    """
     class __OnlyOne:
         def __init__(self):
             self.viz_process = None
