@@ -16,6 +16,10 @@ def test_image_classification(args):
     """
     image_classification = ImageClassification()
     data.setup(**exp.ARGS['data'])
+<<<<<<< HEAD
+=======
+
+>>>>>>> 25b63169a797606001fa9d80a907c5902e8d9330
     expected_defaults = dict(
         data=dict(batch_size=128, inputs=dict(inputs='images')),
         optimizer=dict(optimizer='Adam', learning_rate=1e-3),
