@@ -8,13 +8,13 @@ import logging
 from cortex._lib import (config, data, exp, optimizer, setup_cortex,
                          setup_experiment, train)
 from cortex._lib.utils import print_section
+from cortex._lib.viz_server import VizServerSingleton
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 
 logger = logging.getLogger('cortex')
-viz_process = None
 
 
 def run(model=None):
@@ -46,4 +46,5 @@ def run(model=None):
         exit(0)
 
     train.main_loop(model, **exp.ARGS['train'])
-    viz_process.terminate()
+    viz_singleton = VizServerSingleton()
+    viz_singleton.viz_process.terminate()

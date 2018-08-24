@@ -15,6 +15,7 @@ from .viz_utils import tile_raster_images
 import matplotlib
 import subprocess
 from cortex._lib.config import _yes_no
+from cortex._lib.viz_server import VizServerSingleton
 
 matplotlib.use('Agg')
 from matplotlib import pylab as plt  # noqa E402
@@ -37,7 +38,8 @@ CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 
 
 def init(viz_config):
-    global visualizer, config_font, viz_process
+    viz_singleton = VizServerSingleton()
+    global visualizer, config_font
     if viz_config is not None and ('server' in viz_config.keys() or
                                    'port' in viz_config.keys()):
         server = viz_config.get('server', None)
@@ -47,7 +49,7 @@ def init(viz_config):
             if _yes_no("No Visdom server runnning on the configured address. "
                        "Do you want to start it?"):
                 viz_bash_command = "python -m visdom.server"
-                viz_process = subprocess.Popen(viz_bash_command.split())
+                viz_singleton.viz_process = subprocess.Popen(viz_bash_command.split())
                 logger.info('Using visdom server at {}({})'.format(server, port))
             else:
                 visualizer = None
@@ -56,7 +58,7 @@ def init(viz_config):
                    "to configure Visdom server. Do you want to continue with "
                    "the default address ? (localhost:8097)"):
             viz_bash_command = "python -m visdom.server"
-            viz_process = subprocess.Popen(viz_bash_command.split())
+            viz_singleton.viz_process = subprocess.Popen(viz_bash_command.split())
             visualizer = visdom.Visdom()
             logger.info('Using local visdom server')
         else:
