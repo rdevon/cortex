@@ -83,6 +83,14 @@ class DatasetPlugin(DatasetPluginBase):
         self._datasets[mode] = dataset
 
     def set_dataloader_class(self, dataloader_class: type):
+        """Set dataloader class.
+
+         It will be used instead of :class:`torch.utils.data.DataLoader`.
+
+        Args:
+            dataloader_class: custom data loader class
+
+        """
         self._dataloader_class = dataloader_class
 
     def get_path(self, source: str):
