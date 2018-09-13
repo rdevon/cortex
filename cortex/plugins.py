@@ -90,6 +90,28 @@ class DatasetPlugin(DatasetPluginBase):
         Args:
             dataloader_class: custom data loader class
 
+        Notes:
+            This method can be used to pass custom collate function, pass
+            arguments to the dataloader or use a completely custom loader.
+
+        Example:
+            ```
+            class MyData(DatasetPlugin):
+                sources = ['MyData']
+
+                def handle(self, source, copy_to_local=False, normalize=True,
+                           tanh_normalization=False, **transform_args):
+                    train_set = ...
+
+                    def collate(batch):
+                        collated_batch = ...
+                        return collated_batch
+
+                    NewDataLoader = partial(DataLoader, collate_fn=collate)
+                    self.add_dataset('train', train_set)
+                    self.set_dataloader_class(dataloader_class=NewDataLoader)
+            ```
+
         """
         self._dataloader_class = dataloader_class
 
