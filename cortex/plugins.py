@@ -82,6 +82,9 @@ class DatasetPlugin(DatasetPluginBase):
                 '`{}` already added to datasets in entrypoint'.format(mode))
         self._datasets[mode] = dataset
 
+    def set_dataloader_class(self, dataloader_class: type):
+        self._dataloader_class = dataloader_class
+
     def get_path(self, source: str):
         """Get's the path to a source.
 

@@ -1,6 +1,4 @@
-'''Data module
-
-'''
+"""Data module"""
 
 import logging
 
@@ -73,7 +71,7 @@ def register(plugin):
         _PLUGINS[k] = plugin
 
 
-class DatasetPluginBase():
+class DatasetPluginBase:
     def __init__(self):
         if len(self.sources) == 0:
             raise ValueError('No sources found for dataset entry point.')
@@ -82,3 +80,4 @@ class DatasetPluginBase():
         self._dims = {}
         self._input_names = None
         self._scale = None
+        self._dataloader_class = None
