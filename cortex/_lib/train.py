@@ -12,6 +12,7 @@ import numpy as np
 from . import exp, viz
 from .utils import convert_to_numpy, update_dict_of_lists
 from .viz import plot
+from cortex._lib.viz_server import VizServerSingleton
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -275,6 +276,8 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
             if kill:
                 print('Training interrupted')
                 exp.save(model, prefix='interrupted')
+                viz_singleton = VizServerSingleton()
+                viz_singleton.viz_process.terminate()
                 sys.exit(0)
 
     logger.info('Successfully completed training')
