@@ -44,8 +44,9 @@ class SimpleConvEncoder(BaseNet):
     def __init__(self, shape, dim_out=None, dim_h=64,
                  fully_connected_layers=None, nonlinearity='ReLU',
                  output_nonlinearity=None, f_size=4,
-                 stride=2, pad=1, min_dim=4, n_steps=None,
-                 spectral_norm=False, last_conv_nonlinearity=True, **layer_args):
+                 stride=2, pad=1, min_dim=4, n_steps=None, normalize_input=False,
+                 spectral_norm=False, last_conv_nonlinearity=True,
+                 last_batchnorm=True, **layer_args):
         super(SimpleConvEncoder, self).__init__(
             nonlinearity=nonlinearity, output_nonlinearity=output_nonlinearity)
 
@@ -62,6 +63,9 @@ class SimpleConvEncoder(BaseNet):
 
         if isinstance(dim_h, list):
             n_steps = len(dim_h)
+
+        if normalize_input:
+            self.models.add_module('initial_bn', nn.BatchNorm2d(dim_in))
 
         i = 0
         logger.debug('Input size: {},{}'.format(dim_x, dim_y))
@@ -88,12 +92,18 @@ class SimpleConvEncoder(BaseNet):
             is_last_layer = not((dim_x >= min_dim and dim_y >= min_dim) and
                                 (i < n_steps if n_steps else True))
 
-            if not(last_conv_nonlinearity) and is_last_layer:
-                conv_args['nonlinearity'] = None
+            if is_last_layer:
+                if not(last_conv_nonlinearity):
+                    nonlinearity = None
+                else:
+                    nonlinearity = self.layer_nonlinearity
+
+                if not(last_batchnorm):
+                    conv_args['batch_norm'] = False
 
             finish_layer_2d(
                 self.models, name, dim_x, dim_y, dim_out,
-                nonlinearity=self.layer_nonlinearity, **layer_args)
+                nonlinearity=nonlinearity, **conv_args)
             logger.debug('Output size: {},{}'.format(dim_x, dim_y))
             i += 1
 

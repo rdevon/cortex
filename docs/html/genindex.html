@@ -83,6 +83,11 @@
 <li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules.html">cortex</a></li>
 <li class="toctree-l1"><a class="reference internal" href="develop.html">Develop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">Custom demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#a-walkthrough-a-custom-classifier">A walkthrough a custom classifier:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#defining-losses-and-results">Defining losses and results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#visualization">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#putting-it-together">Putting it together</a></li>
 </ul>
 
             
@@ -190,12 +195,10 @@
 </li>
       <li><a href="cortex.html#cortex.plugins.ModelPlugin.add_scatter">add_scatter() (cortex.plugins.ModelPlugin method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder">AdversarialAutoencoder (class in cortex.built_ins.models.adversarial_autoencoder)</a>
 </li>
-      <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.AE">AE (class in cortex.built_ins.models.ae)</a>
-</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.ae_network.AENetwork">AENetwork (class in cortex.built_ins.networks.ae_network)</a>
 </li>
       <li><a href="cortex.built_ins.datasets.html#cortex.built_ins.datasets.toysets.Aggregation">Aggregation (class in cortex.built_ins.datasets.toysets)</a>
@@ -210,6 +213,12 @@
 </li>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.utils.apply_nonlinearity">apply_nonlinearity() (in module cortex.built_ins.networks.utils)</a>
 </li>
+      <li><a href="cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebA.attr_filename">attr_filename (cortex.built_ins.datasets.CelebA.CelebA attribute)</a>
+</li>
+      <li><a href="cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebA.attr_url">attr_url (cortex.built_ins.datasets.CelebA.CelebA attribute)</a>
+</li>
+      <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder">Autoencoder (class in cortex.built_ins.models.ae)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -223,7 +232,7 @@
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.build">build() (cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder method)</a>
 
       <ul>
-        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.build">(cortex.built_ins.models.ae.AE method)</a>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder.build">(cortex.built_ins.models.ae.Autoencoder method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI.build">(cortex.built_ins.models.ali.ALI method)</a>
 </li>
@@ -231,7 +240,11 @@
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.BidirectionalModel.build">(cortex.built_ins.models.ali.BidirectionalModel method)</a>
 </li>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageAttributeClassification.build">(cortex.built_ins.models.classifier.ImageAttributeClassification method)</a>
+</li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageClassification.build">(cortex.built_ins.models.classifier.ImageClassification method)</a>
+</li>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.build">(cortex.built_ins.models.classifier.SimpleAttributeClassifier method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.build">(cortex.built_ins.models.classifier.SimpleClassifier method)</a>
 </li>
@@ -387,11 +400,15 @@
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.defaults">defaults (cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder attribute)</a>
 
       <ul>
-        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.defaults">(cortex.built_ins.models.ae.AE attribute)</a>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder.defaults">(cortex.built_ins.models.ae.Autoencoder attribute)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI.defaults">(cortex.built_ins.models.ali.ALI attribute)</a>
 </li>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageAttributeClassification.defaults">(cortex.built_ins.models.classifier.ImageAttributeClassification attribute)</a>
+</li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageClassification.defaults">(cortex.built_ins.models.classifier.ImageClassification attribute)</a>
+</li>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.defaults">(cortex.built_ins.models.classifier.SimpleAttributeClassifier attribute)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.defaults">(cortex.built_ins.models.classifier.SimpleClassifier attribute)</a>
 </li>
@@ -420,6 +437,8 @@
 
       <ul>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.vae.ImageEncoder.encode">(cortex.built_ins.models.vae.ImageEncoder method)</a>
+</li>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.vae.VAENetwork.encode">(cortex.built_ins.models.vae.VAENetwork method)</a>
 </li>
       </ul></li>
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.vae.VAENetwork.encoder">encoder (cortex.built_ins.models.vae.VAENetwork attribute)</a>
@@ -491,11 +510,7 @@
 </li>
         <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.ResDecoder.forward">(cortex.built_ins.networks.resnets.ResDecoder method)</a>
 </li>
-        <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.ResEncoder.forward">(cortex.built_ins.networks.resnets.ResEncoder method)</a>
-</li>
         <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.UpsampleConv.forward">(cortex.built_ins.networks.resnets.UpsampleConv method)</a>
-</li>
-        <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.View.forward">(cortex.built_ins.networks.resnets.View method)</a>
 </li>
         <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.tv_models_wrapper.AlexNet.forward">(cortex.built_ins.networks.tv_models_wrapper.AlexNet method)</a>
 </li>
@@ -562,6 +577,8 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageAttributeClassification">ImageAttributeClassification (class in cortex.built_ins.models.classifier)</a>
+</li>
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.ImageClassification">ImageClassification (class in cortex.built_ins.models.classifier)</a>
 </li>
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.image_coders.ImageDecoder">ImageDecoder (class in cortex.built_ins.models.image_coders)</a>
@@ -628,16 +645,18 @@
 </li>
       <li><a href="cortex.html#cortex.plugins.DatasetPlugin.make_indexing">make_indexing() (cortex.plugins.DatasetPlugin method)</a>
 </li>
+      <li><a href="cortex.built_ins.datasets.html#cortex.built_ins.datasets.CelebA.CelebAPlugin.make_split">make_split() (cortex.built_ins.datasets.CelebA.CelebAPlugin method)</a>
+</li>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.base_network.make_subnet">make_subnet() (in module cortex.built_ins.networks.base_network)</a>
 </li>
       <li><a href="cortex.built_ins.datasets.html#cortex.built_ins.datasets.toysets.make_tds_random_and_split">make_tds_random_and_split() (in module cortex.built_ins.datasets.toysets)</a>
 </li>
       <li><a href="cortex.built_ins.datasets.html#cortex.built_ins.datasets.nii_dataload.ImageFolder.maskData">maskData() (cortex.built_ins.datasets.nii_dataload.ImageFolder method)</a>
 </li>
-      <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.MeanPoolConv">MeanPoolConv (class in cortex.built_ins.networks.resnets)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.MeanPoolConv">MeanPoolConv (class in cortex.built_ins.networks.resnets)</a>
+</li>
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.mine.MINE">MINE (class in cortex.built_ins.models.mine)</a>
 </li>
       <li><a href="cortex.html#cortex.plugins.ModelPlugin">ModelPlugin (class in cortex.plugins)</a>
@@ -692,14 +711,14 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.plugin_name">plugin_name (cortex.built_ins.models.ae.AE attribute)</a>
+      <li><a href="cortex.html#cortex.plugins.ModelPlugin.plugin_name">plugin_name (cortex.plugins.ModelPlugin attribute)</a>
+</li>
+      <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.predict">predict() (cortex.built_ins.models.classifier.SimpleAttributeClassifier method)</a>
 
       <ul>
-        <li><a href="cortex.html#cortex.plugins.ModelPlugin.plugin_name">(cortex.plugins.ModelPlugin attribute)</a>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.predict">(cortex.built_ins.models.classifier.SimpleClassifier method)</a>
 </li>
       </ul></li>
-      <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.predict">predict() (cortex.built_ins.models.classifier.SimpleClassifier method)</a>
-</li>
       <li><a href="cortex.built_ins.datasets.html#cortex.built_ins.datasets.toysets.G2.prepare">prepare() (cortex.built_ins.datasets.toysets.G2 method)</a>
 </li>
   </ul></td>
@@ -725,11 +744,13 @@
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.routine">routine() (cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder method)</a>
 
       <ul>
-        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.routine">(cortex.built_ins.models.ae.AE method)</a>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder.routine">(cortex.built_ins.models.ae.Autoencoder method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminator.routine">(cortex.built_ins.models.ali.ALIDiscriminator method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.BidirectionalModel.routine">(cortex.built_ins.models.ali.BidirectionalModel method)</a>
+</li>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.routine">(cortex.built_ins.models.classifier.SimpleAttributeClassifier method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.routine">(cortex.built_ins.models.classifier.SimpleClassifier method)</a>
 </li>
@@ -776,6 +797,8 @@
 </li>
       <li><a href="cortex.html#cortex.plugins.DatasetPlugin.set_scale">set_scale() (cortex.plugins.DatasetPlugin method)</a>
 </li>
+      <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier">SimpleAttributeClassifier (class in cortex.built_ins.models.classifier)</a>
+</li>
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier">SimpleClassifier (class in cortex.built_ins.models.classifier)</a>
 </li>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.conv_decoders.SimpleConvDecoder">SimpleConvDecoder (class in cortex.built_ins.networks.conv_decoders)</a>
@@ -786,10 +809,10 @@
 </li>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.convnets.SimpleNet">SimpleNet (class in cortex.built_ins.networks.convnets)</a>
 </li>
-      <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.SpectralNormLayer.sn_weight">sn_weight() (in module cortex.built_ins.networks.SpectralNormLayer)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.SpectralNormLayer.sn_weight">sn_weight() (in module cortex.built_ins.networks.SpectralNormLayer)</a>
+</li>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.SpectralNormLayer.SNConv2d">SNConv2d (class in cortex.built_ins.networks.SpectralNormLayer)</a>
 </li>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.SpectralNormLayer.SNLinear">SNLinear (class in cortex.built_ins.networks.SpectralNormLayer)</a>
@@ -903,21 +926,19 @@
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.vae.VAENetwork">VAENetwork (class in cortex.built_ins.models.vae)</a>
 </li>
       <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.modules.View">View (class in cortex.built_ins.networks.modules)</a>
-
-      <ul>
-        <li><a href="cortex.built_ins.networks.html#cortex.built_ins.networks.resnets.View">(class in cortex.built_ins.networks.resnets)</a>
 </li>
-      </ul></li>
       <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder.visualize">visualize() (cortex.built_ins.models.adversarial_autoencoder.AdversarialAutoencoder method)</a>
 
       <ul>
-        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.AE.visualize">(cortex.built_ins.models.ae.AE method)</a>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ae.Autoencoder.visualize">(cortex.built_ins.models.ae.Autoencoder method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.ALI.visualize">(cortex.built_ins.models.ali.ALI method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.ALIDiscriminator.visualize">(cortex.built_ins.models.ali.ALIDiscriminator method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.ali.BidirectionalModel.visualize">(cortex.built_ins.models.ali.BidirectionalModel method)</a>
+</li>
+        <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleAttributeClassifier.visualize">(cortex.built_ins.models.classifier.SimpleAttributeClassifier method)</a>
 </li>
         <li><a href="cortex.built_ins.models.html#cortex.built_ins.models.classifier.SimpleClassifier.visualize">(cortex.built_ins.models.classifier.SimpleClassifier method)</a>
 </li>

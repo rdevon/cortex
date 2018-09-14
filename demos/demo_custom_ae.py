@@ -1,7 +1,8 @@
-from cortex.plugins import ModelPlugin
-from cortex.main import run
 import torch.nn.functional as F
 from torch import nn
+
+from cortex.plugins import ModelPlugin
+from cortex.main import run
 
 
 class Autoencoder(nn.Module):
@@ -55,12 +56,11 @@ class AE(ModelPlugin):
             nn.Sigmoid())
         self.nets.ae = Autoencoder(encoder, decoder)
 
-    def routine(self, inputs, targets, ae_criterion=F.mse_loss):
+    def routine(self, inputs, ae_criterion=F.mse_loss):
         """
         Training routine and loss computing.
         Args:
             inputs: torch.Tensor
-            targets: torch.Tensor
             ae_criterion: function
 
         Returns: None
@@ -72,13 +72,12 @@ class AE(ModelPlugin):
             outputs, inputs, size_average=False) / inputs.size(0)
         self.losses.ae = r_loss
 
-    def visualize(self, inputs, targets):
+    def visualize(self, inputs):
         """
         Adding generated images and base images to
         visualization.
         Args:
             inputs: torch.Tensor
-            targets: torch.Tensor
         Returns: None
 
         """

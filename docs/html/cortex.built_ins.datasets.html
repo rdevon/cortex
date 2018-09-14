@@ -97,6 +97,11 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="develop.html">Develop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">Custom demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#a-walkthrough-a-custom-classifier">A walkthrough a custom classifier:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#defining-losses-and-results">Defining losses and results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#visualization">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html#putting-it-together">Putting it together</a></li>
 </ul>
 
             
@@ -177,8 +182,18 @@
 <p>Handler for CelebA.</p>
 <dl class="class">
 <dt id="cortex.built_ins.datasets.CelebA.CelebA">
-<em class="property">class </em><code class="descclassname">cortex.built_ins.datasets.CelebA.</code><code class="descname">CelebA</code><span class="sig-paren">(</span><em>root</em>, <em>transform=None</em>, <em>target_transform=None</em>, <em>download=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebA"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebA" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortex.built_ins.datasets.CelebA.</code><code class="descname">CelebA</code><span class="sig-paren">(</span><em>root</em>, <em>transform=None</em>, <em>target_transform=None</em>, <em>download=False</em>, <em>split=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebA"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebA" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">torchvision.datasets.folder.ImageFolder</span></code></p>
+<dl class="attribute">
+<dt id="cortex.built_ins.datasets.CelebA.CelebA.attr_filename">
+<code class="descname">attr_filename</code><em class="property"> = 'list_attr_celeba.zip'</em><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebA.attr_filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="cortex.built_ins.datasets.CelebA.CelebA.attr_url">
+<code class="descname">attr_url</code><em class="property"> = 'https://www.dropbox.com/s/auexdy98c6g7y25/list_attr_celeba.zip?dl=1'</em><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebA.attr_url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="cortex.built_ins.datasets.CelebA.CelebA.download">
 <code class="descname">download</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebA.download"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebA.download" title="Permalink to this definition">¶</a></dt>
@@ -203,7 +218,7 @@
 <dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.DatasetPlugin" title="cortex.plugins.DatasetPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.DatasetPlugin</span></code></a></p>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.CelebA.CelebAPlugin.handle">
-<code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebAPlugin.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebAPlugin.handle" title="Permalink to this definition">¶</a></dt>
+<code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>split=None</em>, <em>classification_mode=False</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebAPlugin.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebAPlugin.handle" title="Permalink to this definition">¶</a></dt>
 <dd><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -220,6 +235,11 @@
 </table>
 <p>Returns:</p>
 </dd></dl>
+
+<dl class="method">
+<dt id="cortex.built_ins.datasets.CelebA.CelebAPlugin.make_split">
+<code class="descname">make_split</code><span class="sig-paren">(</span><em>data_path</em>, <em>split</em>, <em>Dataset</em>, <em>train_transform</em>, <em>test_transform</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/CelebA.html#CelebAPlugin.make_split"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.CelebA.CelebAPlugin.make_split" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.CelebA.CelebAPlugin.sources">
@@ -241,27 +261,12 @@
 <dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.DatasetPlugin" title="cortex.plugins.DatasetPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.DatasetPlugin</span></code></a></p>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.imagenet.ImageFolder.handle">
-<code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/imagenet.html#ImageFolder.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.imagenet.ImageFolder.handle" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>source</strong> – </li>
-<li><strong>copy_to_local</strong> – </li>
-<li><strong>normalize</strong> – </li>
-<li><strong>**transform_args</strong> – </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<p>Returns:</p>
-</dd></dl>
+<code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>tanh_normalization=False</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/imagenet.html#ImageFolder.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.imagenet.ImageFolder.handle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.imagenet.ImageFolder.sources">
-<code class="descname">sources</code><em class="property"> = ['tiny-imagenet-200']</em><a class="headerlink" href="#cortex.built_ins.datasets.imagenet.ImageFolder.sources" title="Permalink to this definition">¶</a></dt>
+<code class="descname">sources</code><em class="property"> = ['tiny-imagenet-200', 'imagenet']</em><a class="headerlink" href="#cortex.built_ins.datasets.imagenet.ImageFolder.sources" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -395,23 +400,8 @@ files corresponding to class 0 and class 1 respectively</div></blockquote>
 <dd><p>Bases: <a class="reference internal" href="cortex.html#cortex.plugins.DatasetPlugin" title="cortex.plugins.DatasetPlugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">cortex.plugins.DatasetPlugin</span></code></a></p>
 <dl class="method">
 <dt id="cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.handle">
-<code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/torchvision_datasets.html#TorchvisionDatasetPlugin.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.handle" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>source</strong> – </li>
-<li><strong>copy_to_local</strong> – </li>
-<li><strong>normalize</strong> – </li>
-<li><strong>**transform_args</strong> – </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-<p>Returns:</p>
-</dd></dl>
+<code class="descname">handle</code><span class="sig-paren">(</span><em>source</em>, <em>copy_to_local=False</em>, <em>normalize=True</em>, <em>train_samples=None</em>, <em>test_samples=None</em>, <em>labeled_only=False</em>, <em>stl_center_crop=False</em>, <em>stl_resize_only=False</em>, <em>stl_no_resize=False</em>, <em>**transform_args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cortex/built_ins/datasets/torchvision_datasets.html#TorchvisionDatasetPlugin.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.handle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="attribute">
 <dt id="cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.sources">

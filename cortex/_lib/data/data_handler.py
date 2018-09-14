@@ -1,11 +1,9 @@
-'''Data module
-
-'''
+"""Data module"""
 
 import signal
 
-from progressbar import Bar, ProgressBar, Percentage, Timer, ETA
 import torch
+from progressbar import Bar, ProgressBar, Percentage, Timer, ETA
 
 from .noise import get_noise_var
 from .. import exp
@@ -14,8 +12,7 @@ __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
 
 
-class DataHandler(object):
-
+class DataHandler:
     def __init__(self):
         self.dims = {}
         self.input_names = {}
@@ -37,7 +34,8 @@ class DataHandler(object):
 
     def add_dataset(self, source, dataset_entrypoint,
                     n_workers=4, shuffle=True, DataLoader=None):
-        DataLoader = DataLoader or torch.utils.data.DataLoader
+        DataLoader = (DataLoader or dataset_entrypoint._dataloader_class or
+                      torch.utils.data.DataLoader)
 
         if len(dataset_entrypoint._datasets) == 0:
             raise ValueError('No datasets found in entrypoint')
@@ -130,9 +128,6 @@ class DataHandler(object):
             raise RuntimeError('Batch not set')
 
         item = self.inputs.get(item, item)
-        # TODO: Condition added for testing purpose.
-        if item == 'inputs':
-            item = 'images'
         if item not in self.batch.keys():
             raise KeyError('Data with label `{}` not found. Available: {}'
                            .format(item, tuple(self.batch.keys())))

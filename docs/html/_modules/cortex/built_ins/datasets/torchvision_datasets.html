@@ -82,6 +82,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html">Custom demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#a-walkthrough-a-custom-classifier">A walkthrough a custom classifier:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#defining-losses-and-results">Defining losses and results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#visualization">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#putting-it-together">Putting it together</a></li>
 </ul>
 
             
@@ -153,6 +158,7 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">torchvision</span>
+<span class="kn">from</span> <span class="nn">torchvision.transforms</span> <span class="k">import</span> <span class="n">transforms</span>
 
 <span class="kn">from</span> <span class="nn">cortex.plugins</span> <span class="k">import</span> <span class="n">DatasetPlugin</span><span class="p">,</span> <span class="n">register_plugin</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="k">import</span> <span class="n">build_transforms</span>
@@ -160,105 +166,85 @@
 
 <div class="viewcode-block" id="TorchvisionDatasetPlugin"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin">[docs]</a><span class="k">class</span> <span class="nc">TorchvisionDatasetPlugin</span><span class="p">(</span><span class="n">DatasetPlugin</span><span class="p">):</span>
     <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s1">&#39;CIFAR10&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;CIFAR100&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;CocoCaptions&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;CocoDetection&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;FakeData&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;FashionMNIST&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;ImageFolder&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;LSUN&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;LSUNClass&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;MNIST&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;PhotoTour&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;SEMEION&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;STL10&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;SVHN&#39;</span><span class="p">]</span>
+        <span class="s1">&#39;CIFAR10&#39;</span><span class="p">,</span> <span class="s1">&#39;CIFAR100&#39;</span><span class="p">,</span> <span class="s1">&#39;CocoCaptions&#39;</span><span class="p">,</span> <span class="s1">&#39;CocoDetection&#39;</span><span class="p">,</span> <span class="s1">&#39;FakeData&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;FashionMNIST&#39;</span><span class="p">,</span> <span class="s1">&#39;ImageFolder&#39;</span><span class="p">,</span> <span class="s1">&#39;LSUN&#39;</span><span class="p">,</span> <span class="s1">&#39;LSUNClass&#39;</span><span class="p">,</span> <span class="s1">&#39;MNIST&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;PhotoTour&#39;</span><span class="p">,</span> <span class="s1">&#39;SEMEION&#39;</span><span class="p">,</span> <span class="s1">&#39;STL10&#39;</span><span class="p">,</span> <span class="s1">&#39;SVHN&#39;</span>
+    <span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">_handle_LSUN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            Dataset:</span>
-<span class="sd">            data_path:</span>
-<span class="sd">            transform:</span>
-
-<span class="sd">        Returns:</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_handle_LSUN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
-            <span class="n">data_path</span><span class="p">,</span>
-            <span class="n">classes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;bedroom_train&#39;</span><span class="p">],</span>
-            <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;bedroom_train&#39;</span><span class="p">],</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
         <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
-            <span class="n">data_path</span><span class="p">,</span>
-            <span class="n">classes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;bedroom_test&#39;</span><span class="p">],</span>
-            <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;bedroom_test&#39;</span><span class="p">],</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span>
 
-    <span class="k">def</span> <span class="nf">_handle_SVHN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            Dataset:</span>
-<span class="sd">            data_path:</span>
-<span class="sd">            transform:</span>
-
-<span class="sd">        Returns:</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_handle_SVHN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
-            <span class="n">data_path</span><span class="p">,</span>
-            <span class="n">split</span><span class="o">=</span><span class="s1">&#39;train&#39;</span><span class="p">,</span>
-            <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
-            <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
-            <span class="n">data_path</span><span class="p">,</span>
-            <span class="n">split</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">,</span>
-            <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
-            <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span>
 
-    <span class="k">def</span> <span class="nf">_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_handle_STL</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">labeled_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stl_center_crop</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">stl_resize_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stl_no_resize</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">normalize</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            Dataset:</span>
-<span class="sd">            data_path:</span>
-<span class="sd">            transform:</span>
+        <span class="k">if</span> <span class="n">stl_no_resize</span><span class="p">:</span>
+            <span class="n">train_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">RandomHorizontalFlip</span><span class="p">(),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">normalize</span><span class="p">,</span>
+            <span class="p">])</span>
+            <span class="n">test_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">normalize</span><span class="p">,</span>
+            <span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">stl_center_crop</span><span class="p">:</span>
+                <span class="n">tr_trans</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">CenterCrop</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
+                <span class="n">te_trans</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">CenterCrop</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">stl_resize_only</span><span class="p">:</span>
+                <span class="n">tr_trans</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
+                <span class="n">te_trans</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">stl_no_resize</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tr_trans</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">RandomResizedCrop</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
+                <span class="n">te_trans</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span>
 
-<span class="sd">        Returns:</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
+            <span class="n">train_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">tr_trans</span><span class="p">,</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">RandomHorizontalFlip</span><span class="p">(),</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">normalize</span><span class="p">,</span>
+            <span class="p">])</span>
+            <span class="n">test_transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+                <span class="n">te_trans</span><span class="p">,</span>
+                <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+                <span class="n">normalize</span><span class="p">,</span>
+            <span class="p">])</span>
+        <span class="k">if</span> <span class="n">labeled_only</span><span class="p">:</span>
+            <span class="n">split</span> <span class="o">=</span> <span class="s1">&#39;train&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">split</span> <span class="o">=</span> <span class="s1">&#39;train+unlabeled&#39;</span>
         <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
-            <span class="n">data_path</span><span class="p">,</span>
-            <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
-            <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">train_transform</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
-            <span class="n">data_path</span><span class="p">,</span>
-            <span class="n">train</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-            <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
-            <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">test_transform</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span>
 
-<div class="viewcode-block" id="TorchvisionDatasetPlugin.handle"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.handle">[docs]</a>    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span>
-            <span class="bp">self</span><span class="p">,</span>
-            <span class="n">source</span><span class="p">,</span>
-            <span class="n">copy_to_local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-            <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">test_set</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span>
+            <span class="n">data_path</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            source:</span>
-<span class="sd">            copy_to_local:</span>
-<span class="sd">            normalize:</span>
-<span class="sd">            **transform_args:</span>
-
-<span class="sd">        Returns:</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="TorchvisionDatasetPlugin.handle"><a class="viewcode-back" href="../../../../cortex.built_ins.datasets.html#cortex.built_ins.datasets.torchvision_datasets.TorchvisionDatasetPlugin.handle">[docs]</a>    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">copy_to_local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+               <span class="n">train_samples</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">test_samples</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">labeled_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stl_center_crop</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+               <span class="n">stl_resize_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stl_no_resize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">transform_args</span><span class="p">):</span>
 
         <span class="n">Dataset</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">torchvision</span><span class="o">.</span><span class="n">datasets</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
         <span class="n">Dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_indexing</span><span class="p">(</span><span class="n">Dataset</span><span class="p">)</span>
@@ -273,8 +259,9 @@
             <span class="n">data_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy_to_local_path</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">normalize</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normalize</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">source</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MNIST&#39;</span><span class="p">,</span> <span class="s1">&#39;dSprites&#39;</span><span class="p">,</span> <span class="s1">&#39;Fashion-MNIST&#39;</span><span class="p">,</span> <span class="s1">&#39;EMNIST&#39;</span><span class="p">,</span>
-                          <span class="s1">&#39;PhotoTour&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">source</span> <span class="ow">in</span> <span class="p">[</span>
+                    <span class="s1">&#39;MNIST&#39;</span><span class="p">,</span> <span class="s1">&#39;dSprites&#39;</span><span class="p">,</span> <span class="s1">&#39;Fashion-MNIST&#39;</span><span class="p">,</span> <span class="s1">&#39;EMNIST&#39;</span><span class="p">,</span> <span class="s1">&#39;PhotoTour&#39;</span>
+            <span class="p">]:</span>
                 <span class="n">normalize</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">0.5</span><span class="p">,),</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,)]</span>
                 <span class="n">scale</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
@@ -290,10 +277,16 @@
             <span class="n">handler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_LSUN</span>
         <span class="k">elif</span> <span class="n">source</span> <span class="o">==</span> <span class="s1">&#39;SVHN&#39;</span><span class="p">:</span>
             <span class="n">handler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_SVHN</span>
+        <span class="k">elif</span> <span class="n">source</span> <span class="o">==</span> <span class="s1">&#39;STL10&#39;</span><span class="p">:</span>
+            <span class="n">handler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_STL</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">handler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle</span>
 
-        <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span> <span class="o">=</span> <span class="n">handler</span><span class="p">(</span><span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
+        <span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span> <span class="o">=</span> <span class="n">handler</span><span class="p">(</span><span class="n">Dataset</span><span class="p">,</span> <span class="n">data_path</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">,</span>
+                                      <span class="n">labeled_only</span><span class="o">=</span><span class="n">labeled_only</span><span class="p">,</span>
+                                      <span class="n">stl_center_crop</span><span class="o">=</span><span class="n">stl_center_crop</span><span class="p">,</span>
+                                      <span class="n">stl_resize_only</span><span class="o">=</span><span class="n">stl_resize_only</span><span class="p">,</span>
+                                      <span class="n">stl_no_resize</span><span class="o">=</span><span class="n">stl_no_resize</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">train_samples</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">train_set</span><span class="o">.</span><span class="n">train_data</span> <span class="o">=</span> <span class="n">train_set</span><span class="o">.</span><span class="n">train_data</span><span class="p">[:</span><span class="n">train_samples</span><span class="p">]</span>
             <span class="n">train_set</span><span class="o">.</span><span class="n">train_labels</span> <span class="o">=</span> <span class="n">train_set</span><span class="o">.</span><span class="n">train_labels</span><span class="p">[:</span><span class="n">train_samples</span><span class="p">]</span>
@@ -301,15 +294,19 @@
             <span class="n">test_set</span><span class="o">.</span><span class="n">test_data</span> <span class="o">=</span> <span class="n">test_set</span><span class="o">.</span><span class="n">test_data</span><span class="p">[:</span><span class="n">test_samples</span><span class="p">]</span>
             <span class="n">test_set</span><span class="o">.</span><span class="n">test_labels</span> <span class="o">=</span> <span class="n">test_set</span><span class="o">.</span><span class="n">test_labels</span><span class="p">[:</span><span class="n">test_samples</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">source</span> <span class="o">==</span> <span class="s1">&#39;SVHN&#39;</span><span class="p">:</span>
-            <span class="n">dim_c</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span> <span class="o">=</span> <span class="n">train_set</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-            <span class="n">dim_l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
-
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;SVHN&#39;</span><span class="p">,</span> <span class="s1">&#39;STL10&#39;</span><span class="p">):</span>
+            <span class="n">dim_c</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="n">uniques</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">uniques</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="n">dim_l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">uniques</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">train_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-                <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span><span class="p">,</span> <span class="n">dim_c</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">train_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="n">dim_c</span><span class="p">,</span> <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">train_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="n">dim_x</span><span class="p">,</span> <span class="n">dim_y</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
                 <span class="n">dim_c</span> <span class="o">=</span> <span class="mi">1</span>
 
             <span class="n">labels</span> <span class="o">=</span> <span class="n">train_set</span><span class="o">.</span><span class="n">train_labels</span>

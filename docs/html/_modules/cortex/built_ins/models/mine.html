@@ -82,6 +82,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">cortex</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../develop.html">Develop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html">Custom demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#a-walkthrough-a-custom-classifier">A walkthrough a custom classifier:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#defining-losses-and-results">Defining losses and results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#visualization">Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../build.html#putting-it-together">Putting it together</a></li>
 </ul>
 
             
@@ -170,7 +175,7 @@
                                     <span class="n">penalty_amount</span><span class="o">=</span><span class="s1">&#39;mine_penalty_amount&#39;</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">=</span> <span class="n">GradientPenalty</span><span class="p">(</span><span class="n">contract</span><span class="o">=</span><span class="n">contract</span><span class="p">)</span>
 
-<div class="viewcode-block" id="MINE.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.mine.MINE.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">X_m</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">Z_m</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">mine_measure</span><span class="o">=</span><span class="s1">&#39;JSD&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="MINE.routine"><a class="viewcode-back" href="../../../../cortex.built_ins.models.html#cortex.built_ins.models.mine.MINE.routine">[docs]</a>    <span class="k">def</span> <span class="nf">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">X_m</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">Z_m</span><span class="p">,</span> <span class="n">mine_measure</span><span class="o">=</span><span class="s1">&#39;JSD&#39;</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 
 <span class="sd">        Args:</span>
