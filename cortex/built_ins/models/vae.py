@@ -1,15 +1,22 @@
 '''Simple Variational Autoencoder model.
 '''
 
-from cortex.plugins import ModelPlugin, register_plugin
+import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from cortex.built_ins.models.utils import update_encoder_args, update_decoder_args, ms_ssim
+
+from cortex.built_ins.models.utils import ms_ssim
+from cortex.built_ins.models.image_coders import ImageDecoder, ImageEncoder
+from cortex.plugins import ModelPlugin, register_plugin
+
 
 __author__ = 'R Devon Hjelm and Samuel Lavoie'
 __author_email__ = 'erroneus@gmail.com'
+
+logger = logging.getLogger('cortex.vae')
 
 
 class VAENetwork(nn.Module):
@@ -58,83 +65,6 @@ class VAENetwork(nn.Module):
         return self.decoder(self.latent, nonlinearity=nonlinearity)
 
 
-class ImageEncoder(ModelPlugin):
-    '''Builds a simple image encoder.
-
-    '''
-
-    def build(self, encoder_type: str='convnet', dim_out: int=None,
-              encoder_args=dict(fully_connected_layers=1024)):
-        '''
-
-        Args:
-            encoder_type: Encoder model type.
-            dim_out: Output size.
-            encoder_args: Arguments for encoder build.
-
-        '''
-        x_shape = self.get_dims('x', 'y', 'c')
-        Encoder, encoder_args = update_encoder_args(
-            x_shape, model_type=encoder_type, encoder_args=encoder_args)
-        encoder = Encoder(x_shape, dim_out=dim_out, **encoder_args)
-        self.nets.encoder = encoder
-
-    def encode(self, inputs, **kwargs):
-        return self.nets.encoder(inputs, **kwargs)
-
-    def visualize(self, inputs, targets):
-        Z = self.encode(inputs)
-        if targets is not None:
-            targets = targets.data
-        self.add_scatter(Z.data, labels=targets, name='latent values')
-
-
-class ImageDecoder(ModelPlugin):
-    '''Builds a simple image encoder.
-
-    '''
-
-    def build(self,
-              decoder_type: str = 'convnet',
-              dim_in: int = 64,
-              decoder_args=dict(output_nonlinearity='tanh')):
-        '''
-
-        Args:
-            decoder_type: Decoder model type.
-            dim_in: Input size.
-            decoder_args: Arguments for the decoder.
-
-        '''
-        x_shape = self.get_dims('x', 'y', 'c')
-        Decoder, decoder_args = update_decoder_args(
-            x_shape, model_type=decoder_type, decoder_args=decoder_args)
-        decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
-        decoder = Decoder(x_shape, dim_in=dim_in, **decoder_args)
-        self.nets.decoder = decoder
-
-    def routine(self, inputs, Z, decoder_crit=F.mse_loss):
-        '''
-
-        Args:
-            decoder_crit: Criterion for the decoder.
-        x = self.encoder(x)
-        x = self.decoder(x)
-        '''
-
-        X = self.decode(Z)
-        self.losses.decoder = decoder_crit(X, inputs) / inputs.size(0)
-        msssim = ms_ssim(inputs, X)
-        self.results.ms_ssim = msssim.item()
-
-    def decode(self, Z):
-        return self.nets.decoder(Z)
-
-    def visualize(self, Z):
-        gen = self.decode(Z)
-        self.add_image(gen, name='generated')
-
-
 class VAE(ModelPlugin):
     '''Variational autoencder.
 
@@ -154,7 +84,8 @@ class VAE(ModelPlugin):
     def __init__(self):
         super().__init__()
 
-        self.encoder = ImageEncoder()
+        self.encoder = ImageEncoder(contract=dict(
+            kwargs=dict(dim_out='dim_encoder_out')))
         decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
         self.decoder = ImageDecoder(contract=decoder_contract)
 
@@ -189,8 +120,17 @@ class VAE(ModelPlugin):
         vae = self.nets.vae
         outputs = vae(inputs)
 
-        r_loss = vae_criterion(
-            outputs, inputs, size_average=False) / inputs.size(0)
+        try:
+            r_loss = vae_criterion(
+                outputs, inputs, size_average=False) / inputs.size(0)
+        except RuntimeError as e:
+            logger.error('Runtime error. This could possibly be due to using '
+                         'the wrong encoder / decoder for this dataset. '
+                         'If you are using MNIST, for example, use the '
+                         'arguments `--encoder_type mnist --decoder_type '
+                         'mnist`')
+            raise e
+
         kl = (0.5 * (vae.std**2 + vae.mu**2 - 2. * torch.log(vae.std) -
                      1.).sum(1).mean())
 

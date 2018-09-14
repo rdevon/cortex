@@ -151,11 +151,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
                 pass
             dim_l = len(uniques)
         else:
-            if len(train_set.train_data.shape) == 4:
-                dim_c, dim_x, dim_y = train_set[0][0].size()
-            else:
-                dim_x, dim_y = train_set[0][0].size()
-                dim_c = 1
+            dim_c, dim_x, dim_y = train_set[0][0].size()
 
             labels = train_set.train_labels
             if not isinstance(labels, list):
