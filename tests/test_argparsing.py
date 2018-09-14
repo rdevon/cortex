@@ -101,8 +101,8 @@ def test_update_args(args, classifier_modified):
     Asserts: True if exp.ARGS is updated adequately.
 
     """
-    expected_classifier_args_before_update = {'dropout': 0.2, 'dim_h': 100}
-    expected_classifier_args_after_update = {'dropout': 0.1, 'dim_h': 100}
+    expected_classifier_args_before_update = {'dropout': 0.2}
+    expected_classifier_args_after_update = {'dropout': 0.1}
     args_for_update = {
         'data': {
             'batch_size': 128
