@@ -127,8 +127,10 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
 
     training_nets = model._get_training_nets()
 
+    logger.info('Setting up optimizers for {}'.format(set(training_nets)))
+
     for network_key in set(training_nets):
-        logger.info('Building optimizer for {}'.format(network_key))
+        logger.debug('Building optimizer for {}'.format(network_key))
         network = model.nets[network_key]
 
         if isinstance(network, (tuple, list)):
@@ -172,7 +174,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         optimizer = op(params, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
 
-        logger.info(
+        logger.debug(
             'Training {} routine with {}'.format(
                 network_key, optimizer))
 

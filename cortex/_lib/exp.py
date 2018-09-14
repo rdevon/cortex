@@ -31,7 +31,7 @@ DEVICE = torch.device('cpu')
 def _file_string(prefix=''):
     if prefix == '':
         return NAME
-    return '{}({})'.format(NAME, prefix)
+    return '{}_{}_'.format(NAME, prefix)
 
 
 def configure_from_yaml(config_file=None):
@@ -146,7 +146,6 @@ def setup_out_dir(out_path, global_out_path, name=None, clean=False):
 
 def setup_device(device):
     global DEVICE
-    print(device)
     if torch.cuda.is_available() and device != 'cpu':
         if device < torch.cuda.device_count():
             logger.info('Using GPU {}'.format(device))

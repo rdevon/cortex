@@ -14,7 +14,6 @@ __author_email__ = 'erroneus@gmail.com'
 
 
 logger = logging.getLogger('cortex')
-viz_process = None
 
 
 def run(model=None):
@@ -45,5 +44,5 @@ def run(model=None):
         print('Cancelled')
         exit(0)
 
+    print_section('RUNNING')
     train.main_loop(model, **exp.ARGS['train'])
-    viz_process.terminate()

@@ -20,8 +20,15 @@ class ImageFolder(DatasetPlugin):
         Dataset = self.make_indexing(torchvision.datasets.ImageFolder)
         data_path = self.get_path(source)
 
-        train_path = path.join(data_path, 'train')
-        test_path = path.join(data_path, 'val')
+        if isinstance(data_path, dict):
+            if not 'train' in data_path.keys() and 'valid' in data_path.keys():
+                raise ValueError('Imagenet data path must have `train` and '
+                                 '`valid` paths specified')
+            train_path = data_path['train']
+            test_path = data_path['valid']
+        else:
+            train_path = path.join(data_path, 'train')
+            test_path = path.join(data_path, 'val')
 
         if copy_to_local:
             train_path = self.copy_to_local_path(train_path)

@@ -47,19 +47,19 @@ def summarize_results_std(results):
     return results_
 
 
-def train_epoch(model, epoch, quit_on_bad_values, eval_during_train,
-                data_mode='train'):
-    model.train_loop(epoch, data_mode=data_mode)
+def train_epoch(model, epoch, eval_during_train, data_mode='train',
+                use_pbar=True):
+    model.train_loop(epoch, data_mode=data_mode, use_pbar=use_pbar)
 
     if not eval_during_train:
-        return test_epoch(model, epoch, data_mode=data_mode)
+        return test_epoch(model, epoch, data_mode=data_mode, use_pbar=use_pbar)
 
     results = summarize_results(model._all_epoch_results)
     return results
 
 
-def test_epoch(model, epoch, data_mode='test'):
-    model.eval_loop(epoch, data_mode=data_mode)
+def test_epoch(model, epoch, data_mode='test', use_pbar=True):
+    model.eval_loop(epoch, data_mode=data_mode, use_pbar=use_pbar)
     results = summarize_results(model._all_epoch_results)
 
     model.data.reset(make_pbar=False, mode='test')
@@ -183,16 +183,15 @@ def save_best(model, train_results, best, save_on_best, save_on_lowest):
         return best
 
 
-def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
-              save_on_best=None, save_on_lowest=None, save_on_highest=None,
-              eval_during_train=True, train_mode='train', test_mode='test',
-              eval_only=False):
+def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
+              save_on_lowest=None, save_on_highest=None, eval_during_train=True,
+              train_mode='train', test_mode='test', eval_only=False,
+              pbar_off=False):
     '''
 
     Args:
         epochs: Number of epochs.
         archive_every: Number of epochs for writing checkpoints.
-        quit_on_bad_values: Training data mode.
         save_on_best: Testing data mode.
         save_on_lowest: Test on data only (no training).
         save_on_highest: Quit when nans or infs found.
@@ -200,9 +199,12 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
         train_mode: Saves when highest of this result is found.
         test_mode: Saves when lowest of this result is found.
         eval_only: Gives results over a training epoch.
+        pbar_off: Turn off the progressbar.
 
     '''
     info = pprint.pformat(exp.ARGS)
+
+    logger.info('Starting main loop.')
 
     if (viz.visualizer):
         viz.visualizer.text(info, env=exp.NAME, win='info')
@@ -218,14 +220,20 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
     best = None
     if not isinstance(epochs, int):
             epochs = epochs['epochs']
-    for e in range(epochs):
+
+    epoch = exp.INFO['epoch']
+    first_epoch = epoch
+
+    while epoch < epochs:
         try:
             epoch = exp.INFO['epoch']
+            logger.info('Epoch {} / {}'.format(epoch, epochs))
             start_time = time.time()
+
             # TRAINING
             train_results_ = train_epoch(
-                model, epoch, quit_on_bad_values, eval_during_train,
-                data_mode=train_mode)
+                model, epoch, eval_during_train,
+                data_mode=train_mode, use_pbar=not(pbar_off))
             convert_to_numpy(train_results_)
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
@@ -234,7 +242,9 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
                                  save_on_lowest)
 
             # TESTING
-            test_results_ = test_epoch(model, epoch, data_mode=test_mode)
+            test_results_ = test_epoch(model, epoch, data_mode=test_mode,
+                                       use_pbar=not(pbar_off))
+
             convert_to_numpy(test_results_)
             update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
             align_summaries(exp.SUMMARY['train'], exp.SUMMARY['test'])
@@ -242,12 +252,14 @@ def main_loop(model, epochs=500, archive_every=10, quit_on_bad_values=True,
             # Finishing up
             epoch_time = time.time() - start_time
             total_time += epoch_time
-            display_results(train_results_, test_results_, e, epochs,
+            display_results(train_results_, test_results_, epoch, epochs,
                             epoch_time, total_time)
-            if (viz.visualizer):
-                plot()
+
+            if viz.visualizer:
+                plot(epoch, init=(epoch == first_epoch))
                 model.viz.show()
                 model.viz.clear()
+
             if (archive_every and epoch % archive_every == 0):
                 exp.save(model, prefix=epoch)
 

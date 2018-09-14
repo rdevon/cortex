@@ -8,6 +8,7 @@ import copy
 import inspect
 import logging
 import re
+import sys
 
 from sphinxcontrib.napoleon import Config
 from sphinxcontrib.napoleon.docstring import GoogleDocstring
@@ -125,6 +126,8 @@ def make_argument_parser() -> argparse.ArgumentParser:
               ' name will be the base name of the `--out_path`'))
     parser.add_argument('-r', '--reload', type=str, default=None,
                         help=('Path to model to reload.'))
+    parser.add_argument('-a', '--autoreload', default=False,
+                        action='store_true')
     parser.add_argument('-R', '--networks_to_reload', type=str, nargs='+',
                         default=None)
     parser.add_argument('-L', '--load_networks',
@@ -322,7 +325,37 @@ def parse_args(models, model=None):
     else:
         _parse_model(model, parser)
 
-    args = parser.parse_args()
+    command = sys.argv[1:]
+
+    idx = []
+    for i, c in enumerate(command):
+        if c.startswith('-') and not(c.startswith('--')):
+            idx.append(i)
+
+    header = []
+
+    # argparse is picky about ordering
+    for i in idx[::-1]:
+        a = None
+
+        if i + 1 < len(command):
+            a = command[i + 1]
+
+        if a is not None and (a.startswith('-') or a.startswith('--')):
+            a = None
+
+        if a is not None:
+            a = command.pop(i + 1)
+            c = command.pop(i)
+            header += [c, a]
+
+        else:
+            c = command.pop(i)
+            header.append(c)
+
+    command = header + command
+
+    args = parser.parse_args(command)
     if not hasattr(args, 'command'):
         args.command = None
 
