@@ -196,14 +196,14 @@ def plot(epoch, init=False):
         if min_e == epoch:
             Y = [[v_train[0], v_train[0]]]
         else:
-            Y = [v_train[min_e:epoch+1]]
+            Y = [v_train[min_e:epoch + 1]]
         legend = []
 
         if v_test is not None:
             if min_e == epoch:
                 Y.append([v_test[0], v_test[0]])
             else:
-                Y.append(v_test[min_e:epoch+1])
+                Y.append(v_test[min_e:epoch + 1])
 
             if min_e == epoch:
                 X = [[-1, 0], [-1, 0]]

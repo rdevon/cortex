@@ -21,7 +21,7 @@ class ImageFolder(DatasetPlugin):
         data_path = self.get_path(source)
 
         if isinstance(data_path, dict):
-            if not 'train' in data_path.keys() and 'valid' in data_path.keys():
+            if 'train' not in data_path.keys() and 'valid' in data_path.keys():
                 raise ValueError('Imagenet data path must have `train` and '
                                  '`valid` paths specified')
             train_path = data_path['train']

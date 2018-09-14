@@ -139,7 +139,7 @@ class VAE(ModelPlugin):
         self.losses.vae = (r_loss + beta_kld * kl)
         self.results.update(KL_divergence=kl.item(), ms_ssim=msssim.item())
 
-    def visualize(self, inputs, targets):
+    def visualize(self, inputs, targets, Z):
         vae = self.nets.vae
 
         outputs = vae(inputs)
@@ -147,7 +147,7 @@ class VAE(ModelPlugin):
         self.add_image(outputs, name='reconstruction')
         self.add_image(inputs, name='ground truth')
         self.add_scatter(vae.mu.data, labels=targets.data, name='latent values')
-        self.decoder.visualize(vae.mu.data)
+        self.decoder.visualize(Z)
 
 
 register_plugin(VAE)
