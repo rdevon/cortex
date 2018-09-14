@@ -31,7 +31,7 @@ DEVICE = torch.device('cpu')
 def _file_string(prefix=''):
     if prefix == '':
         return NAME
-    return '{}_{}_'.format(NAME, prefix)
+    return '{}_{}'.format(NAME, prefix)
 
 
 def configure_from_yaml(config_file=None):

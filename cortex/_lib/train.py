@@ -262,6 +262,8 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
 
             if (archive_every and epoch % archive_every == 0):
                 exp.save(model, prefix=epoch)
+            else:
+                exp.save(model, prefix='last')
 
             exp.INFO['epoch'] += 1
 
