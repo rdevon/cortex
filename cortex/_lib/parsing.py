@@ -10,6 +10,8 @@ import logging
 import re
 import sys
 
+import torch
+
 from sphinxcontrib.napoleon import Config
 from sphinxcontrib.napoleon.docstring import GoogleDocstring
 
@@ -149,42 +151,20 @@ def make_argument_parser() -> argparse.ArgumentParser:
 
 class StoreDictKeyPair(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        if not '=' in values:
-            setattr(namespace, self.dest, str(values))
-            return
+        if '__' in values:
+            raise ValueError('Private or protected values not allowed.')
 
+        # Puts quotes on things not currently in the Namespace
+        while True:
+            try:
+                eval(values)
+                break
+            except NameError as e:
+                name = str(e).split(' ')[1][1:-1]
+                p = '(?<!\'){}(?!\')'.format(name)
+                values = re.sub(p, "'{}'".format(name), values)
 
-        def extract_dict(v):
-            d = {}
-            for kv in v.split(',,'):
-                k, v = kv.split('=')
-                try:
-                    d[k] = ast.literal_eval(v)
-                except ValueError:
-                    d[k] = v
-            return d
-
-        if '{' in values:
-            if '}' not in values:
-                raise ValueError('Improper use of `{`')
-
-        p = '(?P<key>[^\}]*)=\{(?P<value>[^\}]*)\}'
-        t = re.findall(p, values)
-        values = re.sub(p, '', values)
-
-        if values.startswith(',,'):
-            values = values[2:]
-        if values.endswith(',,'):
-            values = values[:-2]
-
-        d = {}
-        for k, v in t:
-            if k.startswith(',,'):
-                k = k[2:]
-            d[k] = extract_dict(v)
-
-        if len(values) > 0:
-            d.update(extract_dict(values))
+        d = eval(values)
 
         setattr(namespace, self.dest, d)
 
