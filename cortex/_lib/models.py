@@ -533,9 +533,10 @@ class ModelPluginBase(metaclass=PluginType):
         else:
             epoch_str = 'Evaluating {} (epoch {}): '
 
-        def wrapped(epoch, data_mode=data_mode):
+        def wrapped(epoch, data_mode=data_mode, use_pbar=True):
             self._reset_epoch()
-            self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch))
+            self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch),
+                            make_pbar=use_pbar)
             fn()
 
             results = self._all_epoch_results

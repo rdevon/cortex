@@ -183,36 +183,63 @@ class VizHandler():
             save_heatmap(hm, out_file=out_path, image_id=i, title=k)
 
 
-def plot():
-    def get_Y_legend(key, v_train, v_test):
-        Y = []
+def plot(epoch, init=False):
+    '''Updates the plots for the reults.
+
+    Takes the last value from the summary and appends this to the visdom plot.
+
+    '''
+    def get_X_Y_legend(key, v_train, v_test):
+        min_e = max(0, epoch - 1)
+        if init:
+            min_e = 0
+        if min_e == epoch:
+            Y = [[v_train[0], v_train[0]]]
+        else:
+            Y = [v_train[min_e:epoch + 1]]
         legend = []
 
-        Y.append(np.array(v_train))
         if v_test is not None:
-            Y.append(np.array(v_test))
+            if min_e == epoch:
+                Y.append([v_test[0], v_test[0]])
+            else:
+                Y.append(v_test[min_e:epoch + 1])
+
+            if min_e == epoch:
+                X = [[-1, 0], [-1, 0]]
+            else:
+                X = [range(min_e, epoch + 1), range(min_e, epoch + 1)]
+
             legend.append('{} (train)'.format(key))
             legend.append('{} (test)'.format(key))
         else:
             legend.append(key)
 
-        return Y, legend
+            if min_e == epoch:
+                X = [[-1, 0]]
+            else:
+                X = [range(min_e, epoch + 1)]
+
+        return X, Y, legend
 
     train_summary = exp.SUMMARY['train']
     test_summary = exp.SUMMARY['test']
     for k in train_summary.keys():
         v_train = train_summary[k]
         v_test = test_summary[k] if k in test_summary.keys() else None
+
         if isinstance(v_train, dict):
             Y = []
+            X = []
             legend = []
             for k_ in v_train:
                 vt = v_test.get(k_) if v_test is not None else None
-                Y_, legend_ = get_Y_legend(k_, v_train[k_], vt)
+                X_, Y_, legend_ = get_X_Y_legend(k_, v_train[k_], vt)
                 Y += Y_
+                X += X_
                 legend += legend_
         else:
-            Y, legend = get_Y_legend(k, v_train, v_test)
+            X, Y, legend = get_X_Y_legend(k, v_train, v_test)
 
         opts = dict(
             xlabel='epochs',
@@ -220,19 +247,21 @@ def plot():
             ylabel=k,
             title=k)
 
-        if len(Y) == 1:
-            Y = Y[0]
-            X = np.arange(Y.shape[0])
+        X = np.array(X).transpose()
+        Y = np.array(Y).transpose()
+
+        if init:
+            update = None
         else:
-            Y = np.column_stack(Y)
-            X = np.column_stack([np.arange(Y.shape[0])] * Y.shape[1])
+            update = 'append'
 
         visualizer.line(
             Y=Y,
             X=X,
             env=exp.NAME,
             opts=opts,
-            win='line_{}'.format(k))
+            win='line_{}'.format(k),
+            update=update)
 
 
 def dequantize(images):

@@ -19,9 +19,10 @@ setup(name='cortex',
       packages=packages,
       install_requires=[
           'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn',
-          'torchvision', 'visdom==0.1.7', 'pyyaml', 'sphinxcontrib-napoleon'],
+          'torchvision', 'visdom', 'pyyaml', 'sphinxcontrib-napoleon'],
       entry_points={
           'console_scripts': [
               'cortex=cortex.main:run']
       },
+      dependency_links={'git+https://github.com/facebookresearch/visdom.git'},
       zip_safe=False)

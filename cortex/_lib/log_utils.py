@@ -14,7 +14,7 @@ logger.propagate = False
 file_formatter = logging.Formatter(
     '%(asctime)s:%(name)s[%(levelname)s]: %(message)s\n')
 stream_formatter = logging.Formatter(
-    '[%(levelname)s:%(name)s]:%(message)s' + ' ' * 40 + '\n')
+    '[%(levelname)s:%(name)s]: %(message)s' + ' ' * 40 + '\n')
 
 
 def set_stream_logger(verbosity):
@@ -48,4 +48,3 @@ def set_file_logger(file_path):
     fh.setFormatter(file_formatter)
     logger.addHandler(fh)
     fh.terminator = ''
-    logger.info('Saving logs to %s' % file_path)
