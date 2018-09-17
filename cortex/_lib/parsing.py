@@ -154,17 +154,22 @@ class StoreDictKeyPair(argparse.Action):
         if '__' in values:
             raise ValueError('Private or protected values not allowed.')
 
-        # Puts quotes on things not currently in the Namespace
-        while True:
-            try:
-                eval(values)
-                break
-            except NameError as e:
-                name = str(e).split(' ')[1][1:-1]
-                p = '(?<!\'){}(?!\')'.format(name)
-                values = re.sub(p, "'{}'".format(name), values)
+        values_ = values
 
-        d = eval(values)
+        try:
+            # Puts quotes on things not currently in the Namespace
+            while True:
+                try:
+                    eval(values)
+                    break
+                except NameError as e:
+                    name = str(e).split(' ')[1][1:-1]
+                    p = '(?<!\'){}(?!\')'.format(name)
+                    values = re.sub(p, "'{}'".format(name), values)
+
+            d = eval(values)
+        except:
+            d = str(values)
 
         setattr(namespace, self.dest, d)
 
