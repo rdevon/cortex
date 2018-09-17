@@ -17,6 +17,7 @@ __author_email__ = 'erroneus@gmail.com'
 
 logger = logging.getLogger('cortex.optimizer')
 OPTIMIZERS = {}
+SCHEDULERS = {}
 
 _optimizer_defaults = dict(
     SGD=dict(),
@@ -68,7 +69,7 @@ def wrap_optimizer(C):
 
 def setup(model, optimizer='Adam', learning_rate=1.e-4,
           weight_decay={}, clipping={}, optimizer_options={},
-          model_optimizer_options={}):
+          model_optimizer_options={}, scheduler=None, scheduler_options={}):
     '''Optimizer entrypoint.
 
     Args:
@@ -79,10 +80,13 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         weight_decay: If set, this is the weight decay for specified model.
         optimizer_options: Optimizer options.
         model_optimizer_options: Optimizer options for specified model.
+        scheduler: Optimizer learning rate scheduler.
+        scheduler_options: Options for scheduler.
 
     '''
 
     OPTIMIZERS.clear()
+    SCHEDULERS.clear()
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
     clipping = clipping or {}
@@ -173,6 +177,31 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
 
         optimizer = op(params, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
+
+        if scheduler is not None:
+            if isinstance(scheduler, dict):
+                if network_key in scheduler.keys():
+                    sched = scheduler[network_key]
+                    opts = scheduler_options.get(network_key)
+                    if opts is None:
+                        raise ValueError('For dict-type schedulers, '
+                                         '`scheduler_options` must also be a dict '
+                                         'with the same keys.')
+                else:
+                    sched = None
+            else:
+                sched = scheduler
+                opts = scheduler_options
+
+            if sched is not None:
+                if hasattr(optim.lr_scheduler, sched):
+                    sched = getattr(optim.lr_scheduler, sched)
+                else:
+                    raise NotImplementedError(
+                        'Scheduler not supported `{}`'.format(sched))
+
+                logger.debug('Adding {} scheduler to {}'.format(sched, network_key))
+                SCHEDULERS[network_key] = sched(optimizer, **opts)
 
         logger.debug(
             'Training {} routine with {}'.format(

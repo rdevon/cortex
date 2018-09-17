@@ -149,14 +149,43 @@ def make_argument_parser() -> argparse.ArgumentParser:
 
 class StoreDictKeyPair(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        d = {}
+        if not '=' in values:
+            setattr(namespace, self.dest, str(values))
+            return
 
-        for kv in values.split(',,'):
-            k, v = kv.split('=')
-            try:
-                d[k] = ast.literal_eval(v)
-            except ValueError:
-                d[k] = v
+
+        def extract_dict(v):
+            d = {}
+            for kv in v.split(',,'):
+                k, v = kv.split('=')
+                try:
+                    d[k] = ast.literal_eval(v)
+                except ValueError:
+                    d[k] = v
+            return d
+
+        if '{' in values:
+            if '}' not in values:
+                raise ValueError('Improper use of `{`')
+
+        p = '(?P<key>[^\}]*)=\{(?P<value>[^\}]*)\}'
+        t = re.findall(p, values)
+        values = re.sub(p, '', values)
+
+        if values.startswith(',,'):
+            values = values[2:]
+        if values.endswith(',,'):
+            values = values[:-2]
+
+        d = {}
+        for k, v in t:
+            if k.startswith(',,'):
+                k = k[2:]
+            d[k] = extract_dict(v)
+
+        if len(values) > 0:
+            d.update(extract_dict(values))
+
         setattr(namespace, self.dest, d)
 
 
@@ -227,6 +256,15 @@ def _parse_defaults(key, args, subparser):
                 metavar=metavar,
                 type=str2bool,
                 help=help)
+        elif v is None:
+            metavar = '<UNK type> (default=N/A)'
+            subparser.add_argument(
+                arg_str,
+                dest=dest,
+                default=None,
+                action=StoreDictKeyPair,
+                help=help,
+                metavar=metavar)
         else:
             type_ = type(v) if v is not None else str
             metavar = '<' + type_.__name__ + \

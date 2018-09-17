@@ -6,6 +6,8 @@ import copy
 import logging
 import time
 
+import torch
+
 from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_inputs, parse_kwargs
 from .handlers import (aliased, prefixed, NetworkHandler, LossHandler,
@@ -537,11 +539,35 @@ class ModelPluginBase(metaclass=PluginType):
             self._reset_epoch()
             self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch),
                             make_pbar=use_pbar)
+
+            if data_mode == 'train':
+                for k, sched in optimizer.SCHEDULERS.items():
+                    lr = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if not isinstance(
+                            sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        sched.step()
+                    lr_ = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if lr != lr_:
+                        logger.debug(
+                            'Learning rate for {} changed to {}'.format(k, lr_))
+
             fn()
 
             results = self._all_epoch_results
             results['losses'] = dict(self._all_epoch_losses)
             results['times'] = dict(self._all_epoch_times)
+
+            if data_mode == 'train':
+                for k, sched in optimizer.SCHEDULERS.items():
+                    lr = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if isinstance(
+                            sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        loss = results['losses'][k][-1]
+                        sched.step(loss)
+                    lr_ = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if lr != lr_:
+                        logger.debug(
+                            'Learning rate for {} changed to {}'.format(k, lr_))
 
         return wrapped
 
