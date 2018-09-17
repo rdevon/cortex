@@ -169,7 +169,7 @@ class StoreDictKeyPair(argparse.Action):
 
             d = eval(values)
         except:
-            d = str(values)
+            d = str(values_)
 
         setattr(namespace, self.dest, d)
 
