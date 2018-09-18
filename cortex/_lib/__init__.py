@@ -35,18 +35,17 @@ def setup_cortex(model=None):
     return args
 
 
-def find_autoreload(out_path, global_out_path, name):
+def find_autoreload(out_path, global_out_path, name, idx=0):
     out_path = out_path or global_out_path
     out_path = os.path.join(out_path, name)
     binary_dir = os.path.join(out_path, 'binaries')
     binaries = glob.glob(os.path.join(binary_dir, '*.t7'))
     binaries.sort(key=os.path.getmtime)
 
-    if len(binaries) > 0:
-        return binaries[-1]
-    else:
-        logger.warning('No model found to auto-reload')
-        return None
+    if idx >= len(binaries):
+        raise StopIteration
+
+    return binaries[-(1 + idx)]
 
 
 def setup_experiment(args, model=None, testmode=False):
@@ -93,35 +92,58 @@ def setup_experiment(args, model=None, testmode=False):
 
     reload_nets = None
 
+    idx = 0
+
+    def reload(reload_path):
+        d = exp.reload_model(reload_path)
+        exp.INFO.update(**d['info'])
+        exp.NAME = exp.INFO['name']
+        exp.SUMMARY.update(**d['summary'])
+        update_nested_dicts(d['args'], exp.ARGS)
+
+        if args.name:
+            exp.INFO['name'] = exp.NAME
+        if args.out_path or args.name:
+            exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
+                              clean=args.clean)
+        else:
+            exp.OUT_DIRS.update(**d['out_dirs'])
+
+        reload_nets = d['nets']
+
+        return reload_nets
+
     if args.autoreload:
-        reload_path = find_autoreload(args.out_path, config.CONFIG.out_path,
-                                      args.name or model_name)
+        idx = 0
+        while True:
+            try:
+                reload_path = find_autoreload(args.out_path, config.CONFIG.out_path,
+                                              args.name or model_name, idx=idx)
+                reload_nets = reload(reload_path)
+                reload_path = True
+                break
+            except RuntimeError as e:
+                logger.warning(
+                    'Loading error occurred ({}). Trying previous.'
+                    .format(e))
+                idx += 1
+            except StopIteration:
+                logger.warning('No suitable files found to autoreload. '
+                               'Starting from scratch.')
+                reload_path = False
+                break
+
     elif args.reload:
-        reload_path = args.reload
+        try:
+            reload_nets = reload(args.reload)
+            reload_path = True
+        except StopIteration:
+            logger.warning('No suitable files found to autoreload. '
+                           'Starting from scratch.')
+            reload_path = False
+
     else:
         reload_path = False
-
-    if reload_path:
-        try:
-            d = exp.reload_model(reload_path)
-            exp.INFO.update(**d['info'])
-            exp.NAME = exp.INFO['name']
-            exp.SUMMARY.update(**d['summary'])
-            update_nested_dicts(d['args'], exp.ARGS)
-
-            if args.name:
-                exp.INFO['name'] = exp.NAME
-            if args.out_path or args.name:
-                exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
-                                  clean=args.clean)
-            else:
-                exp.OUT_DIRS.update(**d['out_dirs'])
-
-            reload_nets = d['nets']
-        except RuntimeError as e:
-            logger.warning('Loading error occurred ({}). Starting from scratch'
-                           .format(e))
-            reload_path = False
 
     if not reload_path:
         if args.load_networks:
