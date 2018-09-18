@@ -99,25 +99,31 @@ def setup_experiment(args, model=None, testmode=False):
     elif args.reload:
         reload_path = args.reload
     else:
-        reload_path = None
+        reload_path = False
 
     if reload_path:
-        d = exp.reload_model(reload_path)
-        exp.INFO.update(**d['info'])
-        exp.NAME = exp.INFO['name']
-        exp.SUMMARY.update(**d['summary'])
-        update_nested_dicts(d['args'], exp.ARGS)
+        try:
+            d = exp.reload_model(reload_path)
+            exp.INFO.update(**d['info'])
+            exp.NAME = exp.INFO['name']
+            exp.SUMMARY.update(**d['summary'])
+            update_nested_dicts(d['args'], exp.ARGS)
 
-        if args.name:
-            exp.INFO['name'] = exp.NAME
-        if args.out_path or args.name:
-            exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
-                              clean=args.clean)
-        else:
-            exp.OUT_DIRS.update(**d['out_dirs'])
+            if args.name:
+                exp.INFO['name'] = exp.NAME
+            if args.out_path or args.name:
+                exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
+                                  clean=args.clean)
+            else:
+                exp.OUT_DIRS.update(**d['out_dirs'])
 
-        reload_nets = d['nets']
-    else:
+            reload_nets = d['nets']
+        except RuntimeError as e:
+            logger.warning('Loading error occurred ({}). Starting from scratch'
+                           .format(e))
+            reload_path = False
+
+    if not reload_path:
         if args.load_networks:
             d = exp.reload_model(args.load_networks)
             keys = args.networks_to_reload or d['nets']
