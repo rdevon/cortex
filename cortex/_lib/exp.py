@@ -68,7 +68,7 @@ def save(model, prefix=''):
         prefix: Prefix for the save file.
 
     '''
-    prefix = _file_string(prefix)
+    filename = _file_string(prefix)
     binary_dir = OUT_DIRS.get('binary_dir', None)
     if binary_dir is None:
         return
@@ -94,7 +94,10 @@ def save(model, prefix=''):
         summary=SUMMARY
     )
 
-    file_path = path.join(binary_dir, '{}.t7'.format(prefix))
+    file_path = path.join(binary_dir, '{}.t7'.format(filename))
+    if prefix == 'last':
+        copyfile(file_path, file_path + '.bak')
+
     logger.info('Saving checkpoint {}'.format(file_path))
     torch.save(state, file_path)
 
