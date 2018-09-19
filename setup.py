@@ -18,7 +18,7 @@ setup(name='cortex',
       author_email='erroneus@gmail.com',
       packages=packages,
       install_requires=[
-          'imageio', 'matplotlib', 'progressbar2', 'scipy', 'sklearn',
+          'imageio', 'matplotlib==2.2.3', 'progressbar2', 'scipy', 'sklearn',
           'torchvision', 'visdom', 'pyyaml', 'sphinxcontrib-napoleon'],
       entry_points={
           'console_scripts': [
