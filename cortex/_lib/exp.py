@@ -96,7 +96,10 @@ def save(model, prefix=''):
 
     file_path = path.join(binary_dir, '{}.t7'.format(filename))
     if prefix == 'last':
-        copyfile(file_path, file_path + '.bak')
+        try:
+            copyfile(file_path, file_path + '.bak')
+        except FileNotFoundError:
+            pass
 
     logger.info('Saving checkpoint {}'.format(file_path))
     torch.save(state, file_path)
