@@ -92,8 +92,6 @@ def setup_experiment(args, model=None, testmode=False):
 
     reload_nets = None
 
-    idx = 0
-
     def reload(reload_path):
         d = exp.reload_model(reload_path)
         exp.INFO.update(**d['info'])
@@ -122,7 +120,7 @@ def setup_experiment(args, model=None, testmode=False):
                 reload_nets = reload(reload_path)
                 reload_path = True
                 break
-            except RuntimeError as e:
+            except (RuntimeError, EOFError) as e:
                 logger.warning(
                     'Loading error occurred ({}). Trying previous.'
                     .format(e))
@@ -137,7 +135,7 @@ def setup_experiment(args, model=None, testmode=False):
         try:
             reload_nets = reload(args.reload)
             reload_path = True
-        except StopIteration:
+        except (RuntimeError, EOFError):
             logger.warning('No suitable files found to autoreload. '
                            'Starting from scratch.')
             reload_path = False
