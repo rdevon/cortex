@@ -394,9 +394,10 @@ def save_scatter(points, out_file=None, labels=None, caption='', title='',
         Y = (labels + 1.5).astype(int)
         Y = Y - min(Y) + 1
         if len(names) != max(Y):
-            names = ['{}'.format(i + 1) for i in range(max(Y))]
+            names = [names[y] for y in Y]
     else:
         Y = None
+        names = None
 
     visualizer.scatter(
         X=points,
