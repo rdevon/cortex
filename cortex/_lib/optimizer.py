@@ -146,26 +146,22 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         for p in params:
             p.requires_grad = True
 
+        def extract_value(dict_or_value, default=None):
+            if isinstance(dict_or_value, dict):
+                return dict_or_value.get(network_key, default)
+            return dict_or_value
+
         # Learning rates
-        if isinstance(learning_rate, dict):
-            eta = learning_rate[network_key]
-        else:
-            eta = learning_rate
-
+        network_lr = extract_value(learning_rate)
         # Weight decay
-        if isinstance(weight_decay, dict):
-            wd = weight_decay.get(network_key, 0)
-        else:
-            wd = weight_decay
-
-        if isinstance(clipping, dict):
-            cl = clipping.get(network_key, None)
-        else:
-            cl = clipping
+        network_wd = extract_value(weight_decay, 0)
+        # Gradient clipping
+        network_cl = extract_value(clipping)
 
         # Update the optimizer options
         optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
-        optimizer_options_.update(weight_decay=wd, clipping=cl, lr=eta)
+        optimizer_options_.update(
+            weight_decay=network_wd, clipping=network_cl, lr=network_lr)
 
         if network_key in model_optimizer_options:
             optimizer_options_.update(
