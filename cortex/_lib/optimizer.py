@@ -167,7 +167,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
         optimizer_options_.update(weight_decay=wd, clipping=cl, lr=eta)
 
-        if network_key in model_optimizer_options.keys():
+        if network_key in model_optimizer_options:
             optimizer_options_.update(
                 **eval(model_optimizer_options[network_key]))
 
