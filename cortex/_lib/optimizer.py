@@ -1,6 +1,4 @@
-'''Module for setting up the optimizer.
-
-'''
+"""Module for setting up the optimizer."""
 
 from collections import defaultdict
 import logging
@@ -52,8 +50,8 @@ def wrap_optimizer(C):
             """Performs a single optimization step.
 
             Arguments:
-                closure (callable, optional): A closure that reevaluates the model
-                    and returns the loss.
+                closure (callable, optional): A closure that reevaluates the
+                model and returns the loss.
             """
             loss = super().step(closure=closure)
 
@@ -70,7 +68,7 @@ def wrap_optimizer(C):
 def setup(model, optimizer='Adam', learning_rate=1.e-4,
           weight_decay={}, clipping={}, optimizer_options={},
           model_optimizer_options={}, scheduler=None, scheduler_options={}):
-    '''Optimizer entrypoint.
+    """Optimizer entrypoint.
 
     Args:
         optimizer: Optimizer type. See `torch.optim` for supported optimizers.
@@ -83,7 +81,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         scheduler: Optimizer learning rate scheduler.
         scheduler_options: Options for scheduler.
 
-    '''
+    """
 
     OPTIMIZERS.clear()
     SCHEDULERS.clear()
