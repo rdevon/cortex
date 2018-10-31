@@ -120,7 +120,7 @@ def setup_experiment(args, model=None, testmode=False):
                 reload_nets = reload(reload_path)
                 reload_path = True
                 break
-            except (RuntimeError, EOFError) as e:
+            except Exception as e:
                 logger.warning(
                     'Loading error occurred ({}). Trying previous.'
                     .format(e))
@@ -135,7 +135,7 @@ def setup_experiment(args, model=None, testmode=False):
         try:
             reload_nets = reload(args.reload)
             reload_path = True
-        except (RuntimeError, EOFError):
+        except:
             logger.warning('No suitable files found to autoreload. '
                            'Starting from scratch.')
             reload_path = False
