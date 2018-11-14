@@ -68,41 +68,44 @@ def save(model, prefix=''):
         prefix: Prefix for the save file.
 
     '''
-    filename = _file_string(prefix)
-    binary_dir = OUT_DIRS.get('binary_dir', None)
-    if binary_dir is None:
-        return
+    try:
+        filename = _file_string(prefix)
+        binary_dir = OUT_DIRS.get('binary_dir', None)
+        if binary_dir is None:
+            return
 
-    def strip_Nones(d):
-        d_ = {}
-        for k, v in d.items():
-            if isinstance(v, dict):
-                d_[k] = strip_Nones(v)
-            elif v is not None:
-                d_[k] = v
-        return d_
+        def strip_Nones(d):
+            d_ = {}
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    d_[k] = strip_Nones(v)
+                elif v is not None:
+                    d_[k] = v
+            return d_
 
-    for net in model.nets.values():
-        if hasattr(net, 'states'):
-            net.states.clear()
+        for net in model.nets.values():
+            if hasattr(net, 'states'):
+                net.states.clear()
 
-    state = dict(
-        nets=dict(model.nets),
-        info=INFO,
-        args=ARGS,
-        out_dirs=OUT_DIRS,
-        summary=SUMMARY
-    )
+        state = dict(
+            nets=dict(model.nets),
+            info=INFO,
+            args=ARGS,
+            out_dirs=OUT_DIRS,
+            summary=SUMMARY
+        )
 
-    file_path = path.join(binary_dir, '{}.t7'.format(filename))
-    if prefix == 'last':
-        try:
-            copyfile(file_path, file_path + '.bak')
-        except FileNotFoundError:
-            pass
+        file_path = path.join(binary_dir, '{}.t7'.format(filename))
+        if prefix == 'last':
+            try:
+                copyfile(file_path, file_path + '.bak')
+            except FileNotFoundError:
+                pass
 
-    logger.info('Saving checkpoint {}'.format(file_path))
-    torch.save(state, file_path)
+        logger.info('Saving checkpoint {}'.format(file_path))
+        torch.save(state, file_path)
+    except OSError as e:
+        logger.error('Save failed, skipping: {}'.format(e))
 
 
 def setup_out_dir(out_path, global_out_path, name=None, clean=False):
