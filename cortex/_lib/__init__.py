@@ -76,7 +76,7 @@ def setup_experiment(args, model=None, testmode=False):
     experiment_args = copy.deepcopy(default_args)
     update_args(experiment_args, exp.ARGS)
 
-    if not testmode:
+    if not testmode and not args.noviz:
         viz_init(config.CONFIG.viz)
 
     for k, v in vars(args).items():

@@ -146,6 +146,7 @@ def make_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('-v', '--verbosity', type=int, default=1,
                         help='Verbosity of the logging. (0, 1, 2)')
     parser.add_argument('-d', '--device', type=int, default=0)
+    parser.add_argument('-V', '--noviz', help='No visualization.')
     return parser
 
 
