@@ -1,4 +1,8 @@
-"""Data module"""
+"""Data module
+
+This module defines the main iteration functionality.
+
+"""
 
 import signal
 
@@ -13,6 +17,11 @@ __author_email__ = 'erroneus@gmail.com'
 
 
 class DataHandler:
+    """Handler for torchvision datasets.
+
+    This data handler is specialized for torchvision datasets.
+
+    """
     def __init__(self):
         self.dims = {}
         self.input_names = {}
@@ -26,24 +35,55 @@ class DataHandler:
         self.inputs = dict()
 
     def set_batch_size(self, batch_size, skip_last_batch=False):
+        """Sets the batch sizes for the data handler.
+
+        Args:
+            batch_size: The batch size.
+            skip_last_batch: Whether to skip the last batch in case
+            the number of examples is different.
+
+        """
+
         self.batch_size = batch_size
         self.skip_last_batch = skip_last_batch
 
-    def set_inputs(self, **kwargs):
+    def set_input_names(self, **kwargs):
+        """Sets input names to allow for variable tensor names.
+
+        Args:
+            **kwargs: dictionary of name maps (name from: name to)
+
+        """
         self.inputs.update(**kwargs)
 
-    def add_dataset(self, source, dataset_entrypoint,
+    def add_dataset(self, datasets, source, name, plugin,
                     n_workers=4, shuffle=True, DataLoader=None):
-        DataLoader = (DataLoader or dataset_entrypoint._dataloader_class or
+        """Adds a dataset to the data handler.
+
+        Args:
+            datasets: dictionary of datasets added to cortex.
+            source: Name of the dataset.
+            plugin: Plugin for the dataset. This will handle dataset creation.
+            n_workers: Number of workers for iterator.
+            shuffle: Shuffle the dataset for every epoch.
+            DataLoader: Specialized data loader (user-defined).
+
+        """
+
+        DataLoader = (DataLoader or plugin._dataloader_class or
                       torch.utils.data.DataLoader)
 
-        if len(dataset_entrypoint._datasets) == 0:
-            raise ValueError('No datasets found in entrypoint')
+        data = datasets[source]['data']
+        dims = datasets[source]['dims']
+        input_names = datasets[source]['input_names']
+
+        if len(data) == 0:
+            raise ValueError('No datasets found in plugin')
 
         loaders = {}
-        for k, dataset in dataset_entrypoint._datasets.items():
+        for k, dataset in data.items():
             N = len(dataset)
-            dataset_entrypoint._dims['N_' + k] = N
+            dims['N_' + k] = N
 
             if isinstance(self.batch_size, dict):
                 try:
@@ -63,11 +103,24 @@ class DataHandler:
                                     signal.signal(signal.SIGINT,
                                                   signal.SIG_IGN))
 
-        self.dims[source] = dataset_entrypoint._dims
-        self.input_names[source] = dataset_entrypoint._input_names
-        self.loaders[source] = loaders
+        self.dims[name] = dims
+        self.input_names[name] = input_names
+        self.loaders[name] = loaders
 
     def add_noise(self, key, dist=None, size=None, **kwargs):
+        """Adds a noise variable to the data handler.
+
+        Given a specified noise distribution, dimensionalities, and other noise parameters,
+        this will add a noise variable that can be accessed within a model.
+
+        Args:
+            key: Name of noise variable, e.g., `Z`.
+            dist: Distribution of noise variable, e.g., `Normal` or `Uniform`.
+            size: Size of the tensor drawn from noise.
+            **kwargs: Ductionary of parameters specific for distribution.
+
+        """
+
         if size is None:
             raise ValueError
 
@@ -86,9 +139,31 @@ class DataHandler:
         self.dims[key] = dim
 
     def __iter__(self):
+        """__iter__
+
+        Returns:
+            self
+
+        """
         return self
 
     def __next__(self):
+        """__next__ function that returns next batch.
+
+        Loops through the sources (as defined by loaders) and draws batches from
+        each iterator.
+
+        For each source, we first:
+            1) Draw a tuple of data from the iterator
+            2) Check if the number of examples is consistent with other sources.
+            3) Form a dictionary of input names for the source and the data tuple.
+            4) Add this dictionary to a dictionary of outputs.
+            5) Add any noise variables.
+
+        Returns:
+            Tuple of batches.
+
+        """
         output = {}
         sources = self.loaders.keys()
 
@@ -100,10 +175,8 @@ class DataHandler:
                     raise StopIteration
                 batch_size = data[0].size()[0]
             data = dict((k, v) for k, v in zip(self.input_names[source], data))
-            if len(sources) > 1:
-                output[source] = data
-            else:
-                output.update(**data)
+
+            output[source] = data
 
         for k, n_vars in self.noise.items():
             n_var = n_vars[self.mode]
@@ -123,55 +196,95 @@ class DataHandler:
     def next(self):
         return self.__next__()
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
+        """Returns tensor from batch with key.
+
+        If the key has a `.` in it, this indicates to traverse the batch dictionary
+        to the next level.
+
+        Returns:
+            Tensor of data.
+
+        """
         if self.batch is None:
             raise RuntimeError('Batch not set')
 
-        item = self.inputs.get(item, item)
-        if item not in self.batch.keys():
-            raise KeyError('Data with label `{}` not found. Available: {}'
-                           .format(item, tuple(self.batch.keys())))
-        batch = self.batch[item]
+        def get_data(d, key):
+            if '.' in key:
+                k_ = key.split('.')
+                head = k_[0]
+                key = '.'.join(k_[1:])
+            elif len(d.keys()) == 1:
+                head = list(d.keys())[0]
+            else:
+                head = None
 
-        return batch
+            if head:
+                return get_data(d[head], key)
 
-    def get_batch(self, *item):
+            try:
+                key = self.inputs.get(key, key)
+                return d[key]
+            except KeyError:
+                raise KeyError('Data with label `{}` not found. Available: {}'
+                               .format(key, d.keys()))
+
+        return get_data(self.batch, key)
+
+    def get_batch(self, *keys):
+        """Retruns a batch of multiple inputs.
+
+        Args:
+            *keys: List of keys.
+
+        Returns:
+            List of batches.
+
+        """
         if self.batch is None:
             raise RuntimeError('Batch not set')
 
         batch = []
-        for i in item:
-            if '.' in i:
-                j, i_ = i.split('.')
-                j = int(j)
-                batch.append(self.batch[list(self.batch.keys())[j - 1]][i_])
-            elif i not in self.batch.keys():
-                raise KeyError('Data with label `{}` not found. Available: {}'
-                               .format(i, tuple(self.batch.keys())))
-            else:
-                batch.append(self.batch[i])
+        for k in keys:
+            b = self[k]
+            batch.append(b)
         if len(batch) == 1:
             return batch[0]
         else:
             return batch
 
-    def get_dims(self, *q):
-        if q[0] in self.dims.keys():
-            dims = self.dims
-        else:
-            key = [k for k in self.dims.keys()
-                   if k not in self.noise.keys()][0]
-            dims = self.dims[key]
+    def get_dims(self, q):
+        """Returns the dimensionality of input.
 
-        try:
-            d = [dims[q_] for q_ in q]
-        except KeyError:
-            raise KeyError('Cannot resolve dimensions {}, provided {}'
-                           .format(q, dims))
-        if len(d) == 1:
-            return d[0]
+        This is useful for network formation, e.g., where the initial layers and
+        dependent on the input size.
+
+        Args:
+            q: query or list of queries.
+
+        Returns:
+            List of dimensions.
+
+        """
+        if not isinstance(q, list):
+            q = [q]
+
+        dims = []
+        for q_ in q:
+            if '.' in q_:
+                head, tail = q_.split('.')
+            elif len(self.dims.keys()) == 1:
+                head = list(self.dims.keys())[0]
+                tail = q_
+            else:
+                raise KeyError('Error with dimension query {}. '
+                               'Available: {}'.format(q_, self.dims))
+            dims.append(self.dims[head][tail])
+
+        if len(dims) == 1:
+            return dims[0]
         else:
-            return d
+            return dims
 
     def get_label_names(self, source=None):
         # TODO(Devon): This needs to
@@ -194,10 +307,21 @@ class DataHandler:
         return iterator()
 
     def update_pbar(self):
+        """Updates the progress bar for the command line.
+
+        """
         if self.pbar:
             self.pbar.update(self.u)
 
     def reset(self, mode, make_pbar=True, string=''):
+        """Resets the data iterator.
+
+        Args:
+            mode: Which mode to reset to, e.g., `train` or `test`.
+            make_pbar: Whether to use a pbar in the next epoch.
+            string: String to use in the pbar.
+
+        """
         self.mode = mode
         self.u = 0
 

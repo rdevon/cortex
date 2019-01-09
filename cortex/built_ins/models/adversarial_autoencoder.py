@@ -24,15 +24,11 @@ class AdversarialAutoencoder(ModelPlugin):
 
     def __init__(self):
         super().__init__()
-        encoder_contract = dict(kwargs=dict(dim_out='dim_z'))
-        decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
-        disc_contract = dict(kwargs=dict(dim_in='dim_z'))
-        penalty_contract = dict(nets=dict(network='discriminator'))
 
-        self.encoder = ImageEncoder(contract=encoder_contract)
-        self.decoder = ImageDecoder(contract=decoder_contract)
-        self.discriminator = SimpleDiscriminator(contract=disc_contract)
-        self.penalty = GradientPenalty(contract=penalty_contract)
+        self.encoder = ImageEncoder(kwargs=dict(dim_out='dim_z'))
+        self.decoder = ImageDecoder(kwargs=dict(dim_in='dim_z'))
+        self.discriminator = SimpleDiscriminator()
+        self.penalty = GradientPenalty(nets=dict(network='discriminator'))
 
     def build(self, noise_type='normal', dim_z=64):
         '''

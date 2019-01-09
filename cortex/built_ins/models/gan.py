@@ -199,11 +199,12 @@ class Discriminator(ModelPlugin):
             discriminator_args: Discriminator network arguments.
 
         """
-        x_shape = self.get_dims('x', 'y', 'c')
+        dim_c, dim_x, dim_y = self.get_dims('inputs')
+        input_shape = (dim_x, dim_y, dim_c)
         Encoder, discriminator_args = update_encoder_args(
-            x_shape, model_type=discriminator_type,
+            input_shape, model_type=discriminator_type,
             encoder_args=discriminator_args)
-        discriminator = Encoder(x_shape, dim_out=1, **discriminator_args)
+        discriminator = Encoder(input_shape, dim_out=1, **discriminator_args)
         self.nets.discriminator = discriminator
 
     def routine(self, real, fake, measure: str='GAN'):
@@ -280,11 +281,12 @@ class Generator(ModelPlugin):
             generator_args: Generator network arguments.
 
         """
-        x_shape = self.get_dims('x', 'y', 'c')
+        dim_c, dim_x, dim_y = self.get_dims('inputs')
+        input_shape = (dim_x, dim_y, dim_c)
 
         Decoder, generator_args = update_decoder_args(
-            x_shape, model_type=generator_type, decoder_args=generator_args)
-        generator = Decoder(x_shape, dim_in=dim_z, **generator_args)
+            input_shape, model_type=generator_type, decoder_args=generator_args)
+        generator = Decoder(input_shape, dim_in=dim_z, **generator_args)
 
         self.nets.generator = generator
 
@@ -329,13 +331,12 @@ class GAN(ModelPlugin):
         train=dict(save_on_lowest='losses.gan')
     )
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, inputs=None):
+        super().__init__(inputs=inputs)
 
-        self.discriminator = Discriminator()
-        penalty_contract = dict(nets=dict(network='discriminator'))
-        self.penalty = GradientPenalty(contract=penalty_contract)
-        self.generator = Generator()
+        self.discriminator = Discriminator(inputs=inputs)
+        self.penalty = GradientPenalty(nets=dict(network='discriminator'), inputs=inputs)
+        self.generator = Generator(inputs=inputs)
 
     def build(self, noise_type='normal', dim_z=64):
         """
@@ -379,10 +380,10 @@ class GAN(ModelPlugin):
         self.penalty.routine(auto_input=True)
         self.generator.routine(auto_input=True)
 
-    def visualize(self, images, Z):
-        self.add_image(images, name='ground truth')
+    def visualize(self, inputs, Z):
+        self.add_image(inputs, name='ground truth')
         generated = self.generator.generate(Z)
-        self.discriminator.visualize(images, generated)
+        self.discriminator.visualize(inputs, generated)
         self.generator.visualize(Z)
 
 

@@ -36,6 +36,19 @@ def setup_cortex(model=None):
 
 
 def find_autoreload(out_path, global_out_path, name, idx=0):
+    """Finds the latest model saved for autoreload.
+
+    Iterates through models in from newest to oldest until one loads without error.
+
+    Args:
+        out_path: Path to search for models.
+        global_out_path: Alternative global path to search.
+        name: Name of experiment to reload.
+        idx: Index of model loaded.
+
+    Returns:
+
+    """
     out_path = out_path or global_out_path
     out_path = os.path.join(out_path, name)
     binary_dir = os.path.join(out_path, 'binaries')
@@ -49,12 +62,16 @@ def find_autoreload(out_path, global_out_path, name, idx=0):
 
 
 def setup_experiment(args, model=None, testmode=False):
-    '''Sets up the experiment
+    """Sets up the experiment
+
+    Loads all the arguments from the arguments parsed from command line,
+    Reloads models (if necessary), and propagates arguments to the main experiment
+    dictionary.
 
     Args:
-        args: TODO
+        args: Output from argument parser.
 
-    '''
+    """
 
     def update_nested_dicts(from_d, to_d):
         for k, v in from_d.items():

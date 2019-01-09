@@ -84,10 +84,8 @@ class VAE(ModelPlugin):
     def __init__(self):
         super().__init__()
 
-        self.encoder = ImageEncoder(contract=dict(
-            kwargs=dict(dim_out='dim_encoder_out')))
-        decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
-        self.decoder = ImageDecoder(contract=decoder_contract)
+        self.encoder = ImageEncoder(kwargs=dict(dim_out='dim_encoder_out'))
+        self.decoder = ImageDecoder(kwargs=dict(dim_in='dim_z'))
 
     def build(self, dim_z=64, dim_encoder_out=1024):
         '''

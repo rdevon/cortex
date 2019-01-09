@@ -30,7 +30,8 @@ class SimpleClassifier(ModelPlugin):
             classifier_args: Extra arguments for building the classifier
 
         '''
-        dim_l = self.get_dims('labels')
+
+        dim_l = self.get_dims('targets')
         classifier = FullyConnectedNet(dim_in, dim_out=dim_l, **classifier_args)
         self.nets.classifier = classifier
 

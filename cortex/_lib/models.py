@@ -118,7 +118,7 @@ class ModelPluginBase(metaclass=PluginType):
     _all_epoch_losses = ResultsHandler()
     _all_epoch_times = ResultsHandler()
 
-    def __init__(self, contract=None):
+    def __init__(self, kwargs=None, nets=None, inputs=None):
         '''
 
         Args:
@@ -131,9 +131,11 @@ class ModelPluginBase(metaclass=PluginType):
         self._models = []
         self.name = self.__class__.__name__
 
-        if contract:
-            contract = self._check_contract(contract)
-            self._accept_contract(contract)
+        kwargs = kwargs or {}
+        nets = nets or {}
+        inputs = inputs or {}
+        contract = dict(inputs=inputs, nets=nets, kwargs=kwargs)
+        self._contract = contract
 
         if self._contract and len(self._contract['nets']) > 0:
             self._nets = aliased(self._all_nets, aliases=contract['nets'])
@@ -191,7 +193,7 @@ class ModelPluginBase(metaclass=PluginType):
             fn: a callable.
 
         Returns:
-            An indetifier.
+            An indentifier.
 
         '''
         return fn
@@ -199,6 +201,24 @@ class ModelPluginBase(metaclass=PluginType):
     @property
     def kwargs(self):
         return self._kwargs
+
+    def _map_data_queries(self, *queries):
+        """Maps a query for an input for a model to a different key.
+
+        Args:
+            *queries: list of keys.
+
+        Returns:
+            New list of keys.
+
+        """
+
+        queries_ = []
+        for query in queries:
+            query = self._contract['inputs'].get(query, query)
+            queries_.append(query)
+
+        return queries_
 
     def inputs(self, *keys):
         '''Pulls inputs from the data.
@@ -213,15 +233,11 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
-        if self._contract is not None:
-            input_dict = self._contract['inputs']
-        else:
-            input_dict = {}
+        keys = self._map_data_queries(*keys)
 
         inputs = []
         for k in keys:
-            key = input_dict.get(k, k)
-            inp = self.data[key]
+            inp = self.data[k]
             inputs.append(inp)
 
         if len(inputs) == 0:
@@ -304,59 +320,6 @@ class ModelPluginBase(metaclass=PluginType):
         self._kwargs = kwargs
         for model in self._models:
             model._set_kwargs(kwargs)
-
-    def _check_contract(self, contract):
-        '''Checks the compatability of the contract.
-
-        Checks the keys in the contract to make sure they correspond to inputs
-        or hyperparameters of functions in this class.
-
-        Args:
-            contract: Dictionary contract.
-
-        Returns:
-            A cleaned up version of the contract.
-
-        '''
-        kwargs = contract.pop('kwargs', {})
-        nets = contract.pop('nets', {})
-        inputs = contract.pop('inputs', {})
-
-        if len(contract) > 0:
-            raise KeyError('Unknown keys in contract: {}'
-                           .format(tuple(contract.keys())))
-
-        for k, v in kwargs.items():
-            if k not in self._kwargs:
-                raise KeyError('Invalid contract: {} does not have any '
-                               'arguments called {}'
-                               .format(self.__class__.__name__, k))
-
-            if not isinstance(v, str):
-                raise TypeError('Contract values must be strings.')
-
-        for k, v in inputs.items():
-            if k not in self._args:
-                raise KeyError('Invalid contract: {} does not have any '
-                               'inputs called {}'
-                               .format(self.__class__.__name__, k))
-
-            if not isinstance(v, str):
-                raise TypeError('Contract values must be strings.')
-
-        return dict(inputs=inputs, kwargs=kwargs, nets=nets)
-
-    def _accept_contract(self, contract):
-        '''Accepts the contract.
-
-        Args:
-            contract: Dictionary contract.
-
-        '''
-        if self._contract is not None:
-            raise ValueError('Cannot accept more than one contract.')
-
-        self._contract = contract
 
     def _wrap(self, fn):
         '''Wraps methods to allow for auto inputs and kwargs.
@@ -469,7 +432,6 @@ class ModelPluginBase(metaclass=PluginType):
             output = fn(*args, **kwargs)
             self._check_bad_values()
             end = time.time()
-
             update_dict_of_lists(self._epoch_results, **self.results)
             update_dict_of_lists(self._epoch_times,
                                  **{self.name: end - start})

@@ -142,32 +142,33 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             test_set.test_data = test_set.test_data[:test_samples]
             test_set.test_labels = test_set.test_labels[:test_samples]
 
+        dim_images = train_set[0][0].size()
+
         if source in ('SVHN', 'STL10'):
-            dim_c, dim_x, dim_y = train_set[0][0].size()
-            uniques = np.unique(train_set.labels).tolist()
+            labels = train_set.labels
+            uniques = np.unique(labels).tolist()
             try:
                 uniques.remove(-1)
             except ValueError:
                 pass
-            dim_l = len(uniques)
         else:
-            dim_c, dim_x, dim_y = train_set[0][0].size()
-
             labels = train_set.train_labels
             if not isinstance(labels, list):
                 labels = labels.numpy()
-            dim_l = len(np.unique(labels))
+            uniques = np.unique(labels).tolist()
 
-        dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l)
+        dim_l = len(uniques)
+
+        dims = dict(images=dim_images, targets=dim_l)
         input_names = ['images', 'targets', 'index']
 
-        self.add_dataset('train', train_set)
-        self.add_dataset('test', test_set)
-        self.set_input_names(input_names)
-        self.set_dims(**dims)
-
-        if scale is not None:
-            self.set_scale(scale)
+        self.add_dataset(
+            source,
+            data=dict(train=train_set, test=test_set),
+            input_names=input_names,
+            dims=dims,
+            scale=scale
+        )
 
 
 register_plugin(TorchvisionDatasetPlugin)

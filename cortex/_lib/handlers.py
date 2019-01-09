@@ -258,7 +258,35 @@ class NetworkHandler(Handler):
             MutableMapping.__setattr__(self, key, value)
 
 
-ResultsHandler = Handler
+class ResultsHandler(Handler):
+
+    def __setitem__(self, key, value):
+        if isinstance(value, torch.Tensor):
+            value = value.item()
+        self._check_keyvalue(key, value)
+
+        if self._locked:
+            raise KeyError('Handler is locked.')
+
+        if not self._allow_overwrite and hasattr(self, key):
+            raise KeyError('Overwriting keys not allowed.')
+        self.__dict__[key] = value
+
+    def __setattr__(self, key, value):
+        if isinstance(value, torch.Tensor):
+            value = value.item()
+        if key.startswith('_'):
+            return super().__setattr__(key, value)
+
+        self._check_keyvalue(key, value)
+
+        if self._locked:
+            raise KeyError('Handler is locked.')
+
+        if not self._allow_overwrite and hasattr(self, key):
+            raise KeyError('Overwriting keys not allowed.')
+
+        super().__setattr__(key, value)
 
 
 class LossHandler(Handler):

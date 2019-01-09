@@ -17,11 +17,11 @@ class MINE(ALIDiscriminator):
     '''
 
     def __init__(self):
-        super().__init__(contract=dict(nets=dict(discriminator='mine')))
-        contract = dict(nets=dict(network='mine'),
-                        kwargs=dict(penalty_type='mine_penalty_type',
-                                    penalty_amount='mine_penalty_amount'))
-        self.penalty = GradientPenalty(contract=contract)
+        super().__init__(nets=dict(discriminator='mine'))
+        self.penalty = GradientPenalty(
+            nets=dict(network='mine'),
+            kwargs=dict(penalty_type='mine_penalty_type',
+                        penalty_amount='mine_penalty_amount'))
 
     def routine(self, X, X_m, Z, Z_m, mine_measure='JSD'):
         '''
@@ -45,10 +45,8 @@ class GAN_MINE(GAN):
     def __init__(self):
         super().__init__()
         self.mine = MINE()
-
-        encoder_contract = dict(nets=dict(encoder='x_encoder'),
-                                kwargs=dict(dim_out='dim_int'))
-        self.encoder = ImageEncoder(contract=encoder_contract)
+        self.encoder = ImageEncoder(nets=dict(encoder='x_encoder'),
+                                    kwargs=dict(dim_out='dim_int'))
 
     def build(self, noise_type='normal', dim_z=64):
         super().build(noise_type=noise_type, dim_z=dim_z)

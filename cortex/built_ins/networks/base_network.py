@@ -42,6 +42,25 @@ class BaseNet(nn.Module):
         x = apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
         return x
 
+    def partial_forward(self,
+                        x: torch.Tensor,
+                        nonlinearity: str = None,
+                        idx: int = 0,
+                        **nonlinearity_args: dict) -> torch.Tensor:
+
+        self.states = []
+
+        if nonlinearity is None:
+            nonlinearity = self.output_nonlinearity
+        elif not nonlinearity:
+            nonlinearity = None
+
+        for model in self.models[idx:]:
+            x = model(x)
+            self.states.append(x)
+        x = apply_nonlinearity(x, nonlinearity, **nonlinearity_args)
+        return x
+
     def get_h(self, dim_h, n_levels=None):
         if isinstance(dim_h, (list, tuple)):
             pass

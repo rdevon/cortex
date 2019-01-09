@@ -25,8 +25,7 @@ __author_email__ = 'erroneus@gmail.com'
 logger = logging.getLogger('cortex.viz')
 config_font = None
 visualizer = None
-_options = dict(use_tanh=False, quantized=False, img=None, label_names=None,
-                is_caption=False, is_attribute=False)
+_options = dict(label_names=None, is_caption=False, is_attribute=False)
 
 CHARS = ['_', '\n', ' ', '!', '"', '%', '&', "'", '(', ')', ',', '-', '.', '/',
          '0', '1', '2', '3', '4', '5', '8', '9', ':', ';', '=', '?', '\\', '`',
@@ -42,7 +41,10 @@ def init(viz_config):
                                    'port' in viz_config.keys()):
         server = viz_config.get('server', None)
         port = viz_config.get('port', 8097)
+        logger.info('Using visdom version {}'.format(visdom.__version__))
+        print(server, port)
         visualizer = visdom.Visdom(server=server, port=port)
+        print(visualizer.check_connection())
         if not visualizer.check_connection():
             if _yes_no("No Visdom server runnning on the configured address. "
                        "Do you want to start it?"):
@@ -64,15 +66,18 @@ def init(viz_config):
     config_font = viz_config.get('font')
 
 
-def setup(use_tanh=None, quantized=None, img=None, label_names=None,
-          is_caption=False, is_attribute=False, char_map=None, name=None):
+def setup(label_names=None, is_caption=False, is_attribute=False, char_map=None):
+    """Sets up visualization arguments
+
+    Args:
+        img: TODO
+        label_names: TODO
+        is_caption: TODO
+        is_attribute: TODO
+        char_map: TODO
+
+    """
     global _options, CHAR_MAP
-    if use_tanh is not None:
-        _options['use_tanh'] = use_tanh
-    if quantized is not None:
-        _options['quantized'] = quantized
-    if img is not None:
-        _options['img'] = img
     if label_names is not None:
         _options['label_names'] = label_names
     _options['is_caption'] = is_caption
@@ -184,11 +189,11 @@ class VizHandler():
 
 
 def plot(epoch, init=False):
-    '''Updates the plots for the reults.
+    """Updates the plots for the reults.
 
     Takes the last value from the summary and appends this to the visdom plot.
 
-    '''
+    """
     def get_X_Y_legend(key, v_train, v_test):
         min_e = max(0, epoch - 1)
         if init:
@@ -261,22 +266,11 @@ def plot(epoch, init=False):
             env=exp.NAME,
             opts=opts,
             win='line_{}'.format(k),
-            update=update)
+            update=update
+        )
 
 
-def dequantize(images):
-    images = np.argmax(images, axis=1).astype('uint8')
-    images_ = []
-    for image in images:
-        img2 = Image.fromarray(image)
-        img2.putpalette(_options['img'].getpalette())
-        img2 = img2.convert('RGB')
-        images_.append(np.array(img2))
-    images = np.array(images_).transpose(0, 3, 1, 2) / 255.
-    return images
-
-
-def save_text(labels, max_samples=64, out_file=None, text_id=0,
+def save_text(labels, out_file=None, text_id=0,
               caption=''):
     labels = np.argmax(labels, axis=-1)
     char_map = _options['label_names']
@@ -314,9 +308,6 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
         else:
             margin_x = 5
             margin_y = 12
-
-    if _options['quantized']:
-        images = dequantize(images)
 
     images = images * 255.
 
@@ -417,14 +408,10 @@ def save_movie(images, num_x, num_y, out_file=None, movie_id=0):
     else:
         images_ = []
         for i, image in enumerate(images):
-            if _options['quantized']:
-                image = dequantize(image)
             dim_c, dim_x, dim_y = image.shape[-3:]
             image = image.reshape((num_x, num_y, dim_c, dim_x, dim_y))
             image = image.transpose(0, 3, 1, 4, 2)
             image = image.reshape(num_x * dim_x, num_y * dim_y, dim_c)
-            if _options['use_tanh']:
-                image = 0.5 * (image + 1.)
             images_.append(image)
         imageio.mimsave(out_file, images_)
 

@@ -22,6 +22,15 @@ __author_email__ = 'erroneus@gmail.com'
 
 
 def parse_kwargs(f):
+    """Parses kwargs from a function definition.
+
+    Args:
+        f: Function to parse.
+
+    Returns:
+        A dictionary of kwargs.
+
+    """
     kwargs = {}
     sig = inspect.signature(f)
     for i, (sk, sv) in enumerate(sig.parameters.items()):
@@ -39,6 +48,15 @@ def parse_kwargs(f):
 
 
 def parse_inputs(f):
+    """Parses input variables from function definition.
+
+    Args:
+        f: Function to parse.
+
+    Returns:
+        List of variable names.
+
+    """
     args = []
     sig = inspect.signature(f)
     for i, (sk, sv) in enumerate(sig.parameters.items()):
@@ -53,6 +71,15 @@ def parse_inputs(f):
 
 
 def parse_docstring(f):
+    """Parses a docstring from a function defintion.
+
+    Args:
+        f: Function to parse from.
+
+    Returns:
+        Docstring.
+
+    """
     if f.__doc__ is None:
         f.__doc__ = 'TODO\n TODO'
     doc = inspect.cleandoc(f.__doc__)
@@ -66,6 +93,15 @@ def parse_docstring(f):
 
 
 def parse_header(f):
+    """Parses a header from a function definition.
+
+    Args:
+        f: Function to parse from.
+
+    Returns:
+        Header string.
+
+    """
     if f.__doc__ is None:
         f.__doc__ = 'TODO\n TODO'
     doc = inspect.cleandoc(f.__doc__)
@@ -151,6 +187,9 @@ def make_argument_parser() -> argparse.ArgumentParser:
 
 
 class StoreDictKeyPair(argparse.Action):
+    """Parses key value pairs from command line.
+
+    """
     def __call__(self, parser, namespace, values, option_string=None):
         if '__' in values:
             raise ValueError('Private or protected values not allowed.')
@@ -176,6 +215,17 @@ class StoreDictKeyPair(argparse.Action):
 
 
 def str2bool(v):
+    """Converts a string to boolean.
+
+    E.g., yes -> True, no -> False.
+
+    Args:
+        v: String to convert.
+
+    Returns:
+        True or False
+
+    """
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
     elif v.lower() in ('no', 'false', 'f', 'n', '0'):
@@ -185,6 +235,13 @@ def str2bool(v):
 
 
 def _parse_model(model, subparser):
+    """Parses model definitions and adds arguments as command-line arguments.
+
+    Args:
+        model: Model to parse.
+        subparser: argparse subparses to parse values to.
+
+    """
     global default_args
     kwargs = dict((k, v) for k, v in model.kwargs.items())
     model_defaults = model.defaults
@@ -204,6 +261,16 @@ def _parse_model(model, subparser):
 
 
 def _parse_defaults(key, args, subparser):
+    """Parses the default values of a model for the command line.
+
+    Args:
+        key: Key of argument.
+        args: values of argument.
+        subparser: subparser to parse values to so values show up on command line..
+
+    Returns:
+
+    """
     for k, v in args.items():
         arg_str = '--' + key[0] + '.' + k
         help = default_help[key][k]
@@ -317,6 +384,7 @@ def parse_args(models, model=None):
         models: dictionary of models.
 
     Returns:
+        dictionary of kwargs.
 
     '''
 
@@ -387,6 +455,15 @@ def parse_args(models, model=None):
 
 
 def update_args(kwargs, kwargs_to_update):
+    """Updates kwargs from another set of kwargs.
+
+    Does dictionary traversal.
+
+    Args:
+        kwargs: dictionary to update with.
+        kwargs_to_update: dictionary to update.
+
+    """
     def _update_args(from_kwargs, to_kwargs):
         for k, v in from_kwargs.items():
             if isinstance(v, dict) and k not in to_kwargs:

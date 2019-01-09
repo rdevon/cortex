@@ -48,11 +48,8 @@ class BidirectionalModel(ModelPlugin):
     def __init__(self, discriminator, **kwargs):
         super().__init__(**kwargs)
         self.discriminator = discriminator
-
-        encoder_contract = dict(kwargs=dict(dim_out='dim_z'))
-        decoder_contract = dict(kwargs=dict(dim_in='dim_z'))
-        self.decoder = ImageDecoder(contract=decoder_contract)
-        self.encoder = ImageEncoder(contract=encoder_contract)
+        self.decoder = ImageDecoder(kwargs=dict(dim_in='dim_z'))
+        self.encoder = ImageEncoder(kwargs=dict(dim_out='dim_z'))
 
     def build(self):
         self.decoder.build()
@@ -178,12 +175,10 @@ class ALI(ModelPlugin):
         self.bidirectional_model = BidirectionalModel(
             discriminator=self.discriminator)
 
-        encoder_contract = dict(nets=dict(encoder='x_encoder'),
-                                kwargs=dict(dim_out='dim_int'))
-        self.encoder = ImageEncoder(contract=encoder_contract)
+        self.encoder = ImageEncoder(nets=dict(encoder='x_encoder'),
+                                    kwargs=dict(dim_out='dim_int'))
 
-        penalty_contract = dict(nets=dict(network='discriminator'))
-        self.penalty = GradientPenalty(contract=penalty_contract)
+        self.penalty = GradientPenalty(nets=dict(network='discriminator'))
 
     def build(self, dim_z=None, dim_int=None, use_z_encoder=False,
               z_encoder_args=dict(dim_h=256, batch_norm=True),
