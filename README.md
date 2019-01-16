@@ -4,7 +4,6 @@ Cortex is under heavy development. It's functional, but may not fit your needs y
 
 (some) Outstanding issues:
 
-* Reloading models does not reload hyperparameters (they need to be specified again when reloading)
 * Need custom data iterator functionality within custom models
 * torchtext integration needed
 * Missing unit tests
