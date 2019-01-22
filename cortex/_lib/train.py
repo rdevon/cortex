@@ -64,6 +64,7 @@ def test_epoch(model, epoch, data_mode='test', use_pbar=True):
 
     model.data.reset(make_pbar=False, mode='test')
     model.data.next()
+    model.clear_viz()
     model.visualize(auto_input=True)
     return results
 

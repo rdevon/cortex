@@ -397,7 +397,8 @@ class ModelPluginBase(metaclass=PluginType):
 
             if fid not in self._training_nets:
                 losses_before = dict(kv for kv in self._all_losses.items())
-                fn(*args, **kwargs)
+                with torch.cuda.device(exp.DEVICE.index):
+                    fn(*args, **kwargs)
                 losses_after = dict(kv for kv in self._all_losses.items())
 
                 training_nets = []
@@ -429,7 +430,8 @@ class ModelPluginBase(metaclass=PluginType):
                     net.train()
 
             start = time.time()
-            output = fn(*args, **kwargs)
+            with torch.cuda.device(exp.DEVICE.index):
+                output = fn(*args, **kwargs)
             self._check_bad_values()
             end = time.time()
             update_dict_of_lists(self._epoch_results, **self.results)
@@ -568,3 +570,6 @@ class ModelPluginBase(metaclass=PluginType):
     def reload_nets(self, nets_to_reload):
         if nets_to_reload:
             self.nets._handler.load(**nets_to_reload)
+
+    def clear_viz(self):
+        self._viz.clear()

@@ -74,7 +74,6 @@ class GAN_MINE(GAN):
             discriminator_updates: Number of discriminator updates per step.
 
         '''
-
         for _ in range(discriminator_updates):
             self.data.next()
             inputs, Z = self.inputs('inputs', 'Z')

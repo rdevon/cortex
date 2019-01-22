@@ -54,9 +54,14 @@ def setup(sources: str=None, batch_size=64, n_workers: int=4,
                                ' Available: {}'
                                .format(source, tuple(_PLUGINS.keys())))
 
-            plugin.handle(source, copy_to_local=copy_to_local, **data_args)
+            try:
+                plugin.handle(source, copy_to_local=copy_to_local, **data_args)
+            except KeyError:
+                pass
+
             DATA_HANDLER.add_dataset(DATASETS, source, name, plugin, n_workers=n_workers,
                                      shuffle=shuffle)
+
     else:
         raise ValueError('No source provided. Use `--d.source`')
 

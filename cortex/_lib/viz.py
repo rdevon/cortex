@@ -186,6 +186,7 @@ class VizHandler():
             else:
                 out_path = None
             save_heatmap(hm, out_file=out_path, image_id=i, title=k)
+        self.clear()
 
 
 def plot(epoch, init=False):
