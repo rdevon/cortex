@@ -209,6 +209,16 @@ class DataHandler:
         if self.batch is None:
             raise RuntimeError('Batch not set')
 
+        def get_data_keys(d):
+            keys = []
+            for k, v in d.items():
+                keys.append(k)
+                if isinstance(v, dict):
+                    keys_ = get_data_keys(v)
+                    for k_ in keys_:
+                        keys.append(k + '.' + k_)
+            return keys
+
         def get_data(d, key):
             if '.' in key:
                 k_ = key.split('.')
@@ -227,7 +237,7 @@ class DataHandler:
                 return d[key]
             except KeyError:
                 raise KeyError('Data with label `{}` not found. Available: {}'
-                               .format(key, d.keys()))
+                               .format(key, get_data_keys(d)))
 
         return get_data(self.batch, key)
 
