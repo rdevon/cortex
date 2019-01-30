@@ -276,13 +276,13 @@ def _parse_defaults(key, args, subparser):
         help = default_help[key][k]
         dest = key + '.' + k
 
-        if isinstance(v, dict):
-            dstr = ',,'.join(
-                ['{}={}'.format(k, str(v)) for k, v in v.items()])
+        if isinstance(v, (dict, list, tuple)):
+            type_ = type(v)
+            dstr = str(v)
             dstr = dstr.replace(' ', '')
-            dstr = dstr.replace(']', '')
-            dstr = dstr.replace('[', '')
-            metavar = '<k1=v1>' + ' defaults={' + dstr + '})'
+            metavar = '<' + type_.__name__ + '>'
+            if not ('[' in dstr or ']' in dstr):
+                metavar += ' (default=' + dstr + ')'  # argparse doesn't like square brackets
 
             subparser.add_argument(
                 arg_str,
@@ -335,21 +335,20 @@ def _parse_kwargs(k, v, help, subparser):
     arg_str = '--' + k
     choices = None
 
-    if isinstance(v, dict):
-        dstr = ',,'.join(
-            ['{}={}'.format(k, str(v)) for k, v in v.items()])
+    if isinstance(v, (dict, list, tuple)):
+        type_ = type(v)
+        dstr = str(v)
         dstr = dstr.replace(' ', '')
-        dstr = dstr.replace(']', '')
-        dstr = dstr.replace('[', '')
-        metavar = '<k1=v1>' + ' defaults={' + dstr + '})'
+        metavar = '<' + type_.__name__ + '>'
+        if not ('[' in dstr or ']' in dstr):
+            metavar += ' (default=' + dstr + ')'  # argparse doesn't like square brackets
 
         subparser.add_argument(
             arg_str,
             dest=k,
             default=v,
             action=StoreDictKeyPair,
-            help=help,
-            metavar=metavar)
+            help=help, metavar=metavar)
     elif isinstance(v, bool) and not v:
         action = 'store_true'
         subparser.add_argument(

@@ -97,33 +97,92 @@ class PluginType(type):
                        'Using {v} instead of {v_}'.format(k=k, v=v, v_=v_))
 
 
-class ModelPluginBase(metaclass=PluginType):
-    '''
-    TODO
+def _auto_input_decorator(cls, fn):
+    '''Wraps methods to allow for auto inputs and kwargs.
+
+    Args:
+        fn: A callable.
+
+    Returns:
+        A wrapped version of the callable.
+
     '''
 
+    def _fetch_kwargs(**kwargs_):
+        if cls._contract is not None:
+            kwarg_dict = cls._contract['kwargs']
+        else:
+            kwarg_dict = {}
+        kwarg_keys = parse_kwargs(fn).keys()
+
+        kwargs = dict()
+        for k in kwarg_keys:
+            key = kwarg_dict.get(k, k)
+            try:
+                value = cls.kwargs[key]
+            except KeyError:
+                value = kwargs_.get(key)
+            kwargs[k] = value
+
+        return kwargs
+
+    def _fetch_inputs():
+        if cls._contract is not None:
+            input_dict = cls._contract['inputs']
+        else:
+            input_dict = {}
+        input_keys = parse_inputs(fn)
+
+        inputs = []
+        for k in input_keys:
+            key = input_dict.get(k, k)
+            if key == 'args':
+                continue
+            value = cls.data[key]
+            inputs.append(value)
+        return inputs
+
+    def wrapped(*args, auto_input=False, **kwargs_):
+        kwargs = _fetch_kwargs(**kwargs_)
+        for k, v in kwargs_.items():
+            # Infer correct hyperparameters for function and pass them..
+            if isinstance(v, dict) and (k in kwargs and
+                                        isinstance(kwargs[k], dict)):
+                kwargs[k].update(**v)
+            elif v is not None:
+                kwargs[k] = v
+            elif v is None and k not in kwargs:
+                kwargs[k] = v
+        if auto_input:
+            args = _fetch_inputs()
+        return fn(*args, **kwargs)
+
+    return wrapped
+
+
+class ModelPluginBase(metaclass=PluginType):
+    '''Base model class.
+
+    '''
+
+    # Global attributes that all models have access to.
     _viz = VizHandler()
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
-
     _training_nets = dict()
-
     _all_nets = NetworkHandler(allow_overwrite=False)
-    _all_losses = LossHandler(_all_nets, add_values=True)
-    # TODO(Devon): This is done in conjunction with clearing all losses
-    # after train_step.
-    _all_results = ResultsHandler()
 
-    _all_epoch_results = ResultsHandler()
-    _all_epoch_losses = ResultsHandler()
-    _all_epoch_times = ResultsHandler()
+    _epoch_losses = ResultsHandler()
+    _epoch_times = ResultsHandler()
+    _epoch_results = ResultsHandler()
 
     def __init__(self, kwargs=None, nets=None, inputs=None):
         '''
 
         Args:
-            contract: A dictionary of strings which specify naming w.r.t.
-                the model that creates this model.
+            kwargs: mapping for hyperparameter names.
+            nets: name mapping for networks.
+            inputs: name mapping for input names.
         '''
 
         self._contract = None
@@ -131,6 +190,7 @@ class ModelPluginBase(metaclass=PluginType):
         self._models = []
         self.name = self.__class__.__name__
 
+        # Contract to handle naming of things.
         kwargs = kwargs or {}
         nets = nets or {}
         inputs = inputs or {}
@@ -139,31 +199,305 @@ class ModelPluginBase(metaclass=PluginType):
 
         if self._contract and len(self._contract['nets']) > 0:
             self._nets = aliased(self._all_nets, aliases=contract['nets'])
-            self._losses = aliased(self._all_losses, aliases=contract['nets'])
-            self._epoch_losses = aliased(
-                self._all_epoch_losses, aliases=contract['nets'])
         else:
             self._nets = aliased(self._all_nets)
-            self._losses = aliased(self._all_losses)
-            self._epoch_losses = aliased(self._all_epoch_losses)
 
-        self.wrap_functions()
+        # Handlers for various results.
+        self._results = ResultsHandler()
+        self._times = ResultsHandler()
+        self._losses = LossHandler(self.nets)
 
-        self._results = prefixed(
-            self._all_results, prefix=self.name)
-        self._epoch_results = prefixed(
-            self._all_epoch_results, prefix=self.name)
-        self._epoch_times = self._all_epoch_times
+        # Wrap functions
+        self.build = _auto_input_decorator(self, self.build)
+        self.visualize = _auto_input_decorator(self, self.visualize)
 
-    def wrap_functions(self):
-        self._wrap_routine()
-        self.visualize = self._wrap(self.visualize)
-        self.train_step = self._wrap_step(self.train_step)
-        self.eval_step = self._wrap_step(self.eval_step, train=False)
-        self.train_loop = self._wrap_loop(self.train_loop, train=True)
-        self.eval_loop = self._wrap_loop(self.eval_loop, train=False)
-        self.build = self._wrap(self.build)
+        self.routine = self.model_routine(self.routine)
+        self.train_step = self.model_step(self.train_step, train=True)
+        self.optimizer_step = self.model_optimizer_step(self.optimizer_step)
+        self.eval_step = self.model_step(self.eval_step, train=False)
+        self.train_loop = self.model_loop(self.train_loop, train=True)
+        self.eval_loop = self.model_loop(self.eval_loop, train=False)
 
+    # Functions for fetching and collapsing results
+
+    def fetch_all_losses(self):
+        '''Get all network losses from model and child models.
+
+        Returns:
+            dict: Dictionary of network losses and children losses.
+
+        '''
+        losses = dict((self._contract['nets'].get(k, k), v)
+                      for k, v in self.losses.items())
+        self.losses.clear()
+        for model in self._models:
+            losses[model.name] = model.fetch_all_losses()
+        return losses
+
+    def fetch_all_results(self):
+        '''Get all results from model and child models.
+
+        Returns:
+            dict: Dictionary of results and children results.
+
+        '''
+        results = dict((self._contract['nets'].get(k, k), v)
+                       for k, v in self.results.items())
+        self.results.clear()
+        for model in self._models:
+            results[model.name] = model.fetch_all_results()
+        return results
+
+    def fetch_all_times(self):
+        '''Get all times from model and child models.
+
+        Returns:
+            dict: Dictionary of routine times and children times.
+
+        '''
+        times = dict((self._contract['nets'].get(k, k), v)
+                     for k, v in self.times.items())
+        self.times.clear()
+        for model in self._models:
+            times[model.name] = model.fetch_all_times()
+        return times
+
+    def collapse_losses(self):
+        '''Collapses network losses from child models.
+
+        '''
+        def collapse(d, losses):
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    collapse(v, losses)
+                elif k in losses.keys():
+                    losses[k] += v
+                else:
+                    losses[k] = v
+
+        losses = self.fetch_all_losses()
+        losses_ = {}
+        collapse(losses, losses_)
+        self.losses.clear()
+        self.losses.update(**losses_)
+
+    def collapse_results(self):
+        '''Collapses results from child models.
+
+        '''
+        def collapse(d, results, prefix=''):
+            for k, v in d.items():
+                if prefix == '':
+                    key = k
+                else:
+                    key = prefix + '.' + k
+                if isinstance(v, dict):
+                    collapse(v, results, prefix=key)
+                else:
+                    results[key] = v
+        results = self.fetch_all_results()
+        results_ = {}
+        collapse(results, results_)
+        self._results.clear()
+        self._results.update(**results_)
+
+    def collapse_times(self):
+        '''Collapses times from child models.
+
+        '''
+        def collapse(d, times, key=None):
+            for k, v in d.items():
+                key_ = key or k
+                if isinstance(v, dict):
+                    collapse(v, times, key_)
+                else:
+                    times[key_] = v
+
+        times = self.fetch_all_times()
+        times_ = {}
+        collapse(times, times_)
+        self._times = times_
+
+    # Routine, step, and loop wrappers
+    def model_routine(self, fn):
+        '''Wraps the routine.
+
+        Set to `requires_grad` for models that are trained with this routine.
+
+        '''
+
+        fn = _auto_input_decorator(self, fn)
+
+        def cortex_routine(*args, **kwargs):
+            fid = self._get_id(fn)
+
+            if fid not in self._training_nets:
+                # This is the first time a routine has been run. Run once,
+                # then extract the networks from which losses are computed for.
+                # These will be trained.
+                with torch.cuda.device(exp.DEVICE.index):
+                    fn(*args, **kwargs)
+                training_nets = [self._contract['nets'].get(k, k) for k in self.losses.keys()]
+                self._training_nets[fid] = training_nets
+            else:
+                training_nets = self._training_nets[fid]
+
+            self.losses.clear()
+
+            if self._train:
+                for k in training_nets:
+                    net = self.nets[k]
+
+                    optimizer = self._optimizers.get(k)
+                    if optimizer is not None:
+                        optimizer.zero_grad()
+
+                    for p in net.parameters():
+                        p.requires_grad = True
+                    net.train()
+
+            start = time.time()
+            with torch.cuda.device(exp.DEVICE.index):
+                output = fn(*args, **kwargs)
+
+            self._check_bad_values()
+            end = time.time()
+            self.times[self.__class__.__name__] = end - start
+
+            return output
+
+        return cortex_routine
+
+    def model_step(self, fn, train=True):
+        '''Wraps the training or evaluation step.
+
+        Args:
+            fn: Callable step function.
+            train (bool): For train or eval step.
+
+        Returns:
+            Wrapped version of the function.
+
+        '''
+
+        fn = _auto_input_decorator(self, fn)
+
+        def cortex_step(*args, _init=False, **kwargs):
+            if train and not _init:
+                self._set_train()
+                for net in self.nets.values():
+                    net.train()
+            else:
+                self._set_eval()
+                for net in self.nets.values():
+                    net.eval()
+
+            output = fn(*args, **kwargs)
+
+            # Collapse results and times
+            self.collapse_results()
+            self.collapse_losses()
+            self.collapse_times()
+
+            # Detach losses
+            #self.losses.detach()
+            return output
+
+        return cortex_step
+
+    def finish_step(self):
+        '''Finishes a loop.
+
+        Should only be done when all models have completed their step.
+
+        '''
+        # Appends to each list of results and losses.
+        loss_dict = dict((k, v.detach().item()) for k, v in self.losses.items())
+
+        update_dict_of_lists(self._epoch_results, **self.results)
+        update_dict_of_lists(self._epoch_times, **self.times)
+        update_dict_of_lists(self._epoch_losses, **loss_dict)
+
+        self.losses.clear()
+        self.results.clear()
+        self.times.clear()
+
+    def model_loop(self, fn, train=True):
+        '''Wraps a loop.
+
+        Args:
+            fn: Callable loop function.
+            train (bool): For train or eval loop.
+
+        Returns:
+            Wrapped version of the function.
+
+        '''
+
+        data_mode = 'train' if train else 'test'
+
+        if train:
+            epoch_str = 'Training {} (epoch {}): '
+        else:
+            epoch_str = 'Evaluating {} (epoch {}): '
+
+        def cortex_loop(epoch, data_mode=data_mode, use_pbar=True):
+            self._reset_epoch()
+            self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch),
+                            make_pbar=use_pbar)
+
+            if data_mode == 'train':
+                # Normal learning rate scheduler.
+                for k, sched in optimizer.SCHEDULERS.items():
+                    lr = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if not isinstance(
+                            sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        sched.step()
+                    lr_ = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if lr != lr_:
+                        logger.debug(
+                            'Learning rate for {} changed to {}'.format(k, lr_))
+
+            fn()
+
+            results = self._epoch_results
+            results['losses'] = dict(self._epoch_losses)
+            results['times'] = dict(self._epoch_times)
+
+            # Optimizer scheduler.
+            if data_mode == 'train':
+                # Plateau LR based scheduler.
+                for k, sched in optimizer.SCHEDULERS.items():
+                    lr = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if isinstance(
+                            sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        loss = results['losses'][k][-1]
+                        sched.step(loss)
+                    lr_ = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
+                    if lr != lr_:
+                        logger.debug(
+                            'Learning rate for {} changed to {}'.format(k, lr_))
+
+        return cortex_loop
+
+    def model_optimizer_step(self, fn):
+        '''Collapses losses from children models and the runs optimization.
+
+        Args:
+            fn: function to wrap.
+
+        '''
+
+        def cortex_optimizer_step():
+            self.collapse_losses()
+            start = time.time()
+            fn()
+            end = time.time()
+            self.times['Optimizer'] = end - start
+
+        return cortex_optimizer_step
+
+    # Resetting
     @classmethod
     def _reset_class(cls):
         '''Resets the static variables.
@@ -172,20 +506,18 @@ class ModelPluginBase(metaclass=PluginType):
         cls._kwargs.clear()
         cls._help.clear()
         cls._training_nets.clear()
-
         cls._all_nets.clear()
-        cls._all_losses.clear()
-        cls._all_results.clear()
 
-        cls._all_epoch_results.clear()
-        cls._all_epoch_losses.clear()
-        cls._all_epoch_times.clear()
+        cls._epoch_results.clear()
+        cls._epoch_losses.clear()
+        cls._epoch_times.clear()
 
     def _reset_epoch(self):
-        self._all_epoch_results.clear()
-        self._all_epoch_losses.clear()
-        self._all_epoch_times.clear()
+        self._epoch_results.clear()
+        self._epoch_losses.clear()
+        self._epoch_times.clear()
 
+    # Get info and other queries
     def _get_id(self, fn):
         '''Gets a unique identifier for a function.
 
@@ -197,10 +529,6 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
         return fn
-
-    @property
-    def kwargs(self):
-        return self._kwargs
 
     def _map_data_queries(self, *queries):
         """Maps a query for an input for a model to a different key.
@@ -219,6 +547,17 @@ class ModelPluginBase(metaclass=PluginType):
             queries_.append(query)
 
         return queries_
+
+    def _get_training_nets(self):
+        '''Retrieves the training nets for the object.
+
+        '''
+
+        training_nets = []
+        for v in self._training_nets.values():
+            training_nets += v
+
+        return training_nets
 
     def inputs(self, *keys):
         '''Pulls inputs from the data.
@@ -247,6 +586,24 @@ class ModelPluginBase(metaclass=PluginType):
         else:
             return inputs
 
+    # Add results and losses
+    def add_results(self, **kwargs):
+        for key, value in kwargs.items():
+            self.results[key] = value
+
+    def add_losses(self, **kwargs):
+        for key, value in kwargs.items():
+            if key in self.losses.keys():
+                v = self.losses[key]
+                self.losses[key] = [v, value]
+            else:
+                self.losses[key] = value
+
+    # Properties
+    @property
+    def kwargs(self):
+        return self._kwargs
+
     @property
     def help(self):
         return self._help
@@ -262,6 +619,10 @@ class ModelPluginBase(metaclass=PluginType):
     @property
     def losses(self):
         return self._losses
+
+    @property
+    def times(self):
+        return self._times
 
     @property
     def viz(self):
@@ -308,10 +669,10 @@ class ModelPluginBase(metaclass=PluginType):
             model._set_kwargs(self._kwargs)
             model.name = key
 
-            model._results = prefixed(
-                model._all_results, prefix=model.name)
-            model._epoch_results = prefixed(
-                model._all_epoch_results, prefix=model.name)
+            #model._results = prefixed(
+            #    model._all_results, prefix=model.name)
+            #model._epoch_results = prefixed(
+            #    model._all_epoch_results, prefix=model.name)
             self._models.append(model)
 
         super().__setattr__(key, value)
@@ -320,231 +681,6 @@ class ModelPluginBase(metaclass=PluginType):
         self._kwargs = kwargs
         for model in self._models:
             model._set_kwargs(kwargs)
-
-    def _wrap(self, fn):
-        '''Wraps methods to allow for auto inputs and kwargs.
-
-        Args:
-            fn: A callable.
-
-        Returns:
-            A wrapped version of the callable.
-
-        '''
-
-        def _fetch_kwargs(**kwargs_):
-            if self._contract is not None:
-                kwarg_dict = self._contract['kwargs']
-            else:
-                kwarg_dict = {}
-            kwarg_keys = parse_kwargs(fn).keys()
-
-            kwargs = dict()
-            for k in kwarg_keys:
-                key = kwarg_dict.get(k, k)
-                try:
-                    value = self.kwargs[key]
-                except KeyError:
-                    value = kwargs_.get(key)
-                kwargs[k] = value
-
-            return kwargs
-
-        def _fetch_inputs():
-            if self._contract is not None:
-                input_dict = self._contract['inputs']
-            else:
-                input_dict = {}
-            input_keys = parse_inputs(fn)
-
-            inputs = []
-            for k in input_keys:
-                key = input_dict.get(k, k)
-                if key == 'args':
-                    continue
-                value = self.data[key]
-                inputs.append(value)
-            return inputs
-
-        def wrapped(*args, auto_input=False, **kwargs_):
-            kwargs = _fetch_kwargs(**kwargs_)
-            for k, v in kwargs_.items():
-                if isinstance(v, dict) and (k in kwargs and
-                                            isinstance(kwargs[k], dict)):
-                    kwargs[k].update(**v)
-                elif v is not None:
-                    kwargs[k] = v
-                elif v is None and k not in kwargs:
-                    kwargs[k] = v
-            if auto_input:
-                args = _fetch_inputs()
-            return fn(*args, **kwargs)
-
-        return wrapped
-
-    def _wrap_routine(self):
-        '''Wraps the routine.
-
-        Set to `requires_grad` for models that are trained with this routine.
-
-        '''
-
-        fn = self.routine
-        fn = self._wrap(fn)
-
-        def wrapped(*args, **kwargs):
-            fid = self._get_id(fn)
-
-            if fid not in self._training_nets:
-                losses_before = dict(kv for kv in self._all_losses.items())
-                with torch.cuda.device(exp.DEVICE.index):
-                    fn(*args, **kwargs)
-                losses_after = dict(kv for kv in self._all_losses.items())
-
-                training_nets = []
-
-                for k, v in losses_after.items():
-                    try:
-                        if k not in losses_before:
-                            training_nets.append(k)
-                        elif v != losses_before[k]:
-                            training_nets.append(k)
-                    except TypeError:
-                        training_nets.append(k)
-                self._training_nets[fid] = training_nets
-                for k in training_nets:
-                    self.losses.pop(k)
-            else:
-                training_nets = self._training_nets[fid]
-
-            if self._train:
-                for k in training_nets:
-                    net = self.nets[k]
-
-                    optimizer = self._optimizers.get(k)
-                    if optimizer is not None:
-                        optimizer.zero_grad()
-
-                    for p in net.parameters():
-                        p.requires_grad = k in training_nets
-                    net.train()
-
-            start = time.time()
-            with torch.cuda.device(exp.DEVICE.index):
-                output = fn(*args, **kwargs)
-            self._check_bad_values()
-            end = time.time()
-            update_dict_of_lists(self._epoch_results, **self.results)
-            update_dict_of_lists(self._epoch_times,
-                                 **{self.name: end - start})
-            losses = dict()
-            for k, v in self.losses.items():
-                if isinstance(v, (tuple, list)):
-                    losses[k] = sum([v_.item() for v_ in v])
-                else:
-                    losses[k] = v.item()
-            update_dict_of_lists(self._epoch_losses, **losses)
-
-            return output
-
-        self.routine = wrapped
-
-    def _wrap_step(self, fn, train=True):
-        '''Wraps the training or evaluation step.
-
-        Args:
-            fn: Callable step function.
-            train (bool): For train or eval step.
-
-        Returns:
-            Wrapped version of the function.
-
-        '''
-
-        fn = self._wrap(fn)
-
-        def wrapped(*args, _init=False, **kwargs):
-            if train and not _init:
-                self._set_train()
-                for net in self.nets.values():
-                    net.train()
-            else:
-                self._set_eval()
-                for net in self.nets.values():
-                    net.eval()
-
-            output = fn(*args, **kwargs)
-            self.losses.clear()
-
-            return output
-
-        return wrapped
-
-    def _wrap_loop(self, fn, train=True):
-        '''Wraps a loop.
-
-        Args:
-            fn: Callable loop function.
-            train (bool): For train or eval loop.
-
-        Returns:
-            Wrapped version of the function.
-
-        '''
-
-        data_mode = 'train' if train else 'test'
-
-        if train:
-            epoch_str = 'Training {} (epoch {}): '
-        else:
-            epoch_str = 'Evaluating {} (epoch {}): '
-
-        def wrapped(epoch, data_mode=data_mode, use_pbar=True):
-            self._reset_epoch()
-            self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch),
-                            make_pbar=use_pbar)
-
-            if data_mode == 'train':
-                for k, sched in optimizer.SCHEDULERS.items():
-                    lr = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
-                    if not isinstance(
-                            sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                        sched.step()
-                    lr_ = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
-                    if lr != lr_:
-                        logger.debug(
-                            'Learning rate for {} changed to {}'.format(k, lr_))
-
-            fn()
-
-            results = self._all_epoch_results
-            results['losses'] = dict(self._all_epoch_losses)
-            results['times'] = dict(self._all_epoch_times)
-
-            if data_mode == 'train':
-                for k, sched in optimizer.SCHEDULERS.items():
-                    lr = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
-                    if isinstance(
-                            sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                        loss = results['losses'][k][-1]
-                        sched.step(loss)
-                    lr_ = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
-                    if lr != lr_:
-                        logger.debug(
-                            'Learning rate for {} changed to {}'.format(k, lr_))
-
-        return wrapped
-
-    def _get_training_nets(self):
-        '''Retrieves the training nets for the object.
-
-        '''
-
-        training_nets = []
-        for v in self._training_nets.values():
-            training_nets += v
-
-        return training_nets
 
     def _check_bad_values(self):
         '''Check for bad numbers.

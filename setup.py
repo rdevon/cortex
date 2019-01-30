@@ -12,7 +12,7 @@ install_requirements = [
 ]
 
 setup(name='cortex',
-      version='0.12',
+      version='dev0.13',
       description='A library for wrapping your pytorch code',
       author='R Devon Hjelm',
       author_email='erroneus@gmail.com',

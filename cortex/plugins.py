@@ -193,6 +193,7 @@ class ModelPlugin(ModelPluginBase):
         self.data.next()
         self.routine(auto_input=True)
         self.optimizer_step()
+        self.finish_step()
 
     def eval_step(self):
         """Makes an evaluation step.
@@ -202,6 +203,7 @@ class ModelPlugin(ModelPluginBase):
         """
         self.data.next()
         self.routine(auto_input=True)
+        self.finish_step()
 
     def optimizer_step(self):
         """Makes a step of the optimizers for which losses are defined.
@@ -213,6 +215,7 @@ class ModelPlugin(ModelPluginBase):
 
         for i, k in enumerate(keys):
             loss = self.losses.get(k)
+            #loss.backward(retain_graph=True)
             loss.backward(retain_graph=True)
             key = self.nets._aliases.get(k, k)
 
@@ -231,6 +234,7 @@ class ModelPlugin(ModelPluginBase):
         try:
             while True:
                 self.train_step()
+                self.finish_step()
 
         except StopIteration:
             pass
@@ -245,6 +249,7 @@ class ModelPlugin(ModelPluginBase):
         try:
             while True:
                 self.eval_step()
+                self.finish_step()
 
         except StopIteration:
             pass

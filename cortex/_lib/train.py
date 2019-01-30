@@ -2,6 +2,7 @@
 
 '''
 
+from collections import OrderedDict
 import logging
 import pprint
 import sys
@@ -20,6 +21,17 @@ logger = logging.getLogger('cortex.train')
 
 
 def summarize_results(results):
+    ''' Summarizes results from a dictionary of lists.
+
+    Simply takes the mean of every list.
+
+    Args:
+        results (dict): Dictionary of list of results.
+
+    Returns:
+        dict: Dictionary of means.
+
+    '''
     results_ = {}
     for k, v in results.items():
         if isinstance(v, dict):
@@ -38,6 +50,15 @@ def summarize_results(results):
 
 
 def summarize_results_std(results):
+    '''Standard deviation version of `summarize_results`
+
+    Args:
+        results (dict): Dictionary of list of results.
+
+    Returns:
+        dict: Dictionary of stds.
+
+    '''
     results_ = {}
     for k, v in results.items():
         if isinstance(v, dict):
@@ -49,18 +70,48 @@ def summarize_results_std(results):
 
 def train_epoch(model, epoch, eval_during_train, data_mode='train',
                 use_pbar=True):
+    '''Trains model.
+
+    Goes until data iterator returns StopIteration.
+
+    Args:
+        model (ModelPlugin): Model to train.
+        epoch (int): Epoch
+        eval_during_train (bool): Pull results during training.
+            If false, recompute results keeping model fixed.
+        data_mode (str): train or test
+        use_pbar (bool): Use a progressbar when iterating data.
+
+    Returns:
+        dict: Dictionary of results for each batch.
+
+    '''
     model.train_loop(epoch, data_mode=data_mode, use_pbar=use_pbar)
 
     if not eval_during_train:
         return test_epoch(model, epoch, data_mode=data_mode, use_pbar=use_pbar)
 
-    results = summarize_results(model._all_epoch_results)
+    results = summarize_results(model._epoch_results)
     return results
 
 
 def test_epoch(model, epoch, data_mode='test', use_pbar=True):
+    '''Evaluates model.
+
+    Goes until data iterator returns StopIteration.
+
+    Args:
+        model (ModelPlugin): Model to train.
+        epoch (int): Epoch
+        data_mode (str): train or test
+        use_pbar (bool): Use a progressbar when iterating data.
+
+    Returns:
+        dict: Dictionary of results for each batch.
+
+    '''
     model.eval_loop(epoch, data_mode=data_mode, use_pbar=use_pbar)
-    results = summarize_results(model._all_epoch_results)
+    results = summarize_results(model._epoch_results)
 
     model.data.reset(make_pbar=False, mode='test')
     model.data.next()
@@ -69,47 +120,132 @@ def test_epoch(model, epoch, data_mode='test', use_pbar=True):
     return results
 
 
-def display_results(train_results, test_results, epoch, epochs, epoch_time,
-                    total_time):
+def display_results(train_results, test_results, last_train_results, last_test_results,
+                    epoch, epochs, epoch_time, total_time):
+    '''
+
+    Args:
+        train_results (dict): Dictionary of results from training data.
+        test_results (dict): Dictionary of results from holdout data.
+        last_train_results (dict or None): Dictionary of last training data results.
+        last_test_results (dict or None: Dictionary of last holdout data results.
+        epoch (int): Current epoch.
+        epochs (int): Total number of epochs.
+        epoch_time (float): Time for this epoch.
+        total_time (float): Total time for training.
+
+    '''
+
+    class bcolors:
+        INCREASING = '\033[91m' # red
+        DECREASING ='\033[94m' # blue
+        UNDERLINE = '\033[4m'
+        BOLD = '\033[1m'
+        ENDC = '\033[0m'
+
+    def color_increasing(s):
+        return bcolors.INCREASING + s[:-1] + '\u21e7' + bcolors.ENDC
+
+    def color_decreasing(s):
+        return bcolors.DECREASING + s[:-1] + '\u21e9' + bcolors.ENDC
+
+    def underline(s):
+        return bcolors.UNDERLINE + s + bcolors.ENDC
+
+    def bold(s):
+        return bcolors.BOLD + s + bcolors.ENDC
+
+    format_length = 8
+    format_string = '{:8.4f}'
+
+    def print_table(train, test, train_last, test_last, prefix):
+        '''Prints table.
+
+        Args:
+            train (dict): Dictionary of results from training data.
+            test (dict): Dictionary of results from holdout data.
+            train_last (dict or None): Dictionary of last training data results.
+            test_last (dict or None): Dictionary of last holdout data results.
+            prefix: Prefix for first line of table.
+
+        '''
+        train = OrderedDict(sorted(train.items()))
+        max_key_length = max(len(k) for k in train.keys())
+        s = prefix + \
+            ' ' * (max_key_length + 2 - len(prefix) + 4 + format_length - len('train')) + \
+            ' Train |' + \
+            ' ' * (format_length - len('test')) + ' Test'
+        s = underline(s)
+        print(s)
+        for k in train.keys():
+            if k in ('losses', 'times'):
+                continue
+            s = '    '
+            key_length = len(k)
+            v_train = train[k]
+            v_test = test[k]
+            v_train_last = train_last[k] if (train_last and k in train_last) else v_train
+            v_test_last = test_last[k] if (test_last and k in test_last) else v_test
+
+            s += '{} {} '.format(k, '-' + '-' * (max_key_length - key_length))
+            s_train = format_string.format(v_train)
+            if v_train != v_train_last:
+                if v_train > v_train_last:
+                    s += color_increasing(s_train)
+                elif v_train < v_train_last:
+                    s += color_decreasing(s_train)
+            else:
+                s += s_train
+
+            if v_test is not None:
+                s_test = format_string.format(v_test)
+                if v_test != v_test_last:
+                    s += ' | '
+                    if v_test > v_test_last:
+                        s += color_increasing(s_test)
+                    elif v_test < v_test_last:
+                        s += color_decreasing(s_test)
+                else:
+                    s += ' | ' + s_test
+
+            print(s)
+
+    print()
+    print()
+    # Show epoch information
     if epochs and epoch:
-        print('\n\tEpoch {}/{} took {:.3f}s. Total time: {:.2f}'
-              .format(epoch + 1, epochs, epoch_time, total_time))
+        s = 'Epoch {} / {} took {:.2f}s. Total time: {:.2f}s'\
+            .format(epoch + 1, epochs, epoch_time, total_time)
+        s = bold(s)
+        print(s)
 
+    # Show times
     times = train_results.pop('times', None)
+    print(underline('Avg update times: '))
     if times:
-        time_strs = ['{}: {:.2f}'.format(k, v) for k, v in times.items()]
-        print('\tAvg update times: ' + ' | '.join(time_strs))
+        for k, v in times.items():
+            print('    {}: {:.5f}s'.format(k, v))
 
-    train_losses = train_results.pop('losses')
-    test_losses = test_results.pop('losses')
-
-    loss_strs = ['{}: {:.2f} / {:.2f}'
-                 .format(k, train_losses[k], test_losses[k])
-                 for k in train_losses.keys()]
-    print('\tAvg loss: ' + ' | '.join(loss_strs))
-
-    for k in train_results.keys():
-        v_train = train_results[k]
-        v_test = test_results[k] if k in test_results else None
-        if v_test is None:
-            if isinstance(v_train, dict):
-                print('\t' + k + ': ' + ' | '
-                      .join(['{}: {:.2f}'
-                             .format(k_, v_train[k_])
-                             for k_ in v_train.keys()]))
-            else:
-                print('\t{}: {:.2f}'.format(k, v_train))
-        else:
-            if isinstance(v_train, dict):
-                print('\t' + k + ': ' + ' | '
-                      .join(['{}: {:.2f} / {:.2f}'
-                             .format(k_, v_train[k_], v_test[k_])
-                             for k_ in v_train.keys()]))
-            else:
-                print('\t{}: {:.2f} / {:.2f}'.format(k, v_train, v_test))
+    # Show losses
+    train_losses = train_results['losses']
+    test_losses = test_results['losses']
+    train_losses_last = last_train_results.pop('losses') if last_train_results else None
+    test_losses_last = last_test_results.pop('losses') if last_test_results else None
+    print()
+    print_table(train_losses, test_losses, train_losses_last, test_losses_last, 'Network losses:')
+    print()
+    print_table(train_results, test_results, last_train_results, last_test_results, 'Results:')
+    print()
 
 
 def align_summaries(d_train, d_test):
+    '''Aligns summaries for models that are updated at different rates.
+
+    Args:
+        d_train: Dictionary of results from training data.
+        d_test: Dictionary of results from holdout data.
+
+    '''
     keys = set(d_train.keys()).union(set(d_test.keys()))
     for k in keys:
         if k in d_train and k in d_test:
@@ -153,6 +289,19 @@ def align_summaries(d_train, d_test):
 
 
 def save_best(model, train_results, best, save_on_best, save_on_lowest):
+    '''Saves the best model according to some metric.
+
+    Args:
+        model (ModelPlugin): Model.
+        train_results (dict): Dictionary of results from training data.
+        best (float): Last best value.
+        save_on_best (bool): If true, save when best is found.
+        save_on_lowest (bool): If true, lower is better.
+
+    Returns:
+        float: the best value.
+
+    '''
     flattened_results = {}
     for k, v in train_results.items():
         if isinstance(v, dict):
@@ -224,6 +373,8 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
 
     epoch = exp.INFO['epoch']
     first_epoch = epoch
+    train_results_last_ = None
+    test_results_last_ = None
 
     while epoch < epochs:
         try:
@@ -253,8 +404,11 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
             # Finishing up
             epoch_time = time.time() - start_time
             total_time += epoch_time
-            display_results(train_results_, test_results_, epoch, epochs,
-                            epoch_time, total_time)
+            display_results(train_results_, test_results_, train_results_last_, test_results_last_,
+                            epoch, epochs, epoch_time, total_time)
+
+            train_results_last_ = train_results_
+            test_results_last_ = test_results_
 
             if viz.visualizer:
                 plot(epoch, init=(epoch == first_epoch))

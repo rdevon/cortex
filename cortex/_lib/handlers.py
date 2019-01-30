@@ -77,6 +77,11 @@ class Handler(MutableMapping):
                  if not k.startswith('_'))
         return d.__str__()
 
+    def __repr__(self):
+        d = dict((k, v) for k, v in self.__dict__.items()
+                 if not k.startswith('_'))
+        return d.__repr__()
+
 
 def convert_nested_dict_to_handler(d, _class=Handler):
     if not isinstance(d, dict):
@@ -293,7 +298,7 @@ class LossHandler(Handler):
     '''Simple dict-like container for losses
     '''
 
-    _type = torch.Tensor
+    _type = (torch.Tensor, list)
     _get_error_string = 'Loss `{}` not found. You must add it as a dict entry'
 
     def __init__(self, nets, *args, method='append', **kwargs):
