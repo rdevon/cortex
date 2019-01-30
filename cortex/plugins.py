@@ -213,6 +213,7 @@ class ModelPlugin(ModelPluginBase):
 
         for i, k in enumerate(keys):
             loss = self.losses.get(k)
+            #loss.backward(retain_graph=True)
             loss.backward(retain_graph=True)
             key = self.nets._aliases.get(k, k)
 
@@ -231,6 +232,7 @@ class ModelPlugin(ModelPluginBase):
         try:
             while True:
                 self.train_step()
+                self.finish_step()
 
         except StopIteration:
             pass
@@ -245,6 +247,7 @@ class ModelPlugin(ModelPluginBase):
         try:
             while True:
                 self.eval_step()
+                self.finish_step()
 
         except StopIteration:
             pass
