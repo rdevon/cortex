@@ -211,7 +211,7 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
     total_time = 0.
     if eval_only:
         test_results, test_std = test_epoch(
-            'Testing', eval_mode=True, mode=test_mode)
+            'Testing', data_mode=test_mode)
         convert_to_numpy(test_results)
         convert_to_numpy(test_std)
 

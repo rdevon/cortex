@@ -55,10 +55,10 @@ class SimpleClassifier(ModelPlugin):
         if labeled.sum() > 0:
             correct = 100. * (labeled * predicted.eq(
                 targets.data).float()).cpu().sum() / labeled.cpu().sum()
-            self.results.accuracy = correct
+            self.results.accuracy = correct.item()
             self.losses.classifier = loss
 
-        self.results.perc_labeled = labeled.mean()
+        self.results.perc_labeled = labeled.mean().item()
 
     def predict(self, inputs):
         classifier = self.nets.classifier
@@ -107,9 +107,9 @@ class SimpleAttributeClassifier(SimpleClassifier):
         correct = 100. * predicted.eq(attributes.data).cpu().sum(0) / attributes.size(0)
 
         self.losses.classifier = loss
-        self.results.accuracy = dict(mean=correct.float().mean(),
-                                     max=correct.max(),
-                                     min=correct.min())
+        self.results.accuracy = dict(mean=correct.float().mean().item(),
+                                     max=correct.max().item(),
+                                     min=correct.min().item())
 
     def predict(self, inputs):
         classifier = self.nets.classifier
