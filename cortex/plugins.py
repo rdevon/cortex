@@ -193,6 +193,7 @@ class ModelPlugin(ModelPluginBase):
         self.data.next()
         self.routine(auto_input=True)
         self.optimizer_step()
+        self.finish_step()
 
     def eval_step(self):
         """Makes an evaluation step.
@@ -202,6 +203,7 @@ class ModelPlugin(ModelPluginBase):
         """
         self.data.next()
         self.routine(auto_input=True)
+        self.finish_step()
 
     def optimizer_step(self):
         """Makes a step of the optimizers for which losses are defined.

@@ -278,6 +278,7 @@ class ModelPluginBase(metaclass=PluginType):
         losses = self.fetch_all_losses()
         losses_ = {}
         collapse(losses, losses_)
+        self.losses.clear()
         self.losses.update(**losses_)
 
     def collapse_results(self):
@@ -294,11 +295,11 @@ class ModelPluginBase(metaclass=PluginType):
                     collapse(v, results, prefix=key)
                 else:
                     results[key] = v
-
         results = self.fetch_all_results()
         results_ = {}
         collapse(results, results_)
-        self._results = results_
+        self._results.clear()
+        self._results.update(**results_)
 
     def collapse_times(self):
         '''Collapses times from child models.
@@ -399,7 +400,7 @@ class ModelPluginBase(metaclass=PluginType):
             self.collapse_times()
 
             # Detach losses
-            self._losses = dict((k, v.detach().item()) for k, v in self.losses.items())
+            #self.losses.detach()
             return output
 
         return cortex_step
@@ -411,9 +412,11 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
         # Appends to each list of results and losses.
+        loss_dict = dict((k, v.detach().item()) for k, v in self.losses.items())
+
         update_dict_of_lists(self._epoch_results, **self.results)
         update_dict_of_lists(self._epoch_times, **self.times)
-        update_dict_of_lists(self._epoch_losses, **self.losses)
+        update_dict_of_lists(self._epoch_losses, **loss_dict)
 
         self.losses.clear()
         self.results.clear()
