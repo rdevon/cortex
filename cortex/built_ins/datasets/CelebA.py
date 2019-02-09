@@ -17,7 +17,7 @@ class CelebAPlugin(DatasetPlugin):
     sources = ['CelebA']
 
     def handle(self, source, copy_to_local=False, normalize=True,
-               split=None, classification_mode=False, **transform_args):
+               split=None, classification_mode=False, data_path=None, **transform_args):
         """
 
         Args:
@@ -30,7 +30,7 @@ class CelebAPlugin(DatasetPlugin):
 
         """
         Dataset = self.make_indexing(CelebA)
-        data_path = self.get_path(source)
+        data_path = data_path or self.get_path(source)
 
         if copy_to_local:
             data_path = self.copy_to_local_path(data_path)

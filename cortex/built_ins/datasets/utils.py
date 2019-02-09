@@ -5,24 +5,25 @@ Extra functions for build-in datasets
 import torchvision.transforms as transforms
 
 
-def build_transforms(normalize=True, center_crop=None, image_size=None,
+def build_transforms(normalize=None, center_crop=None, image_size=None,
                      random_crop=None, flip=None, random_resize_crop=None,
-                     random_sized_crop=None, use_sobel=False):
+                     random_sized_crop=None):
     """
 
     Args:
-        normalize:
-        center_crop:
-        image_size:
-        random_crop:
-        flip:
-        random_resize_crop:
-        random_sized_crop:
-        use_sobel:
+        normalize (tuple or transforms.Normalize): Parameters for data normalization.
+        center_crop (int): Size for center crop.
+        image_size (int): Size for image size.
+        random_crop (int): Size for image random crop.
+        flip (bool): Randomly flip the data horizontally.
+        random_resize_crop (int): Random resize crop the image.
+        random_sized_crop (int): Random size crop of the image.
 
     Returns:
+        Transforms
 
     """
+
     transform_ = []
 
     if random_resize_crop:

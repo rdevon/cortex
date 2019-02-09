@@ -11,7 +11,7 @@ import time
 import numpy as np
 
 from . import exp, viz
-from .utils import convert_to_numpy, update_dict_of_lists
+from .utils import convert_to_numpy, update_dict_of_lists, print_hypers
 from .viz import plot
 
 __author__ = 'R Devon Hjelm'
@@ -336,7 +336,7 @@ def save_best(model, train_results, best, save_on_best, save_on_lowest):
 def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
               save_on_lowest=None, save_on_highest=None, eval_during_train=True,
               train_mode='train', test_mode='test', eval_only=False,
-              pbar_off=False):
+              pbar_off=False, viz_test_only=False):
     '''
 
     Args:
@@ -350,9 +350,10 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         test_mode: Saves when lowest of this result is found.
         eval_only: Gives results over a training epoch.
         pbar_off: Turn off the progressbar.
+        viz_test_only: Show only test values in visualization.
 
     '''
-    info = pprint.pformat(exp.ARGS)
+    info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
 
     logger.info('Starting main loop.')
 
@@ -411,7 +412,7 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
             test_results_last_ = test_results_
 
             if viz.visualizer:
-                plot(epoch, init=(epoch == first_epoch))
+                plot(epoch, init=(epoch == first_epoch), viz_test_only=viz_test_only)
                 model.viz.show()
                 model.viz.clear()
 

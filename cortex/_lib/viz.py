@@ -42,9 +42,7 @@ def init(viz_config):
         server = viz_config.get('server', None)
         port = viz_config.get('port', 8097)
         logger.info('Using visdom version {}'.format(visdom.__version__))
-        print(server, port)
         visualizer = visdom.Visdom(server=server, port=port)
-        print(visualizer.check_connection())
         if not visualizer.check_connection():
             if _yes_no("No Visdom server runnning on the configured address. "
                        "Do you want to start it?"):
@@ -189,7 +187,7 @@ class VizHandler():
         self.clear()
 
 
-def plot(epoch, init=False):
+def plot(epoch, init=False, viz_test_only=False):
     """Updates the plots for the reults.
 
     Takes the last value from the summary and appends this to the visdom plot.
@@ -231,8 +229,16 @@ def plot(epoch, init=False):
     train_summary = exp.SUMMARY['train']
     test_summary = exp.SUMMARY['test']
     for k in train_summary.keys():
-        v_train = train_summary[k]
-        v_test = test_summary[k] if k in test_summary.keys() else None
+
+        if viz_test_only and k != 'times':
+            if k in test_summary.keys():
+                v_train = test_summary[k]
+                v_test = None
+            else:
+                continue
+        else:
+            v_train = train_summary[k]
+            v_test = test_summary[k] if k in test_summary.keys() else None
 
         if isinstance(v_train, dict):
             Y = []

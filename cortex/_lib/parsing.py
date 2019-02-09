@@ -3,14 +3,11 @@
 '''
 
 import argparse
-import ast
 import copy
 import inspect
 import logging
 import re
 import sys
-
-import torch
 
 from sphinxcontrib.napoleon import Config
 from sphinxcontrib.napoleon.docstring import GoogleDocstring
@@ -124,8 +121,8 @@ train_args = parse_kwargs(train.main_loop)
 optimizer_help = parse_docstring(optimizer.setup)
 optimizer_args = parse_kwargs(optimizer.setup)
 
-default_args = dict(data=data_args, optimizer=optimizer_args, train=train_args)
-default_help = dict(data=data_help, optimizer=optimizer_help, train=train_help)
+DEFAULT_ARGS = dict(data=data_args, optimizer=optimizer_args, train=train_args)
+DEFAULT_HELP = dict(data=data_help, optimizer=optimizer_help, train=train_help)
 
 _protected_args = ['arch', 'out_path', 'name', 'reload',
                    'args', 'copy_to_local', 'meta', 'config_file',
@@ -243,24 +240,24 @@ def _parse_model(model, subparser):
 
     """
     global default_args
-    kwargs = dict((k, v) for k, v in model.kwargs.items())
+    hyperparameters = model.pull_hyperparameters()
     model_defaults = model.defaults
-    model_defaults_model = model.defaults.pop('model', {})
-    update_args(model_defaults_model, kwargs)
-    helps = model.help
+    model_defaults_model = model.defaults.pop('hyperparameters', {})
+    update_args(model_defaults_model, hyperparameters)
+    info = model.pull_info()
 
-    for k, v in kwargs.items():
-        help = helps.get(k, None)
-        _parse_kwargs(k, v, help, subparser)
+    for k, v in hyperparameters.items():
+        h_info = info.get(k, None)
+        _add_hyperparameter_argument(k, v, h_info, subparser)
 
-    default_args = dict((k, v) for k, v in default_args.items())
+    default_args = dict((k, v) for k, v in DEFAULT_ARGS.items())
     update_args(model_defaults, default_args)
 
     for key, args in default_args.items():
-        _parse_defaults(key, args, subparser)
+        _add_default_arguments(key, args, subparser)
 
 
-def _parse_defaults(key, args, subparser):
+def _add_default_arguments(key, args, subparser):
     """Parses the default values of a model for the command line.
 
     Args:
@@ -273,67 +270,24 @@ def _parse_defaults(key, args, subparser):
     """
     for k, v in args.items():
         arg_str = '--' + key[0] + '.' + k
-        help = default_help[key][k]
+        help = DEFAULT_HELP[key][k]
         dest = key + '.' + k
 
-        if isinstance(v, (dict, list, tuple)):
-            type_ = type(v)
-            dstr = str(v)
-            dstr = dstr.replace(' ', '')
-            metavar = '<' + type_.__name__ + '>'
-            if not ('[' in dstr or ']' in dstr):
-                metavar += ' (default=' + dstr + ')'  # argparse doesn't like square brackets
-
-            subparser.add_argument(
-                arg_str,
-                dest=dest,
-                default=None,
-                action=StoreDictKeyPair,
-                help=help,
-                metavar=metavar)
-        elif isinstance(v, bool) and not v:
-            action = 'store_true'
-            dest = key + '.' + k
-            subparser.add_argument(arg_str, dest=dest,
-                                   action=action, default=False,
-                                   help=help)
-        elif isinstance(v, bool):
-            type_ = type(v)
-            metavar = '<' + type_.__name__ + \
-                      '> (default=' + str(v) + ')'
-            dest = key + '.' + k
-            subparser.add_argument(
-                arg_str,
-                dest=dest,
-                default=True,
-                metavar=metavar,
-                type=str2bool,
-                help=help)
-        elif v is None:
-            metavar = '<UNK type> (default=N/A)'
-            subparser.add_argument(
-                arg_str,
-                dest=dest,
-                default=None,
-                action=StoreDictKeyPair,
-                help=help,
-                metavar=metavar)
-        else:
-            type_ = type(v) if v is not None else str
-            metavar = '<' + type_.__name__ + \
-                      '> (default=' + str(v) + ')'
-            subparser.add_argument(
-                arg_str,
-                dest=dest,
-                default=v,
-                metavar=metavar,
-                type=type_,
-                help=help)
+        _add_hyperparameter_argument(k, v, help, subparser, dest=dest, arg_str=arg_str)
 
 
-def _parse_kwargs(k, v, help, subparser):
-    arg_str = '--' + k
-    choices = None
+def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None):
+    '''Adds hyperparameter to parser.
+
+    Args:
+        k: Name of the hyperparameter
+        v: Default value.
+        help: Info for the hyperparameter
+        subparser: Subparser to add argument to.
+
+    '''
+    arg_str = arg_str or '--' + k
+    dest = dest or k
 
     if isinstance(v, (dict, list, tuple)):
         type_ = type(v)
@@ -345,31 +299,39 @@ def _parse_kwargs(k, v, help, subparser):
 
         subparser.add_argument(
             arg_str,
-            dest=k,
+            dest=dest,
             default=v,
             action=StoreDictKeyPair,
             help=help, metavar=metavar)
     elif isinstance(v, bool) and not v:
         action = 'store_true'
         subparser.add_argument(
-            arg_str, dest=k, action=action, default=False, help=help)
+            arg_str, dest=dest, action=action, default=False, help=help)
     elif isinstance(v, bool):
         type_ = type(v)
         metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
         subparser.add_argument(
             arg_str,
-            dest=k,
+            dest=dest,
             default=True,
             metavar=metavar,
             type=str2bool,
             help=help)
+    elif v is None:
+        metavar = '<UNK type> (default=N/A)'
+        subparser.add_argument(
+            arg_str,
+            dest=dest,
+            default=None,
+            action=StoreDictKeyPair,
+            help=help,
+            metavar=metavar)
     else:
         type_ = type(v) if v is not None else str
         metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
         subparser.add_argument(
             arg_str,
-            dest=k,
-            choices=choices,
+            dest=dest,
             metavar=metavar,
             default=v,
             type=type_,

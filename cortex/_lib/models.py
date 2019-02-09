@@ -54,12 +54,19 @@ def get_model(model_name):
 
 class PluginType(type):
     def __new__(metacls, name, bases, attrs):
+        '''
+
+        This effectively reads all the keyword arguments and docstring from core functions,
+        then collects these and makes sure they are consistent for a model.
+
+        '''
         cls = super(PluginType, metacls).__new__(metacls, name, bases, attrs)
 
         help = {}
         kwargs = {}
         args = set()
 
+        # TODO change this to test for decorator, as per future changes to model.
         for key in ['build', 'routine', 'visualize', 'train_step', 'eval_step']:
             if hasattr(cls, key):
                 attr = getattr(cls, key)
@@ -82,6 +89,24 @@ class PluginType(type):
                         kwargs[k] = v
                 args |= args_
 
+        # Get parent class arguemnts, kwargs, and help. TODO
+        '''
+        parents = cls.__bases__
+        for parent in parents:
+            if hasattr(parent, '_kwargs'):
+                for k, v in parent._kwargs.items():
+                    if k in kwargs and v != kwargs[k] and v is not None:
+                        metacls._warn_inconsitent_kwargs(key, k, kwargs[k], v)
+                    else:
+                        kwargs[k] = v
+            if hasattr(parent, '_help'):
+                for k, v in parent._help.items():
+                    if k in help and v != help[k]:
+                        metacls._warn_inconsitent_help(key, k, kwargs[k], v)
+                    else:
+                        help[k] = v
+        '''
+
         cls._help = help
         cls._kwargs = kwargs
         cls._args = args
@@ -93,7 +118,7 @@ class PluginType(type):
                        'Using {v} instead of {v_}'.format(k=k, v=v, v_=v_))
 
     def _warn_inconsitent_kwargs(cls, k, v, v_):
-        logger.warning('Inconsistent keyword defaults found with argument {k}. '
+        logger.warning('Inconsistent hyperparameter defaults found with argument {k}. '
                        'Using {v} instead of {v_}'.format(k=k, v=v, v_=v_))
 
 
@@ -169,9 +194,11 @@ class ModelPluginBase(metaclass=PluginType):
     _viz = VizHandler()
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
+    _hyperparams = dict()
     _training_nets = dict()
     _all_nets = NetworkHandler(allow_overwrite=False)
 
+    # Results for an epoch.
     _epoch_losses = ResultsHandler()
     _epoch_times = ResultsHandler()
     _epoch_results = ResultsHandler()
@@ -217,6 +244,61 @@ class ModelPluginBase(metaclass=PluginType):
         self.eval_step = self.model_step(self.eval_step, train=False)
         self.train_loop = self.model_loop(self.train_loop, train=True)
         self.eval_loop = self.model_loop(self.eval_loop, train=False)
+
+    def __setattr__(self, key, value):
+        '''Sets an attribute for the model.
+
+        Overriding is done to handle adding a ModelPlugin attribute to this
+        object.
+
+        '''
+        if isinstance(value, ModelPluginBase):
+            model = value
+            model.name = key
+            self._models.append(model)
+
+        super().__setattr__(key, value)
+
+    def add_models(self, **kwargs):
+        for k, v in kwargs.items():
+            self.add_model(k, v)
+
+    def add_model(self, key, value):
+        if isinstance(value, ModelPluginBase):
+            setattr(self, key, value)
+        else:
+            raise TypeError('Model must be subclass of {}'.format(ModelPluginBase))
+
+    # Hyperparameter functions
+    def pull_hyperparameters(self):
+        hyperparameters = copy.deepcopy(self._kwargs)
+        for model in self._models:
+            m_hypers = model.pull_hyperparameters()
+            m_hypers = dict(('{}.{}'.format(model.name, k), v)
+                             for k, v in m_hypers.items())
+            hyperparameters.update(**m_hypers)
+
+        return hyperparameters
+
+    def push_hyperparameters(self, hyperameters):
+        for k, v in hyperameters.items():
+            if k in self.kwargs.keys():
+                self.kwargs[k] = v
+
+        for child in self._models:
+            child_hypers = hyperameters.get(child.name, {})
+            child.push_hyperparameters(child_hypers)
+
+    def pull_info(self):
+        # TODO
+        info = copy.deepcopy(self._help)
+        for model in self._models:
+            m_info = model.pull_info()
+            m_info = dict(('{}.{}'.format(model.name, k), v)
+                          for k, v in m_info.items())
+            info.update(**m_info)
+
+        return info
 
     # Functions for fetching and collapsing results
 
@@ -398,9 +480,6 @@ class ModelPluginBase(metaclass=PluginType):
             self.collapse_results()
             self.collapse_losses()
             self.collapse_times()
-
-            # Detach losses
-            #self.losses.detach()
             return output
 
         return cortex_step
@@ -641,46 +720,6 @@ class ModelPluginBase(metaclass=PluginType):
         self._train = False
         for m in self._models:
             m._set_eval()
-
-    def __setattr__(self, key, value):
-        '''Sets an attribute for the model.
-
-        Overriding is done to handle adding a ModelPlugin attribute to this
-        object.
-
-        '''
-        if isinstance(value, ModelPluginBase):
-            model = value
-            kwargs = model.kwargs
-            help = model.help
-
-            if model._contract:
-                kwargs = dict((model._contract['kwargs'].get(k, k), v)
-                              for k, v in kwargs.items() if v is not None)
-                help = dict((model._contract['kwargs'].get(k, k), v)
-                            for k, v in help.items())
-
-            for k, v in kwargs.items():
-                if k not in self.kwargs or self.kwargs[k] is None:
-                    self.kwargs[k] = copy.deepcopy(v)
-            for k, v in help.items():
-                if k not in self.help:
-                    self.help[k] = help[k]
-            model._set_kwargs(self._kwargs)
-            model.name = key
-
-            #model._results = prefixed(
-            #    model._all_results, prefix=model.name)
-            #model._epoch_results = prefixed(
-            #    model._all_epoch_results, prefix=model.name)
-            self._models.append(model)
-
-        super().__setattr__(key, value)
-
-    def _set_kwargs(self, kwargs):
-        self._kwargs = kwargs
-        for model in self._models:
-            model._set_kwargs(kwargs)
 
     def _check_bad_values(self):
         '''Check for bad numbers.

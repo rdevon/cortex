@@ -6,11 +6,12 @@ import copy
 import glob
 import logging
 import os
-import pprint
 
 from . import config, exp, log_utils, models
-from .parsing import default_args, parse_args, update_args
+from .parsing import DEFAULT_ARGS, parse_args, update_args
 from .viz import init as viz_init
+from .utils import print_hypers
+
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -25,7 +26,7 @@ def setup_cortex(model=None):
     logger.
 
     Returns:
-        TODO
+        argparse.arguments: Arguments parsed from command line.
 
     '''
     args = parse_args(models.MODEL_PLUGINS, model=model)
@@ -47,6 +48,7 @@ def find_autoreload(out_path, global_out_path, name, idx=0):
         idx: Index of model loaded.
 
     Returns:
+        str: Path to binary.
 
     """
     out_path = out_path or global_out_path
@@ -69,7 +71,7 @@ def setup_experiment(args, model=None, testmode=False):
     dictionary.
 
     Args:
-        args: Output from argument parser.
+        argparse.arguments: Output from argument parser.
 
     """
 
@@ -90,21 +92,44 @@ def setup_experiment(args, model=None, testmode=False):
     else:
         model_name = model.__class__.__name__
 
-    experiment_args = copy.deepcopy(default_args)
+    experiment_args = copy.deepcopy(DEFAULT_ARGS)
     update_args(experiment_args, exp.ARGS)
 
     if not testmode and not args.noviz:
         viz_init(config.CONFIG.viz)
 
+    def _expand_model_hypers(args, model):
+        d = {}
+        arg_keys = list(args.keys())
+
+        for k in arg_keys:
+            if k in model.kwargs.keys():
+                v = args.pop(k)
+                d[k] = v
+
+        for child in model._models:
+            child_args = dict()
+            arg_keys = list(args.keys())
+            for k in arg_keys:
+                if k.split('.')[0] == child.name:
+                    v = args.pop(k)
+                    child_args['.'.join(k.split('.')[1:])] = v
+
+            d_ = _expand_model_hypers(child_args, child)
+            d[child.name] = d_
+
+        return d
+
+    model_hypers = _expand_model_hypers(vars(args), model)
+    exp.ARGS['model'] = model_hypers
+
     for k, v in vars(args).items():
         if v is not None:
             if '.' in k:
                 head, tail = k.split('.')
-            elif k in model.kwargs:
-                head = 'model'
-                tail = k
             else:
                 continue
+
             exp.ARGS[head][tail] = v
 
     reload_nets = None
@@ -175,13 +200,10 @@ def setup_experiment(args, model=None, testmode=False):
         exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
                           clean=args.clean)
 
-    update_nested_dicts(exp.ARGS['model'], model.kwargs)
-    exp.ARGS['model'].update(**model.kwargs)
-
     exp.configure_from_yaml(config_file=args.config_file)
 
-    for k, v in exp.ARGS.items():
-        logger.info('Ultimate {} arguments: \n{}'
-                    .format(k, pprint.pformat(v)))
+    str = print_hypers(exp.ARGS, s='Final hyperparameters: ')
+    logger.info(str)
+    model.push_hyperparameters(exp.ARGS['model'])
 
     return model, reload_nets

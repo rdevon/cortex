@@ -103,3 +103,52 @@ def compute_tsne(X, perplexity=40, n_iter=300, init='pca'):
     tsne = TSNE(2, perplexity=perplexity, n_iter=n_iter, init=init)
     points = X.tolist()
     return tsne.fit_transform(points)
+
+
+class bcolors:
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    ENDC = '\033[0m'
+
+
+def bold(s, visdom_mode=False):
+    if visdom_mode:
+        bold_char = '<b>'
+        end_char = '</b>'
+    else:
+        bold_char = bcolors.BOLD
+        end_char = bcolors.ENDC
+    return bold_char + s + end_char
+
+
+def underline(s, visdom_mode=False):
+    if visdom_mode:
+        ul_char = '<u>'
+        end_char = '</u>'
+    else:
+        ul_char = bcolors.UNDERLINE
+        end_char = bcolors.ENDC
+    return  ul_char + s + end_char
+
+
+def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0):
+    if visdom_mode:
+        newline = '<br>'
+        space = '&nbsp;&nbsp;'
+    else:
+        newline = '\n'
+        space = '  '
+    prefix = prefix or ''
+    for k, v in d.items():
+        s += '{}{}{}'.format(newline, space, prefix)
+        if level == 0:
+            spaces = space * 30
+            s += underline('{}:{}'.format(k, spaces), visdom_mode=visdom_mode)
+        else:
+            s += '{}:'.format(k)
+
+        if isinstance(v, dict) and len(v) > 0:
+            s = print_hypers(v, prefix + space, s=s, visdom_mode=visdom_mode, level=level + 1)
+        else:
+            s += bold('{}'.format(v), visdom_mode=visdom_mode)
+    return s
