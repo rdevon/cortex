@@ -215,7 +215,6 @@ class ModelPlugin(ModelPluginBase):
 
         for i, k in enumerate(keys):
             loss = self.losses.get(k)
-            #loss.backward(retain_graph=True)
             loss.backward(retain_graph=True)
             key = self.nets._aliases.get(k, k)
 

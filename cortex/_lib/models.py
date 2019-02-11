@@ -444,7 +444,7 @@ class ModelPluginBase(metaclass=PluginType):
 
             self._check_bad_values()
             end = time.time()
-            self.times[self.__class__.__name__] = end - start
+            self.times[self.name] = end - start
 
             return output
 

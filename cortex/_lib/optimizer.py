@@ -27,15 +27,18 @@ _optimizer_defaults = dict(
 
 def wrap_optimizer(C):
     class Op(C):
-        def __init__(self, params, clipping=None, **kwargs):
+        def __init__(self, params, clipping=None, grad_clipping=None, **kwargs):
             super().__init__(params, **kwargs)
 
             if clipping is not None and clipping < 0.0:
                 raise ValueError(
                     "Invalid clipping value: {}".format(clipping))
 
-            self.defaults.update(clipping=clipping)
+            if grad_clipping is not None and grad_clipping < 0.0:
+                raise ValueError(
+                    "Invalid grad_clipping value: {}".format(grad_clipping))
 
+            self.defaults.update(clipping=clipping, grad_clipping=grad_clipping)
             self.state = defaultdict(dict)
             self.param_groups = []
 
@@ -55,6 +58,13 @@ def wrap_optimizer(C):
                 closure (callable, optional): A closure that reevaluates the model
                     and returns the loss.
             """
+
+            for group in self.param_groups:
+                bound = group['grad_clipping']
+                if bound:
+                    for p in group['params']:
+                        p.grad.data.clamp_(-bound, bound)
+
             loss = super().step(closure=closure)
 
             for group in self.param_groups:
@@ -68,7 +78,7 @@ def wrap_optimizer(C):
 
 
 def setup(model, optimizer='Adam', learning_rate=1.e-4,
-          weight_decay={}, clipping={}, optimizer_options={},
+          weight_decay={}, clipping={}, grad_clipping={}, optimizer_options={},
           model_optimizer_options={}, scheduler=None, scheduler_options={}):
     '''Optimizer entrypoint.
 
@@ -76,7 +86,8 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         optimizer: Optimizer type. See `torch.optim` for supported optimizers.
         learning_rate: Learning rate.
         updates_per_routine: Updates per routine.
-        clipping: If set, this is the clipping for each model.
+        clipping: If set, this is the weight clipping for each model.
+        grad_clipping: If set, this is the gradient clipping for each model.
         weight_decay: If set, this is the weight decay for specified model.
         optimizer_options: Optimizer options.
         model_optimizer_options: Optimizer options for specified model.
@@ -90,6 +101,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
     model_optimizer_options = model_optimizer_options or {}
     weight_decay = weight_decay or {}
     clipping = clipping or {}
+    grad_clipping = grad_clipping or {}
 
     # Set the optimizer options
     if len(optimizer_options) == 0:
@@ -166,9 +178,14 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         else:
             cl = clipping
 
+        if isinstance(grad_clipping, dict):
+            g_cl = grad_clipping.get(network_key, None)
+        else:
+            g_cl = grad_clipping
+
         # Update the optimizer options
         optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
-        optimizer_options_.update(weight_decay=wd, clipping=cl, lr=eta)
+        optimizer_options_.update(weight_decay=wd, clipping=cl, grad_clipping=g_cl, lr=eta)
 
         if network_key in model_optimizer_options.keys():
             optimizer_options_.update(**model_optimizer_options)
