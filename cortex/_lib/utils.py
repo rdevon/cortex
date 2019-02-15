@@ -143,9 +143,9 @@ def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0):
         s += '{}{}{}'.format(newline, space, prefix)
         if level == 0:
             spaces = space * 30
-            s += underline('{}:{}'.format(k, spaces), visdom_mode=visdom_mode)
+            s += underline('{}: {}'.format(k, spaces), visdom_mode=visdom_mode)
         else:
-            s += '{}:'.format(k)
+            s += '{}: '.format(k)
 
         if isinstance(v, dict) and len(v) > 0:
             s = print_hypers(v, prefix + space, s=s, visdom_mode=visdom_mode, level=level + 1)

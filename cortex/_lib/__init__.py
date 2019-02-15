@@ -120,8 +120,30 @@ def setup_experiment(args, model=None, testmode=False):
 
         return d
 
+    def _pull_data_args(args):
+        arg_keys = list(args.keys())
+        d = {}
+        for k in arg_keys:
+            try:
+                a = k.split('.')
+                if len(a) == 3 and a[0] == 'data_args':
+                    name, key = a[1], a[2]
+                    value = args.pop(k)
+                    if name not in d.keys():
+                        d[name] = {}
+                    d[name][key] = value
+
+            except:
+                pass
+
+        return d
+
     model_hypers = _expand_model_hypers(vars(args), model)
     exp.ARGS['model'] = model_hypers
+
+    data_args = _pull_data_args(vars(args))
+    exp.ARGS['data'].update(**data_args)
+    exp.ARGS['data'].update(((exp.ARGS['data'].pop('data_args', {}))))
 
     for k, v in vars(args).items():
         if v is not None:

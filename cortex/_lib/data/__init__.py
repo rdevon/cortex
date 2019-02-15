@@ -18,9 +18,27 @@ DATASETS = {}
 _PLUGINS = {}
 
 
+def get_plugins(sources):
+    plugins = dict()
+    if not isinstance(sources, dict):
+        sources = dict(data=sources)
+
+    for name, source in sources.items():
+
+        plugin = _PLUGINS.get(source, None)
+        if plugin is None:
+            raise KeyError('Dataset plugin for `{}` not found.'
+                           ' Available: {}'
+                           .format(source, tuple(_PLUGINS.keys())))
+        plugins[name] = (source, plugin)
+
+    return plugins
+
+
 def setup(sources: str=None, batch_size=64, n_workers: int=4,
           skip_last_batch: bool=False, inputs=dict(),
-          copy_to_local: bool=False, data_args={}, shuffle: bool=True):
+          copy_to_local: bool=False, shuffle: bool=True,
+          **data_args):
     """
     Dataset entrypoint.
 
@@ -33,8 +51,8 @@ def setup(sources: str=None, batch_size=64, n_workers: int=4,
             is smaller than batch_size.
         inputs: Dictionary of input mappings.
         copy_to_local: Copy the data to a local path.
-        data_args: Arguments for dataset plugin.
         shuffle: Shuffle the dataset.
+        data_args: Extra data arguments.
 
     """
     global DATA_HANDLER
@@ -43,19 +61,13 @@ def setup(sources: str=None, batch_size=64, n_workers: int=4,
     DATA_HANDLER.set_input_names(**inputs)
 
     if sources:
-        if not isinstance(sources, dict):
-            sources = dict(data=sources)
+        plugin_dict = get_plugins(sources)
 
-        for name, source in sources.items():
-
-            plugin = _PLUGINS.get(source, None)
-            if plugin is None:
-                raise KeyError('Dataset plugin for `{}` not found.'
-                               ' Available: {}'
-                               .format(source, tuple(_PLUGINS.keys())))
-
+        for name, (source, plugin) in plugin_dict.items():
+            data_args_ = data_args.get(name, {})
+            plugin._set_copy(copy_to_local=copy_to_local)
             try:
-                plugin.handle(source, copy_to_local=copy_to_local, **data_args)
+                plugin.handle(source, **data_args_)
             except KeyError:
                 pass
 
@@ -63,7 +75,7 @@ def setup(sources: str=None, batch_size=64, n_workers: int=4,
                                      shuffle=shuffle)
 
     else:
-        raise ValueError('No source provided. Use `--d.source`')
+        raise ValueError('No source provided. Use `--d.sources`')
 
 
 def register(plugin):
@@ -97,3 +109,7 @@ class DatasetPluginBase:
             raise ValueError('No sources found for dataset plugin.')
 
         self._dataloader_class = None
+        self.copy_to_local = False
+
+    def _set_copy(self, copy_to_local):
+        self.copy_to_local = copy_to_local

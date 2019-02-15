@@ -34,52 +34,16 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         return train_set, test_set
 
     def _handle_STL(self, Dataset, data_path, transform=None,
-                    labeled_only=False, stl_center_crop=False,
-                    stl_resize_only=False, stl_no_resize=False):
-        normalize = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                    labeled_only=False):
 
-        if stl_no_resize:
-            train_transform = transforms.Compose([
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ])
-            test_transform = transforms.Compose([
-                transforms.ToTensor(),
-                normalize,
-            ])
-        else:
-            if stl_center_crop:
-                tr_trans = transforms.CenterCrop(64)
-                te_trans = transforms.CenterCrop(64)
-            elif stl_resize_only:
-                tr_trans = transforms.Resize(64)
-                te_trans = transforms.Resize(64)
-            elif stl_no_resize:
-                pass
-            else:
-                tr_trans = transforms.RandomResizedCrop(64)
-                te_trans = transforms.Resize(64)
-
-            train_transform = transforms.Compose([
-                tr_trans,
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ])
-            test_transform = transforms.Compose([
-                te_trans,
-                transforms.ToTensor(),
-                normalize,
-            ])
         if labeled_only:
             split = 'train'
         else:
             split = 'train+unlabeled'
         train_set = Dataset(
-            data_path, split=split, transform=train_transform, download=True)
+            data_path, split=split, transform=transform, download=True)
         test_set = Dataset(
-            data_path, split='test', transform=test_transform, download=True)
+            data_path, split='test', transform=transform, download=True)
         return train_set, test_set
 
     def _handle(self, Dataset, data_path, transform=None, **kwargs):
@@ -89,10 +53,28 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             data_path, train=False, transform=transform, download=True)
         return train_set, test_set
 
-    def handle(self, source, copy_to_local=False, normalize=True,
-               train_samples=None, test_samples=None,
-               labeled_only=False, stl_center_crop=False,
-               stl_resize_only=False, stl_no_resize=False, **transform_args):
+    def handle(self, source, normalize=True,
+               train_samples: int = None, test_samples: int = None,
+               labeled_only=False, transform=None,
+               center_crop: int = None, image_size: int = None,
+               random_crop: int = None, flip=False, random_resize_crop: int = None,
+               random_sized_crop: int = None):
+        '''
+
+        Args:
+            normalize: Normalization of the image.
+            train_samples: Number of training samples.
+            test_samples: Number of test samples.
+            labeled_only: Only use labeled data.
+            transform: Transformation class object.
+            center_crop: Center cropping of the image.
+            image_size: Final size of the image.
+            random_crop: Random cropping of the image.
+            flip: Random flipping.
+            random_resize_crop: Random resizing and cropping of the image.
+            random_sized_crop: Random sizing and cropping of the image.
+
+        '''
 
         Dataset = getattr(torchvision.datasets, source)
         Dataset = self.make_indexing(Dataset)
@@ -103,23 +85,27 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
 
         data_path = os.path.join(torchvision_path, source)
 
-        if copy_to_local:
+        if self.copy_to_local:
             data_path = self.copy_to_local_path(data_path)
 
-        if normalize and isinstance(normalize, bool):
-            if source in [
+        if transform is None:
+            if normalize and isinstance(normalize, bool):
+                if source in [
                     'MNIST', 'dSprites', 'Fashion-MNIST', 'EMNIST', 'PhotoTour'
-            ]:
-                normalize = [(0.5,), (0.5,)]
-                scale = (0, 1)
+                ]:
+                    normalize = [(0.5,), (0.5,)]
+                    scale = (0, 1)
+                else:
+                    normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
+                    scale = (-1, 1)
+
             else:
-                normalize = [(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)]
-                scale = (-1, 1)
+                scale = None
 
-        else:
-            scale = None
-
-        transform = build_transforms(normalize=normalize, **transform_args)
+            transform = build_transforms(
+                normalize=normalize, center_crop=center_crop, image_size=image_size,
+                random_crop=random_crop, flip=flip, random_resize_crop=random_resize_crop,
+                random_sized_crop=random_sized_crop)
 
         if source == 'LSUN':
             handler = self._handle_LSUN
@@ -131,10 +117,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             handler = self._handle
 
         train_set, test_set = handler(Dataset, data_path, transform=transform,
-                                      labeled_only=labeled_only,
-                                      stl_center_crop=stl_center_crop,
-                                      stl_resize_only=stl_resize_only,
-                                      stl_no_resize=stl_no_resize)
+                                      labeled_only=labeled_only)
         if train_samples is not None:
             train_set.train_data = train_set.train_data[:train_samples]
             train_set.train_labels = train_set.train_labels[:train_samples]

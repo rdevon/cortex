@@ -31,7 +31,6 @@ def parse_kwargs(f):
     kwargs = {}
     sig = inspect.signature(f)
     for i, (sk, sv) in enumerate(sig.parameters.items()):
-
         if sk == 'self':
             pass
         elif sk == 'kwargs':
@@ -42,6 +41,32 @@ def parse_kwargs(f):
             v = copy.deepcopy(sv.default)
             kwargs[sv.name] = v
     return kwargs
+
+
+def parse_annotation(f):
+    """Parses kwargs types from a function definition.
+
+    Args:
+        f: Function to parse.
+
+    Returns:
+        A dictionary of types.
+
+    """
+    annotations = {}
+    sig = inspect.signature(f)
+    for i, (sk, sv) in enumerate(sig.parameters.items()):
+        annotation = sv.annotation
+        if sk == 'self':
+            pass
+        elif sk == 'kwargs':
+            pass
+        elif sv.default == inspect.Parameter.empty:
+            pass
+        elif annotation != inspect.Parameter.empty:
+            annotations[sv.name] = annotation
+
+    return annotations
 
 
 def parse_inputs(f):
@@ -100,8 +125,9 @@ def parse_header(f):
 
     """
     if f.__doc__ is None:
-        f.__doc__ = 'TODO\n TODO'
-    doc = inspect.cleandoc(f.__doc__)
+        doc = 'TODO\n TODO'
+    else:
+        doc = inspect.cleandoc(f.__doc__)
     config = Config()
     google_doc = GoogleDocstring(doc, config)
     rst = str(google_doc)
@@ -178,9 +204,24 @@ def make_argument_parser() -> argparse.ArgumentParser:
                               'This cannot be undone!'))
     parser.add_argument('-v', '--verbosity', type=int, default=1,
                         help='Verbosity of the logging. (0, 1, 2)')
-    parser.add_argument('-d', '--device', type=int, default=0)
+    parser.add_argument('-d', '--device', type=int, nargs='+', default=0)
     parser.add_argument('-V', '--noviz', default=False, action='store_true', help='No visualization.')
     return parser
+
+
+def _parse_argument(values):
+    # Puts quotes on things not currently in the Namespace
+    while True:
+        try:
+            eval(values)
+            break
+        except NameError as e:
+            name = str(e).split(' ')[1][1:-1]
+            p = '(?<!\'){}(?!\')'.format(name)
+            values = re.sub(p, "'{}'".format(name), values)
+
+    d = eval(values)
+    return d
 
 
 class StoreDictKeyPair(argparse.Action):
@@ -194,17 +235,7 @@ class StoreDictKeyPair(argparse.Action):
         values_ = values
 
         try:
-            # Puts quotes on things not currently in the Namespace
-            while True:
-                try:
-                    eval(values)
-                    break
-                except NameError as e:
-                    name = str(e).split(' ')[1][1:-1]
-                    p = '(?<!\'){}(?!\')'.format(name)
-                    values = re.sub(p, "'{}'".format(name), values)
-
-            d = eval(values)
+            d = _parse_argument(values)
         except:
             d = str(values_)
 
@@ -231,6 +262,25 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
+def _parse_data(plugin, subparser, name):
+    '''
+
+    Args:
+        plugin:
+        subparser:
+
+    '''
+    hyperparameters = parse_kwargs(plugin.handle)
+    infos = parse_docstring(plugin.handle)
+    annotations = parse_annotation(plugin.handle)
+    for k, v in hyperparameters.items():
+        h_info = infos.get(k, None)
+        dest = 'data_args.' + name + '.' + k
+        arg_str = '--' + name + '_args.' + k
+        _add_hyperparameter_argument(k, v, h_info, subparser, dest=dest, arg_str=arg_str,
+                                     annotation=annotations.get(k, None))
+
+
 def _parse_model(model, subparser):
     """Parses model definitions and adds arguments as command-line arguments.
 
@@ -240,18 +290,46 @@ def _parse_model(model, subparser):
 
     """
     global default_args
+
+    # First pull the model hyperparameters
     hyperparameters = model.pull_hyperparameters()
+
+    # Get default hyperparameters
     model_defaults = model.defaults
     model_defaults_model = model.defaults.pop('hyperparameters', {})
     update_args(model_defaults_model, hyperparameters)
+
+    # Get docstring information.
     info = model.pull_info()
+
+    # Update total hyperparameter arguments.
+    default_args = dict((k, v) for k, v in DEFAULT_ARGS.items())
+    update_args(model_defaults, default_args)
+    model_args = default_args.pop('model', {})
+
+    # Flatten to dot notation.
+    new_model_args = {}
+    def _flatten_args(args, d, prefix=None):
+        for k, v in args.items():
+            if isinstance(v, dict):
+                if prefix is None:
+                    prefix_ = k
+                else:
+                    prefix_ = '{}.{}'.format(prefix, k)
+                _flatten_args(v, d, prefix=prefix_)
+            else:
+                if prefix is None:
+                    key = k
+                else:
+                    key = prefix + '.' + k
+                d[key] = v
+
+    _flatten_args(model_args, new_model_args)
 
     for k, v in hyperparameters.items():
         h_info = info.get(k, None)
+        v = new_model_args.get(k, v)
         _add_hyperparameter_argument(k, v, h_info, subparser)
-
-    default_args = dict((k, v) for k, v in DEFAULT_ARGS.items())
-    update_args(model_defaults, default_args)
 
     for key, args in default_args.items():
         _add_default_arguments(key, args, subparser)
@@ -270,13 +348,17 @@ def _add_default_arguments(key, args, subparser):
     """
     for k, v in args.items():
         arg_str = '--' + key[0] + '.' + k
-        help = DEFAULT_HELP[key][k]
-        dest = key + '.' + k
 
-        _add_hyperparameter_argument(k, v, help, subparser, dest=dest, arg_str=arg_str)
+        try:
+            help = DEFAULT_HELP[key][k]
+            dest = key + '.' + k
+
+            _add_hyperparameter_argument(k, v, help, subparser, dest=dest, arg_str=arg_str)
+        except KeyError:
+            pass
 
 
-def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None):
+def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None, annotation=None):
     '''Adds hyperparameter to parser.
 
     Args:
@@ -284,13 +366,14 @@ def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None)
         v: Default value.
         help: Info for the hyperparameter
         subparser: Subparser to add argument to.
+        annotation: Type of the hyperparameter.
 
     '''
     arg_str = arg_str or '--' + k
     dest = dest or k
 
+    type_ = annotation or type(v)
     if isinstance(v, (dict, list, tuple)):
-        type_ = type(v)
         dstr = str(v)
         dstr = dstr.replace(' ', '')
         metavar = '<' + type_.__name__ + '>'
@@ -308,7 +391,6 @@ def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None)
         subparser.add_argument(
             arg_str, dest=dest, action=action, default=False, help=help)
     elif isinstance(v, bool):
-        type_ = type(v)
         metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
         subparser.add_argument(
             arg_str,
@@ -318,7 +400,10 @@ def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None)
             type=str2bool,
             help=help)
     elif v is None:
-        metavar = '<UNK type> (default=N/A)'
+        if type_.__name__ != 'NoneType':
+            metavar = '<' + type_.__name__ + '>'
+        else:
+            metavar = '<UNK type>'
         subparser.add_argument(
             arg_str,
             dest=dest,
@@ -327,7 +412,7 @@ def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None)
             help=help,
             metavar=metavar)
     else:
-        type_ = type(v) if v is not None else str
+        #type_ = type(v) if v is not None else str
         metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
         subparser.add_argument(
             arg_str,
@@ -379,6 +464,17 @@ def parse_args(models, model=None):
         _parse_model(model, parser)
 
     command = sys.argv[1:]
+
+    if '--d.sources' in command:
+        d_idx = command.index('--d.sources')
+        if len(command) <= d_idx + 1:
+            raise ValueError('No argument provided after `--d.sources`')
+        arg = command[d_idx + 1]
+        # Puts quotes on things not currently in the Namespace
+        arg = _parse_argument(arg)
+        plugins = data.get_plugins(arg)
+        for name, (source, plugin) in plugins.items():
+            _parse_data(plugin, parser, name=name)
 
     idx = []
     for i, c in enumerate(command):

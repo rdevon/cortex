@@ -336,7 +336,7 @@ def save_best(model, train_results, best, save_on_best, save_on_lowest):
 def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
               save_on_lowest=None, save_on_highest=None, eval_during_train=True,
               train_mode='train', test_mode='test', eval_only=False,
-              pbar_off=False, viz_test_only=False):
+              pbar_off=False, viz_test_only=False, visdom_off=False):
     '''
 
     Args:
@@ -351,11 +351,15 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         eval_only: Gives results over a training epoch.
         pbar_off: Turn off the progressbar.
         viz_test_only: Show only test values in visualization.
+        visdom_off: Turn off visdom.
 
     '''
     info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
 
     logger.info('Starting main loop.')
+
+    if visdom_off:
+        viz.visualizer = None
 
     if (viz.visualizer):
         viz.visualizer.text(info, env=exp.NAME, win='info')

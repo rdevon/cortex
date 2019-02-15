@@ -6,8 +6,6 @@ import logging
 from os import path
 import shutil
 
-from torch.utils.data import Dataset
-
 from cortex._lib.config import CONFIG, _config_name
 from cortex._lib.data import DatasetPluginBase, register as register_data, DATASETS
 from cortex._lib.models import ModelPluginBase, register_model

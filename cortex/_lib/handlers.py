@@ -7,6 +7,9 @@ import logging
 
 import torch
 
+from cortex._lib import exp
+
+
 logger = logging.getLogger('cortex.handlers')
 
 
@@ -46,7 +49,7 @@ class Handler(MutableMapping):
         self.__dict__[key] = value
 
     def __setattr__(self, key, value):
-        if key.startswith('_'):
+        if key.startswith('_') or callable(value):
             return super().__setattr__(key, value)
 
         self._check_keyvalue(key, value)
@@ -251,6 +254,9 @@ class NetworkHandler(Handler):
 
         if self._locked:
             raise KeyError('Handler is locked.')
+
+        value.to(exp.DEVICE)
+        value = torch.nn.DataParallel(value)
 
         if not self._allow_overwrite and hasattr(self, key):
             if key in self._loaded:
