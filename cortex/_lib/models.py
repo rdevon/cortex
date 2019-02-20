@@ -10,8 +10,7 @@ import torch
 
 from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_inputs, parse_kwargs
-from .handlers import (aliased, prefixed, NetworkHandler, LossHandler,
-                       ResultsHandler)
+from .handlers import nested, NetworkHandler, LossHandler, ResultsHandler
 from .utils import bad_values, update_dict_of_lists
 from .viz import VizHandler
 
@@ -133,6 +132,9 @@ def _auto_input_decorator(cls, fn):
 
     '''
 
+    if not callable(fn):
+        raise ValueError('Only callables (functions) can be wrapped.')
+
     def _fetch_kwargs(**kwargs_):
         if cls._contract is not None:
             kwarg_dict = cls._contract['kwargs']
@@ -144,7 +146,7 @@ def _auto_input_decorator(cls, fn):
         for k in kwarg_keys:
             key = kwarg_dict.get(k, k)
             try:
-                value = cls.kwargs[key]
+                value = cls._hyperparams[key]
             except KeyError:
                 value = kwargs_.get(key)
             kwargs[k] = value
@@ -168,19 +170,23 @@ def _auto_input_decorator(cls, fn):
         return inputs
 
     def wrapped(*args, auto_input=False, **kwargs_):
-        kwargs = _fetch_kwargs(**kwargs_)
-        for k, v in kwargs_.items():
-            # Infer correct hyperparameters for function and pass them..
-            if isinstance(v, dict) and (k in kwargs and
-                                        isinstance(kwargs[k], dict)):
-                kwargs[k].update(**v)
-            elif v is not None:
-                kwargs[k] = v
-            elif v is None and k not in kwargs:
-                kwargs[k] = v
-        if auto_input:
-            args = _fetch_inputs()
-        return fn(*args, **kwargs)
+        try:
+            kwargs = _fetch_kwargs(**kwargs_)
+            for k, v in kwargs_.items():
+                # Infer correct hyperparameters for function and pass them..
+                if isinstance(v, dict) and (k in kwargs and
+                                            isinstance(kwargs[k], dict)):
+                    kwargs[k].update(**v)
+                elif v is not None:
+                    kwargs[k] = v
+                elif v is None and k not in kwargs:
+                    kwargs[k] = v
+            if auto_input:
+                args = _fetch_inputs()
+            return fn(*args, **kwargs)
+        except RuntimeError as e:
+            logger.exception('Runtime error with model {}:'.format(cls.name))
+            raise e
 
     return wrapped
 
@@ -194,9 +200,7 @@ class ModelPluginBase(metaclass=PluginType):
     _viz = VizHandler()
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
-    _hyperparams = dict()
-    _training_nets = dict()
-    _all_nets = NetworkHandler(allow_overwrite=False)
+    _all_nets = NetworkHandler()
 
     # Results for an epoch.
     _epoch_losses = ResultsHandler()
@@ -213,9 +217,11 @@ class ModelPluginBase(metaclass=PluginType):
         '''
 
         self._contract = None
-        self._train = False
         self._models = []
         self.name = self.__class__.__name__
+
+        self._hyperparams = copy.deepcopy(self._kwargs)
+        self._training_nets = None
 
         # Contract to handle naming of things.
         kwargs = kwargs or {}
@@ -224,23 +230,21 @@ class ModelPluginBase(metaclass=PluginType):
         contract = dict(inputs=inputs, nets=nets, kwargs=kwargs)
         self._contract = contract
 
-        if self._contract and len(self._contract['nets']) > 0:
-            self._nets = aliased(self._all_nets, aliases=contract['nets'])
-        else:
-            self._nets = aliased(self._all_nets)
+        # Network handler.
+        self._nets = nested(self._all_nets, self)  # Networks.
 
         # Handlers for various results.
-        self._results = ResultsHandler()
-        self._times = ResultsHandler()
-        self._losses = LossHandler(self.nets)
+        self._results = ResultsHandler()  # Results to be displayed.
+        self._times = ResultsHandler()  # Times for models.
+        self._losses = LossHandler(self.nets)  # Losses for training.
+        self._all_losses = dict()  # Summary of losses for display.
 
         # Wrap functions
         self.build = _auto_input_decorator(self, self.build)
-        self.visualize = _auto_input_decorator(self, self.visualize)
-
+        self.visualize = self.visualize_step(self.visualize)
         self.routine = self.model_routine(self.routine)
-        self.train_step = self.model_step(self.train_step, train=True)
         self.optimizer_step = self.model_optimizer_step(self.optimizer_step)
+        self.train_step = self.model_step(self.train_step, train=True)
         self.eval_step = self.model_step(self.eval_step, train=False)
         self.train_loop = self.model_loop(self.train_loop, train=True)
         self.eval_loop = self.model_loop(self.eval_loop, train=False)
@@ -269,9 +273,26 @@ class ModelPluginBase(metaclass=PluginType):
         else:
             raise TypeError('Model must be subclass of {}'.format(ModelPluginBase))
 
+    # Add results and losses
+    def add_results(self, **kwargs):
+        for key, value in kwargs.items():
+            self.results[key] = value
+
+    def add_losses(self, **kwargs):
+        for key, value in kwargs.items():
+            if key in self.losses.keys():
+                v = self.losses[key]
+                self.losses[key] = [v, value]
+            else:
+                self.losses[key] = value
+
+    def add_nets(self, **kwargs):
+        for key, value in kwargs.items():
+            self.nets[key] = value
+
     # Hyperparameter functions
     def pull_hyperparameters(self):
-        hyperparameters = copy.deepcopy(self._kwargs)
+        hyperparameters = copy.deepcopy(self._hyperparams)
         for model in self._models:
             m_hypers = model.pull_hyperparameters()
             m_hypers = dict(('{}.{}'.format(model.name, k), v)
@@ -282,8 +303,8 @@ class ModelPluginBase(metaclass=PluginType):
 
     def push_hyperparameters(self, hyperameters):
         for k, v in hyperameters.items():
-            if k in self.kwargs.keys():
-                self.kwargs[k] = v
+            if k in self._hyperparams.keys():
+                self._hyperparams[k] = v
 
         for child in self._models:
             child_hypers = hyperameters.get(child.name, {})
@@ -309,7 +330,7 @@ class ModelPluginBase(metaclass=PluginType):
             dict: Dictionary of network losses and children losses.
 
         '''
-        losses = dict((self._contract['nets'].get(k, k), v)
+        losses = dict((self.nets._aliases[k], v)
                       for k, v in self.losses.items())
         self.losses.clear()
         for model in self._models:
@@ -348,18 +369,41 @@ class ModelPluginBase(metaclass=PluginType):
         '''Collapses network losses from child models.
 
         '''
-        def collapse(d, losses):
+        def collapse(d, losses, all_losses, model_name=None):
             for k, v in d.items():
                 if isinstance(v, dict):
-                    collapse(v, losses)
-                elif k in losses.keys():
-                    losses[k] += v
+                    collapse(v, losses, all_losses, model_name=k)
                 else:
-                    losses[k] = v
+                    if k in losses.keys():
+                        losses[k] += v
+                    else:
+                        losses[k] = v
+
+                    if model_name is not None:
+                        if k not in all_losses:
+                            all_losses[k] = {}
+                        all_losses[k][model_name] = v.detach().item()
+                        all_losses[k]['all'] = losses[k].detach().item()
+
+        def summarize_losses(losses):
+            d = {}
+            for k, v in losses.items():
+                d[k] = v.pop('all')
+                if len(v) > 1: # more than one loss for this network
+                    for k_, v_ in v.items():
+                        d['{}.{}'.format(k, k_)] = v_
+            return d
 
         losses = self.fetch_all_losses()
         losses_ = {}
-        collapse(losses, losses_)
+        all_losses = {}
+        collapse(losses, losses_, all_losses)
+
+        # These losses are the ones displayed.
+        self._all_losses.clear()
+        self._all_losses.update(**summarize_losses(all_losses))
+
+        # These are the backpropped ones.
         self.losses.clear()
         self.losses.update(**losses_)
 
@@ -411,36 +455,17 @@ class ModelPluginBase(metaclass=PluginType):
         fn = _auto_input_decorator(self, fn)
 
         def cortex_routine(*args, **kwargs):
-            fid = self._get_id(fn)
-
-            if fid not in self._training_nets:
+            if self._training_nets is None:
                 # This is the first time a routine has been run. Run once,
                 # then extract the networks from which losses are computed for.
                 # These will be trained.
-                with torch.cuda.device(exp.DEVICE.index):
-                    fn(*args, **kwargs)
-                training_nets = [self._contract['nets'].get(k, k) for k in self.losses.keys()]
-                self._training_nets[fid] = training_nets
-            else:
-                training_nets = self._training_nets[fid]
+
+                fn(*args, **kwargs)
+                self._training_nets = [self.nets._aliases.get(k, k) for k in self.losses.keys()]
 
             self.losses.clear()
-
-            if self._train:
-                for k in training_nets:
-                    net = self.nets[k]
-
-                    optimizer = self._optimizers.get(k)
-                    if optimizer is not None:
-                        optimizer.zero_grad()
-
-                    for p in net.parameters():
-                        p.requires_grad = True
-                    net.train()
-
             start = time.time()
-            with torch.cuda.device(exp.DEVICE.index):
-                output = fn(*args, **kwargs)
+            output = fn(*args, **kwargs)
 
             self._check_bad_values()
             end = time.time()
@@ -449,6 +474,22 @@ class ModelPluginBase(metaclass=PluginType):
             return output
 
         return cortex_routine
+
+    def visualize_step(self, fn):
+
+        fn = _auto_input_decorator(self, fn)
+
+        def viz_step(*args, **kwargs):
+
+            for k, net in self._all_nets.items():
+                net.eval()
+
+            output = fn(*args, **kwargs)
+
+            return output
+
+        return viz_step
+
 
     def model_step(self, fn, train=True):
         '''Wraps the training or evaluation step.
@@ -466,12 +507,14 @@ class ModelPluginBase(metaclass=PluginType):
 
         def cortex_step(*args, _init=False, **kwargs):
             if train and not _init:
-                self._set_train()
-                for net in self.nets.values():
-                    net.train()
+                training_nets = self._get_training_nets()
+                for k, net in self._all_nets.items():
+                    if k in training_nets:
+                        net.train()
+                    else:
+                        net.eval()
             else:
-                self._set_eval()
-                for net in self.nets.values():
+                for net in self._all_nets.values():
                     net.eval()
 
             output = fn(*args, **kwargs)
@@ -491,15 +534,18 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
         # Appends to each list of results and losses.
-        loss_dict = dict((k, v.detach().item()) for k, v in self.losses.items())
 
         update_dict_of_lists(self._epoch_results, **self.results)
         update_dict_of_lists(self._epoch_times, **self.times)
-        update_dict_of_lists(self._epoch_losses, **loss_dict)
+        update_dict_of_lists(self._epoch_losses, **self._all_losses)
 
         self.losses.clear()
+        self._all_losses.clear()
         self.results.clear()
         self.times.clear()
+
+        for opt in self._optimizers.values():
+            opt.zero_grad()
 
     def model_loop(self, fn, train=True):
         '''Wraps a loop.
@@ -539,6 +585,7 @@ class ModelPluginBase(metaclass=PluginType):
 
             fn()
 
+            # Collect losses from epoch.
             results = self._epoch_results
             results['losses'] = dict(self._epoch_losses)
             results['times'] = dict(self._epoch_times)
@@ -573,6 +620,7 @@ class ModelPluginBase(metaclass=PluginType):
             fn()
             end = time.time()
             self.times['Optimizer'] = end - start
+            self.losses.clear()
 
         return cortex_optimizer_step
 
@@ -595,19 +643,6 @@ class ModelPluginBase(metaclass=PluginType):
         self._epoch_results.clear()
         self._epoch_losses.clear()
         self._epoch_times.clear()
-
-    # Get info and other queries
-    def _get_id(self, fn):
-        '''Gets a unique identifier for a function.
-
-        Args:
-            fn: a callable.
-
-        Returns:
-            An indentifier.
-
-        '''
-        return fn
 
     def _map_data_queries(self, *queries):
         """Maps a query for an input for a model to a different key.
@@ -632,9 +667,13 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
-        training_nets = []
-        for v in self._training_nets.values():
-            training_nets += v
+        if self._training_nets is not None:
+            training_nets = self._training_nets[:]
+        else:
+            training_nets = []
+
+        for child in self._models:
+            training_nets += child._get_training_nets()
 
         return training_nets
 
@@ -664,19 +703,6 @@ class ModelPluginBase(metaclass=PluginType):
             return inputs[0]
         else:
             return inputs
-
-    # Add results and losses
-    def add_results(self, **kwargs):
-        for key, value in kwargs.items():
-            self.results[key] = value
-
-    def add_losses(self, **kwargs):
-        for key, value in kwargs.items():
-            if key in self.losses.keys():
-                v = self.losses[key]
-                self.losses[key] = [v, value]
-            else:
-                self.losses[key] = value
 
     # Properties
     @property
@@ -710,16 +736,6 @@ class ModelPluginBase(metaclass=PluginType):
     @property
     def data(self):
         return self._data
-
-    def _set_train(self):
-        self._train = True
-        for m in self._models:
-            m._set_train()
-
-    def _set_eval(self):
-        self._train = False
-        for m in self._models:
-            m._set_eval()
 
     def _check_bad_values(self):
         '''Check for bad numbers.

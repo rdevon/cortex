@@ -203,7 +203,7 @@ class ModelPlugin(ModelPluginBase):
         self.routine(auto_input=True)
         self.finish_step()
 
-    def optimizer_step(self):
+    def optimizer_step(self, retain_graph=False):
         """Makes a step of the optimizers for which losses are defined.
 
         This can be overridden to change the behavior of the optimizer.
@@ -211,15 +211,27 @@ class ModelPlugin(ModelPluginBase):
         """
         keys = self.losses.keys()
 
-        for i, k in enumerate(keys):
-            loss = self.losses.get(k)
-            loss.backward(retain_graph=True)
-            key = self.nets._aliases.get(k, k)
+        for opt in self._optimizers.values():
+            opt.zero_grad()
 
+        for i, k in enumerate(keys):
+            key = self.nets._aliases.get(k, k)
             optimizer = self._optimizers.get(key)
+
+            if optimizer is not None:
+                optimizer.zero_grad()
+
+            loss = self.losses.get(k)
+
+            retain_graph_ = retain_graph or (i + 1 < len(keys))
+            loss.backward(retain_graph=retain_graph_)
+
             if optimizer is not None:
                 optimizer.step()
                 optimizer.zero_grad()
+
+        for opt in self._optimizers.values():
+            opt.zero_grad()
 
     def train_loop(self):
         """The training loop.

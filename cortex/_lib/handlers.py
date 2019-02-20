@@ -95,17 +95,15 @@ def convert_nested_dict_to_handler(d, _class=Handler):
     return _class(**d)
 
 
-class AliasedHandler(Handler):
-    def __init__(self, handler, aliases=None):
-        self._aliases = aliases or {}
+class NestedNetworkHandler(Handler):
+    def __init__(self, handler, model):
+        self._model = model
         self._handler = handler
+        self._aliases = {}
 
     def __getattr__(self, item):
         if item.startswith('_'):
-            try:
-                return super().__getitem__(item)
-            except KeyError:
-                return getattr(self._handler, item)
+            return super().__getitem__(item)
         item = self._aliases.get(item, item)
         return self._handler.__getitem__(item)
 
@@ -113,11 +111,20 @@ class AliasedHandler(Handler):
         if key.startswith('_'):
             return super().__setattr__(key, value)
 
-        if key in self._aliases.values():
-            raise KeyError('Name clash. Key is a value in the set of aliases.')
+        alias = None
+        for k, v in self._handler.items():
+            if value is v:
+                alias = k
+                break
 
-        key = self._aliases.get(key, key)
-        self._handler.__setattr__(key, value)
+        if alias:
+            self._aliases[key] = alias
+            return self._handler[alias]
+        else:
+            value = torch.nn.DataParallel(value, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
+            alias = '{}.{}'.format(self._model.name, key)
+            self._aliases[key] = alias
+            return self._handler.__setattr__(alias, value)
 
     def __getitem__(self, item):
         if item.startswith('_'):
@@ -129,91 +136,24 @@ class AliasedHandler(Handler):
         if key.startswith('_'):
             return super().__setitem__(key, value)
 
-        if key in self._aliases.values():
-            raise KeyError('Name clash. Key is a value in the set of aliases.')
+        alias = None
+        for k, v in self._handler.items():
+            if value is v:
+                alias = k
+                break
 
-        key = self._aliases.get(key, key)
-        return self._handler.__setitem__(key, value)
-
-    def __str__(self):
-        r_aliases = dict((v, k) for k, v in self._aliases.items())
-        d = dict((r_aliases.get(k, k), v)
-                 for k, v in self._handler.__dict__.items()
-                 if not k.startswith('_'))
-        return d.__str__()
-
-    def __len__(self):
-        return len(self._handler)
-
-    def __iter__(self):
-        r_aliases = dict((v, k) for k, v in self._aliases.items())
-        for k in self._handler:
-            yield r_aliases.get(k, k)
-
-    def __delitem__(self, key):
-        key = self._aliases.get(key, key)
-        self._handler.__delattr__(key)
+        if alias:
+            self._aliases[key] = alias
+            return self._handler[alias]
+        else:
+            value = torch.nn.DataParallel(value, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
+            alias = '{}.{}'.format(self._model.name, key)
+            self._aliases[key] = alias
+            return self._handler.__setitem__(alias, value)
 
 
-def aliased(handler, aliases=None):
-    return AliasedHandler(handler, aliases=aliases)
-
-
-class PrefixedAliasedHandler(Handler):
-    def __init__(self, handler, prefix=None):
-        self._prefix = prefix or ''
-        self._handler = handler
-
-    def __getattr__(self, item):
-        if item.startswith('_'):
-            return super().__setattr__(item)
-        item = self._prefix + '_' + item
-        return self._handler.__getitem__(item)
-
-    def __setattr__(self, key, value):
-        if key.startswith('_'):
-            return super().__setattr__(key, value)
-
-        key = self._prefix + '_' + key
-        return self._handler.__setattr__(key, value)
-
-    def __getitem__(self, item):
-        if item.startswith('_'):
-            return super().__getitem__(item)
-        item = self._prefix + '_' + item
-        return self._handler.__getitem__(item)
-
-    def __setitem__(self, key, value):
-        if key.startswith('_'):
-            return super().__setitem__(key, value)
-
-        key = self._prefix + '_' + key
-        return self._handler.__setitem__(key, value)
-
-    def __str__(self):
-        d = dict((k[len(self._prefix) + 1:], v)
-                 for k, v in self._handler.__dict__.items()
-                 if not k.startswith('_') and k.startswith(self._prefix + '_'))
-        return d.__str__()
-
-    def __len__(self):
-        d = dict((k[len(self._prefix) + 1:], v)
-                 for k, v in self._handler.__dict__.items()
-                 if not k.startswith('_') and k.startswith(self._prefix + '_'))
-        return len(d)
-
-    def __iter__(self):
-        for item in self._handler:
-            if item.startswith(self._prefix + '_'):
-                yield item[len(self._prefix) + 1:]
-
-    def __delitem__(self, key):
-        key = self._prefix + '_' + key
-        self._handler.__delattr__(key)
-
-
-def prefixed(handler, prefix=None):
-    return PrefixedAliasedHandler(handler, prefix=prefix)
+def nested(handler, model):
+    return NestedNetworkHandler(handler, model)
 
 
 class NetworkHandler(Handler):
@@ -254,9 +194,6 @@ class NetworkHandler(Handler):
 
         if self._locked:
             raise KeyError('Handler is locked.')
-
-        value.to(exp.DEVICE)
-        value = torch.nn.DataParallel(value)
 
         if not self._allow_overwrite and hasattr(self, key):
             if key in self._loaded:

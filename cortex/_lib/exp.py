@@ -4,6 +4,7 @@ Used for saving, loading, summarizing, etc
 
 '''
 
+import copy
 import logging
 import os
 from os import path
@@ -26,6 +27,7 @@ OUT_DIRS = {}
 ARGS = dict(data=dict(), model=dict(), optimizer=dict(), train=dict())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
+DEVICE_IDS = None
 
 
 def _file_string(prefix=''):
@@ -83,12 +85,12 @@ def save(model, prefix=''):
                     d_[k] = v
             return d_
 
-        for net in model.nets.values():
-            if hasattr(net, 'states'):
-                net.states.clear()
+        nets = {}
+        for k, net in model._all_nets.items():
+            nets[k] = copy.deepcopy(net).to('cpu')
 
         state = dict(
-            nets=dict(model.nets),
+            nets=nets,
             info=INFO,
             args=ARGS,
             out_dirs=OUT_DIRS,
@@ -154,8 +156,12 @@ def setup_out_dir(out_path, global_out_path, name=None, clean=False):
 
 
 def setup_device(device):
-    device = ','.join(['cuda:{}'.format(d) for d in device])
-    global DEVICE
+    global DEVICE, DEVICE_IDS
+
+    if isinstance(device, int):
+        device = [device]
+    DEVICE_IDS = device
+    device = 'cuda:{}'.format(device[0])
     if torch.cuda.is_available() and device != 'cpu':
         DEVICE = torch.device(device)
     else:

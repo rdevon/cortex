@@ -129,11 +129,13 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
     model.data.reset(make_pbar=False, mode='test')
     model.train_step(_init=True)
     model.losses.clear()
+    model._all_losses.clear()
+    model.results.clear()
     model.visualize(auto_input=True)
 
     training_nets = model._get_training_nets()
 
-    logger.info('Setting up optimizers for {}'.format(set(training_nets)))
+    logger.info('Setting up optimizers for modules / networks: {}'.format(set(training_nets)))
 
     for network_key in set(training_nets):
         logger.debug('Building optimizer for {}'.format(network_key))
