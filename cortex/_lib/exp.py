@@ -30,29 +30,40 @@ DEVICE = torch.device('cpu')
 DEVICE_IDS = None
 
 
-def _file_string(prefix=''):
+def _file_string(prefix: str = '') -> str:
     if prefix == '':
         return NAME
     return '{}_{}'.format(NAME, prefix)
 
 
-def configure_from_yaml(config_file=None):
-    '''Loads arguments into a yaml file.
+def from_yaml(config_file: str = None) -> dict:
+    '''Loads hyperparameters from a yaml file.
+
+    Args:
+        config_file: Config file path.
+
+    Returns:
+        dict: Dictionary of hyperparameters
 
     '''
-    global ARGS
 
     if config_file is not None:
         with open(config_file, 'r') as f:
             d = yaml.load(f)
         logger.info('Loading config {}'.format(d))
-        ARGS.model.update(**d.get('builds', {}))
-        ARGS.optimizer.update(**d.get('optimizer', {}))
-        ARGS.train.update(**d.get('train', {}))
-        ARGS.data.update(**d.get('data', {}))
+        return d
+
+    else:
+        return {}
 
 
-def reload_model(model_to_reload):
+def reload_model(model_to_reload: str):
+    '''
+
+    Args:
+        model_to_reload: Path to model to reload.
+
+    '''
     if not path.isfile(model_to_reload):
         raise ValueError('Cannot find {}'.format(model_to_reload))
 
@@ -62,7 +73,7 @@ def reload_model(model_to_reload):
     return torch.load(model_to_reload, map_location='cpu')
 
 
-def save(model, prefix=''):
+def save(model, prefix: str = ''):
     '''Saves a model.
 
     Args:
@@ -110,8 +121,14 @@ def save(model, prefix=''):
         logger.error('Save failed, skipping: {}'.format(e))
 
 
-def setup_out_dir(out_path, global_out_path, name=None, clean=False):
+def setup_out_dir(out_path: str, global_out_path: str, name: str = None, clean: bool = False):
     '''Sets up the output directory of an experiment.
+
+    Args:
+        out_path: Output directory.
+        global_out_path: Global path for cortex.
+        name: Name of experiment.
+        clean: Clean the experiment directory, if exists.
 
     '''
     global OUT_DIRS
@@ -155,7 +172,7 @@ def setup_out_dir(out_path, global_out_path, name=None, clean=False):
     OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir)
 
 
-def setup_device(device):
+def setup_device(device: [int] or int):
     global DEVICE, DEVICE_IDS
 
     if isinstance(device, int):

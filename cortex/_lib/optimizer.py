@@ -148,6 +148,10 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         else:
             params = list(network.parameters())
 
+        if len(params) == 0:
+            logger.debug('Skipping {}, no parameters found.'.format(network_key))
+            continue
+
         # Needed for reloading.
         for p in params:
             p.requires_grad = True

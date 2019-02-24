@@ -221,7 +221,6 @@ def setup_experiment(args, model=None, testmode=False):
         exp.INFO['name'] = exp.NAME
         exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
                           clean=args.clean)
-    exp.configure_from_yaml(config_file=args.config_file)
 
     str = print_hypers(exp.ARGS, s='Final hyperparameters: ')
     logger.info(str)

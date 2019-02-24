@@ -12,7 +12,7 @@ import sys
 from sphinxcontrib.napoleon import Config
 from sphinxcontrib.napoleon.docstring import GoogleDocstring
 
-from . import data, optimizer, train
+from . import data, exp, optimizer, train
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -281,35 +281,21 @@ def _parse_data(plugin, subparser, name):
                                      annotation=annotations.get(k, None))
 
 
-def _parse_model(model, subparser):
+def _parse_model(model, subparser, yaml_hypers=None):
     """Parses model definitions and adds arguments as command-line arguments.
 
     Args:
         model: Model to parse.
         subparser: argparse subparses to parse values to.
+        yaml_hypers: Hyperparameters from config file.
 
     """
     global default_args
 
-    # First pull the model hyperparameters
-    hyperparameters = model.pull_hyperparameters()
-
-    # Get default hyperparameters
-    model_defaults = model.defaults
-    model_defaults_model = model.defaults.pop('hyperparameters', {})
-    update_args(model_defaults_model, hyperparameters)
-
-    # Get docstring information.
-    info = model.pull_info()
-
-    # Update total hyperparameter arguments.
-    default_args = dict((k, v) for k, v in DEFAULT_ARGS.items())
-    update_args(model_defaults, default_args)
-    model_args = default_args.pop('model', {})
-
-    # Flatten to dot notation.
-    new_model_args = {}
     def _flatten_args(args, d, prefix=None):
+        '''Flatten to dot notation.
+
+        '''
         for k, v in args.items():
             if isinstance(v, dict):
                 if prefix is None:
@@ -324,12 +310,40 @@ def _parse_model(model, subparser):
                     key = prefix + '.' + k
                 d[key] = v
 
-    _flatten_args(model_args, new_model_args)
+    def _flatten(args):
+        new_args = {}
+        _flatten_args(args, new_args)
+        return new_args
 
-    for k, v in hyperparameters.items():
+    # First pull the model hyperparameters
+    hyperparameters = model.pull_hyperparameters()
+
+    # Get default hyperparameters
+    model_defaults_model = model.defaults.pop('hyperparameters', {})
+    update_args(model_defaults_model, hyperparameters)
+
+    yaml_hypers_train = yaml_hypers.pop('train', {})
+    yaml_hypers_data = yaml_hypers.pop('data', {})
+    yaml_hypers_optimizer = yaml_hypers.pop('optimizer', {})
+
+    update_args(yaml_hypers, hyperparameters)
+
+    # Get docstring information.
+    info = model.pull_info()
+
+    hyperparameters = _flatten(hyperparameters)
+    info = _flatten(info)
+
+    hyperparameter_keys = sorted(list(hyperparameters.keys()))
+    for k in hyperparameter_keys:
+        v = hyperparameters[k]
         h_info = info.get(k, None)
-        v = new_model_args.get(k, v)
         _add_hyperparameter_argument(k, v, h_info, subparser)
+
+    # Update total hyperparameter arguments.
+    default_args = dict((k, v) for k, v in DEFAULT_ARGS.items())
+    update_args(model.defaults, default_args)
+    update_args(dict(train=yaml_hypers_train, data=yaml_hypers_data, optimizer=yaml_hypers_optimizer), default_args)
 
     for key, args in default_args.items():
         _add_default_arguments(key, args, subparser)
@@ -436,6 +450,22 @@ def parse_args(models, model=None):
 
     parser = make_argument_parser()
 
+    command = sys.argv[1:]
+    if '-c' in sys.argv or '--config' in sys.argv:
+
+        if '-c' in command:
+            c_idx = command.index('-c')
+        else:
+            c_idx = command.index('--config')
+
+        if (len(command) <= c_idx + 1) or command[c_idx + 1].startswith('-'):
+            raise ValueError('No argument provided after `-c` or `--config`')
+        yaml = command[c_idx + 1]
+        yaml_hypers = exp.from_yaml(config_file=yaml)
+        command = command[:c_idx] + command[c_idx + 2:]
+    else:
+        yaml_hypers = {}
+
     if model is None:
         subparsers = parser.add_subparsers(
             title='Cortex',
@@ -458,16 +488,14 @@ def parse_args(models, model=None):
                 formatter_class=lambda prog: argparse.HelpFormatter(
                     prog, max_help_position=50, width=100))
 
-            _parse_model(model, subparser)
+            _parse_model(model, subparser, yaml_hypers=yaml_hypers)
 
     else:
-        _parse_model(model, parser)
-
-    command = sys.argv[1:]
+        _parse_model(model, parser, yaml_hypers=yaml_hypers)
 
     if '--d.sources' in command:
         d_idx = command.index('--d.sources')
-        if len(command) <= d_idx + 1:
+        if len(command) <= d_idx + 1 or command[d_idx + 1].startswith('-'):
             raise ValueError('No argument provided after `--d.sources`')
         arg = command[d_idx + 1]
         # Puts quotes on things not currently in the Namespace

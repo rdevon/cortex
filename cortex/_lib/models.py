@@ -295,9 +295,7 @@ class ModelPluginBase(metaclass=PluginType):
         hyperparameters = copy.deepcopy(self._hyperparams)
         for model in self._models:
             m_hypers = model.pull_hyperparameters()
-            m_hypers = dict(('{}.{}'.format(model.name, k), v)
-                             for k, v in m_hypers.items())
-            hyperparameters.update(**m_hypers)
+            hyperparameters[model.name] = m_hypers
 
         return hyperparameters
 
@@ -315,9 +313,7 @@ class ModelPluginBase(metaclass=PluginType):
         info = copy.deepcopy(self._help)
         for model in self._models:
             m_info = model.pull_info()
-            m_info = dict(('{}.{}'.format(model.name, k), v)
-                          for k, v in m_info.items())
-            info.update(**m_info)
+            info[model.name] = m_info
 
         return info
 
