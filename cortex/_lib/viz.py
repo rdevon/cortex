@@ -187,42 +187,25 @@ class VizHandler():
         self.clear()
 
 
-def plot(epoch, init=False, viz_test_only=False):
+def plot(plot_updates, init=False, viz_test_only=False):
     """Updates the plots for the reults.
 
     Takes the last value from the summary and appends this to the visdom plot.
 
     """
     def get_X_Y_legend(key, v_train, v_test):
-        min_e = max(0, epoch - 1)
-        if init:
-            min_e = 0
-        if min_e == epoch:
-            Y = [[v_train[0], v_train[0]]]
-        else:
-            Y = [v_train[min_e:epoch + 1]]
+        Y = [v_train]
         legend = []
 
         if v_test is not None:
-            if min_e == epoch:
-                Y.append([v_test[0], v_test[0]])
-            else:
-                Y.append(v_test[min_e:epoch + 1])
-
-            if min_e == epoch:
-                X = [[-1, 0], [-1, 0]]
-            else:
-                X = [range(min_e, epoch + 1), range(min_e, epoch + 1)]
+            Y.append(v_test)
+            X = [range(len(v_train)), range(len(v_test))]
 
             legend.append('{} (train)'.format(key))
             legend.append('{} (test)'.format(key))
         else:
             legend.append(key)
-
-            if min_e == epoch:
-                X = [[-1, 0]]
-            else:
-                X = [range(min_e, epoch + 1)]
+            X = [range(len(v_train))]
 
         return X, Y, legend
 
@@ -253,8 +236,12 @@ def plot(epoch, init=False, viz_test_only=False):
         else:
             X, Y, legend = get_X_Y_legend(k, v_train, v_test)
 
+        if plot_updates:
+            label = 'Per {} updates'.format(plot_updates)
+        else:
+            label = 'Epochs'
         opts = dict(
-            xlabel='epochs',
+            xlabel=label,
             legend=legend,
             ylabel=k,
             title=k)
@@ -262,19 +249,13 @@ def plot(epoch, init=False, viz_test_only=False):
         X = np.array(X).transpose()
         Y = np.array(Y).transpose()
 
-        if init:
-            update = None
-        else:
-            update = 'append'
-
         if Y.shape[-1] > 0:
             visualizer.line(
                 Y=Y,
                 X=X,
                 env=exp.NAME,
                 opts=opts,
-                win='line_{}'.format(k),
-                update=update
+                win='line_{}'.format(k)
             )
 
 

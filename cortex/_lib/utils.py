@@ -43,9 +43,15 @@ def update_dict_of_lists(d_to_update, **d):
                 d_to_update[k] = {}
             update_dict_of_lists(d_to_update[k], **v)
         elif k in d_to_update.keys():
-            d_to_update[k].append(v)
+            if isinstance(v, list):
+                d_to_update[k] += v
+            else:
+                d_to_update[k].append(v)
         else:
-            d_to_update[k] = [v]
+            if isinstance(v, list):
+                d_to_update[k] = v
+            else:
+                d_to_update[k] = [v]
 
 
 def bad_values(d):

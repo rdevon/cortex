@@ -19,31 +19,40 @@ __author_email__ = 'erroneus@gmail.com'
 logger = logging.getLogger('cortex.train')
 
 
-def summarize_results(results):
+def summarize_results(results, length=None):
     ''' Summarizes results from a dictionary of lists.
 
     Simply takes the mean of every list.
 
     Args:
         results (dict): Dictionary of list of results.
+        length (int): Windows over which means of results are taken.
 
     Returns:
-        dict: Dictionary of means.
+        dict: Dictionary of means or list of means.
 
     '''
+
+    def chunks(l, n):
+        """Yield successive n-sized chunks from l."""
+        for i in range(0, len(l), n):
+            yield np.mean(l[i:i + n])
+
     results_ = {}
     for k, v in results.items():
         if isinstance(v, dict):
-            results_[k] = summarize_results(v)
+            results_[k] = summarize_results(v, length=length)
         else:
             if len(v) > 0:
                 try:
-                    results_[k] = np.mean(v)
+                    if length:
+                        results_[k] = list(chunks(v, length))
+                    else:
+                        results_[k] = np.mean(v)
                 except BaseException:
                     raise ValueError(
                         'Something is wrong with result {} of type {}.'.format(
-                            k, type(
-                                v[0])))
+                            k, type(v[0])))
 
     return results_
 
@@ -90,8 +99,7 @@ def train_epoch(model, epoch, eval_during_train, data_mode='train',
     if not eval_during_train:
         return test_epoch(model, epoch, data_mode=data_mode, use_pbar=use_pbar)
 
-    results = summarize_results(model._epoch_results)
-    return results
+    return model._epoch_results
 
 
 def test_epoch(model, epoch, data_mode='test', use_pbar=True):
@@ -110,13 +118,12 @@ def test_epoch(model, epoch, data_mode='test', use_pbar=True):
 
     '''
     model.eval_loop(epoch, data_mode=data_mode, use_pbar=use_pbar)
-    results = summarize_results(model._epoch_results)
 
     model.data.reset(make_pbar=False, mode='test')
     model.data.next()
     model.clear_viz()
     model.visualize(auto_input=True)
-    return results
+    return model._epoch_results
 
 
 def display_results(train_results, test_results, last_train_results, last_test_results,
@@ -351,7 +358,8 @@ def save_best(model, train_results, best, save_on_best, save_on_lowest):
 def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
               save_on_lowest=None, save_on_highest=None, eval_during_train=True,
               train_mode='train', test_mode='test', eval_only=False,
-              pbar_off=False, viz_test_only=False, visdom_off=False, use_tensorboard=False):
+              pbar_off=False, viz_test_only=False, visdom_off=False,
+              plot_updates=None):
     '''
 
     Args:
@@ -367,7 +375,7 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         pbar_off: Turn off the progressbar.
         viz_test_only: Show only test values in visualization.
         visdom_off: Turn off visdom.
-        use_tensorboard: blah
+        plot_updates: If set, plot is more fine-grained for updates.
 
     '''
     info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
@@ -394,8 +402,8 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
 
     epoch = exp.INFO['epoch']
     first_epoch = epoch
-    train_results_last_ = None
-    test_results_last_ = None
+    train_results_last_total = None
+    test_results_last_total = None
 
     while epoch < epochs:
         try:
@@ -408,6 +416,12 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
                 model, epoch, eval_during_train,
                 data_mode=train_mode, use_pbar=not(pbar_off))
             convert_to_numpy(train_results_)
+            train_results_total = summarize_results(train_results_)
+            if plot_updates:
+                train_results_ = summarize_results(train_results_, length=plot_updates)
+            else:
+                train_results_ = train_results_total
+
             update_dict_of_lists(exp.SUMMARY['train'], **train_results_)
 
             if save_on_best or save_on_highest or save_on_lowest:
@@ -417,22 +431,23 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
             # TESTING
             test_results_ = test_epoch(model, epoch, data_mode=test_mode,
                                        use_pbar=not(pbar_off))
-
             convert_to_numpy(test_results_)
-            update_dict_of_lists(exp.SUMMARY['test'], **test_results_)
+            test_results_total = summarize_results(test_results_)
+
+            update_dict_of_lists(exp.SUMMARY['test'], **test_results_total)
             align_summaries(exp.SUMMARY['train'], exp.SUMMARY['test'])
 
             # Finishing up
             epoch_time = time.time() - start_time
             total_time += epoch_time
-            display_results(train_results_, test_results_, train_results_last_, test_results_last_,
-                            epoch, epochs, epoch_time, total_time)
+            display_results(train_results_total, test_results_total, train_results_last_total,
+                            test_results_last_total, epoch, epochs, epoch_time, total_time)
 
-            train_results_last_ = train_results_
-            test_results_last_ = test_results_
+            train_results_last_total = train_results_total
+            test_results_last_total = test_results_total
 
             if viz.visualizer:
-                plot(epoch, init=(epoch == first_epoch), viz_test_only=viz_test_only)
+                plot(plot_updates, init=(epoch == first_epoch), viz_test_only=viz_test_only)
                 model.viz.show()
                 model.viz.clear()
 
