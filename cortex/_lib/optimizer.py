@@ -5,6 +5,7 @@
 from collections import defaultdict
 import logging
 
+import numpy as np
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
@@ -25,7 +26,7 @@ _optimizer_defaults = dict(
 )
 
 
-def wrap_optimizer(C):
+def wrap_optimizer(C, plot_grads=False):
     class Op(C):
         def __init__(self, params, clipping=None, grad_clipping=None, **kwargs):
             super().__init__(params, **kwargs)
@@ -74,12 +75,37 @@ def wrap_optimizer(C):
                         p.data.clamp_(-bound, bound)
             return loss
 
+        def grad_stats(self):
+            '''Gets the stats of gradients
+
+            Returns:
+                dict: mean, std, min, max of gradients
+
+            '''
+
+            if not plot_grads:
+                return {}
+
+            grads = []
+            for group in self.param_groups:
+                for p in group['params']:
+                    grads.append(p.grad.detach().cpu().numpy().flatten())
+
+            grads = np.concatenate(grads)
+            mean = np.mean(grads)
+            std = np.std(grads)
+            min = np.min(grads)
+            max = np.max(grads)
+
+            return dict(mean=mean, std=std, min=min, max=max)
+
+
     return Op
 
 
 def setup(model, optimizer='Adam', learning_rate=1.e-4,
           weight_decay={}, clipping={}, grad_clipping={}, optimizer_options={},
-          model_optimizer_options={}, scheduler=None, scheduler_options={}):
+          model_optimizer_options={}, scheduler=None, scheduler_options={}, plot_grads=False):
     '''Optimizer entrypoint.
 
     Args:
@@ -93,6 +119,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         model_optimizer_options: Optimizer options for specified model.
         scheduler: Optimizer learning rate scheduler.
         scheduler_options: Options for scheduler.
+        plot_grads: Plot the gradients for debugging. Adds time to training.
 
     '''
 
@@ -186,7 +213,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
             optimizer_options_.update(**model_optimizer_options)
 
         # Create the optimizer
-        op = wrap_optimizer(op)
+        op = wrap_optimizer(op, plot_grads=plot_grads)
 
         optimizer = op(params, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer

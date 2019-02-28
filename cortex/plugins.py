@@ -227,6 +227,7 @@ class ModelPlugin(ModelPluginBase):
             loss.backward(retain_graph=retain_graph_)
 
             if optimizer is not None:
+                self.add_grads(**{k: optimizer.grad_stats()})
                 optimizer.step()
                 optimizer.zero_grad()
 

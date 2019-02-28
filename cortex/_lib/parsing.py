@@ -315,13 +315,14 @@ def _parse_model(model, subparser, yaml_hypers=None):
         _flatten_args(args, new_args)
         return new_args
 
-    # First pull the model hyperparameters
+    # First pull the model hyperparameters as a dictionary
     hyperparameters = model.pull_hyperparameters()
 
     # Get default hyperparameters
     model_defaults_model = model.defaults.pop('hyperparameters', {})
     update_args(model_defaults_model, hyperparameters)
 
+    # From config yaml file.
     yaml_hypers_train = yaml_hypers.pop('train', {})
     yaml_hypers_data = yaml_hypers.pop('data', {})
     yaml_hypers_optimizer = yaml_hypers.pop('optimizer', {})
@@ -331,9 +332,11 @@ def _parse_model(model, subparser, yaml_hypers=None):
     # Get docstring information.
     info = model.pull_info()
 
+    # Put hyperparameters into dot notation.
     hyperparameters = _flatten(hyperparameters)
     info = _flatten(info)
 
+    # Loop through hypers then add to argparse
     hyperparameter_keys = sorted(list(hyperparameters.keys()))
     for k in hyperparameter_keys:
         v = hyperparameters[k]
@@ -426,7 +429,6 @@ def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None,
             help=help,
             metavar=metavar)
     else:
-        #type_ = type(v) if v is not None else str
         metavar = '<' + type_.__name__ + '> (default=' + str(v) + ')'
         subparser.add_argument(
             arg_str,

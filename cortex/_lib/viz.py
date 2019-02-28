@@ -267,14 +267,15 @@ def plot(epoch, init=False, viz_test_only=False):
         else:
             update = 'append'
 
-        visualizer.line(
-            Y=Y,
-            X=X,
-            env=exp.NAME,
-            opts=opts,
-            win='line_{}'.format(k),
-            update=update
-        )
+        if Y.shape[-1] > 0:
+            visualizer.line(
+                Y=Y,
+                X=X,
+                env=exp.NAME,
+                opts=opts,
+                win='line_{}'.format(k),
+                update=update
+            )
 
 
 def save_text(labels, out_file=None, text_id=0,
@@ -296,6 +297,24 @@ def save_text(labels, out_file=None, text_id=0,
 def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
                 max_samples=None, margin_x=5, margin_y=5, image_id=0,
                 caption='', title=''):
+    '''
+
+    Args:
+        images:
+        num_x:
+        num_y:
+        out_file:
+        labels:
+        max_samples:
+        margin_x:
+        margin_y:
+        image_id:
+        caption:
+        title:
+
+    Returns:
+
+    '''
     if labels is not None:
         if isinstance(labels, (tuple, list)):
             labels = zip(*labels)

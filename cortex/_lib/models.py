@@ -206,6 +206,7 @@ class ModelPluginBase(metaclass=PluginType):
     _epoch_losses = ResultsHandler()
     _epoch_times = ResultsHandler()
     _epoch_results = ResultsHandler()
+    _epoch_grads = ResultsHandler()
 
     def __init__(self, kwargs=None, nets=None, inputs=None):
         '''
@@ -235,6 +236,7 @@ class ModelPluginBase(metaclass=PluginType):
 
         # Handlers for various results.
         self._results = ResultsHandler()  # Results to be displayed.
+        self._grads = ResultsHandler() # Gradients of each optimizer.
         self._times = ResultsHandler()  # Times for models.
         self._losses = LossHandler(self.nets)  # Losses for training.
         self._all_losses = dict()  # Summary of losses for display.
@@ -289,6 +291,10 @@ class ModelPluginBase(metaclass=PluginType):
     def add_nets(self, **kwargs):
         for key, value in kwargs.items():
             self.nets[key] = value
+
+    def add_grads(self, **kwargs):
+        for key, value in kwargs.items():
+            self.grads[key] = value
 
     # Hyperparameter functions
     def pull_hyperparameters(self):
@@ -347,6 +353,20 @@ class ModelPluginBase(metaclass=PluginType):
             results[model.name] = model.fetch_all_results()
         return results
 
+    def fetch_all_grads(self):
+        '''Get all grads from model and child models.
+
+        Returns:
+            dict: Dictionary of grads and children grads.
+
+        '''
+        grads = dict((self._contract['nets'].get(k, k), v)
+                       for k, v in self.grads.items())
+        self.grads.clear()
+        for model in self._models:
+            grads[model.name] = model.fetch_all_grads()
+        return grads
+
     def fetch_all_times(self):
         '''Get all times from model and child models.
 
@@ -396,7 +416,6 @@ class ModelPluginBase(metaclass=PluginType):
         collapse(losses, losses_, all_losses)
 
         # These losses are the ones displayed.
-        self._all_losses.clear()
         self._all_losses.update(**summarize_losses(all_losses))
 
         # These are the backpropped ones.
@@ -422,6 +441,26 @@ class ModelPluginBase(metaclass=PluginType):
         collapse(results, results_)
         self._results.clear()
         self._results.update(**results_)
+
+    def collapse_grads(self):
+        '''Collapses grads from child models.
+
+        '''
+        def collapse(d, grads, prefix=''):
+            for k, v in d.items():
+                if prefix == '':
+                    key = k
+                else:
+                    key = prefix + '.' + k
+                if isinstance(v, dict):
+                    collapse(v, grads, prefix=key)
+                else:
+                    grads[key] = v
+        grads = self.fetch_all_grads()
+        grads_ = {}
+        collapse(grads, grads_)
+        self._grads.clear()
+        self._grads.update(**grads_)
 
     def collapse_times(self):
         '''Collapses times from child models.
@@ -514,30 +553,34 @@ class ModelPluginBase(metaclass=PluginType):
                     net.eval()
 
             output = fn(*args, **kwargs)
+            self.finish_step()
 
-            # Collapse results and times
-            self.collapse_results()
-            self.collapse_losses()
-            self.collapse_times()
             return output
 
         return cortex_step
 
     def finish_step(self):
-        '''Finishes a loop.
+        '''Finishes a step.
 
         Should only be done when all models have completed their step.
 
         '''
         # Appends to each list of results and losses.
 
+        self.collapse_results()
+        self.collapse_times()
+        self.collapse_losses()
+        self.collapse_grads()
+
         update_dict_of_lists(self._epoch_results, **self.results)
         update_dict_of_lists(self._epoch_times, **self.times)
         update_dict_of_lists(self._epoch_losses, **self._all_losses)
+        update_dict_of_lists(self._epoch_grads, **self.grads)
 
         self.losses.clear()
         self._all_losses.clear()
         self.results.clear()
+        self.grads.clear()
         self.times.clear()
 
         for opt in self._optimizers.values():
@@ -585,6 +628,7 @@ class ModelPluginBase(metaclass=PluginType):
             results = self._epoch_results
             results['losses'] = dict(self._epoch_losses)
             results['times'] = dict(self._epoch_times)
+            results['grads'] = dict(self._epoch_grads)
 
             # Optimizer scheduler.
             if data_mode == 'train':
@@ -610,10 +654,10 @@ class ModelPluginBase(metaclass=PluginType):
 
         '''
 
-        def cortex_optimizer_step():
+        def cortex_optimizer_step(*args, **kwargs):
             self.collapse_losses()
             start = time.time()
-            fn()
+            fn(*args, **kwargs)
             end = time.time()
             self.times['Optimizer'] = end - start
             self.losses.clear()
@@ -712,6 +756,10 @@ class ModelPluginBase(metaclass=PluginType):
     @property
     def results(self):
         return self._results
+
+    @property
+    def grads(self):
+        return self._grads
 
     @property
     def nets(self):

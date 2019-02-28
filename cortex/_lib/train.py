@@ -4,7 +4,6 @@
 
 from collections import OrderedDict
 import logging
-import pprint
 import sys
 import time
 
@@ -170,15 +169,20 @@ def display_results(train_results, test_results, last_train_results, last_test_r
 
         '''
         train = OrderedDict(sorted(train.items()))
+
+        if len(train) == 0:
+            return
+
         max_key_length = max(len(k) for k in train.keys())
         s = prefix + \
             ' ' * (max_key_length + 2 - len(prefix) + 4 + format_length - len('train')) + \
             ' Train |' + \
             ' ' * (format_length - len('test')) + ' Test'
         s = underline(s)
+
         print(s)
         for k in train.keys():
-            if k in ('losses', 'times'):
+            if k in ('losses', 'times', 'grads'):
                 continue
             s = '    '
             key_length = len(k)
@@ -209,6 +213,7 @@ def display_results(train_results, test_results, last_train_results, last_test_r
                     s += ' | ' + s_test
 
             print(s)
+        print()
 
     print()
     print()
@@ -229,13 +234,17 @@ def display_results(train_results, test_results, last_train_results, last_test_r
     # Show losses
     train_losses = train_results['losses']
     test_losses = test_results['losses']
+    train_grads = train_results['grads']
+    test_grads = test_results['grads']
+
+    train_grads_last = last_train_results.pop('grads') if last_train_results else None
+    test_grads_last = last_test_results.pop('grads') if last_test_results else None
     train_losses_last = last_train_results.pop('losses') if last_train_results else None
     test_losses_last = last_test_results.pop('losses') if last_test_results else None
-    print()
+
     print_table(train_losses, test_losses, train_losses_last, test_losses_last, 'Network losses:')
-    print()
     print_table(train_results, test_results, last_train_results, last_test_results, 'Results:')
-    print()
+    print_table(train_grads, test_grads, train_grads_last, test_grads_last, 'Network grads:')
 
 
 def align_summaries(d_train, d_test):
@@ -252,8 +261,14 @@ def align_summaries(d_train, d_test):
             v_train = d_train[k]
             v_test = d_test[k]
             if isinstance(v_train, dict):
-                max_train_len = max([len(v) for v in v_train.values()])
-                max_test_len = max([len(v) for v in v_test.values()])
+                if len(v_train) == 0:
+                    max_train_len = 0
+                else:
+                    max_train_len = max([len(v) for v in v_train.values()])
+                if len(v_test) == 0:
+                    max_test_len = 0
+                else:
+                    max_test_len = max([len(v) for v in v_test.values()])
                 max_len = max(max_train_len, max_test_len)
                 for k_, v in v_train.items():
                     if len(v) < max_len:
@@ -336,7 +351,7 @@ def save_best(model, train_results, best, save_on_best, save_on_lowest):
 def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
               save_on_lowest=None, save_on_highest=None, eval_during_train=True,
               train_mode='train', test_mode='test', eval_only=False,
-              pbar_off=False, viz_test_only=False, visdom_off=False):
+              pbar_off=False, viz_test_only=False, visdom_off=False, use_tensorboard=False):
     '''
 
     Args:
@@ -352,6 +367,7 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         pbar_off: Turn off the progressbar.
         viz_test_only: Show only test values in visualization.
         visdom_off: Turn off visdom.
+        use_tensorboard: blah
 
     '''
     info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)

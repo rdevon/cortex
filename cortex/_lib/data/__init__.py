@@ -66,10 +66,7 @@ def setup(sources: str=None, batch_size=64, n_workers: int=4,
         for name, (source, plugin) in plugin_dict.items():
             data_args_ = data_args.get(name, {})
             plugin._set_copy(copy_to_local=copy_to_local)
-            try:
-                plugin.handle(source, **data_args_)
-            except KeyError:
-                pass
+            plugin.handle(source, **data_args_)
 
             DATA_HANDLER.add_dataset(DATASETS, source, name, plugin, n_workers=n_workers,
                                      shuffle=shuffle)

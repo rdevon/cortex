@@ -72,7 +72,6 @@ class DataHandler:
 
         DataLoader = (DataLoader or plugin._dataloader_class or
                       torch.utils.data.DataLoader)
-
         data = datasets[source]['data']
         dims = datasets[source]['dims']
         input_names = datasets[source]['input_names']
@@ -289,7 +288,11 @@ class DataHandler:
             else:
                 raise KeyError('Error with dimension query {}. '
                                'Available: {}'.format(q_, self.dims))
-            dims.append(self.dims[head][tail])
+            try:
+                dims.append(self.dims[head][tail])
+            except KeyError:
+                raise KeyError('Dimensions {} not found. '
+                               'Available from data handler: {}'.format(q_, self.dims))
 
         if len(dims) == 1:
             return dims[0]
