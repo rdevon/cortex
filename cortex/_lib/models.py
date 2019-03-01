@@ -191,6 +191,74 @@ def _auto_input_decorator(cls, fn):
     return wrapped
 
 
+def model_step(cls, fn, train=True):
+    '''Wraps the training or evaluation step.
+
+    Args:
+        fn: Callable step function.
+        train (bool): For train or eval step.
+
+    Returns:
+        Wrapped version of the function.
+
+    '''
+
+    fn = _auto_input_decorator(cls, fn)
+
+    def cortex_step(*args, _init=False, **kwargs):
+        if train and not _init:
+            training_nets = cls._get_training_nets()
+            for k, net in cls._all_nets.items():
+                if k in training_nets:
+                    net.train()
+                else:
+                    net.eval()
+        else:
+            for net in cls._all_nets.values():
+                net.eval()
+
+        output = fn(*args, **kwargs)
+        cls.finish_step()
+
+        return output
+
+    return cortex_step
+
+
+def cortex_train_step(fn):
+    def cortex_step(cls, *args, _init=False, **kwargs):
+        if not _init:
+            training_nets = cls._get_training_nets()
+            for k, net in cls._all_nets.items():
+                if k in training_nets:
+                    net.train()
+                else:
+                    net.eval()
+        else:
+            for net in cls._all_nets.values():
+                net.eval()
+
+        output = _auto_input_decorator(cls, fn)(cls, *args, **kwargs)
+        cls.finish_step()
+
+        return output
+
+    return cortex_step
+
+
+def cortex_eval_step(fn):
+    def cortex_step(cls, *args, _init=False, **kwargs):
+        for net in cls._all_nets.values():
+            net.eval()
+
+        output = _auto_input_decorator(cls, fn)(cls, *args, **kwargs)
+        cls.finish_step()
+
+        return output
+
+    return cortex_step
+
+
 class ModelPluginBase(metaclass=PluginType):
     '''Base model class.
 
@@ -207,6 +275,8 @@ class ModelPluginBase(metaclass=PluginType):
     _epoch_times = ResultsHandler()
     _epoch_results = ResultsHandler()
     _epoch_grads = ResultsHandler()
+
+    _steps = ['train_step']
 
     def __init__(self, kwargs=None, nets=None, inputs=None):
         '''
@@ -246,8 +316,8 @@ class ModelPluginBase(metaclass=PluginType):
         self.visualize = self.visualize_step(self.visualize)
         self.routine = self.model_routine(self.routine)
         self.optimizer_step = self.model_optimizer_step(self.optimizer_step)
-        self.train_step = self.model_step(self.train_step, train=True)
-        self.eval_step = self.model_step(self.eval_step, train=False)
+        self.train_step = model_step(self, self.train_step, train=True)
+        self.eval_step = model_step(self, self.eval_step, train=False)
         self.train_loop = self.model_loop(self.train_loop, train=True)
         self.eval_loop = self.model_loop(self.eval_loop, train=False)
 
@@ -525,40 +595,6 @@ class ModelPluginBase(metaclass=PluginType):
 
         return viz_step
 
-
-    def model_step(self, fn, train=True):
-        '''Wraps the training or evaluation step.
-
-        Args:
-            fn: Callable step function.
-            train (bool): For train or eval step.
-
-        Returns:
-            Wrapped version of the function.
-
-        '''
-
-        fn = _auto_input_decorator(self, fn)
-
-        def cortex_step(*args, _init=False, **kwargs):
-            if train and not _init:
-                training_nets = self._get_training_nets()
-                for k, net in self._all_nets.items():
-                    if k in training_nets:
-                        net.train()
-                    else:
-                        net.eval()
-            else:
-                for net in self._all_nets.values():
-                    net.eval()
-
-            output = fn(*args, **kwargs)
-            self.finish_step()
-
-            return output
-
-        return cortex_step
-
     def finish_step(self):
         '''Finishes a step.
 
@@ -656,10 +692,7 @@ class ModelPluginBase(metaclass=PluginType):
 
         def cortex_optimizer_step(*args, **kwargs):
             self.collapse_losses()
-            start = time.time()
             fn(*args, **kwargs)
-            end = time.time()
-            self.times['Optimizer'] = end - start
             self.losses.clear()
 
         return cortex_optimizer_step

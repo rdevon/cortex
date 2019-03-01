@@ -5,6 +5,7 @@
 import logging
 from os import path
 import shutil
+import time
 
 from cortex._lib.config import CONFIG, _config_name
 from cortex._lib.data import DatasetPluginBase, register as register_data, DATASETS
@@ -223,6 +224,7 @@ class ModelPlugin(ModelPluginBase):
 
             loss = self.losses.get(k)
 
+            start = time.time()
             retain_graph_ = retain_graph or (i + 1 < len(keys))
             loss.backward(retain_graph=retain_graph_)
 
@@ -230,6 +232,8 @@ class ModelPlugin(ModelPluginBase):
                 self.add_grads(**{k: optimizer.grad_stats()})
                 optimizer.step()
                 optimizer.zero_grad()
+                end = time.time()
+                self.times['Optimizer {}'.format(k)] = end - start
 
         for opt in self._optimizers.values():
             opt.zero_grad()
@@ -244,7 +248,6 @@ class ModelPlugin(ModelPluginBase):
         try:
             while True:
                 self.train_step()
-                self.finish_step()
 
         except StopIteration:
             pass
@@ -259,7 +262,6 @@ class ModelPlugin(ModelPluginBase):
         try:
             while True:
                 self.eval_step()
-                self.finish_step()
 
         except StopIteration:
             pass

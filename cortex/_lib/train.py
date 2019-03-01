@@ -235,7 +235,9 @@ def display_results(train_results, test_results, last_train_results, last_test_r
     times = train_results.pop('times', None)
     print(underline('Avg update times: '))
     if times:
-        for k, v in times.items():
+        time_keys = sorted(list(times.keys()))
+        for k in time_keys:
+            v = times[k]
             print('    {}: {:.5f}s'.format(k, v))
 
     # Show losses

@@ -100,7 +100,8 @@ class DataHandler:
                                     shuffle=shuffle, num_workers=n_workers,
                                     worker_init_fn=lambda x:
                                     signal.signal(signal.SIGINT,
-                                                  signal.SIG_IGN))
+                                                  signal.SIG_IGN),
+                                    pin_memory=True)
 
         self.dims[name] = dims
         self.input_names[name] = input_names
