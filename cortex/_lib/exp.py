@@ -98,7 +98,7 @@ def save(model, prefix: str = ''):
 
         nets = {}
         for k, net in model._all_nets.items():
-            nets[k] = copy.deepcopy(net).to('cpu')
+            nets[k] = copy.deepcopy(net.module).to('cpu')
 
         state = dict(
             nets=nets,

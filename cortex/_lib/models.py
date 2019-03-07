@@ -170,23 +170,19 @@ def _auto_input_decorator(cls, fn):
         return inputs
 
     def wrapped(*args, auto_input=False, **kwargs_):
-        try:
-            kwargs = _fetch_kwargs(**kwargs_)
-            for k, v in kwargs_.items():
-                # Infer correct hyperparameters for function and pass them..
-                if isinstance(v, dict) and (k in kwargs and
-                                            isinstance(kwargs[k], dict)):
-                    kwargs[k].update(**v)
-                elif v is not None:
-                    kwargs[k] = v
-                elif v is None and k not in kwargs:
-                    kwargs[k] = v
-            if auto_input:
-                args = _fetch_inputs()
-            return fn(*args, **kwargs)
-        except RuntimeError as e:
-            logger.exception('Runtime error with model {}:'.format(cls.name))
-            raise e
+        kwargs = _fetch_kwargs(**kwargs_)
+        for k, v in kwargs_.items():
+            # Infer correct hyperparameters for function and pass them..
+            if isinstance(v, dict) and (k in kwargs and
+                                        isinstance(kwargs[k], dict)):
+                kwargs[k].update(**v)
+            elif v is not None:
+                kwargs[k] = v
+            elif v is None and k not in kwargs:
+                kwargs[k] = v
+        if auto_input:
+            args = _fetch_inputs()
+        return fn(*args, **kwargs)
 
     return wrapped
 
@@ -560,21 +556,17 @@ class ModelPluginBase(metaclass=PluginType):
         fn = _auto_input_decorator(self, fn)
 
         def cortex_routine(*args, **kwargs):
-            if self._training_nets is None:
-                # This is the first time a routine has been run. Run once,
-                # then extract the networks from which losses are computed for.
-                # These will be trained.
-
-                fn(*args, **kwargs)
-                self._training_nets = [self.nets._aliases.get(k, k) for k in self.losses.keys()]
-
-            self.losses.clear()
             start = time.time()
             output = fn(*args, **kwargs)
+            if self._training_nets is None:
+                self._training_nets = [self.nets._aliases.get(k, k) for k in self.losses.keys()]
 
             self._check_bad_values()
             end = time.time()
-            self.times[self.name] = end - start
+            if self.name in self.times:
+                self.times[self.name] += (end - start)
+            else:
+                self.times[self.name] = end - start
 
             return output
 
@@ -590,6 +582,9 @@ class ModelPluginBase(metaclass=PluginType):
                 net.eval()
 
             output = fn(*args, **kwargs)
+            self.losses.clear()
+            self.results.clear()
+            self.times.clear()
 
             return output
 
@@ -711,11 +706,13 @@ class ModelPluginBase(metaclass=PluginType):
         cls._epoch_results.clear()
         cls._epoch_losses.clear()
         cls._epoch_times.clear()
+        cls._epoch_grads.clear()
 
     def _reset_epoch(self):
         self._epoch_results.clear()
         self._epoch_losses.clear()
         self._epoch_times.clear()
+        self._epoch_grads.clear()
 
     def _map_data_queries(self, *queries):
         """Maps a query for an input for a model to a different key.
