@@ -212,31 +212,22 @@ class ModelPlugin(ModelPluginBase):
         """
         keys = self.losses.keys()
 
-        for opt in self._optimizers.values():
-            opt.zero_grad()
-
         for i, k in enumerate(keys):
             key = self.nets._aliases.get(k, k)
             optimizer = self._optimizers.get(key)
 
             if optimizer is not None:
                 optimizer.zero_grad()
+                loss = self.losses.get(k)
 
-            loss = self.losses.get(k)
+                start = time.time()
+                retain_graph_ = retain_graph or (i + 1 < len(keys))
+                loss.backward(retain_graph=retain_graph_)
 
-            start = time.time()
-            retain_graph_ = retain_graph or (i + 1 < len(keys))
-            loss.backward(retain_graph=retain_graph_)
-
-            if optimizer is not None:
                 self.add_grads(**{k: optimizer.grad_stats()})
                 optimizer.step()
-                optimizer.zero_grad()
                 end = time.time()
                 self.times['Optimizer {}'.format(k)] = end - start
-
-        for opt in self._optimizers.values():
-            opt.zero_grad()
 
     def train_loop(self):
         """The training loop.

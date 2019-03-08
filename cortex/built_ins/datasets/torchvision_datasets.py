@@ -19,21 +19,21 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         'PhotoTour', 'SEMEION', 'STL10', 'SVHN'
     ]
 
-    def _handle_LSUN(self, Dataset, data_path, transform=None, **kwargs):
+    def _handle_LSUN(self, Dataset, data_path, transform=None, test_transform=None, **kwargs):
         train_set = Dataset(
             data_path, classes=['bedroom_train'], transform=transform)
         test_set = Dataset(
             data_path, classes=['bedroom_test'], transform=transform)
         return train_set, test_set
 
-    def _handle_SVHN(self, Dataset, data_path, transform=None, **kwargs):
+    def _handle_SVHN(self, Dataset, data_path, transform=None, test_transform=None, **kwargs):
         train_set = Dataset(
             data_path, split='train', transform=transform, download=True)
         test_set = Dataset(
-            data_path, split='test', transform=transform, download=True)
+            data_path, split='test', transform=test_transform, download=True)
         return train_set, test_set
 
-    def _handle_STL(self, Dataset, data_path, transform=None,
+    def _handle_STL(self, Dataset, data_path, transform=None, test_transform=None,
                     labeled_only=False):
 
         if labeled_only:
@@ -43,7 +43,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         train_set = Dataset(
             data_path, split=split, transform=transform, download=True)
         test_set = Dataset(
-            data_path, split='test', transform=transform, download=True)
+            data_path, split='test', transform=test_transform, download=True)
         return train_set, test_set
 
     def _handle(self, Dataset, data_path, transform=None, **kwargs):
@@ -58,7 +58,11 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
                labeled_only=False, transform=None,
                center_crop: int = None, image_size: int = None,
                random_crop: int = None, flip=False, random_resize_crop: int = None,
-               random_sized_crop: int = None):
+               random_sized_crop: int = None,
+               center_crop_test: int = None, image_size_test: int = None,
+               random_crop_test: int = None, flip_test=False, random_resize_crop_test: int = None,
+               random_sized_crop_test: int = None
+               ):
         '''
 
         Args:
@@ -102,10 +106,14 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
             else:
                 scale = None
 
-            transform = build_transforms(
+            train_transform = build_transforms(
                 normalize=normalize, center_crop=center_crop, image_size=image_size,
                 random_crop=random_crop, flip=flip, random_resize_crop=random_resize_crop,
                 random_sized_crop=random_sized_crop)
+            test_transform = build_transforms(
+                normalize=normalize, center_crop=center_crop_test, image_size=image_size_test,
+                random_crop=random_crop_test, flip=flip_test, random_resize_crop=random_resize_crop_test,
+                random_sized_crop=random_sized_crop_test)
 
         if source == 'LSUN':
             handler = self._handle_LSUN
@@ -116,7 +124,7 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
         else:
             handler = self._handle
 
-        train_set, test_set = handler(Dataset, data_path, transform=transform,
+        train_set, test_set = handler(Dataset, data_path, transform=train_transform, test_transform=test_transform,
                                       labeled_only=labeled_only)
         if train_samples is not None:
             train_set.train_data = train_set.train_data[:train_samples]

@@ -194,7 +194,7 @@ def display_results(train_results, test_results, last_train_results, last_test_r
             s = '    '
             key_length = len(k)
             v_train = train[k]
-            v_test = test[k]
+            v_test = test.get(k, None)
             v_train_last = train_last[k] if (train_last and k in train_last) else v_train
             v_test_last = test_last[k] if (test_last and k in test_last) else v_test
 

@@ -75,7 +75,7 @@ def wrap_optimizer(C, plot_grads=False):
                         p.data.clamp_(-bound, bound)
             return loss
 
-        def grad_stats(self):
+        def grad_stats(self, override=False):
             '''Gets the stats of gradients
 
             Returns:
@@ -83,7 +83,7 @@ def wrap_optimizer(C, plot_grads=False):
 
             '''
 
-            if not plot_grads:
+            if not plot_grads and not override:
                 return {}
 
             grads = []
@@ -98,7 +98,6 @@ def wrap_optimizer(C, plot_grads=False):
             max = np.max(grads)
 
             return dict(mean=mean, std=std, min=min, max=max)
-
 
     return Op
 

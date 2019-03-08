@@ -101,6 +101,10 @@ class NestedNetworkHandler(Handler):
         self._handler = handler
         self._aliases = {}
 
+    def load(self, **kwargs):
+        for k, v in kwargs.items():
+            self.__setattr__(k, v)
+
     def __getattr__(self, item):
         if item.startswith('_'):
             return super().__getitem__(item)
@@ -121,7 +125,10 @@ class NestedNetworkHandler(Handler):
             self._aliases[key] = alias
             return self._handler[alias]
         else:
-            value = torch.nn.DataParallel(value, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
+            if isinstance(value, torch.nn.DataParallel):
+                value = value.to(exp.DEVICE)
+            else:
+                value = torch.nn.DataParallel(value, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
             alias = '{}.{}'.format(self._model.name, key)
             self._aliases[key] = alias
             return self._handler.__setattr__(alias, value)
@@ -146,7 +153,10 @@ class NestedNetworkHandler(Handler):
             self._aliases[key] = alias
             return self._handler[alias]
         else:
-            value = torch.nn.DataParallel(value, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
+            if isinstance(value, torch.nn.DataParallel):
+                value = value.to(exp.DEVICE)
+            else:
+                value = torch.nn.DataParallel(value, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
             alias = '{}.{}'.format(self._model.name, key)
             self._aliases[key] = alias
             return self._handler.__setitem__(alias, value)
@@ -167,8 +177,12 @@ class NetworkHandler(Handler):
         self._loaded = dict()
 
     def load(self, **kwargs):
-        self._loaded.update(**kwargs)
-        self.update(**kwargs)
+        nets = {}
+        for k, v in kwargs.items():
+            net = torch.nn.DataParallel(v, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
+            nets[k] = net
+        self._loaded.update(**nets)
+        self.update(**nets)
 
     def __setitem__(self, key, value):
         self._check_keyvalue(key, value)
@@ -176,13 +190,12 @@ class NetworkHandler(Handler):
         if self._locked:
             raise KeyError('Handler is locked.')
 
-        if not self._allow_overwrite and hasattr(self, key):
-            if key in self._loaded:
-                self.__dict__[key] = value
-                loaded = self._loaded[key]
-                self.__dict__[key].load_state_dict(loaded.state_dict())
-            else:
-                raise KeyError('Overwriting keys not allowed.')
+        if key in self._loaded:
+            MutableMapping.__setattr__(self, key, value)
+            loaded = self._loaded[key]
+            self.__dict__[key].load_state_dict(loaded.state_dict())
+        elif not self._allow_overwrite and hasattr(self, key):
+            raise KeyError('Overwriting keys not allowed.')
         else:
             self.__dict__[key] = value
 
@@ -195,13 +208,12 @@ class NetworkHandler(Handler):
         if self._locked:
             raise KeyError('Handler is locked.')
 
-        if not self._allow_overwrite and hasattr(self, key):
-            if key in self._loaded:
-                MutableMapping.__setattr__(self, key, value)
-                loaded = self._loaded[key]
-                self.__dict__[key].load_state_dict(loaded.state_dict())
-            else:
-                raise KeyError('Overwriting keys not allowed.')
+        if key in self._loaded:
+            MutableMapping.__setattr__(self, key, value)
+            loaded = self._loaded[key]
+            self.__dict__[key].load_state_dict(loaded.state_dict())
+        elif not self._allow_overwrite and hasattr(self, key):
+            raise KeyError('Overwriting keys not allowed.')
         else:
             MutableMapping.__setattr__(self, key, value)
 
