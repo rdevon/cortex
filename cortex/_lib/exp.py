@@ -28,6 +28,7 @@ ARGS = dict(data=dict(), model=dict(), optimizer=dict(), train=dict())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
 DEVICE_IDS = None
+VIS = 'viz'
 
 
 def _file_string(prefix: str = '') -> str:
@@ -152,6 +153,7 @@ def setup_out_dir(out_path: str, global_out_path: str, name: str = None, clean: 
 
     binary_dir = path.join(out_path, 'binaries')
     image_dir = path.join(out_path, 'images')
+    tb_dir = path.join(out_path, 'tb')
 
     if clean:
         logger.warning('Cleaning directory (cannot be undone)')
@@ -159,17 +161,21 @@ def setup_out_dir(out_path: str, global_out_path: str, name: str = None, clean: 
             rmtree(binary_dir)
         if path.isdir(image_dir):
             rmtree(image_dir)
+        if path.isdir(tb_dir):
+            rmtree(tb_dir)
 
     if not path.isdir(binary_dir):
         os.mkdir(binary_dir)
     if not path.isdir(image_dir):
         os.mkdir(image_dir)
+    if not path.isdir(tb_dir):
+        os.mkdir(tb_dir)
 
     logger.info('Setting out path to `{}`'.format(out_path))
     logger.info('Logging to `{}`'.format(path.join(out_path, 'out.log')))
     set_file_logger(path.join(out_path, 'out.log'))
 
-    OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir)
+    OUT_DIRS.update(binary_dir=binary_dir, image_dir=image_dir, tb=tb_dir)
 
 
 def setup_device(device: [int] or int):
@@ -183,3 +189,11 @@ def setup_device(device: [int] or int):
         DEVICE = torch.device(device)
     else:
         logger.info('Using CPU')
+
+def setup_visualization(vis: str):
+    global VIS
+    if vis not in ['vis', 'tb']:
+        raise ValueError('Choose valid argument for visualisation')
+
+    VIS = vis
+    logger.info('Visualization: {}'.format(vis))

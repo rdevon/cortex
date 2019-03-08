@@ -117,27 +117,35 @@ class bcolors:
     ENDC = '\033[0m'
 
 
-def bold(s, visdom_mode=False):
+def bold(s, visdom_mode=False, tb_mode=False):
     if visdom_mode:
-        bold_char = '<b>'
-        end_char = '</b>'
+        if tb_mode:
+            bold_char = ''
+            end_char = ''
+        else:
+            bold_char = '<b>'
+            end_char = '</b>'
     else:
         bold_char = bcolors.BOLD
         end_char = bcolors.ENDC
     return bold_char + s + end_char
 
 
-def underline(s, visdom_mode=False):
+def underline(s, visdom_mode=False, tb_mode=False):
     if visdom_mode:
-        ul_char = '<u>'
-        end_char = '</u>'
+        if tb_mode:
+            ul_char = ''
+            end_char = ''
+        else:
+            ul_char = '<u>'
+            end_char = '</u>'
     else:
         ul_char = bcolors.UNDERLINE
         end_char = bcolors.ENDC
     return  ul_char + s + end_char
 
 
-def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0):
+def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0, tb_mode=False):
     if visdom_mode:
         newline = '<br>'
         space = '&nbsp;&nbsp;'
@@ -149,12 +157,12 @@ def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0):
         s += '{}{}{}'.format(newline, space, prefix)
         if level == 0:
             spaces = space * 30
-            s += underline('{}: {}'.format(k, spaces), visdom_mode=visdom_mode)
+            s += underline('{}: {}'.format(k, spaces), visdom_mode=visdom_mode, tb_mode=tb_mode)
         else:
             s += '{}: '.format(k)
 
         if isinstance(v, dict) and len(v) > 0:
-            s = print_hypers(v, prefix + space, s=s, visdom_mode=visdom_mode, level=level + 1)
+            s = print_hypers(v, prefix + space, s=s, visdom_mode=visdom_mode, level=level + 1, tb_mode=tb_mode)
         else:
-            s += bold('{}'.format(v), visdom_mode=visdom_mode)
+            s += bold('{}'.format(v), visdom_mode=visdom_mode, tb_mode=tb_mode)
     return s

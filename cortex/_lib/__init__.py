@@ -9,7 +9,6 @@ import os
 
 from . import config, exp, log_utils, models
 from .parsing import DEFAULT_ARGS, parse_args, update_args
-from .viz import init as viz_init
 from .utils import print_hypers
 
 
@@ -95,8 +94,15 @@ def setup_experiment(args, model=None, testmode=False):
     experiment_args = copy.deepcopy(DEFAULT_ARGS)
     update_args(experiment_args, exp.ARGS)
 
-    if not testmode and not args.noviz:
-        viz_init(config.CONFIG.viz)
+    exp.setup_visualization(args.visdom)
+    
+    if args.visdom == 'viz':
+        from .viz import init as viz_init
+        if not testmode and not args.noviz:
+            viz_init(config.CONFIG.viz)
+    
+
+    
 
     def _expand_model_hypers(args, model):
         d = {}
@@ -221,6 +227,12 @@ def setup_experiment(args, model=None, testmode=False):
         exp.INFO['name'] = exp.NAME
         exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
                           clean=args.clean)
+
+
+    if args.visdom == 'tb':
+        from .tensorborad import init as tb_init
+        if not testmode and not args.noviz:
+            tb_init(exp.OUT_DIRS['tb'])
 
     str = print_hypers(exp.ARGS, s='Final hyperparameters: ')
     logger.info(str)

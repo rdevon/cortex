@@ -7,7 +7,7 @@ from os import path
 import imageio
 import numpy as np
 from PIL import Image, ImageDraw
-import visdom
+from tensorboardX import SummaryWriter
 
 from . import data, exp
 from .utils import convert_to_numpy, compute_tsne
@@ -19,8 +19,7 @@ from cortex._lib.config import _yes_no
 matplotlib.use('Agg')
 from matplotlib import pylab as plt  # noqa E402
 
-__author__ = 'R Devon Hjelm'
-__author_email__ = 'erroneus@gmail.com'
+
 
 logger = logging.getLogger('cortex.viz')
 config_font = None
@@ -35,33 +34,41 @@ CHARS = ['_', '\n', ' ', '!', '"', '%', '&', "'", '(', ')', ',', '-', '.', '/',
 CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 
 
-def init(viz_config):
-    global visualizer, config_font, viz_process, writer
-    if viz_config is not None and ('server' in viz_config.keys() or
-                                   'port' in viz_config.keys()):
-        server = viz_config.get('server', None)
-        port = viz_config.get('port', 8097)
-        logger.info('Using visdom version {}'.format(visdom.__version__))
-        visualizer = visdom.Visdom(server=server, port=port)
-        if not visualizer.check_connection():
-            if _yes_no("No Visdom server runnning on the configured address. "
-                       "Do you want to start it?"):
-                viz_bash_command = "python -m visdom.server"
-                viz_process = subprocess.Popen(viz_bash_command.split())
-                logger.info('Using visdom server at {}({})'.format(server, port))
-            else:
-                visualizer = None
-    else:
-        if _yes_no("Visdom configuration is not specified. Please run 'cortex setup' "
-                   "to configure Visdom server. Do you want to continue with "
-                   "the default address ? (localhost:8097)"):
-            viz_bash_command = "python -m visdom.server"
-            viz_process = subprocess.Popen(viz_bash_command.split())
-            visualizer = visdom.Visdom()
-            logger.info('Using local visdom server')
-        else:
-            visualizer = None
-    config_font = viz_config.get('font')
+def init(out_dir):
+
+    # global visualizer, config_font, viz_process
+    # if viz_config is not None and ('server' in viz_config.keys() or
+    #                                'port' in viz_config.keys()):
+    #     server = viz_config.get('server', None)
+    #     port = viz_config.get('port', 8097)
+    #     logger.info('Using visdom version {}'.format(visdom.__version__))
+    #     visualizer = visdom.Visdom(server=server, port=port)
+    #     if not visualizer.check_connection():
+    #         if _yes_no("No Visdom server runnning on the configured address. "
+    #                    "Do you want to start it?"):
+    #             viz_bash_command = "python -m visdom.server"
+    #             viz_process = subprocess.Popen(viz_bash_command.split())
+    #             logger.info('Using visdom server at {}({})'.format(server, port))
+    #         else:
+    #             visualizer = None
+    # else:
+    #     if _yes_no("Visdom configuration is not specified. Please run 'cortex setup' "
+    #                "to configure Visdom server. Do you want to continue with "
+    #                "the default address ? (localhost:8097)"):
+    #         viz_bash_command = "python -m visdom.server"
+    #         viz_process = subprocess.Popen(viz_bash_command.split())
+    #         visualizer = visdom.Visdom()
+    #         logger.info('Using local visdom server')
+    #     else:
+    #         visualizer = None
+    # config_font = viz_config.get('font')
+
+
+
+    global visualizer
+    visualizer = SummaryWriter(out_dir)
+    logger.info('Starting Tensorboard writer')
+
 
 
 def setup(label_names=None, is_caption=False, is_attribute=False, char_map=None):
@@ -86,7 +93,7 @@ def setup(label_names=None, is_caption=False, is_attribute=False, char_map=None)
         CHAR_MAP = char_map
 
 
-class VizHandler():
+class TBHandler():
     def __init__(self):
         self.clear()
         self.output_dirs = exp.OUT_DIRS
@@ -110,6 +117,7 @@ class VizHandler():
                            'visualization. Use the name kwarg'
                            .format(name))
         self.images[name] = (im, labels)
+        visualizer.add_image()
 
     def add_histogram(self, hist, name='histogram'):
         if name in self.histograms:
@@ -249,7 +257,6 @@ def plot(plot_updates, init=False, viz_test_only=False):
         X = np.array(X).transpose()
         Y = np.array(Y).transpose()
 
-
         if Y.shape[-1] > 0:
             visualizer.line(
                 Y=Y,
@@ -261,14 +268,16 @@ def plot(plot_updates, init=False, viz_test_only=False):
 
 
 def save_text(labels, out_file=None, text_id=0,
-              caption=''):
+              caption='', step=None):
     labels = np.argmax(labels, axis=-1)
     char_map = _options['label_names']
     l_ = [''.join([char_map[j] for j in label]) for label in labels]
 
     logger.info('{}: {}'.format(caption, l_[0]))
-    visualizer.text('\n'.join(l_), env=exp.NAME,
-                    win='text_{}'.format(text_id))
+    # visualizer.text('\n'.join(l_), env=exp.NAME,
+    #                 win='text_{}'.format(text_id))
+
+    visualizer.add_text('text_{}'.format(text_id), '\n'.join(l_), global_step=step)
 
     if out_file is not None:
         with open(out_file, 'w') as f:
@@ -278,7 +287,7 @@ def save_text(labels, out_file=None, text_id=0,
 
 def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
                 max_samples=None, margin_x=5, margin_y=5, image_id=0,
-                caption='', title=''):
+                caption='', title='', step=None):
     '''
 
     Args:
@@ -368,63 +377,68 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
     arr = np.array(im)
     if arr.ndim == 3:
         arr = arr.transpose(2, 0, 1)
-    visualizer.image(arr, opts=dict(title=title, caption=caption),
-                     win='image_{}'.format(image_id),
-                     env=exp.NAME)
+    # visualizer.image(arr, opts=dict(title=title, caption=caption),
+    #                  win='image_{}'.format(image_id),
+    #                  env=exp.NAME)
+
+    visualizer.add_images(tag='image_{}'.format(image_id), img_tensor = arr, global_step=step)
 
     if out_file:
         im.save(out_file)
 
 
 def save_heatmap(X, out_file=None, caption='', title='', image_id=0):
-    visualizer.heatmap(
-        X=X,
-        opts=dict(
-            title=title,
-            caption=caption),
-        win='heatmap_{}'.format(image_id),
-        env=exp.NAME)
+    # visualizer.heatmap(
+    #     X=X,
+    #     opts=dict(
+    #         title=title,
+    #         caption=caption),
+    #     win='heatmap_{}'.format(image_id),
+    #     env=exp.NAME)
+    raise NotImplementedError
 
 
 def save_scatter(points, out_file=None, labels=None, caption='', title='',
                  image_id=0):
-    if labels is not None:
-        Y = (labels + 1.5).astype(int)
-    else:
-        Y = None
+    # if labels is not None:
+    #     Y = (labels + 1.5).astype(int)
+    # else:
+    #     Y = None
 
-    names = data.DATA_HANDLER.get_label_names()
-    Y = Y - min(Y) + 1
-    if len(names) != max(Y):
-        names = ['{}'.format(i + 1) for i in range(max(Y))]
+    # names = data.DATA_HANDLER.get_label_names()
+    # Y = Y - min(Y) + 1
+    # if len(names) != max(Y):
+    #     names = ['{}'.format(i + 1) for i in range(max(Y))]
 
-    visualizer.scatter(
-        X=points,
-        Y=Y,
-        opts=dict(
-            title=title,
-            caption=caption,
-            legend=names,
-            markersize=5),
-        win='scatter_{}'.format(image_id),
-        env=exp.NAME)
+    # visualizer.scatter(
+    #     X=points,
+    #     Y=Y,
+    #     opts=dict(
+    #         title=title,
+    #         caption=caption,
+    #         legend=names,
+    #         markersize=5),
+    #     win='scatter_{}'.format(image_id),
+    #     env=exp.NAME)
+    raise NotImplementedError
 
 
 def save_movie(images, num_x, num_y, out_file=None, movie_id=0):
-    if out_file is None:
-        logger.warning('`out_file` not provided. Not saving.')
-    else:
-        images_ = []
-        for i, image in enumerate(images):
-            dim_c, dim_x, dim_y = image.shape[-3:]
-            image = image.reshape((num_x, num_y, dim_c, dim_x, dim_y))
-            image = image.transpose(0, 3, 1, 4, 2)
-            image = image.reshape(num_x * dim_x, num_y * dim_y, dim_c)
-            images_.append(image)
-        imageio.mimsave(out_file, images_)
+    # if out_file is None:
+    #     logger.warning('`out_file` not provided. Not saving.')
+    # else:
+    #     images_ = []
+    #     for i, image in enumerate(images):
+    #         dim_c, dim_x, dim_y = image.shape[-3:]
+    #         image = image.reshape((num_x, num_y, dim_c, dim_x, dim_y))
+    #         image = image.transpose(0, 3, 1, 4, 2)
+    #         image = image.reshape(num_x * dim_x, num_y * dim_y, dim_c)
+    #         images_.append(image)
+    #     imageio.mimsave(out_file, images_)
 
-    visualizer.video(videofile=out_file, env=exp.NAME,
-                     win='movie_{}'.format(movie_id))
+    # visualizer.video(videofile=out_file, env=exp.NAME,
+    #                  win='movie_{}'.format(movie_id))
+    raise NotImplementedError
 
 
 def save_hist(scores, out_file, hist_id=0):
@@ -443,3 +457,6 @@ def save_hist(scores, out_file, hist_id=0):
         X=X, Y=np.array([0.5 * (bins[i] + bins[i + 1]) for i in range(99)]),
         opts=dict(legend=['Real', 'Fake']), win='hist_{}'.format(hist_id),
         env=exp.NAME)
+
+    visualizer.add_histogram('hist_{}'.format(hist_id), scores)
+    raise NotImplementedError
