@@ -832,9 +832,9 @@ class ModelPluginBase(metaclass=PluginType):
                     bads, self.losses))
             exit(0)
 
-    def reload_nets(self, nets_to_reload):
+    def reload_nets(self, nets_to_reload, lax_reload=False):
         if nets_to_reload:
-            self.nets._handler.load(**nets_to_reload)
+            self.nets._handler.load(lax_reload, **nets_to_reload)
 
     def clear_viz(self):
         self._viz.clear()

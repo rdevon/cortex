@@ -226,4 +226,4 @@ def setup_experiment(args, model=None, testmode=False):
     logger.info(str)
     model.push_hyperparameters(exp.ARGS['model'])
 
-    return model, reload_nets
+    return model, reload_nets, args.lax_reload
