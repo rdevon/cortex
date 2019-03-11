@@ -175,14 +175,11 @@ class NetworkHandler(Handler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._loaded = dict()
+        self._lax_reload = False
 
-    def load(self, **kwargs):
-        nets = {}
-        for k, v in kwargs.items():
-            net = torch.nn.DataParallel(v, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
-            nets[k] = net
-        self._loaded.update(**nets)
-        self.update(**nets)
+    def load(self, lax_reload, **kwargs):
+        self._lax_reload = lax_reload
+        self._loaded.update(**kwargs)
 
     def __setitem__(self, key, value):
         self._check_keyvalue(key, value)
@@ -191,9 +188,10 @@ class NetworkHandler(Handler):
             raise KeyError('Handler is locked.')
 
         if key in self._loaded:
+            logger.debug('Loading parameters from saved model for {}'.format(key))
             MutableMapping.__setattr__(self, key, value)
             loaded = self._loaded[key]
-            self.__dict__[key].load_state_dict(loaded.state_dict())
+            self.__dict__[key].load_state_dict(loaded.state_dict(), strict=not(self._lax_reload))
         elif not self._allow_overwrite and hasattr(self, key):
             raise KeyError('Overwriting keys not allowed.')
         else:
@@ -209,9 +207,10 @@ class NetworkHandler(Handler):
             raise KeyError('Handler is locked.')
 
         if key in self._loaded:
+            logger.debug('Loading parameters from saved model for {}'.format(key))
             MutableMapping.__setattr__(self, key, value)
             loaded = self._loaded[key]
-            self.__dict__[key].load_state_dict(loaded.state_dict())
+            self.__dict__[key].load_state_dict(loaded.state_dict(), strict=not(self._lax_reload))
         elif not self._allow_overwrite and hasattr(self, key):
             raise KeyError('Overwriting keys not allowed.')
         else:

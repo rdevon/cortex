@@ -31,11 +31,11 @@ def run(model=None):
         else:
             config.set_config()
             print_section('EXPERIMENT')
-            model, reload_nets = setup_experiment(args, model=model)
+            model, reload_nets, lax_reload = setup_experiment(args, model=model)
             print_section('DATA')
             data.setup(**exp.ARGS['data'])
             print_section('MODEL')
-            model.reload_nets(reload_nets)
+            model.reload_nets(reload_nets, lax_reload)
             model.build()
             print_section('OPTIMIZER')
             optimizer.setup(model, **exp.ARGS['optimizer'])

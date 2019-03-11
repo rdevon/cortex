@@ -195,6 +195,7 @@ def make_argument_parser() -> argparse.ArgumentParser:
                         type=str, default=None,
                         help=('Path to model to reload. Does not load args,'
                               ' info, etc'))
+    parser.add_argument('-s', '--lax_reload', default=False, action='store_true', help='Sets strict reloading to False.')
     parser.add_argument('-m', '--meta', type=str, default=None)
     parser.add_argument('-c', '--config_file', default=None,
                         help=('Configuration yaml file. '
