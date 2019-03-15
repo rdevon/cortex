@@ -144,7 +144,7 @@ def underline(s, mode='visdom'):
 
 
 def print_hypers(d, prefix=None, s='', mode='visdom', level=0):
-    if visdom_mode:
+    if mode == 'visdom':
         newline = '<br>'
         space = '&nbsp;&nbsp;'
     else:

@@ -105,7 +105,7 @@ def setup_experiment(args, model=None, testmode=False):
     
 
     def _expand_model_hypers(args, model):
-        d = {}09y
+        d = {}
         arg_keys = list(args.keys())
 
         for k in arg_keys:
@@ -229,12 +229,12 @@ def setup_experiment(args, model=None, testmode=False):
                           clean=args.clean)
 
 
-    if args.visdom == 'tb':
+    if args.visualization == 'tensorboard':
         from .tensorborad import init as tb_init
-        if not testmode and not args.noviz:
+        if not testmode:
             tb_init(exp.OUT_DIRS['tb'])
 
-    str = print_hypers(exp.ARGS, s='Final hyperparameters: ')
+    str = print_hypers(exp.ARGS, s='Final hyperparameters: ', mode=args.visualization)
     logger.info(str)
     model.push_hyperparameters(exp.ARGS['model'])
 
