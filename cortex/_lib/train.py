@@ -380,22 +380,17 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         plot_updates: If set, plot is more fine-grained for updates.
 
     '''
-    info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
+    info = print_hypers(exp.ARGS, s='Model hyperparameters: ', mode=exp.VISUALIZATION)
 
     logger.info('Starting main loop.')
 
-    if visdom_off:
+    if exp.VISUALIZATION == 'off':
         viz.visualizer = None
-
-    #import ipdb; ipdb.set_trace()
-    
-    if exp.VIS == 'vis':
-        if (viz.visualizer):
-            viz.visualizer.text(info, env=exp.NAME, win='info')
-    elif exp.VIS == 'tb':
+    elif exp.VISUALIZATION == 'visdom':
+        viz.visualizer.text(info, env=exp.NAME, win='info')
+    elif exp.VISUALIZATION == 'tensorboard':
         from . import tensorborad as tb
-        tb_info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True, tb_mode=True)
-        tb.visualizer.add_text('info', tb_info)
+        tb.visualizer.add_text('info', info)
             
 
 
@@ -460,12 +455,12 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
             train_results_last_total = train_results_total
             test_results_last_total = test_results_total
 
-            if viz.visualizer:
-                if exp.VIS == 'vis':
+            
+            if exp.VISUALIZATION == 'visdom':
                     plot(plot_updates, init=(epoch == first_epoch), viz_test_only=viz_test_only)
                     model.viz.show()
                     model.viz.clear()
-            elif exp.VIS =='tb':
+            elif exp.VISUALIZATION == 'tensorboard':
                 losses = {}
                 for key in train_results_last_total.keys():
                     if isinstance(train_results_last_total[key], dict):

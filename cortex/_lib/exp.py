@@ -28,7 +28,7 @@ ARGS = dict(data=dict(), model=dict(), optimizer=dict(), train=dict())
 INFO = {'name': NAME, 'epoch': 0}
 DEVICE = torch.device('cpu')
 DEVICE_IDS = None
-VIS = 'viz'
+VISUALIZATION = 'visdom'
 
 
 def _file_string(prefix: str = '') -> str:
@@ -190,10 +190,10 @@ def setup_device(device: [int] or int):
     else:
         logger.info('Using CPU')
 
-def setup_visualization(vis: str):
-    global VIS
-    if vis not in ['vis', 'tb']:
+def setup_visualization(visualization: str):
+    global VISUALIZATION
+    if visualization not in ['visdom', 'tensorboard', 'off']:
         raise ValueError('Choose valid argument for visualisation')
 
-    VIS = vis
-    logger.info('Visualization: {}'.format(vis))
+    VISUALIZATION = visualization
+    logger.info('Visualization: {}'.format(visualization))

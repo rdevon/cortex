@@ -94,18 +94,18 @@ def setup_experiment(args, model=None, testmode=False):
     experiment_args = copy.deepcopy(DEFAULT_ARGS)
     update_args(experiment_args, exp.ARGS)
 
-    exp.setup_visualization(args.visdom)
+    exp.setup_visualization(args.visualization)
     
-    if args.visdom == 'viz':
+    if args.visualization == 'visdom':
         from .viz import init as viz_init
-        if not testmode and not args.noviz:
+        if not testmode and args.visualization != 'off':
             viz_init(config.CONFIG.viz)
     
 
     
 
     def _expand_model_hypers(args, model):
-        d = {}
+        d = {}09y
         arg_keys = list(args.keys())
 
         for k in arg_keys:

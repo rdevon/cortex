@@ -206,8 +206,7 @@ def make_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('-v', '--verbosity', type=int, default=1,
                         help='Verbosity of the logging. (0, 1, 2)')
     parser.add_argument('-d', '--device', type=int, nargs='+', default=0)
-    parser.add_argument('-V', '--noviz', default=False, action='store_true', help='No visualization.')
-    parser.add_argument('-vis', '--visdom', default='vis', type=str, help='options: vis, tb')
+    parser.add_argument('-V', '--visualization', default='visdom', type=str, help='options: visdom, tensorboard, off')
     return parser
 
 

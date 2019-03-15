@@ -36,7 +36,7 @@ CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 
 
 def init(viz_config):
-    global visualizer, config_font, viz_process, writer
+    global visualizer, config_font, viz_process
     if viz_config is not None and ('server' in viz_config.keys() or
                                    'port' in viz_config.keys()):
         server = viz_config.get('server', None)
