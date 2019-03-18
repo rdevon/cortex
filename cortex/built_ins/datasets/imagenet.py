@@ -75,7 +75,7 @@ class ImageFolder(DatasetPlugin):
         test_set = Dataset(root=test_path, transform=test_transform)
         input_names = ['images', 'targets', 'index']
 
-        dim_c, dim_x, dim_y = train_set[0][0].size()
+        dim_images = train_set[0][0].size()
 
         print('Computing min / max...')
 
@@ -88,15 +88,14 @@ class ImageFolder(DatasetPlugin):
 
         dim_l = len(train_set.classes)
 
-        dims = dict(x=dim_x, y=dim_y, c=dim_c, labels=dim_l)
+        dims = dict(images=dim_images, targets=dim_l)
 
-        self.add_dataset('train', train_set)
-        self.add_dataset('test', test_set)
-        self.set_input_names(input_names)
-        self.set_dims(**dims)
-
-        self.set_scale((img_min, img_max))
-        print('Finished loading dataset')
+        self.add_dataset(
+            source,
+            data=dict(train=train_set, test=test_set),
+            input_names=input_names,
+            dims=dims,
+            scale=(img_min, img_max))
 
 
 register_data(ImageFolder)
