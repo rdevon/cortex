@@ -12,7 +12,11 @@ from . import data, exp, optimizer
 from .parsing import parse_docstring, parse_inputs, parse_kwargs
 from .handlers import nested, NetworkHandler, LossHandler, ResultsHandler
 from .utils import bad_values, update_dict_of_lists
-from .viz import VizHandler
+
+if EXP.visualization == 'visdom':
+    from .viz import VizHandler
+elif EXP.visualization == 'tensorboard':
+    from .tensorborad import VizHandler
 
 
 __author__ = 'R Devon Hjelm'
