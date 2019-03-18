@@ -298,7 +298,7 @@ def _parse_model(model, subparser, yaml_hypers=None):
 
         '''
         for k, v in args.items():
-            if isinstance(v, dict):
+            if isinstance(v, dict) and len(v) > 0:
                 if prefix is None:
                     prefix_ = k
                 else:
@@ -397,7 +397,6 @@ def _add_hyperparameter_argument(k, v, help, subparser, dest=None, arg_str=None,
         metavar = '<' + type_.__name__ + '>'
         if not ('[' in dstr or ']' in dstr):
             metavar += ' (default=' + dstr + ')'  # argparse doesn't like square brackets
-
         subparser.add_argument(
             arg_str,
             dest=dest,

@@ -104,7 +104,8 @@ def wrap_optimizer(C, plot_grads=False):
 
 def setup(model, optimizer='Adam', learning_rate=1.e-4,
           weight_decay={}, clipping={}, grad_clipping={}, optimizer_options={},
-          model_optimizer_options={}, scheduler=None, scheduler_options={}, plot_grads=False):
+          model_optimizer_options={}, scheduler=None, scheduler_options={}, plot_grads=False,
+          single_optimizer=False):
     '''Optimizer entrypoint.
 
     Args:
@@ -119,6 +120,7 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         scheduler: Optimizer learning rate scheduler.
         scheduler_options: Options for scheduler.
         plot_grads: Plot the gradients for debugging. Adds time to training.
+        single_optimizer: Use a single optimizer for all parameters.
 
     '''
 
@@ -163,22 +165,22 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
 
     training_nets = model._get_training_nets()
 
-    logger.info('Setting up optimizers for modules / networks: {}'.format(set(training_nets)))
-
-    for network_key in set(training_nets):
+    def build_optimizer(network_key, op):
         logger.debug('Building optimizer for {}'.format(network_key))
-        network = model.nets[network_key]
 
-        if isinstance(network, (tuple, list)):
+        if isinstance(network_key, list):
+            network = [model.nets[k] for k in network_key]
             params = []
             for net in network:
                 params += list(net.parameters())
+            network_key = 'ALL'
         else:
+            network = model.nets[network_key]
             params = list(network.parameters())
 
         if len(params) == 0:
             logger.debug('Skipping {}, no parameters found.'.format(network_key))
-            continue
+            return
 
         # Needed for reloading.
         for p in params:
@@ -210,11 +212,11 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         optimizer_options_ = dict((k, v) for k, v in optimizer_options.items())
         optimizer_options_.update(weight_decay=wd, clipping=cl, grad_clipping=g_cl, lr=eta)
 
-        if network_key in model_optimizer_options.keys():
-            optimizer_options_.update(**model_optimizer_options)
-
         # Create the optimizer
         op = wrap_optimizer(op, plot_grads=plot_grads)
+
+        if network_key in model_optimizer_options.keys():
+            optimizer_options_.update(**model_optimizer_options)
 
         optimizer = op(params, **optimizer_options_)
         OPTIMIZERS[network_key] = optimizer
@@ -247,6 +249,15 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         logger.debug(
             'Training {} routine with {}'.format(
                 network_key, optimizer))
+
+    network_list = list(set(training_nets))
+    if single_optimizer:
+        logger.info('Setting up single optimizer all modules / networks: {}'.format(set(training_nets)))
+        build_optimizer(network_list, op)
+    else:
+        logger.info('Setting up optimizers for modules / networks: {}'.format(set(training_nets)))
+        for network_key in network_list:
+            build_optimizer(network_key, op)
 
     if not exp.DEVICE == torch.device('cpu'):
         cudnn.benchmark = True

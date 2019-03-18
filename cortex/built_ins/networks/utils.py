@@ -16,10 +16,11 @@ def get_nonlinearity(nonlinearity=None):
         if nonlinearity == nn.LeakyReLU:
             nonlinearity = nonlinearity(0.02, inplace=True)
     elif hasattr(nn, nonlinearity):
+        nonlin_ = nonlinearity
         nonlinearity = getattr(nn, nonlinearity)
-        if nonlinearity == 'LeakyReLU':
+        if nonlin_ == 'LeakyReLU':
             nonlinearity = nonlinearity(0.02, inplace=True)
-        elif nonlinearity == 'ReLU':
+        elif nonlin_ == 'ReLU':
             nonlinearity = nonlinearity(inplace=True)
         else:
             nonlinearity = nonlinearity()

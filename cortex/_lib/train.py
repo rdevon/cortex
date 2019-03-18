@@ -367,13 +367,11 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
     Args:
         epochs: Number of epochs.
         archive_every: Number of epochs for writing checkpoints.
-        save_on_best: Testing data mode.
-        save_on_lowest: Test on data only (no training).
-        save_on_highest: Quit when nans or infs found.
-        eval_during_train: Saves when highest of this result is found.
-        train_mode: Saves when highest of this result is found.
-        test_mode: Saves when lowest of this result is found.
-        eval_only: Gives results over a training epoch.
+        train_mode: Training data mode.
+        test_mode: Testing data mode.
+        save_on_lowest: Saves when lowest of this result is found.
+        save_on_highest: Saves when highest of this result is found.
+        eval_only: Gives results over a test epoch.
         pbar_off: Turn off the progressbar.
         viz_test_only: Show only test values in visualization.
         visdom_off: Turn off visdom.
@@ -391,12 +389,19 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         viz.visualizer.text(info, env=exp.NAME, win='info')
     total_time = 0.
     if eval_only:
-        test_results, test_std = test_epoch(
-            'Testing', eval_mode=True, mode=test_mode)
-        convert_to_numpy(test_results)
-        convert_to_numpy(test_std)
+        train_results_ = test_epoch(model, None, data_mode=train_mode,
+                                    use_pbar=not (pbar_off))
+        test_results_ = test_epoch(model, None, data_mode=test_mode,
+                                  use_pbar=not(pbar_off))
+        convert_to_numpy(train_results_)
+        convert_to_numpy(test_results_)
 
-        display_results(test_results, test_std, 'Evaluation', None, None, None)
+        train_results_total = summarize_results(train_results_)
+        test_results_total = summarize_results(test_results_)
+
+        display_results(train_results_total, test_results_total, None,
+                        None, exp.INFO['epoch'], 0, 0, 0)
+
         exit(0)
     best = None
     if not isinstance(epochs, int):
