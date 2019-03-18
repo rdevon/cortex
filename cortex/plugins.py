@@ -192,7 +192,6 @@ class ModelPlugin(ModelPluginBase):
         self.data.next()
         self.routine(auto_input=True)
         self.optimizer_step()
-        self.finish_step()
 
     def eval_step(self):
         """Makes an evaluation step.
@@ -202,7 +201,6 @@ class ModelPlugin(ModelPluginBase):
         """
         self.data.next()
         self.routine(auto_input=True)
-        self.finish_step()
 
     def optimizer_step(self, retain_graph=False):
         """Makes a step of the optimizers for which losses are defined.
@@ -212,22 +210,28 @@ class ModelPlugin(ModelPluginBase):
         """
         keys = self.losses.keys()
 
-        for i, k in enumerate(keys):
-            key = self.nets._aliases.get(k, k)
+        def op_step(key, loss, retain_graph=False):
             optimizer = self._optimizers.get(key)
 
             if optimizer is not None:
                 optimizer.zero_grad()
-                loss = self.losses.get(k)
 
                 start = time.time()
-                retain_graph_ = retain_graph or (i + 1 < len(keys))
-                loss.backward(retain_graph=retain_graph_)
+                loss.backward(retain_graph=retain_graph)
 
-                self.add_grads(**{k: optimizer.grad_stats()})
+                self.add_grads(**{key: optimizer.grad_stats()})
                 optimizer.step()
                 end = time.time()
-                self.times['Optimizer {}'.format(k)] = end - start
+                self.times['Optimizer {}'.format(key)] = end - start
+
+        if 'ALL' in self._optimizers.keys(): # One optimizer
+            loss = sum(self.losses.values())
+            op_step('ALL', loss)
+        else:
+            for i, k in enumerate(keys):
+                key = self.nets._aliases.get(k, k)
+                loss = self.losses.get(k)
+                op_step(key, loss, retain_graph=(i + 1 < len(keys)))
 
     def train_loop(self):
         """The training loop.

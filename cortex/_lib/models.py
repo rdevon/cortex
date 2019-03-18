@@ -217,8 +217,13 @@ def model_step(cls, fn, train=True):
             for net in cls._all_nets.values():
                 net.eval()
 
-        output = fn(*args, **kwargs)
-        cls.finish_step()
+        if train:
+            output = fn(*args, **kwargs)
+            cls.finish_step()
+        else:
+            with torch.no_grad():
+                output = fn(*args, **kwargs)
+                cls.finish_step()
 
         return output
 
@@ -251,8 +256,9 @@ def cortex_eval_step(fn):
         for net in cls._all_nets.values():
             net.eval()
 
-        output = _auto_input_decorator(cls, fn)(cls, *args, **kwargs)
-        cls.finish_step()
+        with torch.no_grad():
+            output = _auto_input_decorator(cls, fn)(cls, *args, **kwargs)
+            cls.finish_step()
 
         return output
 
@@ -553,8 +559,6 @@ class ModelPluginBase(metaclass=PluginType):
     def model_routine(self, fn):
         '''Wraps the routine.
 
-        Set to `requires_grad` for models that are trained with this routine.
-
         '''
 
         fn = _auto_input_decorator(self, fn)
@@ -584,6 +588,7 @@ class ModelPluginBase(metaclass=PluginType):
 
             for k, net in self._all_nets.items():
                 net.eval()
+            self.data.reset(mode='test', make_pbar=False)
 
             output = fn(*args, **kwargs)
             self.losses.clear()
@@ -617,9 +622,6 @@ class ModelPluginBase(metaclass=PluginType):
         self.results.clear()
         self.grads.clear()
         self.times.clear()
-
-        for opt in self._optimizers.values():
-            opt.zero_grad()
 
     def model_loop(self, fn, train=True):
         '''Wraps a loop.

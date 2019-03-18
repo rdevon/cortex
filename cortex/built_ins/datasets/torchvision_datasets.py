@@ -6,7 +6,6 @@ import os
 
 import numpy as np
 import torchvision
-from torchvision.transforms import transforms
 
 from cortex.plugins import DatasetPlugin, register_plugin
 from .utils import build_transforms
@@ -135,21 +134,17 @@ class TorchvisionDatasetPlugin(DatasetPlugin):
 
         dim_images = train_set[0][0].size()
 
-        if source in ('SVHN', 'STL10'):
+        if hasattr(train_set, 'labels'):
             labels = train_set.labels
-            uniques = np.unique(labels).tolist()
-            try:
-                uniques.remove(-1)
-            except ValueError:
-                pass
-        else:
-            labels = train_set.train_labels
-            if not isinstance(labels, list):
-                labels = labels.numpy()
-            uniques = np.unique(labels).tolist()
+        elif hasattr(train_set, 'targets'):
+            labels = train_set.targets
+
+        uniques = sorted(np.unique(labels).tolist())
+
+        if -1 in uniques:
+            uniques = uniques[1:]
 
         dim_l = len(uniques)
-
         dims = dict(images=dim_images, targets=dim_l)
         input_names = ['images', 'targets', 'index']
 
