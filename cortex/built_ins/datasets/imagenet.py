@@ -16,6 +16,16 @@ class ImageFolder(DatasetPlugin):
 
     def handle(self, source, copy_to_local=False, normalize=True,
                tanh_normalization=False, **transform_args):
+        '''
+
+        Args:
+            normalize: Normalize imagenet.
+            tanh_normalization: Scale data from -1 to 1.
+            **transform_args: Extra transformation arguments.
+
+        Returns:
+
+        '''
 
         Dataset = self.make_indexing(torchvision.datasets.ImageFolder)
         data_path = self.get_path(source)
