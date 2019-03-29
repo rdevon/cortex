@@ -74,6 +74,8 @@ def setup_experiment(args, model=None, testmode=False):
 
     """
 
+    
+    exp.setup_visualization(args.visualization)
     def update_nested_dicts(from_d, to_d):
         for k, v in from_d.items():
             if (k in to_d) and isinstance(to_d[k], dict):
@@ -94,7 +96,7 @@ def setup_experiment(args, model=None, testmode=False):
     experiment_args = copy.deepcopy(DEFAULT_ARGS)
     update_args(experiment_args, exp.ARGS)
 
-    exp.setup_visualization(args.visualization)
+   
     
     if args.visualization == 'visdom':
         from .viz import init as viz_init
@@ -237,5 +239,6 @@ def setup_experiment(args, model=None, testmode=False):
     str = print_hypers(exp.ARGS, s='Final hyperparameters: ', mode=args.visualization)
     logger.info(str)
     model.push_hyperparameters(exp.ARGS['model'])
+    model.update_visualization(exp.VISUALIZATION)
 
     return model, reload_nets, args.lax_reload

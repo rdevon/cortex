@@ -18,6 +18,7 @@ from cortex._lib.config import _yes_no
 
 matplotlib.use('Agg')
 from matplotlib import pylab as plt  # noqa E402
+from torchvision.utils import make_grid
 
 
 
@@ -93,7 +94,7 @@ def setup(label_names=None, is_caption=False, is_attribute=False, char_map=None)
         CHAR_MAP = char_map
 
 
-class TBHandler():
+class VizHandler():
     def __init__(self):
         self.clear()
         self.output_dirs = exp.OUT_DIRS
@@ -107,26 +108,17 @@ class TBHandler():
         self.heatmaps = {}
 
     def add_image(self, im, name='image', labels=None):
-        im = convert_to_numpy(im)
-        mi, ma = self.image_scale
-        im = (im - mi) / float(ma - mi)
-        if labels is not None:
-            labels = convert_to_numpy(labels)
-        if name in self.images:
-            logger.warning('{} already added to '
-                           'visualization. Use the name kwarg'
-                           .format(name))
-        self.images[name] = (im, labels)
-        visualizer.add_image()
+        visualizer.add_image(name, make_grid(im))
 
     def add_histogram(self, hist, name='histogram'):
-        if name in self.histograms:
-            logger.warning('{} already added'
-                           ' to visualization.'
-                           ' Use the name kwarg'
-                           .format(name))
+        # if name in self.histograms:
+        #     logger.warning('{} already added'
+        #                    ' to visualization.'
+        #                    ' Use the name kwarg'
+        #                    .format(name))
         hist = convert_to_numpy(hist)
-        self.histograms[name] = hist
+        # self.histograms[name] = hist
+        visualizer.add_histogram(name, hist)
 
     def add_heatmap(self, hm, name='heatmap'):
         if name in self.heatmaps:
@@ -142,6 +134,7 @@ class TBHandler():
         labels = convert_to_numpy(labels)
 
         self.scatters[name] = (sc, labels)
+        visualizer.add_embedding(sc, )
 
     def show(self):
         image_dir = self.output_dirs['image_dir']
@@ -459,4 +452,4 @@ def save_hist(scores, out_file, hist_id=0):
         env=exp.NAME)
 
     visualizer.add_histogram('hist_{}'.format(hist_id), scores)
-    raise NotImplementedError
+    #raise NotImplementedError
