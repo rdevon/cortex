@@ -9,7 +9,6 @@ import os
 
 from . import config, exp, log_utils, models
 from .parsing import DEFAULT_ARGS, parse_args, update_args
-from .viz import init as viz_init
 from .utils import print_hypers
 
 
@@ -75,6 +74,8 @@ def setup_experiment(args, model=None, testmode=False):
 
     """
 
+    
+    exp.setup_visualization(args.visualization)
     def update_nested_dicts(from_d, to_d):
         for k, v in from_d.items():
             if (k in to_d) and isinstance(to_d[k], dict):
@@ -95,8 +96,15 @@ def setup_experiment(args, model=None, testmode=False):
     experiment_args = copy.deepcopy(DEFAULT_ARGS)
     update_args(experiment_args, exp.ARGS)
 
-    if not testmode and not args.noviz:
-        viz_init(config.CONFIG.viz)
+   
+    
+    if args.visualization == 'visdom':
+        from .viz import init as viz_init
+        if not testmode and args.visualization != 'off':
+            viz_init(config.CONFIG.viz)
+    
+
+    
 
     def _expand_model_hypers(args, model):
         d = {}
@@ -222,8 +230,15 @@ def setup_experiment(args, model=None, testmode=False):
         exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
                           clean=args.clean)
 
-    str = print_hypers(exp.ARGS, s='Final hyperparameters: ')
+
+    if args.visualization == 'tensorboard':
+        from .tensorborad import init as tb_init
+        if not testmode:
+            tb_init(exp.OUT_DIRS['tb'])
+
+    str = print_hypers(exp.ARGS, s='Final hyperparameters: ', mode=args.visualization)
     logger.info(str)
     model.push_hyperparameters(exp.ARGS['model'])
+    model.update_visualization(exp.VISUALIZATION)
 
     return model, reload_nets, args.lax_reload

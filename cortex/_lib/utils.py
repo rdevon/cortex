@@ -117,8 +117,11 @@ class bcolors:
     ENDC = '\033[0m'
 
 
-def bold(s, visdom_mode=False):
-    if visdom_mode:
+def bold(s, mode='visdom'):
+    if mode == 'tensorboard':
+        bold_char = ''
+        end_char = ''
+    elif mode == 'visdom':
         bold_char = '<b>'
         end_char = '</b>'
     else:
@@ -127,8 +130,11 @@ def bold(s, visdom_mode=False):
     return bold_char + s + end_char
 
 
-def underline(s, visdom_mode=False):
-    if visdom_mode:
+def underline(s, mode='visdom'):
+    if mode == 'tensorboard':
+        ul_char = ''
+        end_char = ''
+    elif mode == 'visdom':
         ul_char = '<u>'
         end_char = '</u>'
     else:
@@ -137,8 +143,8 @@ def underline(s, visdom_mode=False):
     return  ul_char + s + end_char
 
 
-def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0):
-    if visdom_mode:
+def print_hypers(d, prefix=None, s='', mode='visdom', level=0):
+    if mode == 'visdom':
         newline = '<br>'
         space = '&nbsp;&nbsp;'
     else:
@@ -149,12 +155,12 @@ def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0):
         s += '{}{}{}'.format(newline, space, prefix)
         if level == 0:
             spaces = space * 30
-            s += underline('{}: {}'.format(k, spaces), visdom_mode=visdom_mode)
+            s += underline('{}: {}'.format(k, spaces), mode=mode)
         else:
             s += '{}: '.format(k)
 
         if isinstance(v, dict) and len(v) > 0:
-            s = print_hypers(v, prefix + space, s=s, visdom_mode=visdom_mode, level=level + 1)
+            s = print_hypers(v, prefix + space, s=s, mode=mode, level=level + 1)
         else:
-            s += bold('{}'.format(v), visdom_mode=visdom_mode)
+            s += bold('{}'.format(v), mode=mode)
     return s

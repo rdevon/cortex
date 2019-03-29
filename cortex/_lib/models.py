@@ -267,6 +267,7 @@ class ModelPluginBase(metaclass=PluginType):
     '''
 
     # Global attributes that all models have access to.
+
     _viz = VizHandler()
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
@@ -336,6 +337,14 @@ class ModelPluginBase(metaclass=PluginType):
             self._models.append(model)
 
         super().__setattr__(key, value)
+
+    def update_visualization(self, visualization):
+        
+        if visualization == 'visdom':
+            from .viz import VizHandler
+        elif visualization == 'tensorboard':
+            from .tensorborad import VizHandler
+        self._viz = VizHandler()
 
     def add_models(self, **kwargs):
         for k, v in kwargs.items():

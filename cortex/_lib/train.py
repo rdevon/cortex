@@ -378,15 +378,22 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         plot_updates: If set, plot is more fine-grained for updates.
 
     '''
-    info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
+    info = print_hypers(exp.ARGS, s='Model hyperparameters: ', mode=exp.VISUALIZATION)
 
     logger.info('Starting main loop.')
 
-    if visdom_off:
+    if exp.VISUALIZATION == 'off':
         viz.visualizer = None
-
-    if (viz.visualizer):
+    elif exp.VISUALIZATION == 'visdom':
         viz.visualizer.text(info, env=exp.NAME, win='info')
+    elif exp.VISUALIZATION == 'tensorboard':
+        from . import tensorborad as tb
+        tb.visualizer.add_text('info', info)
+            
+
+
+
+
     total_time = 0.
     if eval_only:
         train_results_ = test_epoch(model, None, data_mode=train_mode,
@@ -453,10 +460,23 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
             train_results_last_total = train_results_total
             test_results_last_total = test_results_total
 
-            if viz.visualizer:
-                plot(plot_updates, init=(epoch == first_epoch), viz_test_only=viz_test_only)
-                model.viz.show()
-                model.viz.clear()
+            
+            if exp.VISUALIZATION == 'visdom':
+                    plot(plot_updates, init=(epoch == first_epoch), viz_test_only=viz_test_only)
+                    model.viz.show()
+                    model.viz.clear()
+            elif exp.VISUALIZATION == 'tensorboard':
+                losses = {}
+                for key in train_results_last_total.keys():
+                    if isinstance(train_results_last_total[key], dict):
+                        for key2 in train_results_last_total[key].keys():
+                            losses['train_{}'.format(key2)] = train_results_last_total[key][key2]
+                            losses['test_{}'.format(key2)] = test_results_last_total[key][key2]
+                    else:
+                        tb.visualizer.add_scalars('{}'.format(key), {'train': train_results_last_total[key], 'test': test_results_last_total[key]}, epoch)
+                
+                tb.visualizer.add_scalars('losses', losses, epoch)
+
 
             if (archive_every and epoch % archive_every == 0):
                 exp.save(model, prefix=epoch)
