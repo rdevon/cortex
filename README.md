@@ -10,24 +10,24 @@ Cortex is under heavy development. It's functional, but may not fit your needs y
 * Missing unit tests
 
 # Cortex   
-[![Build Status](https://travis-ci.com/rdevon/cortex.svg?branch=master)](https://travis-ci.com/rdevon/cortex) 
- 
+[![Build Status](https://travis-ci.com/rdevon/cortex.svg?branch=master)](https://travis-ci.com/rdevon/cortex)
+
 Cortex is a wrapper around Pytorch that makes training, managing, and visualizing models more convenient.
-      
+
 ## Installation  
-  
-### Prerequisites 
+
+### Prerequisites
 ##### Python
-     
+
      cortex is currently only tested on Python 3.5 and 3.6
-     
+
 ##### Visdom (optional)
 
      $pip install visdom  
- 
+
 ### From Source  
-     $git clone https://github.com/rdevon/cortex.git 
-     $cd cortex 
+     $git clone https://github.com/rdevon/cortex.git
+     $cd cortex
      $pip install .
 
 ### Configuration  
@@ -35,14 +35,14 @@ Cortex is a wrapper around Pytorch that makes training, managing, and visualizin
 #### Visdom Server (optional)
 Cortex has built-in visualization functionality, and currently we support only Visdom (though development for torchvision options is welcome). This is optional, but highly recommended if you wish to use visualization tools within cortex.
 
-To get started with visdom, start a Visdom server and look for server address in the output. By default, the server's address is `http://localhost:8097`. 
+To get started with visdom, start a Visdom server and look for server address in the output. By default, the server's address is `http://localhost:8097`.
 
      $python -m visdom.server  
-     
+
 For more details, see https://github.com/facebookresearch/visdom
 
 #### Experiment Configuration  
-  
+
 The first thing to do is to set up the config.yaml. This file is user-specific, and will tell cortex everything user-specific regarding data locations, visualation, and output locations. This helps your code in cortex be more distributable, as the overhead of dataset locations is handled here.
 
 In order to get started, just run:
@@ -58,7 +58,7 @@ The first step is to check out cortex from the command line. Simply type:
     $ cortex --help
 
 ##### Arguments
-                                 
+
     setup                                         Setup cortex configuration.
     GAN                                           Generative adversarial network.
     VAE                                           Variational autoencder.
@@ -73,7 +73,7 @@ And many more coming.
 
  ##### Options  
   There are many command-line options in cortex:    
-  
+
 
       -h, --help                                      show this help message and exit
       -o OUT_PATH, --out_path OUT_PATH                Output path directory. All model results will go
@@ -92,17 +92,18 @@ And many more coming.
                                                       undone!
       -v VERBOSITY, --verbosity VERBOSITY             Verbosity of the logging. (0, 1, 2)
       -d DEVICE, --device DEVICE
-      
+      -V, --noviz                                     No visualization.
+
 ##### Usage Example  
 To run an experiment from the Cortex built-in GAN architecture on  the CIFAR10 dataset,
 
     $cortex GAN --d.source CIFAR10 --d.copy_to_local
-  
+
 ### Custom demos
 
 While cortex has built-in functionality, but it is meant to meant to be used with your own modules. An example of making a model that works with cortex can be found at:
 https://github.com/rdevon/cortex/blob/master/demos/demo_classifier.py
-and 
+and
 https://github.com/rdevon/cortex/blob/master/demos/demo_custom_ae.py
 
 Documentation on the API can be found here:
@@ -123,10 +124,10 @@ The signature of these functions look like:
 ```
     def build(self, dim_z=64, dim_encoder_out=64):
         ...
-        
+
     def routine(self, inputs, targets, ae_criterion=F.mse_loss):
         ...
-        
+
     def visualize(self, inputs, targets):
         ...
 ```
@@ -151,7 +152,7 @@ class Autoencoder(nn.Module):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
         return decoded
- 
+
 ...
 
     def build(self, dim_z=64, dim_encoder_out=64):
