@@ -127,7 +127,7 @@ def test_epoch(model, epoch, data_mode='test', use_pbar=True):
 
 
 def display_results(train_results, test_results, last_train_results, last_test_results,
-                    epoch, epochs, epoch_time, total_time):
+                    epoch, epochs, epoch_time, total_time, no_ascii=False):
     '''
 
     Args:
@@ -139,6 +139,7 @@ def display_results(train_results, test_results, last_train_results, last_test_r
         epochs (int): Total number of epochs.
         epoch_time (float): Time for this epoch.
         total_time (float): Total time for training.
+        no_ascii (bool): If True, do not display ascii characters or color.
 
     '''
 
@@ -150,16 +151,28 @@ def display_results(train_results, test_results, last_train_results, last_test_r
         ENDC = '\033[0m'
 
     def color_increasing(s):
-        return bcolors.INCREASING + s[:-1] + '\u21e7' + bcolors.ENDC
+        if not no_ascii:
+            return bcolors.INCREASING + s[:-1] + '\u21e7' + bcolors.ENDC
+        else:
+            return s[:-1] + '+'
 
     def color_decreasing(s):
-        return bcolors.DECREASING + s[:-1] + '\u21e9' + bcolors.ENDC
+        if not no_ascii:
+            return bcolors.DECREASING + s[:-1] + '\u21e9' + bcolors.ENDC
+        else:
+            return s[:-1] + '-'
 
     def underline(s):
-        return bcolors.UNDERLINE + s + bcolors.ENDC
+        if not no_ascii:
+            return bcolors.UNDERLINE + s + bcolors.ENDC
+        else:
+            return s
 
     def bold(s):
-        return bcolors.BOLD + s + bcolors.ENDC
+        if not no_ascii:
+            return bcolors.BOLD + s + bcolors.ENDC
+        else:
+            return s
 
     format_length = 8
     format_string = '{:8.4f}'
@@ -361,7 +374,7 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
               save_on_lowest=None, save_on_highest=None, eval_during_train=True,
               train_mode='train', test_mode='test', eval_only=False,
               pbar_off=False, viz_test_only=False, visdom_off=False,
-              plot_updates=None):
+              plot_updates=None, no_ascii=False):
     '''
 
     Args:
@@ -376,6 +389,7 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         viz_test_only: Show only test values in visualization.
         visdom_off: Turn off visdom.
         plot_updates: If set, plot is more fine-grained for updates.
+        no_ascii: If True, the do not display ascii characters or color.
 
     '''
     info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
@@ -400,7 +414,7 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
         test_results_total = summarize_results(test_results_)
 
         display_results(train_results_total, test_results_total, None,
-                        None, exp.INFO['epoch'], 0, 0, 0)
+                        None, exp.INFO['epoch'], 0, 0, 0, no_ascii=no_ascii)
 
         exit(0)
     best = None
@@ -448,7 +462,8 @@ def main_loop(model, epochs=500, archive_every=10, save_on_best=None,
             epoch_time = time.time() - start_time
             total_time += epoch_time
             display_results(train_results_total, test_results_total, train_results_last_total,
-                            test_results_last_total, epoch, epochs, epoch_time, total_time)
+                            test_results_last_total, epoch, epochs, epoch_time, total_time,
+                            no_ascii=no_ascii)
 
             train_results_last_total = train_results_total
             test_results_last_total = test_results_total

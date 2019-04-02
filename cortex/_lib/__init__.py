@@ -138,22 +138,6 @@ def setup_experiment(args, model=None, testmode=False):
 
         return d
 
-    model_hypers = _expand_model_hypers(vars(args), model)
-    exp.ARGS['model'] = model_hypers
-
-    data_args = _pull_data_args(vars(args))
-    exp.ARGS['data'].update(**data_args)
-    exp.ARGS['data'].update(((exp.ARGS['data'].pop('data_args', {}))))
-
-    for k, v in vars(args).items():
-        if v is not None:
-            if '.' in k:
-                head, tail = k.split('.')
-            else:
-                continue
-
-            exp.ARGS[head][tail] = v
-
     reload_nets = None
 
     def reload(reload_path):
@@ -206,6 +190,22 @@ def setup_experiment(args, model=None, testmode=False):
 
     else:
         reload_path = False
+
+    model_hypers = _expand_model_hypers(vars(args), model)
+    exp.ARGS['model'] = model_hypers
+
+    data_args = _pull_data_args(vars(args))
+    exp.ARGS['data'].update(**data_args)
+    exp.ARGS['data'].update(((exp.ARGS['data'].pop('data_args', {}))))
+
+    for k, v in vars(args).items():
+        if v is not None:
+            if '.' in k:
+                head, tail = k.split('.')
+            else:
+                continue
+
+            exp.ARGS[head][tail] = v
 
     if not reload_path:
         if args.load_networks:

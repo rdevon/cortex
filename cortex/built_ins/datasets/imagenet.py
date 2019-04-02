@@ -15,7 +15,7 @@ class ImageFolder(DatasetPlugin):
     sources = ['tiny-imagenet-200', 'imagenet']
 
     def handle(self, source, copy_to_local=False, normalize=True,
-               tanh_normalization=False, **transform_args):
+               tanh_normalization=False, image_size=224, **transform_args):
         '''
 
         Args:
@@ -56,14 +56,14 @@ class ImageFolder(DatasetPlugin):
             normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
             train_transform = transforms.Compose([
-                transforms.RandomResizedCrop(224),
+                transforms.RandomResizedCrop(image_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
             ])
             test_transform = transforms.Compose([
                 transforms.Resize(256),
-                transforms.CenterCrop(224),
+                transforms.CenterCrop(image_size),
                 transforms.ToTensor(),
                 normalize,
             ])
