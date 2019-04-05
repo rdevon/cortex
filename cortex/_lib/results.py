@@ -588,4 +588,5 @@ class Results(object):
                 else:
                     header = 'Network grads:'
 
-                self.print_table(train_results, test_results, last_train_results, last_test_results, header)
+                self.print_table(train_results, test_results, last_train_results, last_test_results, header,
+                                 no_ascii=no_ascii)
