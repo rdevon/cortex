@@ -13,7 +13,8 @@ import yaml
 
 import torch
 
-from .log_utils import set_file_logger
+from cortex._lib.results import Results
+from cortex._lib.log_utils import set_file_logger
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -22,10 +23,10 @@ logger = logging.getLogger('cortex.exp')
 
 # Experiment info
 NAME = 'X'
-SUMMARY = {'train': {}, 'test': {}}
-OUT_DIRS = {}
-ARGS = dict(data=dict(), model=dict(), optimizer=dict(), train=dict())
-INFO = {'name': NAME, 'epoch': 0}
+OUT_DIRS = dict()
+ARGS = dict(data=dict(), model=dict(), optimizer=dict(), train=dict(), viz=dict())
+RESULTS = Results()
+INFO = dict(name=NAME, epoch=0, data_steps=-1)
 DEVICE = torch.device('cpu')
 DEVICE_IDS = None
 
@@ -105,7 +106,7 @@ def save(model, prefix: str = ''):
             info=INFO,
             args=ARGS,
             out_dirs=OUT_DIRS,
-            summary=SUMMARY
+            results=RESULTS.todict()
         )
 
         file_path = path.join(binary_dir, '{}.t7'.format(filename))
@@ -119,6 +120,51 @@ def save(model, prefix: str = ''):
         torch.save(state, file_path)
     except OSError as e:
         logger.error('Save failed, skipping: {}'.format(e))
+
+
+def save_best(model, train_results, best, save_on_best, save_on_lowest):
+    '''Saves the best model according to some metric.
+
+    Args:
+        model (ModelPlugin): Model.
+        train_results (dict): Dictionary of results from training data.
+        best (float): Last best value.
+        save_on_best (bool): If true, save when best is found.
+        save_on_lowest (bool): If true, lower is better.
+
+    Returns:
+        float: the best value.
+
+    '''
+    flattened_results = {}
+    for k, v in train_results.items():
+        if isinstance(v, dict):
+            for k_, v_ in v.items():
+                flattened_results[k + '.' + k_] = v_
+        else:
+            flattened_results[k] = v
+    if save_on_best in flattened_results:
+        # TODO(Devon) This needs to be fixed.
+        # when train_for is set, result keys vary per epoch
+        # if save_on_best not in flattened_results:
+        #    raise ValueError('`save_on_best` key `{}` not found.
+        #  Available: {}'.format(
+        #        save_on_best, tuple(flattened_results.keys())))
+        current = flattened_results[save_on_best]
+        if not best:
+            found_best = True
+        elif save_on_lowest:
+            found_best = current < best
+        else:
+            found_best = current > best
+        if found_best:
+            best = current
+            print(
+                '\nFound best {} (train): {}'.format(
+                    save_on_best, best))
+            save(model, prefix='best_' + save_on_best)
+
+        return best
 
 
 def setup_out_dir(out_path: str, global_out_path: str, name: str = None, clean: bool = False):

@@ -8,11 +8,10 @@ import time
 
 import torch
 
-from . import data, exp, optimizer
+from . import data, exp, optimizer, viz
 from .parsing import parse_docstring, parse_inputs, parse_kwargs
-from .handlers import nested, NetworkHandler, LossHandler, ResultsHandler
+from .handlers import nested, NetworkHandler, LossHandler
 from .utils import bad_values, update_dict_of_lists
-from .viz import VizHandler
 
 
 __author__ = 'R Devon Hjelm'
@@ -267,16 +266,10 @@ class ModelPluginBase(metaclass=PluginType):
     '''
 
     # Global attributes that all models have access to.
-    _viz = VizHandler()
     _data = data.DATA_HANDLER
     _optimizers = optimizer.OPTIMIZERS
     _all_nets = NetworkHandler()
-
-    # Results for an epoch.
-    _epoch_losses = ResultsHandler()
-    _epoch_times = ResultsHandler()
-    _epoch_results = ResultsHandler()
-    _epoch_grads = ResultsHandler()
+    _viz = viz.viz_handler
 
     _steps = ['train_step']
 
@@ -307,9 +300,9 @@ class ModelPluginBase(metaclass=PluginType):
         self._nets = nested(self._all_nets, self)  # Networks.
 
         # Handlers for various results.
-        self._results = ResultsHandler()  # Results to be displayed.
-        self._grads = ResultsHandler() # Gradients of each optimizer.
-        self._times = ResultsHandler()  # Times for models.
+        self._results = dict()  # Results to be displayed.
+        self._grads = dict() # Gradients of each optimizer.
+        self._times = dict()  # Times for models.
         self._losses = LossHandler(self.nets)  # Losses for training.
         self._all_losses = dict()  # Summary of losses for display.
 
@@ -395,9 +388,9 @@ class ModelPluginBase(metaclass=PluginType):
 
         return info
 
-    # Functions for fetching and collapsing results
+    # Functions for pulling and collapsing results
 
-    def fetch_all_losses(self):
+    def pull_losses(self):
         '''Get all network losses from model and child models.
 
         Returns:
@@ -408,10 +401,10 @@ class ModelPluginBase(metaclass=PluginType):
                       for k, v in self.losses.items())
         self.losses.clear()
         for model in self._models:
-            losses[model.name] = model.fetch_all_losses()
+            losses[model.name] = model.pull_losses()
         return losses
 
-    def fetch_all_results(self):
+    def pull_results(self):
         '''Get all results from model and child models.
 
         Returns:
@@ -422,10 +415,11 @@ class ModelPluginBase(metaclass=PluginType):
                        for k, v in self.results.items())
         self.results.clear()
         for model in self._models:
-            results[model.name] = model.fetch_all_results()
+
+            results[model.name] = model.pull_results()
         return results
 
-    def fetch_all_grads(self):
+    def pull_grads(self):
         '''Get all grads from model and child models.
 
         Returns:
@@ -436,10 +430,10 @@ class ModelPluginBase(metaclass=PluginType):
                        for k, v in self.grads.items())
         self.grads.clear()
         for model in self._models:
-            grads[model.name] = model.fetch_all_grads()
+            grads[model.name] = model.pull_grads()
         return grads
 
-    def fetch_all_times(self):
+    def pull_times(self):
         '''Get all times from model and child models.
 
         Returns:
@@ -450,106 +444,8 @@ class ModelPluginBase(metaclass=PluginType):
                      for k, v in self.times.items())
         self.times.clear()
         for model in self._models:
-            times[model.name] = model.fetch_all_times()
+            times[model.name] = model.pull_times()
         return times
-
-    def collapse_losses(self):
-        '''Collapses network losses from child models.
-
-        '''
-        def collapse(d, losses, all_losses, model_name=None):
-            for k, v in d.items():
-                if isinstance(v, dict):
-                    collapse(v, losses, all_losses, model_name=k)
-                else:
-                    if k in losses.keys():
-                        losses[k] += v
-                    else:
-                        losses[k] = v
-
-                    if model_name is not None:
-                        if k not in all_losses:
-                            all_losses[k] = {}
-                        all_losses[k][model_name] = v.detach().item()
-                        all_losses[k]['all'] = losses[k].detach().item()
-
-        def summarize_losses(losses):
-            d = {}
-            for k, v in losses.items():
-                d[k] = v.pop('all')
-                if len(v) > 1: # more than one loss for this network
-                    for k_, v_ in v.items():
-                        d['{}.{}'.format(k, k_)] = v_
-            return d
-
-        losses = self.fetch_all_losses()
-        losses_ = {}
-        all_losses = {}
-        collapse(losses, losses_, all_losses)
-
-        # These losses are the ones displayed.
-        self._all_losses.update(**summarize_losses(all_losses))
-
-        # These are the backpropped ones.
-        self.losses.clear()
-        self.losses.update(**losses_)
-
-    def collapse_results(self):
-        '''Collapses results from child models.
-
-        '''
-        def collapse(d, results, prefix=''):
-            for k, v in d.items():
-                if prefix == '':
-                    key = k
-                else:
-                    key = prefix + '.' + k
-                if isinstance(v, dict):
-                    collapse(v, results, prefix=key)
-                else:
-                    results[key] = v
-        results = self.fetch_all_results()
-        results_ = {}
-        collapse(results, results_)
-        self._results.clear()
-        self._results.update(**results_)
-
-    def collapse_grads(self):
-        '''Collapses grads from child models.
-
-        '''
-        def collapse(d, grads, prefix=''):
-            for k, v in d.items():
-                if prefix == '':
-                    key = k
-                else:
-                    key = prefix + '.' + k
-                if isinstance(v, dict):
-                    collapse(v, grads, prefix=key)
-                else:
-                    grads[key] = v
-        grads = self.fetch_all_grads()
-        grads_ = {}
-        collapse(grads, grads_)
-        self._grads.clear()
-        self._grads.update(**grads_)
-
-    def collapse_times(self):
-        '''Collapses times from child models.
-
-        '''
-        def collapse(d, times, key=None):
-            for k, v in d.items():
-                key_ = key or k
-                if isinstance(v, dict):
-                    collapse(v, times, key_)
-                else:
-                    times[key_] = v
-
-        times = self.fetch_all_times()
-        times_ = {}
-        collapse(times, times_)
-        self._times = times_
 
     # Routine, step, and loop wrappers
     def model_routine(self, fn):
@@ -564,7 +460,6 @@ class ModelPluginBase(metaclass=PluginType):
             output = fn(*args, **kwargs)
             if self._training_nets is None:
                 self._training_nets = [self.nets._aliases.get(k, k) for k in self.losses.keys()]
-
             self._check_bad_values()
             end = time.time()
             if self.name in self.times:
@@ -584,13 +479,8 @@ class ModelPluginBase(metaclass=PluginType):
 
             for k, net in self._all_nets.items():
                 net.eval()
-            self.data.reset(mode='test', make_pbar=False)
-
             output = fn(*args, **kwargs)
-            self.losses.clear()
-            self.results.clear()
-            self.times.clear()
-
+            self.clear()
             return output
 
         return viz_step
@@ -601,23 +491,21 @@ class ModelPluginBase(metaclass=PluginType):
         Should only be done when all models have completed their step.
 
         '''
-        # Appends to each list of results and losses.
+        # Add results to the global results.
+        times = self.pull_times()
+        grads = self.pull_grads()
+        results = self.pull_results()
+        losses = self.pull_losses()
 
-        self.collapse_results()
-        self.collapse_times()
-        self.collapse_losses()
-        self.collapse_grads()
+        exp.RESULTS.update(mode=self.data.mode,
+                           results=results,
+                           times=times,
+                           grads=grads)
 
-        update_dict_of_lists(self._epoch_results, **self.results)
-        update_dict_of_lists(self._epoch_times, **self.times)
-        update_dict_of_lists(self._epoch_losses, **self._all_losses)
-        update_dict_of_lists(self._epoch_grads, **self.grads)
+        exp.RESULTS.update_losses(losses, mode=self.data.mode)
+        self.viz.update(self.visualize)
 
-        self.losses.clear()
-        self._all_losses.clear()
-        self.results.clear()
-        self.grads.clear()
-        self.times.clear()
+        self.clear()
 
     def model_loop(self, fn, train=True):
         '''Wraps a loop.
@@ -639,7 +527,6 @@ class ModelPluginBase(metaclass=PluginType):
             epoch_str = 'Evaluating {} (epoch {}): '
 
         def cortex_loop(epoch, data_mode=data_mode, use_pbar=True):
-            self._reset_epoch()
             self.data.reset(data_mode, string=epoch_str.format(exp.NAME, epoch),
                             make_pbar=use_pbar)
 
@@ -657,12 +544,6 @@ class ModelPluginBase(metaclass=PluginType):
 
             fn()
 
-            # Collect losses from epoch.
-            results = self._epoch_results
-            results['losses'] = dict(self._epoch_losses)
-            results['times'] = dict(self._epoch_times)
-            results['grads'] = dict(self._epoch_grads)
-
             # Optimizer scheduler.
             if data_mode == 'train':
                 # Plateau LR based scheduler.
@@ -670,7 +551,7 @@ class ModelPluginBase(metaclass=PluginType):
                     lr = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
                     if isinstance(
                             sched, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                        loss = results['losses'][k][-1]
+                        loss = exp.RESULTS.losses[k][-1]
                         sched.step(loss)
                     lr_ = optimizer.OPTIMIZERS[k].param_groups[0]['lr']
                     if lr != lr_:
@@ -688,33 +569,31 @@ class ModelPluginBase(metaclass=PluginType):
         '''
 
         def cortex_optimizer_step(*args, **kwargs):
-            self.collapse_losses()
-            fn(*args, **kwargs)
-            self.losses.clear()
+
+            def collapse(d, losses):
+                for k, v in d.items():
+                    if isinstance(v, dict):
+                        collapse(v, losses)
+                    else:
+                        if k in losses.keys():
+                            losses[k] += v
+                        else:
+                            losses[k] = v
+
+            losses = self.pull_losses()  # Pull losses from models.
+
+            # Push losses to the results.
+            exp.RESULTS.update_losses(losses, mode=self.data.mode)
+
+            # Collect losses by network and add.
+            losses_by_network = {}
+            collapse(losses, losses_by_network)
+            self.losses.update(**losses_by_network)
+
+            fn(*args, **kwargs)  # Optimizer step.
+            self.losses.clear()  # Cleanup
 
         return cortex_optimizer_step
-
-    # Resetting
-    @classmethod
-    def _reset_class(cls):
-        '''Resets the static variables.
-
-        '''
-        cls._kwargs.clear()
-        cls._help.clear()
-        cls._training_nets.clear()
-        cls._all_nets.clear()
-
-        cls._epoch_results.clear()
-        cls._epoch_losses.clear()
-        cls._epoch_times.clear()
-        cls._epoch_grads.clear()
-
-    def _reset_epoch(self):
-        self._epoch_results.clear()
-        self._epoch_losses.clear()
-        self._epoch_times.clear()
-        self._epoch_grads.clear()
 
     def _map_data_queries(self, *queries):
         """Maps a query for an input for a model to a different key.
@@ -837,6 +716,12 @@ class ModelPluginBase(metaclass=PluginType):
     def reload_nets(self, nets_to_reload, lax_reload=False):
         if nets_to_reload:
             self.nets._handler.load(lax_reload, **nets_to_reload)
+
+    def clear(self):
+        self.times.clear()
+        self.losses.clear()
+        self.results.clear()
+        self.grads.clear()
 
     def clear_viz(self):
         self._viz.clear()

@@ -32,6 +32,7 @@ class DataHandler:
         self.iterator = {}
         self.pbar = None
         self.u = 0
+        self.mode = None
         self.inputs = dict()
 
     def set_batch_size(self, batch_size, skip_last_batch=False):
@@ -190,6 +191,9 @@ class DataHandler:
         self.batch = output
         self.u += 1
         self.update_pbar()
+
+        if self.mode == 'train':
+            exp.INFO['data_steps'] += 1
 
         return self.batch
 

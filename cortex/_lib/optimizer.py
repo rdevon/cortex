@@ -153,15 +153,13 @@ def setup(model, optimizer='Adam', learning_rate=1.e-4,
         raise NotImplementedError(
             'Optimizer not supported `{}`'.format(optimizer))
 
-    model._reset_epoch()
     model.data.reset(make_pbar=False, mode='test')
+    exp.RESULTS.pause()  # don't accumulate results.
     for step_key in model._steps:
         step = getattr(model, step_key)
         step(_init=True)
-    model.losses.clear()
-    model._all_losses.clear()
-    model.results.clear()
-    model.visualize(auto_input=True)
+    model.clear()
+    exp.RESULTS.unpause()
 
     training_nets = model._get_training_nets()
 

@@ -6,7 +6,7 @@
 import logging
 
 from cortex._lib import (config, data, exp, optimizer, setup_cortex,
-                         setup_experiment, train)
+                         setup_experiment, train, viz)
 from cortex._lib.utils import print_section
 
 __author__ = 'R Devon Hjelm'
@@ -30,14 +30,21 @@ def run(model=None):
             exit(0)
         else:
             config.set_config()
-            print_section('EXPERIMENT')
+
+            print_section('Experiment setup')
             model, reload_nets, lax_reload = setup_experiment(args, model=model)
-            print_section('DATA')
+
+            print_section('Data setup')
             data.setup(**exp.ARGS['data'])
-            print_section('MODEL')
+
+            print_section('Visualization setup')
+            viz.setup(**exp.ARGS['viz'])
+
+            print_section('Model setup')
             model.reload_nets(reload_nets, lax_reload)
             model.build()
-            print_section('OPTIMIZER')
+
+            print_section('Optimizer setup')
             optimizer.setup(model, **exp.ARGS['optimizer'])
 
     except KeyboardInterrupt:

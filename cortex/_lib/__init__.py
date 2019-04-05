@@ -9,7 +9,6 @@ import os
 
 from . import config, exp, log_utils, models
 from .parsing import DEFAULT_ARGS, parse_args, update_args
-from .viz import init as viz_init
 from .utils import print_hypers
 
 
@@ -95,9 +94,6 @@ def setup_experiment(args, model=None, testmode=False):
     experiment_args = copy.deepcopy(DEFAULT_ARGS)
     update_args(experiment_args, exp.ARGS)
 
-    if not testmode and not args.noviz:
-        viz_init(config.CONFIG.viz)
-
     def _expand_model_hypers(args, model):
         d = {}
         arg_keys = list(args.keys())
@@ -144,7 +140,7 @@ def setup_experiment(args, model=None, testmode=False):
         d = exp.reload_model(reload_path)
         exp.INFO.update(**d['info'])
         exp.NAME = exp.INFO['name']
-        exp.SUMMARY.update(**d['summary'])
+        exp.RESULTS.load(**d['results'])
         update_nested_dicts(d['args'], exp.ARGS)
 
         if args.name:
@@ -221,6 +217,7 @@ def setup_experiment(args, model=None, testmode=False):
         exp.INFO['name'] = exp.NAME
         exp.setup_out_dir(args.out_path, config.CONFIG.out_path, exp.NAME,
                           clean=args.clean)
+    exp.ARGS['viz'].update(**config.CONFIG.viz)
 
     str = print_hypers(exp.ARGS, s='Final hyperparameters: ')
     logger.info(str)

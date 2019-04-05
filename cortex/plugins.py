@@ -224,7 +224,7 @@ class ModelPlugin(ModelPluginBase):
                 end = time.time()
                 self.times['Optimizer {}'.format(key)] = end - start
 
-        if 'ALL' in self._optimizers.keys(): # One optimizer
+        if 'ALL' in self._optimizers.keys():  # One optimizer
             loss = sum(self.losses.values())
             op_step('ALL', loss)
         else:
@@ -293,7 +293,7 @@ class ModelPlugin(ModelPluginBase):
             **kwargs: TODO
 
         """
-        self._viz.add_image(*args, **kwargs)
+        self.viz.add_image(*args, **kwargs)
 
     def add_histogram(self, *args, **kwargs):
         """Adds histogram for visualizaiton.
@@ -303,7 +303,7 @@ class ModelPlugin(ModelPluginBase):
             **kwargs: TODO
 
         """
-        self._viz.add_histogram(*args, **kwargs)
+        self.viz.add_histogram(*args, **kwargs)
 
     def add_scatter(self, *args, **kwargs):
         """Adds a scatter plot to visualization.
@@ -313,7 +313,7 @@ class ModelPlugin(ModelPluginBase):
             **kwargs: TODO
 
         """
-        self._viz.add_scatter(*args, **kwargs)
+        self.viz.add_scatter(*args, **kwargs)
 
     def add_heatmap(self, *args, **kwargs):
         """Adds a heatmap to visualization.
@@ -323,7 +323,7 @@ class ModelPlugin(ModelPluginBase):
             **kwargs: TODO
 
         """
-        self._viz.add_heatmap(*args, **kwargs)
+        self.viz.add_heatmap(*args, **kwargs)
 
 
 def register_plugin(plugin):

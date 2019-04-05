@@ -12,7 +12,7 @@ import sys
 from sphinxcontrib.napoleon import Config
 from sphinxcontrib.napoleon.docstring import GoogleDocstring
 
-from . import data, exp, optimizer, train
+from . import data, exp, optimizer, train, viz
 
 __author__ = 'R Devon Hjelm'
 __author_email__ = 'erroneus@gmail.com'
@@ -146,9 +146,11 @@ train_help = parse_docstring(train.main_loop)
 train_args = parse_kwargs(train.main_loop)
 optimizer_help = parse_docstring(optimizer.setup)
 optimizer_args = parse_kwargs(optimizer.setup)
+viz_help = parse_docstring(viz.setup)
+viz_args = parse_kwargs(viz.setup)
 
-DEFAULT_ARGS = dict(data=data_args, optimizer=optimizer_args, train=train_args)
-DEFAULT_HELP = dict(data=data_help, optimizer=optimizer_help, train=train_help)
+DEFAULT_ARGS = dict(data=data_args, optimizer=optimizer_args, train=train_args, viz=viz_args)
+DEFAULT_HELP = dict(data=data_help, optimizer=optimizer_help, train=train_help, viz=viz_help)
 
 _protected_args = ['arch', 'out_path', 'name', 'reload',
                    'args', 'copy_to_local', 'meta', 'config_file',
@@ -206,7 +208,6 @@ def make_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('-v', '--verbosity', type=int, default=1,
                         help='Verbosity of the logging. (0, 1, 2)')
     parser.add_argument('-d', '--device', type=int, nargs='+', default=0)
-    parser.add_argument('-V', '--noviz', default=False, action='store_true', help='No visualization.')
     return parser
 
 
@@ -327,6 +328,7 @@ def _parse_model(model, subparser, yaml_hypers=None):
     yaml_hypers_train = yaml_hypers.pop('train', {})
     yaml_hypers_data = yaml_hypers.pop('data', {})
     yaml_hypers_optimizer = yaml_hypers.pop('optimizer', {})
+    yaml_hypers_viz = yaml_hypers.pop('viz', {})
 
     update_args(yaml_hypers, hyperparameters)
 
@@ -347,7 +349,8 @@ def _parse_model(model, subparser, yaml_hypers=None):
     # Update total hyperparameter arguments.
     default_args = dict((k, v) for k, v in DEFAULT_ARGS.items())
     update_args(model.defaults, default_args)
-    update_args(dict(train=yaml_hypers_train, data=yaml_hypers_data, optimizer=yaml_hypers_optimizer), default_args)
+    update_args(dict(train=yaml_hypers_train, data=yaml_hypers_data, optimizer=yaml_hypers_optimizer,
+                     viz=yaml_hypers_viz), default_args)
 
     for key, args in default_args.items():
         _add_default_arguments(key, args, subparser)

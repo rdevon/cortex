@@ -137,8 +137,8 @@ def underline(s, visdom_mode=False):
     return  ul_char + s + end_char
 
 
-def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0):
-    if visdom_mode:
+def print_hypers(d, prefix=None, s='', visdom_mode=False, level=0, no_ascii=False):
+    if visdom_mode and not(no_ascii):
         newline = '<br>'
         space = '&nbsp;&nbsp;'
     else:

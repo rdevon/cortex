@@ -1,6 +1,7 @@
 """
 Visualization.
 """
+
 import logging
 from os import path
 
@@ -10,7 +11,7 @@ from PIL import Image, ImageDraw
 import visdom
 
 from . import data, exp
-from .utils import convert_to_numpy, compute_tsne
+from .utils import convert_to_numpy, compute_tsne, print_hypers
 from .viz_utils import tile_raster_images
 import matplotlib
 import subprocess
@@ -25,22 +26,40 @@ __author_email__ = 'erroneus@gmail.com'
 logger = logging.getLogger('cortex.viz')
 config_font = None
 visualizer = None
-_options = dict(label_names=None, is_caption=False, is_attribute=False)
-
-CHARS = ['_', '\n', ' ', '!', '"', '%', '&', "'", '(', ')', ',', '-', '.', '/',
-         '0', '1', '2', '3', '4', '5', '8', '9', ':', ';', '=', '?', '\\', '`',
-         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-         'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '*', '*',
-         '*']
-CHAR_MAP = dict((i, CHARS[i]) for i in range(len(CHARS)))
 
 
-def init(viz_config):
-    global visualizer, config_font, viz_process
-    if viz_config is not None and ('server' in viz_config.keys() or
-                                   'port' in viz_config.keys()):
-        server = viz_config.get('server', None)
-        port = viz_config.get('port', 8097)
+_plotly_colors = [[31, 119, 180],  # muted blue
+                  [255, 127, 14],  # safety orange
+                  [44, 160, 44],  # cooked asparagus green
+                  [214, 39, 40],  # brick red
+                  [148, 103, 189],  # muted purple
+                  [140, 86, 75],  # chestnut brown
+                  [227, 119, 194],  # raspberry yogurt pink
+                  [127, 127, 127],  # middle gray
+                  [188, 189, 34],  # curry yellow-green
+                  [23, 190, 207]  # blue-teal
+                  ]
+
+
+def setup(server=None, port=8097, font=None, update_frequency=0, plot_window=0,
+          viz_off=False, viz_mode='visdom', plot_test_only=False):
+    '''
+
+    Args:
+        update_frequency (int): Frequency in data steps for displaying visualization.
+        plot_window (int): Window for data steps for displaying plots.
+        viz_off (bool): Turn off visualization.
+        viz_mod (str): Visualizer mode. Only `visdom` supported but others coming soon.
+        plot_test_only (bool): Show only plots for test set.
+
+    '''
+    if viz_off:
+        return
+
+    global visualizer, config_font
+    config_font = font
+
+    if server and port:
         logger.info('Using visdom version {}'.format(visdom.__version__))
         visualizer = visdom.Visdom(server=server, port=port)
         if not visualizer.check_connection():
@@ -61,45 +80,82 @@ def init(viz_config):
             logger.info('Using local visdom server')
         else:
             visualizer = None
-    config_font = viz_config.get('font')
 
-
-def setup(label_names=None, is_caption=False, is_attribute=False, char_map=None):
-    """Sets up visualization arguments
-
-    Args:
-        img: TODO
-        label_names: TODO
-        is_caption: TODO
-        is_attribute: TODO
-        char_map: TODO
-
-    """
-    global _options, CHAR_MAP
-    if label_names is not None:
-        _options['label_names'] = label_names
-    _options['is_caption'] = is_caption
-    _options['is_attribute'] = is_attribute
-    if is_caption and is_attribute:
-        raise ValueError('Cannot be both attribute and caption')
-    if char_map is not None:
-        CHAR_MAP = char_map
+    if visualizer is not None:
+        viz_handler.setup(update_frequency=update_frequency, plot_window=plot_window, viz_mode=viz_mode,
+                          plot_test_only=plot_test_only)
+        info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
+        visualizer.text(info, env=exp.NAME, win='info')
 
 
 class VizHandler():
-    def __init__(self):
+    '''Hanldes all of your visualization needs.
+
+    '''
+    def __init__(self, ):
         self.clear()
         self.output_dirs = exp.OUT_DIRS
         self.prefix = exp._file_string('')
         self.image_scale = (-1, 1)
+        self.last_step = -1
+        self.stored_plots = dict(losses=dict(train=dict(), test=dict()),
+                                 results=dict(train=dict(), test=dict()),
+                                 times=dict(train=dict()),
+                                 grads=dict(train=dict(), test=dict()))
+
+    def setup(self, update_frequency, plot_window, viz_mode, plot_test_only):
+        '''Set up the handler.
+
+        Args:
+            update_frequency (int): Number of steps per update.
+            plot_window (int): Window for plots.
+            viz_mode (str): Mode for visualization. Only visdom support right now.
+            plot_test_only (bool): Plot only eval values.
+
+        '''
+        self.update_frequency = update_frequency
+        self.plot_window = plot_window
+        self.plot_test_only = plot_test_only
 
     def clear(self):
+        '''Clears visualizer.
+
+        '''
         self.images = {}
         self.scatters = {}
         self.histograms = {}
         self.heatmaps = {}
 
+    def update(self, viz_fn):
+        '''Run a visualization update.
+
+        This function will trigger visualization every N steps in training.
+
+        Args:
+            viz_fn: Visualization function from model.
+
+        '''
+        visualizer.text('dummy to keep server from falling asleep', win='dummy')
+        def show():
+            viz_fn(auto_input=True)
+            self.plot()
+            self.clear()
+
+        if self.update_frequency == 0:  # Update at the beginning of every epoch.
+            current_step = exp.INFO['epoch']
+            if current_step != self.last_step:
+                show()
+            self.last_step = exp.INFO['epoch']
+        else:
+            current_step = exp.INFO['data_steps']
+            if ((current_step % self.update_frequency) == 0) and (current_step != self.last_step):
+                show()
+            self.last_step = exp.INFO['data_steps']
+
     def add_image(self, im, name='image', labels=None):
+        '''Adds an image to the handler.
+
+        '''
         im = convert_to_numpy(im)
         mi, ma = self.image_scale
         im = (im - mi) / float(ma - mi)
@@ -136,6 +192,9 @@ class VizHandler():
         self.scatters[name] = (sc, labels)
 
     def show(self):
+        '''Shows images.
+
+        '''
         image_dir = self.output_dirs['image_dir']
         for i, (k, (im, labels)) in enumerate(self.images.items()):
             if image_dir:
@@ -186,77 +245,122 @@ class VizHandler():
             save_heatmap(hm, out_file=out_path, image_id=i, title=k)
         self.clear()
 
+    def plot(self):
+        """Updates the plots for the results.
 
-def plot(plot_updates, init=False, viz_test_only=False):
-    """Updates the plots for the reults.
+        """
 
-    Takes the last value from the summary and appends this to the visdom plot.
+        def send_plot(k, X, Y, win, name, dash, linecolor, update=None):
+            X = np.array(X).transpose()
+            Y = np.array(Y).transpose()
 
-    """
-    def get_X_Y_legend(key, v_train, v_test):
-        Y = [v_train]
-        legend = []
-
-        if v_test is not None:
-            Y.append(v_test)
-            X = [range(len(v_train)), range(len(v_test))]
-
-            legend.append('{} (train)'.format(key))
-            legend.append('{} (test)'.format(key))
-        else:
-            legend.append(key)
-            X = [range(len(v_train))]
-
-        return X, Y, legend
-
-    train_summary = exp.SUMMARY['train']
-    test_summary = exp.SUMMARY['test']
-    for k in train_summary.keys():
-
-        if viz_test_only and k != 'times':
-            if k in test_summary.keys():
-                v_train = test_summary[k]
-                v_test = None
+            if self.plot_window == 0:
+                label = 'Epochs'
             else:
-                continue
-        else:
-            v_train = train_summary[k]
-            v_test = test_summary[k] if k in test_summary.keys() else None
+                label = 'Updates'
+            title_parts = k.split('.')
+            title = '\n'.join(title_parts)
+            ylabel = title_parts[-1]
 
-        if isinstance(v_train, dict):
-            Y = []
-            X = []
-            legend = []
-            for k_ in v_train:
-                vt = v_test.get(k_) if v_test is not None else None
-                X_, Y_, legend_ = get_X_Y_legend(k_, v_train[k_], vt)
-                Y += Y_
-                X += X_
-                legend += legend_
-        else:
-            X, Y, legend = get_X_Y_legend(k, v_train, v_test)
+            opts = dict(
+                xlabel=label,
+                ylabel=ylabel,
+                title=title,
+                dash=dash,
+                update=update,
+                linecolor=np.array([linecolor]))
 
-        if plot_updates:
-            label = 'Per {} updates'.format(plot_updates)
-        else:
-            label = 'Epochs'
-        opts = dict(
-            xlabel=label,
-            legend=legend,
-            ylabel=k,
-            title=k)
+            visualizer.line(Y=Y, X=X, env=exp.NAME, win=win, name=name, opts=opts, update=update)
 
-        X = np.array(X).transpose()
-        Y = np.array(Y).transpose()
+        for result_type in ('times', 'losses', 'results', 'grads'):
+            stored_plots = self.stored_plots[result_type]
+            results = exp.RESULTS.results[result_type]
 
-        if Y.shape[-1] > 0:
-            visualizer.line(
-                Y=Y,
-                X=X,
-                env=exp.NAME,
-                opts=opts,
-                win='line_{}'.format(k)
-            )
+            modes = list(results.keys())
+
+            # This option can make it so we only show eval results
+            if self.plot_test_only:
+                if 'test' in modes and result_type != 'times':
+                    modes = ['test']
+                elif 'train' in modes and result_type == 'times':
+                    modes = ['train']
+                else:
+                    modes = []
+
+            update = None
+            seen_result_keys = set()
+
+            for mode in modes:
+                if mode not in stored_plots:
+                    stored_plots[mode] = dict()
+
+                stored_mode = stored_plots[mode]
+                result = results[mode]
+                result_keys = list(result.keys())
+
+                lc_idx = 0
+                for result_key in result_keys:
+                    if result_key not in stored_mode:
+                        stored_mode[result_key] = ([], [])
+
+                    # Fetch result line not already pulled and combine with stored.
+                    X, Y = stored_mode[result_key]
+
+                    # Some chunks weren't finished when update called
+                    if len(X) > 1 and self.plot_window != 0 and (X[-1] % self.plot_window) != 0:
+                        start = X[-2] + 1
+                    elif len(X) > 0:
+                        start = X[-1] + 1
+                    else:
+                        start = 0
+                    X_add, Y_add = exp.RESULTS.chunk(mode, result_type, result_key, start=start, window=self.plot_window)
+
+                    # Add new chunks to storage
+                    if len(X) > 1 and self.plot_window != 0 and (X[-2] % self.plot_window) != 0:
+                        X = X[:-2] + X_add
+                        Y = Y[:-2] + Y_add
+                    else:
+                        X = X + X_add
+                        Y = Y + Y_add
+
+                    # For some plots, there might not be a value for x = 0
+                    if X[0] != 0:
+                        X = [0] + X
+                        Y = [Y[0]] + Y
+                    stored_mode[result_key] = (X, Y)
+
+                    # Results get their own window, losses etc shared window.
+                    if result_type == 'results':
+                        win = 'line_{}'.format(result_key)
+                        name = mode
+                        if result_key in seen_result_keys:
+                            update = 'append'
+                        else:
+                            update = None
+                        title = result_key
+                        seen_result_keys.add(result_key)
+                    else:
+                        win = result_type
+                        name = '{} ({})'.format(result_key, mode)
+                        title = result_type
+                        seen_result_keys.add(result_key)
+
+                    linecolor = _plotly_colors[lc_idx]
+
+                    # Eval values get a dash line.
+                    if mode == 'test' or self.plot_test_only:
+                        dash = np.array(['dashdot'])
+                    else:
+                        dash = None
+
+                    send_plot(title, X, Y, win, name, dash=dash, linecolor=linecolor, update=update)
+                    update = 'append'
+
+                    lc_idx += 1
+                    lc_idx = lc_idx % len(_plotly_colors)
+
+
+viz_handler = VizHandler()
 
 
 def save_text(labels, out_file=None, text_id=0,
