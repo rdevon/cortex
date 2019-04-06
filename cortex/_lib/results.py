@@ -38,117 +38,6 @@ def underline(s, no_ascii=False):
         return s
 
 
-def summarize_results(results, start, end):
-    ''' Summarizes results from a dictionary of lists.
-
-    Simply takes the mean of every list.
-
-    Args:
-        results (dict): Dictionary of list of results.
-        start (int): Start of summary window.
-        end (int): End of summary window.
-
-    Returns:
-        dict: Dictionary of means or list of means.
-
-    '''
-
-    def chunks(l, n):
-        """Yield successive n-sized chunks from l."""
-        for i in range(0, len(l), n):
-            yield np.mean(l[i:i + n])
-
-    results_ = {}
-    for k, v in results.items():
-        if isinstance(v, dict):
-            results_[k] = summarize_results(v, length=length)
-        else:
-            if len(v) > 0:
-                try:
-                    results_[k] = list(chunks(v, length))
-                except BaseException:
-                    raise ValueError(
-                        'Something is wrong with result {} of type {}.'.format(
-                            k, type(v[0])))
-
-    return results_
-
-
-def summarize_results_std(results):
-    '''Standard deviation version of `summarize_results`
-
-    Args:
-        results (dict): Dictionary of list of results.
-
-    Returns:
-        dict: Dictionary of stds.
-
-    '''
-    results_ = {}
-    for k, v in results.items():
-        if isinstance(v, dict):
-            results_[k] = summarize_results(v)
-        else:
-            results_[k] = np.std(v)
-    return results_
-
-
-def align_summaries(d_train, d_test):
-    '''Aligns summaries for models that are updated at different rates.
-
-    Args:
-        d_train: Dictionary of results from training data.
-        d_test: Dictionary of results from holdout data.
-
-    '''
-    keys = set(d_train.keys()).union(set(d_test.keys()))
-    for k in keys:
-        if k in d_train and k in d_test:
-            v_train = d_train[k]
-            v_test = d_test[k]
-            if isinstance(v_train, dict):
-                if len(v_train) == 0:
-                    max_train_len = 0
-                else:
-                    max_train_len = max([len(v) for v in v_train.values()])
-                if len(v_test) == 0:
-                    max_test_len = 0
-                else:
-                    max_test_len = max([len(v) for v in v_test.values()])
-                max_len = max(max_train_len, max_test_len)
-                for k_, v in v_train.items():
-                    if len(v) < max_len:
-                        v_train[k_] = (v_train[k_] + [v_train[k_][-1]] *
-                                       (max_len - len(v_train[k_])))
-                for k_, v in v_test.items():
-                    if len(v) < max_len:
-                        v_test[k_] = (v_test[k_] + [v_test[k_][-1]] *
-                                      (max_len - len(v_test[k_])))
-            else:
-                if len(v_train) > len(v_test):
-                    d_test[k] = (v_test + [v_test[-1]] *
-                                 (len(v_train) - len(v_test)))
-                elif len(v_test) > len(v_train):
-                    d_train[k] = (v_train + [v_train[-1]] *
-                                  (len(v_test) - len(v_train)))
-        elif k in d_train:
-            v_train = d_train[k]
-            if isinstance(v_train, dict):
-                max_len = max([len(v) for v in v_train.values()])
-                for k_, v in v_train.items():
-                    if len(v) < max_len:
-                        v_train[k_] = (v_train[k_] + [v_train[k_][-1]] *
-                                       (max_len - len(v_train[k_])))
-        elif k in d_test:
-            v_test = d_test[k]
-            if isinstance(v_test, dict):
-                max_len = max([len(v) for v in v_test.values()])
-                for k_, v in v_test.items():
-                    if len(v) < max_len:
-                        v_test[k_] = v_test[k_] + [v_test[k_][-1]] * \
-                            (max_len - len(v_test[k_]))
-
-
 class Results(object):
     '''Class for handling results.
 
@@ -167,9 +56,9 @@ class Results(object):
         self._pause = False
 
     def clear(self):
-        self.results.clear()
-        self.epoch_markers.clear()
-        self.step_markers.clear()
+        self.results.update(dict(losses=dict(), results=dict(), times=dict(), grads=dict()))
+        self.epoch_markers.update(dict(losses=dict(), results=dict(), times=dict(), grads=dict()))
+        self.step_markers.update(dict(losses=dict(), results=dict(), times=dict(), grads=dict()))
 
     def todict(self):
         d = dict(results=self.results,
@@ -177,7 +66,7 @@ class Results(object):
                  step_markers=self.step_markers)
         return d
 
-    def load(self, results, epoch_markers, step_markers):
+    def load(self, results=None, epoch_markers=None, step_markers=None):
         self.results = results
         self.epoch_markers = epoch_markers
         self.step_markers = step_markers
@@ -444,6 +333,8 @@ class Results(object):
 
                 Y = new_Y
                 end = end or max(X_unique)
+                if start != 0:
+                    start -= 1
                 windows = list(range(start, end + window, window))
                 X = []
                 new_Y = []

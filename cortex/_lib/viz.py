@@ -42,7 +42,7 @@ _plotly_colors = [[31, 119, 180],  # muted blue
 
 
 def setup(server=None, port=8097, font=None, update_frequency=0, plot_window=0,
-          viz_off=False, viz_mode='visdom', plot_test_only=False):
+          viz_off=False, viz_mode='visdom', plot_test_only=False, align_colors=False):
     '''
 
     Args:
@@ -51,6 +51,7 @@ def setup(server=None, port=8097, font=None, update_frequency=0, plot_window=0,
         viz_off (bool): Turn off visualization.
         viz_mod (str): Visualizer mode. Only `visdom` supported but others coming soon.
         plot_test_only (bool): Show only plots for test set.
+        align_colors (bool): Aligns train / test colors in plots.
 
     '''
     if viz_off:
@@ -83,7 +84,7 @@ def setup(server=None, port=8097, font=None, update_frequency=0, plot_window=0,
 
     if visualizer is not None:
         viz_handler.setup(update_frequency=update_frequency, plot_window=plot_window, viz_mode=viz_mode,
-                          plot_test_only=plot_test_only)
+                          plot_test_only=plot_test_only, align_colors=align_colors)
         info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
         visualizer.text(info, env=exp.NAME, win='info')
 
@@ -103,7 +104,7 @@ class VizHandler():
                                  times=dict(train=dict()),
                                  grads=dict(train=dict(), test=dict()))
 
-    def setup(self, update_frequency, plot_window, viz_mode, plot_test_only):
+    def setup(self, update_frequency, plot_window, viz_mode, plot_test_only, align_colors):
         '''Set up the handler.
 
         Args:
@@ -111,11 +112,13 @@ class VizHandler():
             plot_window (int): Window for plots.
             viz_mode (str): Mode for visualization. Only visdom support right now.
             plot_test_only (bool): Plot only eval values.
+            align_colors (bool): Aligns train / test colors in plots.
 
         '''
         self.update_frequency = update_frequency
         self.plot_window = plot_window
         self.plot_test_only = plot_test_only
+        self.align_colors = align_colors
 
     def clear(self):
         '''Clears visualizer.
@@ -135,7 +138,6 @@ class VizHandler():
             viz_fn: Visualization function from model.
 
         '''
-        visualizer.text('dummy to keep server from falling asleep', win='dummy')
         def show():
             viz_fn(auto_input=True)
             self.plot()
@@ -262,13 +264,16 @@ class VizHandler():
             title = '\n'.join(title_parts)
             ylabel = title_parts[-1]
 
+            if linecolor is not None:
+                linecolor = np.array([linecolor])
+
             opts = dict(
                 xlabel=label,
                 ylabel=ylabel,
                 title=title,
                 dash=dash,
                 update=update,
-                linecolor=np.array([linecolor]))
+                linecolor=linecolor)
 
             visualizer.line(Y=Y, X=X, env=exp.NAME, win=win, name=name, opts=opts, update=update)
 
@@ -345,7 +350,10 @@ class VizHandler():
                         title = result_type
                         seen_result_keys.add(result_key)
 
-                    linecolor = _plotly_colors[lc_idx]
+                    if self.align_colors:
+                        linecolor = _plotly_colors[lc_idx]
+                    else:
+                        linecolor = None
 
                     # Eval values get a dash line.
                     if mode == 'test' or self.plot_test_only:

@@ -37,6 +37,13 @@ def _file_string(prefix: str = '') -> str:
     return '{}_{}'.format(NAME, prefix)
 
 
+def reset():
+    global INFO, ARGS
+    INFO.update(name=NAME, epoch=0, data_steps=-1)
+    RESULTS.clear()
+    ARGS.update(data=dict(), model=dict(), optimizer=dict(), train=dict(), viz=dict())
+
+
 def from_yaml(config_file: str = None) -> dict:
     '''Loads hyperparameters from a yaml file.
 

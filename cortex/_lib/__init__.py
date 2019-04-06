@@ -168,6 +168,7 @@ def setup_experiment(args, model=None, testmode=False):
                 logger.warning('No suitable files found to autoreload. '
                                'Starting from scratch.')
                 reload_path = False
+                exp.reset()
                 break
             except Exception as e:
                 logger.warning(
