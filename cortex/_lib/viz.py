@@ -41,12 +41,13 @@ _plotly_colors = [[31, 119, 180],  # muted blue
                   ]
 
 
-def setup(server=None, port=8097, font=None, update_frequency=0, plot_window=0,
+def setup(server=None, port=8097, font=None, update_frequency=0, viz_frequency=0, plot_window=0,
           viz_off=False, viz_mode='visdom', plot_test_only=False, align_colors=False):
     '''
 
     Args:
-        update_frequency (int): Frequency in data steps for displaying visualization.
+        update_frequency (int): Frequency in data steps for displaying visualization. 0=once per epoch.
+        viz_frequency (int): Number of steps per visualization (e.g., images) update. 0=once per epoch.
         plot_window (int): Window for data steps for displaying plots.
         viz_off (bool): Turn off visualization.
         viz_mod (str): Visualizer mode. Only `visdom` supported but others coming soon.
@@ -84,7 +85,7 @@ def setup(server=None, port=8097, font=None, update_frequency=0, plot_window=0,
 
     if visualizer is not None:
         viz_handler.setup(update_frequency=update_frequency, plot_window=plot_window, viz_mode=viz_mode,
-                          plot_test_only=plot_test_only, align_colors=align_colors)
+                          viz_frequency=viz_frequency, plot_test_only=plot_test_only, align_colors=align_colors)
         info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
         visualizer.text(info, env=exp.NAME, win='info')
 
@@ -99,16 +100,18 @@ class VizHandler():
         self.prefix = exp._file_string('')
         self.image_scale = (-1, 1)
         self.last_step = -1
+        self.last_viz_step = -1
         self.stored_plots = dict(losses=dict(train=dict(), test=dict()),
                                  results=dict(train=dict(), test=dict()),
                                  times=dict(train=dict()),
                                  grads=dict(train=dict(), test=dict()))
 
-    def setup(self, update_frequency, plot_window, viz_mode, plot_test_only, align_colors):
+    def setup(self, update_frequency, viz_frequency, plot_window, viz_mode, plot_test_only, align_colors):
         '''Set up the handler.
 
         Args:
-            update_frequency (int): Number of steps per update.
+            update_frequency (int): Number of steps per plot update.
+            viz_frequency (int): Number of steps per visualization (e.g., images) update.
             plot_window (int): Window for plots.
             viz_mode (str): Mode for visualization. Only visdom support right now.
             plot_test_only (bool): Plot only eval values.
@@ -116,6 +119,7 @@ class VizHandler():
 
         '''
         self.update_frequency = update_frequency
+        self.viz_frequency = viz_frequency
         self.plot_window = plot_window
         self.plot_test_only = plot_test_only
         self.align_colors = align_colors
@@ -138,21 +142,31 @@ class VizHandler():
             viz_fn: Visualization function from model.
 
         '''
+
         def show():
             viz_fn(auto_input=True)
-            self.plot()
+            self.show()
             self.clear()
 
         if self.update_frequency == 0:  # Update at the beginning of every epoch.
             current_step = exp.INFO['epoch']
             if current_step != self.last_step:
-                show()
-            self.last_step = exp.INFO['epoch']
+                self.plot()
         else:
             current_step = exp.INFO['data_steps']
             if ((current_step % self.update_frequency) == 0) and (current_step != self.last_step):
+                self.plot()
+        self.last_step = current_step
+
+        if self.viz_frequency == 0:  # Update at the beginning of every epoch.
+            current_step = exp.INFO['epoch']
+            if current_step != self.last_viz_step:
                 show()
-            self.last_step = exp.INFO['data_steps']
+        else:
+            current_step = exp.INFO['data_steps']
+            if ((current_step % self.viz_frequency) == 0) and (current_step != self.last_viz_step):
+                show()
+        self.last_viz_step = current_step
 
     def add_image(self, im, name='image', labels=None):
         '''Adds an image to the handler.
