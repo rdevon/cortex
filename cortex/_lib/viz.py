@@ -109,7 +109,7 @@ class VizHandler():
                                  grads=dict(train=dict(), test=dict()))
         self._off = False
 
-    def turn_off(self):
+    def off(self):
         self._off = True
 
     def setup(self, update_frequency, viz_frequency, plot_window, viz_mode, plot_test_only, align_colors):
