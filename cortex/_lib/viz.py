@@ -88,6 +88,8 @@ def setup(server=None, port=8097, font=None, update_frequency=0, viz_frequency=0
                           viz_frequency=viz_frequency, plot_test_only=plot_test_only, align_colors=align_colors)
         info = print_hypers(exp.ARGS, s='Model hyperparameters: ', visdom_mode=True)
         visualizer.text(info, env=exp.NAME, win='info')
+    else:
+        viz_handler.off()
 
 
 class VizHandler():
@@ -105,6 +107,10 @@ class VizHandler():
                                  results=dict(train=dict(), test=dict()),
                                  times=dict(train=dict()),
                                  grads=dict(train=dict(), test=dict()))
+        self._off = False
+
+    def turn_off(self):
+        self._off = True
 
     def setup(self, update_frequency, viz_frequency, plot_window, viz_mode, plot_test_only, align_colors):
         '''Set up the handler.
@@ -142,6 +148,8 @@ class VizHandler():
             viz_fn: Visualization function from model.
 
         '''
+        if self._off:
+            return
 
         def show():
             viz_fn(auto_input=True)
