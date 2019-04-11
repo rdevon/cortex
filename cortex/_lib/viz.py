@@ -56,6 +56,7 @@ def setup(server=None, port=8097, font=None, update_frequency=0, viz_frequency=0
 
     '''
     if viz_off:
+        viz_handler.off()
         return
 
     global visualizer, config_font
