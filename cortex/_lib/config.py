@@ -202,7 +202,7 @@ def setup_config_file(config_file):
     tv_default = d['data_paths'].get('torchvision')
     tv_path = _check_dir(_tv_path_message, tv_default)
     if tv_path is not None:
-        d['data_paths']['torchvision'] = local_path
+        d['data_paths']['torchvision'] = tv_path
     print()
 
     # Extra data paths
