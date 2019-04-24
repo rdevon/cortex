@@ -19,7 +19,7 @@ setup(name='cortex',
       packages=packages,
       install_requires=[
           'imageio', 'matplotlib==2.2.3', 'progressbar2', 'scipy', 'sklearn',
-          'torchvision', 'visdom', 'pyyaml', 'sphinxcontrib-napoleon'],
+          'torchvision>=0.2.2', 'visdom', 'pyyaml', 'sphinxcontrib-napoleon'],
       entry_points={
           'console_scripts': [
               'cortex=cortex.main:run']

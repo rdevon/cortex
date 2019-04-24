@@ -181,7 +181,7 @@ def setup_experiment(args, model=None, testmode=False):
             reload_nets = reload(args.reload)
             reload_path = True
         except:
-            logger.warning('No suitable files found to autoreload. '
+            logger.warning('Reload failed. '
                            'Starting from scratch.')
             reload_path = False
 

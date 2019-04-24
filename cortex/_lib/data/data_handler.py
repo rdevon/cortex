@@ -309,7 +309,7 @@ class DataHandler:
         # incorporate specific label
         # names from the dataset plugin.
         source = source or list(self.loaders.keys())[0]
-        names = ['{}'.format(i) for i in range(self.dims[source]['labels'])]
+        names = ['{}'.format(i) for i in range(self.dims[source]['targets'])]
         return names
 
     def make_iterator(self, source):
