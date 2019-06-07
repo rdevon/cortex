@@ -27,6 +27,7 @@ class DataHandler:
         self.input_names = {}
         self.noise = {}
         self.loaders = {}
+        self.datasets = {}
         self.batch = None
         self.noise = {}
         self.iterator = {}
@@ -104,6 +105,7 @@ class DataHandler:
                                                   signal.SIG_IGN),
                                     pin_memory=True)
 
+        self.datasets[name] = dataset
         self.dims[name] = dims
         self.input_names[name] = input_names
         self.loaders[name] = loaders

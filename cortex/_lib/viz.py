@@ -27,7 +27,6 @@ logger = logging.getLogger('cortex.viz')
 config_font = None
 visualizer = None
 
-
 _plotly_colors = [[31, 119, 180],  # muted blue
                   [255, 127, 14],  # safety orange
                   [44, 160, 44],  # cooked asparagus green
@@ -177,7 +176,7 @@ class VizHandler():
                 show()
         self.last_viz_step = current_step
 
-    def add_image(self, im, name='image', labels=None):
+    def add_image(self, im, name='image', labels=None, **kwargs):
         '''Adds an image to the handler.
 
         '''
@@ -190,7 +189,7 @@ class VizHandler():
             logger.warning('{} already added to '
                            'visualization. Use the name kwarg'
                            .format(name))
-        self.images[name] = (im, labels)
+        self.images[name] = (im, labels, kwargs)
 
     def add_histogram(self, hist, name='histogram'):
         if name in self.histograms:
@@ -221,7 +220,7 @@ class VizHandler():
 
         '''
         image_dir = self.output_dirs['image_dir']
-        for i, (k, (im, labels)) in enumerate(self.images.items()):
+        for i, (k, (im, labels, kwargs)) in enumerate(self.images.items()):
             if image_dir:
                 logger.debug('Saving images to {}'.format(image_dir))
                 out_path = path.join(
@@ -230,7 +229,7 @@ class VizHandler():
                 out_path = None
 
             save_images(im, 8, 8, out_file=out_path, labels=labels,
-                        max_samples=64, image_id=1 + i, caption=k)
+                        max_samples=64, image_id=1 + i, caption=k, **kwargs)
 
         for i, (k, (sc, labels)) in enumerate(self.scatters.items()):
 
@@ -412,7 +411,7 @@ def save_text(labels, out_file=None, text_id=0,
 
 def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
                 max_samples=None, margin_x=5, margin_y=5, image_id=0,
-                caption='', title=''):
+                caption='', title='', parts=None, part_locs=None, shades=None):
     '''
 
     Args:
@@ -452,6 +451,14 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
             margin_y = 12
 
     images = images * 255.
+
+    if shades is not None:
+        n_parts = shades.shape[1]
+        n_colors = len(_plotly_colors)
+        for part_idx in range(n_parts):
+            shade = shades[:, part_idx][:, None, :, :]
+            shading = shade * np.array(_plotly_colors[part_idx % n_colors])[None, :, None, None]
+            images = (1 - shade) * images + shade * (0.5 * shading + 0.5 * images)
 
     dim_c, dim_x, dim_y = images.shape[-3:]
     if dim_c == 1:
@@ -498,6 +505,19 @@ def save_images(images, num_x, num_y, out_file=None, labels=None,  # noqa C901
             else:
                 l_ = str(label)
             idr.text((x_, y_), l_, fill=fill)
+
+    if part_locs is not None:
+        idr = ImageDraw.Draw(im)
+        batch_size, n_parts, _ = part_locs.shape
+        if parts is None:
+            parts = range(n_parts)
+        for image_idx in range(batch_size):
+            x_base = (image_idx % num_x) * (dim_x + margin_x)
+            y_base = (image_idx // num_x) * (dim_y + margin_y)
+            for part, (x, y, viz) in zip(parts, part_locs[image_idx]):
+                if viz == 1:
+                    w, h = idr.textsize(part)
+                    idr.text((x_base + x - w / 2 , y_base + y - h / 2), part, fill=fill)
 
     arr = np.array(im)
     if arr.ndim == 3:
