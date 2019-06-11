@@ -39,6 +39,8 @@ _plotly_colors = [[31, 119, 180],  # muted blue
                   [23, 190, 207]  # blue-teal
                   ]
 
+_options = dict(label_names=None, is_caption=False, is_attribute=False)
+
 
 def setup(server=None, port=8097, font=None, update_frequency=0, viz_frequency=0, plot_window=0,
           viz_off=False, viz_mode='visdom', plot_test_only=False, align_colors=False):
