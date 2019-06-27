@@ -3,6 +3,7 @@ Visualization.
 """
 
 import logging
+import math
 from os import path
 
 import imageio
@@ -230,8 +231,18 @@ class VizHandler():
             else:
                 out_path = None
 
-            save_images(im, 8, 8, out_file=out_path, labels=labels,
-                        max_samples=64, image_id=1 + i, caption=k, **kwargs)
+            num_images = im.shape[0]
+
+            # Taken from https://stackoverflow.com/questions/40700302/find-the-two-highest-factors-of-a-single-number-that-are-closest-to-each-other
+            def closestDivisors(n):
+                a = round(math.sqrt(n))
+                while n % a > 0: a -= 1
+                return a, n // a
+
+            num_x, num_y = closestDivisors(num_images)
+
+            save_images(im, num_x, num_y, out_file=out_path, labels=labels,
+                        image_id=1 + i, caption=k, **kwargs)
 
         for i, (k, (sc, labels)) in enumerate(self.scatters.items()):
 

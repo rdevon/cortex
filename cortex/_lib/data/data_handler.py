@@ -6,6 +6,7 @@ This module defines the main iteration functionality.
 
 import signal
 
+import numpy as np
 import torch
 from progressbar import Bar, ProgressBar, Percentage, Timer, ETA
 
@@ -164,7 +165,7 @@ class DataHandler:
             5) Add any noise variables.
 
         Returns:
-            Tuple of batches.
+            tuple: Tuple of batches.
 
         """
         output = {}
@@ -209,7 +210,7 @@ class DataHandler:
         to the next level.
 
         Returns:
-            Tensor of data.
+            torch.Tensor: Tensor of data.
 
         """
         if self.batch is None:
@@ -247,6 +248,50 @@ class DataHandler:
 
         return get_data(self.batch, key)
 
+    def get_uniterated_data(self, key, mode, idx=None, idx_mode='random', N=None):
+        '''Draws samples without worrying about iterations.
+
+        Args:
+            key: Key of the data to be drawn.
+            mode: Mode of the data to be drawn (train, test).
+            idx: Index of datapoint. If not given, do random.
+            idx_mode: How to pull idxs if they aren't provided. Supported are `random` and `firstN`
+            N: number of samples, if idx is not set. If None, use batch_size
+
+        Returns:
+            torch.Tensor: the data.
+
+        '''
+
+        sourcekey = key.split('.')
+        source = sourcekey[0]
+        key = '.'.join(sourcekey[1:])
+        batch_size = self.batch_size[mode]
+
+        dataset = self.loaders[source][mode].dataset
+
+        if idx is None:
+            N = N or batch_size
+            if idx_mode == 'random':
+                idx = np.random.choice(range(len(dataset)), size=(N,))
+            elif idx_mode == 'firstN':
+                idx = range(N)
+            else:
+                raise ValueError
+        input_names = self.input_names[source]
+
+        data = []
+        for i in idx:
+            d_ = dataset[i]
+            if key in input_names:
+                data.append(d_[input_names.index(key)])
+            else:
+                raise KeyError
+
+        data = torch.stack(data)
+
+        return data, idx
+
     def get_batch(self, *keys):
         """Retruns a batch of multiple inputs.
 
@@ -254,7 +299,7 @@ class DataHandler:
             *keys: List of keys.
 
         Returns:
-            List of batches.
+            list: List of batches.
 
         """
         if self.batch is None:
@@ -279,7 +324,7 @@ class DataHandler:
             q: query or list of queries.
 
         Returns:
-            List of dimensions.
+            list: List of dimensions.
 
         """
         if not isinstance(q, list):

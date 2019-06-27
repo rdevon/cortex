@@ -655,6 +655,41 @@ class ModelPluginBase(metaclass=PluginType):
         else:
             return inputs
 
+    def uniterated_inputs(self, *keys, mode=None, idx=None, idx_mode='random', N=None):
+        '''Pulls test inputs from the data.
+
+        This function exists to allow pulling test examples for visualization.
+        TODO (devon): iterators need to be a little more transportable, such that the user can pull whatever data they'd like.
+
+        Args:
+            keys: List of string variable names.
+            mode: If set, chose a data point from this mode.
+            idx: If set, pull specific data index.
+            idx_mode: How to pull idxs if they aren't provided. Supported are `random` and `firstN`
+            N: number of samples, if idx is not set. If None, use batch_size
+
+        Returns:
+            Tensor variables.
+
+        '''
+
+        mode = mode or self.data.mode
+
+        keys = self._map_data_queries(*keys)
+
+        inputs = []
+        for k in keys:
+            # Get input and idx if it wasn't specified.
+            inp, idx = self.data.get_uniterated_data(k, mode=mode, idx=idx, idx_mode=idx_mode, N=N)
+            inputs.append(inp)
+
+        if len(inputs) == 0:
+            return None
+        elif len(inputs) == 1:
+            return inputs[0]
+        else:
+            return inputs
+
     # Properties
     @property
     def kwargs(self):
