@@ -30,9 +30,9 @@ visualizer = None
 
 _plotly_colors = [[31, 119, 180],  # muted blue
                   [255, 127, 14],  # safety orange
+                  [148, 103, 189],  # muted purple
                   [44, 160, 44],  # cooked asparagus green
                   [214, 39, 40],  # brick red
-                  [148, 103, 189],  # muted purple
                   [140, 86, 75],  # chestnut brown
                   [227, 119, 194],  # raspberry yogurt pink
                   [127, 127, 127],  # middle gray
