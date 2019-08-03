@@ -131,6 +131,7 @@ class NestedNetworkHandler(Handler):
                 value = torch.nn.DataParallel(value, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
             alias = '{}.{}'.format(self._model.name, key)
             self._aliases[key] = alias
+            print(key, alias)
             return self._handler.__setattr__(alias, value)
 
     def __getitem__(self, item):
@@ -213,6 +214,8 @@ class NetworkHandler(Handler):
             logger.debug('Loading parameters from saved model for {}'.format(key))
             MutableMapping.__setattr__(self, key, value)
             loaded = self._loaded[key]
+            if isinstance(self.__dict__[key], torch.nn.DataParallel) and not isinstance(loaded, torch.nn.DataParallel):
+                loaded = torch.nn.DataParallel(loaded, device_ids=exp.DEVICE_IDS).to(exp.DEVICE)
             self.__dict__[key].load_state_dict(loaded.state_dict(), strict=not(self._lax_reload))
         elif not self._allow_overwrite and hasattr(self, key):
             raise KeyError('Overwriting keys not allowed.')
