@@ -174,6 +174,7 @@ def setup_experiment(args, model=None, testmode=False):
                 logger.warning(
                     'Loading error occurred ({}). Trying previous.'
                     .format(e))
+                logging.exception()
                 idx += 1
 
     elif args.reload:
