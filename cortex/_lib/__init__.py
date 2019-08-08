@@ -78,7 +78,8 @@ def setup_experiment(args, model=None, testmode=False):
         for k, v in from_d.items():
             if (k in to_d) and isinstance(to_d[k], dict):
                 if not isinstance(v, dict):
-                    raise ValueError('Updating dict entry with non-dict.')
+                    raise ValueError('Updating dict entry with non-dict for key {}. (original: {}, new: {})'
+                                     .format(k, to_d[k], v))
                 update_nested_dicts(v, to_d[k])
             else:
                 to_d[k] = v
