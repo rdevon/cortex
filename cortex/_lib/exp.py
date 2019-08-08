@@ -106,7 +106,11 @@ def save(model, prefix: str = ''):
 
         nets = {}
         for k, net in model._all_nets.items():
-            nets[k] = copy.deepcopy(net.module).to('cpu')
+            try:
+                nets[k] = copy.deepcopy(net.module).to('cpu')
+            except RuntimeError:
+                # This is something weird about deepcopy that I don't understand
+                nets[k] = net.module
 
         state = dict(
             nets=nets,
