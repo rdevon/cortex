@@ -79,7 +79,7 @@ def setup_experiment(args, model=None, testmode=False):
             if (k in to_d) and isinstance(to_d[k], dict):
                 if not isinstance(v, dict):
                     if k == 'batch_size' and isinstance(v, int):
-                        print('Doing the batch_size fix')
+                        logger.debug('Doing the batch_size fix')
                         v = {'train': v, 'test': v}
                     else:
                         raise ValueError('Updating dict entry with non-dict for key {}. (original: {}, new: {})'
