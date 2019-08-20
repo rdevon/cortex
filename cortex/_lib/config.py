@@ -4,7 +4,8 @@
 
 import glob
 import logging
-from os import path
+from os import path, getenv
+
 import pathlib
 import pprint
 import readline
@@ -60,6 +61,15 @@ _out_message = 'Cortex requires an out path to store experiment files. ' \
                'results from experiments.'
 _out_path_message = 'Enter the path to the output directory: [{}] '
 
+def parse_env_vars(dic):
+    def aux(st):
+        if st.startswith('$'):
+            st = st.split('/')
+            st[0] = getenv(st[0][1:])
+            st = '/'.join(st)
+        return st
+
+    return {k: aux(dic[k]) for k in dic}
 
 def set_config():
     ''' Setups up cortex config.
@@ -81,6 +91,7 @@ def set_config():
 
             viz = d.get('viz', {})
             data_paths = d.get('data_paths', {})
+            data_paths = parse_env_vars(data_paths)
             arch_paths = d.get('arch_paths', {})
             out_path = d.get('out_path', None)
 
