@@ -24,5 +24,5 @@ setup(name='cortex',
           'console_scripts': [
               'cortex=cortex.main:run']
       },
-      dependency_links={'git+https://github.com/facebookresearch/visdom.git'},
+      dependency_links=['git+https://github.com/facebookresearch/visdom.git'],
       zip_safe=False)
